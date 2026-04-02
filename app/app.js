@@ -163,6 +163,13 @@ async function renderDashboard() {
             </div>
             <span class="app-route__meta">${state.me.user.isAdmin ? 'Admin' : 'Member'}</span>
           </a>
+          <a class="app-route" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">
+            <div>
+              <strong>Twitch</strong>
+              <p>Watch vghosted live.</p>
+            </div>
+            <span class="app-route__meta">Live channel</span>
+          </a>
         </div>
       </article>
       <a class="app-panel app-panel--link" href="/app/profile/">
