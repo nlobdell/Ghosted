@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ghosted Clan | OSRS Dark Fantasy</title>
+    <meta
+      name="description"
+      content="Ghosted is an OSRS-first clan with a dark fantasy identity. Join us for PvM, raids, skilling, and more at discord.gg/ghosted."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="veil"></div>
+
+    <header class="hero">
+      <nav class="nav container">
+        <a href="#top" class="brand" aria-label="Ghosted home">Ghosted</a>
+        <a
+          class="button button--small"
+          href="https://discord.gg/ghosted"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Join Discord</a
+        >
+      </nav>
+
+      <div class="hero__content container" id="top">
+        <p class="eyebrow">OSRS Clan • Dark Fantasy</p>
+        <h1>Forged in Gielinor.<br />United as <span>Ghosted</span>.</h1>
+        <p class="hero__subtitle">
+          We are an OSRS-first clan focused on raids, bossing, skilling, and chill community nights.
+          We also branch into other games when the squad wants a new grind.
+        </p>
+        <div class="hero__actions">
+          <a class="button" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer"
+            >Enter the Discord</a
+          >
+          <a class="button button--ghost" href="#pillars">Explore Clan</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section container" id="pillars">
+        <h2>Clan Pillars</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>OSRS Core</h3>
+            <p>Raids, boss rotations, skilling pushes, and progression with reliable teammates.</p>
+          </article>
+          <article class="card">
+            <h3>Low-Drama Community</h3>
+            <p>Respect first. New players and veterans both get a place in the party.</p>
+          </article>
+          <article class="card">
+            <h3>Multi-Game Nights</h3>
+            <p>When we need a break from Gielinor, we jump into other co-op and competitive titles.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section container split" id="join">
+        <div>
+          <p class="eyebrow">Join Ghosted</p>
+          <h2>Minimal barrier. Strong culture.</h2>
+          <p class="copy">
+            If you want an active clan that respects your time and still loves the grind, come run with us.
+            Start in Discord, introduce yourself, and hop in when events go live.
+          </p>
+        </div>
+        <aside class="panel">
+          <h3>Quick Start</h3>
+          <ol>
+            <li>Join <strong>discord.gg/ghosted</strong></li>
+            <li>Say hi in chat and share your RSN</li>
+            <li>Jump into your first event</li>
+          </ol>
+          <a class="button" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer"
+            >Join Now</a
+          >
+        </aside>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p>© <span id="year"></span> Ghosted Clan</p>
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>
