@@ -12,7 +12,6 @@ type ReelView = {
 };
 
 type SymbolTile = Phaser.GameObjects.Container & {
-  iconText?: Phaser.GameObjects.Text;
   glyphText?: Phaser.GameObjects.Text;
 };
 
@@ -173,9 +172,6 @@ export class SlotScene extends Phaser.Scene {
       reel.frame.setStrokeStyle(2, 0xffffff, 0.08);
       reel.strip.iterate((child: Phaser.GameObjects.GameObject) => {
         const tile = child as SymbolTile;
-        if (tile.iconText) {
-          tile.iconText.setScale(1);
-        }
         if (tile.glyphText) {
           tile.glyphText.setScale(1);
         }
@@ -204,7 +200,7 @@ export class SlotScene extends Phaser.Scene {
     const tile = reel.strip.list[rowIndex] as SymbolTile | undefined;
     if (!tile) return;
     this.tweens.add({
-      targets: [tile.iconText, tile.glyphText].filter(Boolean),
+      targets: [tile.glyphText].filter(Boolean),
       scale: 1.08,
       duration: 160,
       repeat: 3,
@@ -257,15 +253,11 @@ export class SlotScene extends Phaser.Scene {
     body.setStrokeStyle(1, 0xffffff, 0.08);
     const badge = this.add.circle(TILE_WIDTH * 0.5, 33, 18, meta.tint, 0.18);
     badge.setStrokeStyle(2, meta.tint, 0.45);
-    const icon = this.add.text(TILE_WIDTH * 0.5, 32, meta.emoji, {
-      fontFamily: '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif',
-      fontSize: '26px',
-    });
-    icon.setOrigin(0.5);
+    const icon = drawIcon(this, meta.icon, TILE_WIDTH * 0.5, 33, meta.tint);
     const glyph = this.add.text(TILE_WIDTH * 0.5, 33, meta.glyph, {
       color: Phaser.Display.Color.IntegerToColor(meta.tint).rgba,
       fontFamily: '"Space Grotesk", sans-serif',
-      fontSize: '15px',
+      fontSize: '13px',
       fontStyle: '700',
       letterSpacing: 1.2,
     });
@@ -279,7 +271,6 @@ export class SlotScene extends Phaser.Scene {
     });
     label.setOrigin(0.5);
 
-    tile.iconText = icon;
     tile.glyphText = glyph;
     tile.add([shadow, body, badge, icon, glyph, label]);
     return tile;
@@ -303,4 +294,112 @@ function parseColor(color: string, fallback: number) {
   } catch {
     return fallback;
   }
+}
+
+function drawIcon(scene: Phaser.Scene, kind: string, x: number, y: number, tint: number) {
+  const icon = scene.add.graphics();
+  icon.x = x;
+  icon.y = y;
+  icon.lineStyle(2, tint, 0.9);
+  icon.fillStyle(tint, 0.22);
+
+  switch (kind) {
+    case 'coin':
+      icon.fillCircle(0, 0, 12);
+      icon.strokeCircle(0, 0, 12);
+      icon.strokeCircle(0, 0, 7);
+      break;
+    case 'crown':
+      icon.beginPath();
+      icon.moveTo(-12, 8);
+      icon.lineTo(-8, -6);
+      icon.lineTo(0, 2);
+      icon.lineTo(8, -6);
+      icon.lineTo(12, 8);
+      icon.closePath();
+      icon.fillPath();
+      icon.strokePath();
+      break;
+    case 'gem':
+      icon.beginPath();
+      icon.moveTo(0, -12);
+      icon.lineTo(12, 0);
+      icon.lineTo(0, 12);
+      icon.lineTo(-12, 0);
+      icon.closePath();
+      icon.fillPath();
+      icon.strokePath();
+      break;
+    case 'ghost':
+      icon.fillRoundedRect(-10, -10, 20, 24, 8);
+      icon.strokeRoundedRect(-10, -10, 20, 24, 8);
+      icon.fillCircle(-4, -2, 1.5);
+      icon.fillCircle(4, -2, 1.5);
+      break;
+    case 'lantern':
+      icon.fillRoundedRect(-8, -8, 16, 20, 4);
+      icon.strokeRoundedRect(-8, -8, 16, 20, 4);
+      icon.lineBetween(-4, -8, 4, -8);
+      icon.lineBetween(-2, -11, 2, -11);
+      break;
+    case 'mask':
+      icon.beginPath();
+      icon.moveTo(-12, -4);
+      icon.lineTo(-8, 8);
+      icon.lineTo(0, 12);
+      icon.lineTo(8, 8);
+      icon.lineTo(12, -4);
+      icon.lineTo(0, -12);
+      icon.closePath();
+      icon.fillPath();
+      icon.strokePath();
+      break;
+    case 'moon':
+      icon.fillCircle(-2, 0, 12);
+      icon.fillStyle(0x1a1028, 1);
+      icon.fillCircle(4, -2, 11);
+      icon.lineStyle(2, tint, 0.9);
+      icon.strokeCircle(-2, 0, 12);
+      break;
+    case 'rune':
+      icon.beginPath();
+      icon.moveTo(0, -12);
+      icon.lineTo(4, -3);
+      icon.lineTo(12, 0);
+      icon.lineTo(4, 3);
+      icon.lineTo(0, 12);
+      icon.lineTo(-4, 3);
+      icon.lineTo(-12, 0);
+      icon.lineTo(-4, -3);
+      icon.closePath();
+      icon.fillPath();
+      icon.strokePath();
+      break;
+    case 'scatter':
+      icon.strokeCircle(0, 0, 12);
+      icon.strokeCircle(0, 0, 5);
+      icon.lineBetween(-12, 0, 12, 0);
+      icon.lineBetween(0, -12, 0, 12);
+      break;
+    case 'wild':
+      icon.beginPath();
+      icon.moveTo(0, -12);
+      icon.lineTo(3, -3);
+      icon.lineTo(12, 0);
+      icon.lineTo(3, 3);
+      icon.lineTo(0, 12);
+      icon.lineTo(-3, 3);
+      icon.lineTo(-12, 0);
+      icon.lineTo(-3, -3);
+      icon.closePath();
+      icon.fillPath();
+      icon.strokePath();
+      break;
+    default:
+      icon.fillCircle(0, 0, 10);
+      icon.strokeCircle(0, 0, 10);
+      break;
+  }
+
+  return icon;
 }
