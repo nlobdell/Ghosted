@@ -5,6 +5,7 @@ Ghosted is now a lightweight Python web app with:
 - Public marketing pages at `/` and `/design/`
 - Discord-authenticated community apps at `/app/`
 - Backend-owned rewards, casino, giveaway, and admin logic
+- VPS deployment artifacts under [`deploy/`](./deploy)
 
 ## Run locally
 
@@ -32,6 +33,8 @@ Optional Discord integrations:
 - `DISCORD_WEBHOOK_URL`
 - `ADMIN_DISCORD_IDS`
 - `PUBLIC_BASE_URL`
+- `DATABASE_PATH`
+- `SESSION_COOKIE_SECURE`
 
 ## Dev auth
 
@@ -52,4 +55,21 @@ http://localhost:8000/auth/dev-login?next=/app/
 
 - Rewards are points-only and have no cash value.
 - Balances, spins, and giveaway entries are validated on the backend.
-- SQLite data is stored in `data/ghosted.db`.
+- SQLite data defaults to `data/ghosted.db`.
+- In production, set `DATABASE_PATH=/var/lib/ghosted/ghosted.db`.
+
+## VPS deployment
+
+Production deployment files are included:
+
+- [`deploy/ghosted.env.example`](./deploy/ghosted.env.example)
+- [`deploy/ghosted.service`](./deploy/ghosted.service)
+- [`deploy/Caddyfile.example`](./deploy/Caddyfile.example)
+- [`deploy/ubuntu-vps.md`](./deploy/ubuntu-vps.md)
+
+Recommended production stack:
+
+- Ubuntu VPS
+- `systemd` for process management
+- Caddy for HTTPS and reverse proxying
+- SQLite on persistent local disk at `/var/lib/ghosted/ghosted.db`
