@@ -41,6 +41,72 @@ STATIC_MIME_OVERRIDES = {
     ".js": "application/javascript; charset=utf-8",
     ".json": "application/json; charset=utf-8",
 }
+DEFAULT_CASINO_GAMES = [
+    {
+        "slug": "moon-spark",
+        "name": "Moon Spark",
+        "cost": 10,
+        "config": {
+            "reel_symbols": ["moon", "moon", "rune", "coin", "coin", "ghost"],
+            "triple": {"moon": 6, "ghost": 5, "rune": 4, "coin": 3},
+            "double": {"moon": 2, "ghost": 2},
+            "top_payout": 60,
+            "flavor": "Light stakes, quick spins, and enough hits to keep the floor lively.",
+            "volatility": "Low",
+            "mood": "Steady starter machine",
+            "jackpot_label": "Moonfall x6",
+            "accent": "#7bdff6",
+        },
+    },
+    {
+        "slug": "shadow-vault",
+        "name": "Shadow Vault",
+        "cost": 25,
+        "config": {
+            "reel_symbols": ["crown", "ghost", "rune", "coin", "coin", "moon"],
+            "triple": {"crown": 10, "ghost": 7, "rune": 5, "moon": 4},
+            "double": {"crown": 2, "ghost": 2, "rune": 1},
+            "top_payout": 250,
+            "flavor": "Balanced swings for players who want more tension without going broke.",
+            "volatility": "Medium",
+            "mood": "Controlled pressure",
+            "jackpot_label": "Vault Crown x10",
+            "accent": "#ffd166",
+        },
+    },
+    {
+        "slug": "phantom-jackpot",
+        "name": "Phantom Jackpot",
+        "cost": 50,
+        "config": {
+            "reel_symbols": ["crown", "crown", "ghost", "rune", "moon", "coin"],
+            "triple": {"crown": 16, "ghost": 10, "rune": 7, "moon": 5},
+            "double": {"crown": 3, "ghost": 2, "rune": 1},
+            "top_payout": 800,
+            "flavor": "Heavy swings, louder misses, and the kind of line hits people brag about.",
+            "volatility": "High",
+            "mood": "Big risk centerpiece",
+            "jackpot_label": "Phantom Crown x16",
+            "accent": "#ff5d8f",
+        },
+    },
+    {
+        "slug": "ember-heist",
+        "name": "Ember Heist",
+        "cost": 75,
+        "config": {
+            "reel_symbols": ["crown", "ghost", "crown", "rune", "moon", "coin"],
+            "triple": {"crown": 18, "ghost": 12, "rune": 8, "moon": 6},
+            "double": {"crown": 4, "ghost": 2, "rune": 1},
+            "top_payout": 1350,
+            "flavor": "A raid-night closer built for players chasing one massive finish.",
+            "volatility": "High",
+            "mood": "Hot table closer",
+            "jackpot_label": "Heist Crown x18",
+            "accent": "#ff8c42",
+        },
+    },
+]
 
 
 class AppError(Exception):
@@ -167,6 +233,107 @@ def connect_database(path: Path = DB_PATH) -> sqlite3.Connection:
     return connection
 
 
+def reel_symbol_counts(symbols: list[str]) -> Counter[str]:
+    return Counter(str(symbol) for symbol in symbols if symbol)
+
+
+def payout_multiplier_for_symbols(symbols: list[str], config: dict[str, Any]) -> int:
+    counts = Counter(symbols)
+    if len(counts) == 1 and symbols:
+        return int(config.get("triple", {}).get(symbols[0], 0))
+
+    repeated = next((symbol for symbol, count in counts.items() if count == 2), None)
+    if repeated:
+        return int(config.get("double", {}).get(repeated, 0))
+    return 0
+
+
+def build_paytable(cost: int, config: dict[str, Any]) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for symbol, multiplier in sorted(config.get("triple", {}).items(), key=lambda item: int(item[1]), reverse=True):
+        entries.append(
+            {
+                "kind": "triple",
+                "symbols": [symbol, symbol, symbol],
+                "multiplier": int(multiplier),
+                "payout": cost * int(multiplier),
+                "label": f"3 {symbol.title()}",
+            }
+        )
+    for symbol, multiplier in sorted(config.get("double", {}).items(), key=lambda item: int(item[1]), reverse=True):
+        entries.append(
+            {
+                "kind": "double",
+                "symbols": [symbol, symbol, "any"],
+                "multiplier": int(multiplier),
+                "payout": cost * int(multiplier),
+                "label": f"2 {symbol.title()}",
+            }
+        )
+    return entries
+
+
+def calculate_machine_metrics(cost: int, config: dict[str, Any]) -> dict[str, float]:
+    symbols = [str(symbol) for symbol in config.get("reel_symbols", []) if symbol]
+    if not symbols:
+        return {"hit_rate": 0.0, "return_rate": 0.0}
+
+    counts = reel_symbol_counts(symbols)
+    total = len(symbols)
+    hit_rate = 0.0
+    return_rate = 0.0
+
+    for left, left_count in counts.items():
+        for middle, middle_count in counts.items():
+            for right, right_count in counts.items():
+                combo = [left, middle, right]
+                probability = (left_count / total) * (middle_count / total) * (right_count / total)
+                multiplier = payout_multiplier_for_symbols(combo, config)
+                if multiplier:
+                    hit_rate += probability
+                    return_rate += probability * (cost * multiplier)
+
+    return {
+        "hit_rate": round(hit_rate, 4),
+        "return_rate": round(return_rate / cost if cost else 0.0, 4),
+    }
+
+
+def outcome_summary(game_name: str, wager: int, symbols: list[str], payout: int) -> dict[str, Any]:
+    counts = Counter(symbols)
+    if payout <= 0:
+        repeated = next((symbol for symbol, count in counts.items() if count == 2), None)
+        if repeated:
+            return {
+                "type": "near_miss",
+                "label": "Near miss",
+                "headline": f"{game_name} nearly connected.",
+                "detail": f"Two {repeated} symbols showed, but the line did not pay.",
+            }
+        return {
+            "type": "miss",
+            "label": "Miss",
+            "headline": f"{game_name} came up cold.",
+            "detail": f"No line payout. {wager} points were wagered on this spin.",
+        }
+
+    if len(counts) == 1:
+        return {
+            "type": "jackpot" if payout >= wager * 10 else "triple",
+            "label": "Jackpot" if payout >= wager * 10 else "Triple line",
+            "headline": f"{game_name} paid a full line hit.",
+            "detail": f"All three reels landed on {symbols[0]} for a {payout}-point payout.",
+        }
+
+    repeated = next((symbol for symbol, count in counts.items() if count == 2), None) or symbols[0]
+    return {
+        "type": "double",
+        "label": "Two of a kind",
+        "headline": f"{game_name} paid a partial line.",
+        "detail": f"Two {repeated} symbols connected for {payout} points.",
+    }
+
+
 def init_database(connection: sqlite3.Connection) -> None:
     connection.executescript(
         """
@@ -265,55 +432,17 @@ def init_database(connection: sqlite3.Connection) -> None:
 
 
 def seed_default_games(connection: sqlite3.Connection) -> None:
-    existing = connection.execute("SELECT COUNT(*) AS count FROM casino_games").fetchone()["count"]
-    if existing:
-        return
-
-    games = [
-        {
-            "slug": "moon-spark",
-            "name": "Moon Spark",
-            "cost": 10,
-            "config": {
-                "reel_symbols": ["moon", "moon", "rune", "coin", "coin", "ghost"],
-                "triple": {"moon": 6, "ghost": 5, "rune": 4, "coin": 3},
-                "double": {"moon": 2, "ghost": 2},
-                "top_payout": 60,
-                "flavor": "Light stakes, quick spins, decent chances to keep your streak alive.",
-            },
-        },
-        {
-            "slug": "shadow-vault",
-            "name": "Shadow Vault",
-            "cost": 25,
-            "config": {
-                "reel_symbols": ["crown", "ghost", "rune", "coin", "coin", "moon"],
-                "triple": {"crown": 10, "ghost": 7, "rune": 5, "moon": 4},
-                "double": {"crown": 2, "ghost": 2, "rune": 1},
-                "top_payout": 250,
-                "flavor": "A balanced machine for players who want bigger swings without going all-in.",
-            },
-        },
-        {
-            "slug": "phantom-jackpot",
-            "name": "Phantom Jackpot",
-            "cost": 50,
-            "config": {
-                "reel_symbols": ["crown", "crown", "ghost", "rune", "moon", "coin"],
-                "triple": {"crown": 16, "ghost": 10, "rune": 7, "moon": 5},
-                "double": {"crown": 3, "ghost": 2, "rune": 1},
-                "top_payout": 800,
-                "flavor": "Higher risk, higher reward, and the machine everyone blames when it runs cold.",
-            },
-        },
-    ]
-
     created_at = utc_iso()
-    for game in games:
+    for game in DEFAULT_CASINO_GAMES:
         connection.execute(
             """
             INSERT INTO casino_games (slug, name, cost, config_json, active, created_at)
             VALUES (?, ?, ?, ?, 1, ?)
+            ON CONFLICT(slug) DO UPDATE SET
+                name = excluded.name,
+                cost = excluded.cost,
+                config_json = excluded.config_json,
+                active = excluded.active
             """,
             (game["slug"], game["name"], game["cost"], json.dumps(game["config"]), created_at),
         )
@@ -618,6 +747,7 @@ def list_games(connection: sqlite3.Connection) -> list[dict[str, Any]]:
     games: list[dict[str, Any]] = []
     for row in rows:
         config = json_loads(row["config_json"], {})
+        metrics = calculate_machine_metrics(row["cost"], config)
         games.append(
             {
                 "id": row["id"],
@@ -626,28 +756,28 @@ def list_games(connection: sqlite3.Connection) -> list[dict[str, Any]]:
                 "cost": row["cost"],
                 "topPayout": config.get("top_payout", row["cost"]),
                 "flavor": config.get("flavor", ""),
+                "volatility": config.get("volatility", "Medium"),
+                "mood": config.get("mood", ""),
+                "jackpotLabel": config.get("jackpot_label", ""),
+                "accent": config.get("accent", "#9d7cf2"),
                 "reelSymbols": config.get("reel_symbols", []),
+                "paytable": build_paytable(row["cost"], config),
+                "hitRate": metrics["hit_rate"],
+                "returnRate": metrics["return_rate"],
             }
         )
     return games
 
 
-def evaluate_spin(game_row: sqlite3.Row, rng: random.Random | random.SystemRandom | None = None) -> tuple[list[str], int]:
+def evaluate_spin(
+    game_row: sqlite3.Row,
+    rng: random.Random | random.SystemRandom | None = None,
+) -> tuple[list[str], int, dict[str, Any]]:
     rng = rng or RNG
     config = json_loads(game_row["config_json"], {})
     symbols = [rng.choice(config["reel_symbols"]) for _ in range(3)]
-    counts = Counter(symbols)
-    payout = 0
-
-    if len(counts) == 1:
-        symbol = symbols[0]
-        payout = int(game_row["cost"] * config.get("triple", {}).get(symbol, 0))
-    else:
-        repeated = next((symbol for symbol, count in counts.items() if count == 2), None)
-        if repeated:
-            payout = int(game_row["cost"] * config.get("double", {}).get(repeated, 0))
-
-    return symbols, payout
+    payout = int(game_row["cost"] * payout_multiplier_for_symbols(symbols, config))
+    return symbols, payout, outcome_summary(game_row["name"], int(game_row["cost"]), symbols, payout)
 
 
 def total_wagered_today(connection: sqlite3.Connection, user_id: int) -> int:
@@ -661,6 +791,15 @@ def total_wagered_today(connection: sqlite3.Connection, user_id: int) -> int:
         (user_id, utc_iso(start)),
     ).fetchone()
     return int(row["total"])
+
+
+def daily_wager_status(connection: sqlite3.Connection, user_id: int) -> dict[str, int]:
+    wagered = total_wagered_today(connection, user_id)
+    return {
+        "dailyWagered": wagered,
+        "dailyRemaining": max(0, DAILY_WAGER_CAP - wagered),
+        "dailyCap": DAILY_WAGER_CAP,
+    }
 
 
 def last_spin_time(connection: sqlite3.Connection, user_id: int) -> datetime | None:
@@ -703,7 +842,7 @@ def spin_game(
         f"Wagered on {game_row['name']}.",
         {"game_slug": game_slug, "cost": game_row["cost"]},
     )
-    symbols, payout = evaluate_spin(game_row, rng=rng)
+    symbols, payout, outcome = evaluate_spin(game_row, rng=rng)
     connection.execute(
         """
         INSERT INTO casino_spins (user_id, game_id, wager, payout, symbols_json, created_at)
@@ -722,14 +861,18 @@ def spin_game(
         )
     connection.commit()
 
-    return {
+    result = {
         "game": game_row["name"],
+        "gameSlug": game_slug,
         "symbols": symbols,
         "wager": game_row["cost"],
         "payout": payout,
         "net": payout - game_row["cost"],
         "balance": get_balance(connection, user_row["id"]),
+        "outcome": outcome,
     }
+    result.update(daily_wager_status(connection, user_row["id"]))
+    return result
 
 
 def giveaway_status(row: sqlite3.Row) -> str:
@@ -904,10 +1047,13 @@ def recent_spins(connection: sqlite3.Connection, user_id: int, limit: int = 5) -
             "game": row["name"],
             "wager": row["wager"],
             "payout": row["payout"],
-            "symbols": json_loads(row["symbols_json"], []),
+            "net": int(row["payout"]) - int(row["wager"]),
+            "symbols": symbols,
             "createdAt": row["created_at"],
+            "outcome": outcome_summary(row["name"], int(row["wager"]), symbols, int(row["payout"])),
         }
         for row in rows
+        for symbols in [json_loads(row["symbols_json"], [])]
     ]
 
 
@@ -1286,11 +1432,13 @@ class GhostedHandler(BaseHTTPRequestHandler):
 
     def handle_api_rewards(self, connection: sqlite3.Connection) -> None:
         row = self.require_user(connection)
+        wager = daily_wager_status(connection, row["id"])
         self.respond_json(
             {
                 "balance": get_balance(connection, row["id"]),
                 "entries": recent_ledger(connection, row["id"]),
                 "spins": recent_spins(connection, row["id"]),
+                **wager,
             }
         )
 
