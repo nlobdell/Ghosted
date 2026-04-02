@@ -134,30 +134,27 @@ function syncCasinoPanels() {
   if (!state.me?.authenticated || !state.rewards || !game) return;
 
   const headline = document.querySelector<HTMLElement>('[data-console-headline]');
-  const copy = document.querySelector<HTMLElement>('[data-console-copy]');
   const status = document.querySelector<HTMLElement>('[data-status]');
   const spin = document.querySelector<HTMLButtonElement>('[data-spin]');
   const playerBoard = document.querySelector<HTMLElement>('[data-player-board]');
   const history = document.querySelector<HTMLElement>('[data-history]');
 
   if (headline) {
-    headline.textContent = state.latestResult?.outcome.headline || `${game.name} is loaded`;
-  }
-  if (copy) {
-    copy.textContent = state.latestResult?.outcome.detail
-      || `${game.rows} rows, ${game.reelCount} reels, and server-resolved paylines. Wilds substitute. Scatters unlock the feature.`;
+    headline.textContent = state.latestResult?.outcome.headline || game.name;
   }
   if (status) {
     if (state.spinning) {
-      status.textContent = `${game.name} is spinning...`;
+      status.textContent = 'Spinning...';
     } else if (state.latestResult?.freeSpinsAwarded) {
-      status.textContent = `${state.latestResult.freeSpinsAwarded} free spins awarded with ${state.latestResult.scatter.count} scatters.`;
+      status.textContent = `${state.latestResult.freeSpinsAwarded} free spins awarded`;
     } else if (state.latestResult?.usedFreeSpin) {
-      status.textContent = `${state.latestResult.freeSpinsRemaining} free spins remain in the bank.`;
+      status.textContent = `${state.latestResult.freeSpinsRemaining} free spins left`;
     } else if (state.latestResult?.payout) {
-      status.textContent = `Paid ${state.latestResult.payout.toLocaleString()} pts across ${state.latestResult.lineWins.length || 1} winning lines.`;
+      status.textContent = `${state.latestResult.payout.toLocaleString()} pts paid`;
     } else if (state.latestResult) {
-      status.textContent = `No hit. Net ${state.latestResult.net.toLocaleString()} pts on that spin.`;
+      status.textContent = 'No win';
+    } else {
+      status.textContent = `${game.cost.toLocaleString()} pts stake`;
     }
   }
   if (spin) {

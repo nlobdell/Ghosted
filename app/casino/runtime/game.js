@@ -236,7 +236,7 @@ const Hn = (r) => {
   },
   test: () => !0,
   load: async () => {
-    await Promise.resolve().then(() => UP);
+    await Promise.resolve().then(() => _P);
   }
 }, ql = {
   extension: {
@@ -246,10 +246,10 @@ const Hn = (r) => {
   },
   test: () => typeof self < "u" && self.WorkerGlobalScope !== void 0,
   load: async () => {
-    await Promise.resolve().then(() => OP);
+    await Promise.resolve().then(() => UP);
   }
 };
-class ve {
+class ge {
   /**
    * Creates a new `ObservablePoint`
    * @param observer - Observer to pass to listen for change events.
@@ -282,7 +282,7 @@ class ve {
    * @see {@link Observer} For observer interface details
    */
   clone(e) {
-    return new ve(e ?? this._observer, this._x, this._y);
+    return new ge(e ?? this._observer, this._x, this._y);
   }
   /**
    * Sets the point to a new x and y position.
@@ -4192,8 +4192,8 @@ class Pf {
     this._poolsByClass.forEach((e) => e.clear()), this._poolsByClass.clear();
   }
 }
-const ge = new Pf();
-us.register(ge);
+const de = new Pf();
+us.register(de);
 const Cf = {
   get isCachedAsTexture() {
     return !!this.renderGroup?.isCachedAsTexture;
@@ -4359,12 +4359,12 @@ class Df {
     for (let t = 0; t < this._tests.length; t++) {
       const s = this._tests[t];
       if (s.test(e))
-        return ge.get(s.maskClass, e);
+        return de.get(s.maskClass, e);
     }
     return e;
   }
   returnMaskEffect(e) {
-    ge.return(e);
+    de.return(e);
   }
 }
 const Gn = new Df();
@@ -4452,7 +4452,7 @@ const xf = {
         s[n].getChildrenByLabel(r, !0, t);
     return t;
   }
-}, Pe = ge.getPool(H), it = ge.getPool(we), bf = new H(), yf = {
+}, Pe = de.getPool(H), it = de.getPool(we), bf = new H(), yf = {
   getFastGlobalBounds(r, e) {
     e || (e = new we()), e.clear(), this._getGlobalBoundsRecursive(!!r, e, this.parentRenderLayer), e.isValid || e.set(0, 0, 0, 0);
     const t = this.renderGroup || this.parentRenderGroup;
@@ -4788,8 +4788,8 @@ class kf {
     this._texturePool = {};
   }
 }
-const pe = new kf();
-us.register(pe);
+const Be = new kf();
+us.register(Be);
 class _n {
   constructor() {
     this.renderPipeId = "renderGroup", this.root = null, this.canBundle = !1, this.renderGroupParent = null, this.renderGroupChildren = [], this.worldTransform = new H(), this.worldColorAlpha = 4294967295, this.worldColor = 16777215, this.worldAlpha = 1, this.childrenToUpdate = /* @__PURE__ */ Object.create(null), this.updateTick = 0, this.gcTick = 0, this.childrenRenderablesToUpdate = { list: [], index: 0 }, this.structureDidChange = !0, this.instructionSet = new fi(), this._onRenderContainers = [], this.textureNeedsUpdate = !0, this.isCachedAsTexture = !1, this._matrixDirty = 7;
@@ -4806,7 +4806,7 @@ class _n {
     this.textureOptions = e, this.isCachedAsTexture = !0, this.textureNeedsUpdate = !0;
   }
   disableCacheAsTexture() {
-    this.isCachedAsTexture = !1, this.texture && (pe.returnTexture(this.texture, !0), this.texture = null);
+    this.isCachedAsTexture = !1, this.texture && (Be.returnTexture(this.texture, !0), this.texture = null);
   }
   updateCacheTexture() {
     this.textureNeedsUpdate = !0;
@@ -4949,10 +4949,10 @@ function Gf(r, e, t = {}) {
   for (const s in e)
     !t[s] && e[s] !== void 0 && (r[s] = e[s]);
 }
-const tn = new ve(null), ir = new ve(null), sn = new ve(null, 1, 1), or = new ve(null), Rr = 1, ui = 2, Gs = 4;
-class de extends Ie {
+const tn = new ge(null), ir = new ge(null), sn = new ge(null, 1, 1), or = new ge(null), Rr = 1, ui = 2, Gs = 4;
+class ue extends Ie {
   constructor(e = {}) {
-    super(), this.uid = se("renderable"), this._updateFlags = 15, this.renderGroup = null, this.parentRenderGroup = null, this.parentRenderGroupIndex = 0, this.didChange = !1, this.didViewUpdate = !1, this.relativeRenderGroupDepth = 0, this.children = [], this.parent = null, this.includeInBuild = !0, this.measurable = !0, this.isSimple = !0, this.parentRenderLayer = null, this.updateTick = -1, this.localTransform = new H(), this.relativeGroupTransform = new H(), this.groupTransform = this.relativeGroupTransform, this.destroyed = !1, this._position = new ve(this, 0, 0), this._scale = sn, this._pivot = ir, this._origin = or, this._skew = tn, this._cx = 1, this._sx = 0, this._cy = 0, this._sy = 1, this._rotation = 0, this.localColor = 16777215, this.localAlpha = 1, this.groupAlpha = 1, this.groupColor = 16777215, this.groupColorAlpha = 4294967295, this.localBlendMode = "inherit", this.groupBlendMode = "normal", this.localDisplayStatus = 7, this.globalDisplayStatus = 7, this._didContainerChangeTick = 0, this._didViewChangeTick = 0, this._didLocalTransformChangeId = -1, this.effects = [], Gf(this, e, {
+    super(), this.uid = se("renderable"), this._updateFlags = 15, this.renderGroup = null, this.parentRenderGroup = null, this.parentRenderGroupIndex = 0, this.didChange = !1, this.didViewUpdate = !1, this.relativeRenderGroupDepth = 0, this.children = [], this.parent = null, this.includeInBuild = !0, this.measurable = !0, this.isSimple = !0, this.parentRenderLayer = null, this.updateTick = -1, this.localTransform = new H(), this.relativeGroupTransform = new H(), this.groupTransform = this.relativeGroupTransform, this.destroyed = !1, this._position = new ge(this, 0, 0), this._scale = sn, this._pivot = ir, this._origin = or, this._skew = tn, this._cx = 1, this._sx = 0, this._cy = 0, this._sy = 1, this._rotation = 0, this.localColor = 16777215, this.localAlpha = 1, this.groupAlpha = 1, this.groupColor = 16777215, this.groupColorAlpha = 4294967295, this.localBlendMode = "inherit", this.groupBlendMode = "normal", this.localDisplayStatus = 7, this.globalDisplayStatus = 7, this._didContainerChangeTick = 0, this._didViewChangeTick = 0, this._didLocalTransformChangeId = -1, this.effects = [], Gf(this, e, {
       children: !0,
       parent: !0,
       effects: !0
@@ -4964,7 +4964,7 @@ class de extends Ie {
    * @deprecated since 8.8.0
    */
   static mixin(e) {
-    k("8.8.0", "Container.mixin is deprecated, please use extensions.mixin instead."), z.mixin(de, e);
+    k("8.8.0", "Container.mixin is deprecated, please use extensions.mixin instead."), z.mixin(ue, e);
   }
   // = 'default';
   /**
@@ -5061,7 +5061,7 @@ class de extends Ie {
   enableRenderGroup() {
     if (this.renderGroup) return;
     const e = this.parentRenderGroup;
-    e?.removeChild(this), this.renderGroup = ge.get(_n, this), this.groupTransform = H.IDENTITY, e?.addChild(this), this._updateIsSimple();
+    e?.removeChild(this), this.renderGroup = de.get(_n, this), this.groupTransform = H.IDENTITY, e?.addChild(this), this._updateIsSimple();
   }
   /**
    * This will disable the render group for this container.
@@ -5070,7 +5070,7 @@ class de extends Ie {
   disableRenderGroup() {
     if (!this.renderGroup) return;
     const e = this.parentRenderGroup;
-    e?.removeChild(this), ge.return(this.renderGroup), this.renderGroup = null, this.groupTransform = this.relativeGroupTransform, e?.addChild(this), this._updateIsSimple();
+    e?.removeChild(this), de.return(this.renderGroup), this.renderGroup = null, this.groupTransform = this.relativeGroupTransform, e?.addChild(this), this._updateIsSimple();
   }
   /** @ignore */
   _updateIsSimple() {
@@ -5213,10 +5213,10 @@ class de extends Ie {
    * @since 4.0.0
    */
   get pivot() {
-    return this._pivot === ir && (this._pivot = new ve(this, 0, 0)), this._pivot;
+    return this._pivot === ir && (this._pivot = new ge(this, 0, 0)), this._pivot;
   }
   set pivot(e) {
-    this._pivot === ir && (this._pivot = new ve(this, 0, 0), this._origin !== or && _("Setting both a pivot and origin on a Container is not recommended. This can lead to unexpected behavior if not handled carefully.")), typeof e == "number" ? this._pivot.set(e) : this._pivot.copyFrom(e);
+    this._pivot === ir && (this._pivot = new ge(this, 0, 0), this._origin !== or && _("Setting both a pivot and origin on a Container is not recommended. This can lead to unexpected behavior if not handled carefully.")), typeof e == "number" ? this._pivot.set(e) : this._pivot.copyFrom(e);
   }
   /**
    * The skew factor for the object in radians. Skewing is a transformation that distorts
@@ -5248,10 +5248,10 @@ class de extends Ie {
    * @default {x: 0, y: 0}
    */
   get skew() {
-    return this._skew === tn && (this._skew = new ve(this, 0, 0)), this._skew;
+    return this._skew === tn && (this._skew = new ge(this, 0, 0)), this._skew;
   }
   set skew(e) {
-    this._skew === tn && (this._skew = new ve(this, 0, 0)), this._skew.copyFrom(e);
+    this._skew === tn && (this._skew = new ge(this, 0, 0)), this._skew.copyFrom(e);
   }
   /**
    * The scale factors of this object along the local coordinate axes.
@@ -5269,10 +5269,10 @@ class de extends Ie {
    * @since 4.0.0
    */
   get scale() {
-    return this._scale === sn && (this._scale = new ve(this, 1, 1)), this._scale;
+    return this._scale === sn && (this._scale = new ge(this, 1, 1)), this._scale;
   }
   set scale(e) {
-    this._scale === sn && (this._scale = new ve(this, 0, 0)), typeof e == "string" && (e = parseFloat(e)), typeof e == "number" ? this._scale.set(e) : this._scale.copyFrom(e);
+    this._scale === sn && (this._scale = new ge(this, 0, 0)), typeof e == "string" && (e = parseFloat(e)), typeof e == "number" ? this._scale.set(e) : this._scale.copyFrom(e);
   }
   /**
    * @experimental
@@ -5289,10 +5289,10 @@ class de extends Ie {
    * ```
    */
   get origin() {
-    return this._origin === or && (this._origin = new ve(this, 0, 0)), this._origin;
+    return this._origin === or && (this._origin = new ge(this, 0, 0)), this._origin;
   }
   set origin(e) {
-    this._origin === or && (this._origin = new ve(this, 0, 0), this._pivot !== ir && _("Setting both a pivot and origin on a Container is not recommended. This can lead to unexpected behavior if not handled carefully.")), typeof e == "number" ? this._origin.set(e) : this._origin.copyFrom(e);
+    this._origin === or && (this._origin = new ge(this, 0, 0), this._pivot !== ir && _("Setting both a pivot and origin on a Container is not recommended. This can lead to unexpected behavior if not handled carefully.")), typeof e == "number" ? this._origin.set(e) : this._origin.copyFrom(e);
   }
   /**
    * The width of the Container, setting this will actually modify the scale to achieve the value set.
@@ -5637,7 +5637,7 @@ class de extends Ie {
   }
 }
 z.mixin(
-  de,
+  ue,
   mf,
   yf,
   Sf,
@@ -5651,7 +5651,7 @@ z.mixin(
   Tf,
   Ef
 );
-class di extends de {
+class di extends ue {
   constructor(e) {
     super(e), this.canBundle = !0, this.allowChildren = !1, this._roundPixels = 0, this._lastUsed = -1, this._gpuData = /* @__PURE__ */ Object.create(null), this.autoGarbageCollect = !0, this._gcLastUsed = -1, this._bounds = new we(0, 1, 0, 0), this._boundsDirty = !0, this.autoGarbageCollect = e.autoGarbageCollect ?? !0;
   }
@@ -5750,7 +5750,7 @@ class Gt extends di {
     super({
       label: "Sprite",
       ...a
-    }), this.renderPipeId = "sprite", this.batched = !0, this._visualBounds = { minX: 0, maxX: 1, minY: 0, maxY: 0 }, this._anchor = new ve(
+    }), this.renderPipeId = "sprite", this.batched = !0, this._visualBounds = { minX: 0, maxX: 1, minY: 0, maxY: 0 }, this._anchor = new ge(
       {
         _onUpdate: () => {
           this.onViewUpdate();
@@ -6088,7 +6088,7 @@ class OA {
     this.reset();
   }
   static test(e) {
-    return e instanceof de;
+    return e instanceof ue;
   }
 }
 OA.extension = C.MaskEffect;
@@ -9797,7 +9797,7 @@ const Yu = [
   render(e, t) {
     this.tick++;
     let s = e;
-    if (s instanceof de && (s = { container: s }, t && (k(q, "passing a second argument is deprecated, please use render options instead"), s.target = t.renderTexture)), s.target || (s.target = this.view.renderTarget), s.target === this.view.renderTarget && (this._lastObjectRendered = s.container, s.clearColor ?? (s.clearColor = this.background.colorRgba), s.clear ?? (s.clear = this.background.clearBeforeRender)), s.clearColor) {
+    if (s instanceof ue && (s = { container: s }, t && (k(q, "passing a second argument is deprecated, please use render options instead"), s.target = t.renderTexture)), s.target || (s.target = this.view.renderTarget), s.target === this.view.renderTarget && (this._lastObjectRendered = s.container, s.clearColor ?? (s.clearColor = this.background.colorRgba), s.clear ?? (s.clear = this.background.clearBeforeRender)), s.clearColor) {
       const n = Array.isArray(s.clearColor) && s.clearColor.length === 4;
       s.clearColor = n ? s.clearColor : $.shared.setValue(s.clearColor).toArray();
     }
@@ -10199,7 +10199,7 @@ z.add(gc);
 z.add(vc);
 const Bc = class Kn {
   constructor(...e) {
-    this.stage = new de(), e[0] !== void 0 && k(q, "Application constructor options are deprecated, please use Application.init() instead.");
+    this.stage = new ue(), e[0] !== void 0 && k(q, "Application constructor options are deprecated, please use Application.init() instead.");
   }
   /**
    * Initializes the PixiJS application with the specified options.
@@ -10221,7 +10221,7 @@ const Bc = class Kn {
    * ```
    */
   async init(e) {
-    e = { ...e }, this.stage || (this.stage = new de()), this.renderer = await Nu(e), Kn._plugins.forEach((t) => {
+    e = { ...e }, this.stage || (this.stage = new ue()), this.renderer = await Nu(e), Kn._plugins.forEach((t) => {
       t.init.call(this, e);
     });
   }
@@ -13685,7 +13685,7 @@ function Pg(r, e, t) {
     u.x2,
     u.y2
   );
-  const d = ge.get(Qi);
+  const d = de.get(Qi);
   d.indexOffset = h, d.indexSize = c.length - h, d.attributeOffset = l, d.attributeSize = a.length / 2 - l, d.baseColor = r.style, d.alpha = r.alpha, d.texture = f, d.geometryData = t, e.push(d);
 }
 function xa(r, e, t, s, n) {
@@ -13712,7 +13712,7 @@ function xa(r, e, t, s, n) {
       rg(i, 2, d, o, v, 2, i.length / 2 - d, w);
     } else
       ng(o, v, 2, i.length / 2 - d);
-    const p = ge.get(Qi);
+    const p = de.get(Qi);
     p.indexOffset = u, p.indexSize = a.length - u, p.attributeOffset = d, p.attributeSize = i.length / 2 - d, p.baseColor = e.color, p.alpha = e.alpha, p.texture = B, p.geometryData = n, p.topology = g, s.push(p);
   });
 }
@@ -13734,8 +13734,8 @@ class mg {
   }
   reset() {
     this.batches && this.batches.forEach((e) => {
-      ge.return(e);
-    }), this.graphicsData && ge.return(this.graphicsData), this.isBatchable = !1, this.context = null, this.batches.length = 0, this.geometryData.indices.length = 0, this.geometryData.vertices.length = 0, this.geometryData.uvs.length = 0, this.graphicsData = null;
+      de.return(e);
+    }), this.graphicsData && de.return(this.graphicsData), this.isBatchable = !1, this.context = null, this.batches.length = 0, this.geometryData.indices.length = 0, this.geometryData.vertices.length = 0, this.geometryData.uvs.length = 0, this.graphicsData = null;
   }
   destroy() {
     this.reset(), this.batches = null, this.geometryData = null;
@@ -13807,7 +13807,7 @@ const yi = class qn {
     return e._gpuData[this._renderer.uid] || this._initContext(e);
   }
   _initContextRenderData(e) {
-    const t = ge.get(Eg, {
+    const t = de.get(Eg, {
       maxTextures: this._renderer.limits.maxBatchableTextures
     }), s = e._gpuData[this._renderer.uid], { batches: n, geometryData: i } = s;
     s.graphicsData = t;
@@ -18446,7 +18446,7 @@ class Vc {
       A,
       n.width,
       n.height
-    ), s.outputRenderSurface = pe.getOptimalTexture(
+    ), s.outputRenderSurface = Be.getOptimalTexture(
       a.width,
       a.height,
       s.resolution,
@@ -18458,7 +18458,7 @@ class Vc {
   /** @internal */
   pop() {
     const e = this.renderer, t = this._popFilterData();
-    t.skip || (e.globalUniforms.pop(), e.renderTarget.finishRenderPass(), this._activeFilterData = t, this._applyFiltersToTexture(t, !1), t.blendRequired && pe.returnTexture(t.backTexture), pe.returnTexture(t.inputTexture));
+    t.skip || (e.globalUniforms.pop(), e.renderTarget.finishRenderPass(), this._activeFilterData = t, this._applyFiltersToTexture(t, !1), t.blendRequired && Be.returnTexture(t.backTexture), Be.returnTexture(t.inputTexture));
   }
   /**
    * Copies the last render surface to a texture.
@@ -18467,7 +18467,7 @@ class Vc {
    * @param previousBounds - The previous bounds to use for offsetting the copy.
    */
   getBackTexture(e, t, s) {
-    const n = e.colorTexture.source._resolution, i = pe.getOptimalTexture(
+    const n = e.colorTexture.source._resolution, i = Be.getOptimalTexture(
       t.width,
       t.height,
       n,
@@ -18557,7 +18557,7 @@ class Vc {
    * @param previousFilterData - The previous filter data for back texture calculation
    */
   _setupFilterTextures(e, t, s, n) {
-    if (e.backTexture = S.EMPTY, e.inputTexture = pe.getOptimalTexture(
+    if (e.backTexture = S.EMPTY, e.inputTexture = Be.getOptimalTexture(
       t.width,
       t.height,
       e.resolution,
@@ -18647,7 +18647,7 @@ class Vc {
       i[o].apply(this, s, e.outputRenderSurface, t);
     else {
       let A = e.inputTexture;
-      const c = pe.getOptimalTexture(
+      const c = Be.getOptimalTexture(
         n.width,
         n.height,
         A.source._resolution,
@@ -18661,7 +18661,7 @@ class Vc {
         const u = A;
         A = h, h = u;
       }
-      i[a].apply(this, A, e.outputRenderSurface, t), pe.returnTexture(c);
+      i[a].apply(this, A, e.outputRenderSurface, t), Be.returnTexture(c);
     }
   }
   _calculateFilterBounds(e, t, s, n, i) {
@@ -19067,7 +19067,7 @@ class Gv {
   }
   destroy() {
     this.batches.forEach((e) => {
-      ge.return(e);
+      de.return(e);
     }), this.batches.length = 0;
   }
 }
@@ -19128,7 +19128,7 @@ class $c {
   _updateBatchesForRenderable(e, t) {
     const s = e.context, i = this.renderer.graphicsContext.getGpuContext(s), o = this.renderer._roundPixels | e._roundPixels;
     t.batches = i.batches.map((a) => {
-      const A = ge.get(Qi);
+      const A = de.get(Qi);
       return a.copyTo(A), A.renderable = e, A.roundPixels = o, A;
     });
   }
@@ -20196,7 +20196,7 @@ class Uv extends di {
     const { text: s, resolution: n, style: i, anchor: o, width: a, height: A, roundPixels: c, ...h } = e;
     super({
       ...h
-    }), this.batched = !0, this._resolution = null, this._autoResolution = !0, this._didTextUpdate = !0, this._styleClass = t, this.text = s ?? "", this.style = i, this.resolution = n ?? null, this.allowChildren = !1, this._anchor = new ve(
+    }), this.batched = !0, this._resolution = null, this._autoResolution = !0, this._didTextUpdate = !0, this._styleClass = t, this.text = s ?? "", this.style = i, this.resolution = n ?? null, this.allowChildren = !1, this._anchor = new ge(
       {
         _onUpdate: () => {
           this.onViewUpdate();
@@ -22526,7 +22526,7 @@ const gB = new we();
 function vB(r, e, t, s, n = !1) {
   const i = gB;
   i.minX = 0, i.minY = 0, i.maxX = r.width / s | 0, i.maxY = r.height / s | 0;
-  const o = pe.getOptimalTexture(
+  const o = Be.getOptimalTexture(
     i.width,
     i.height,
     s,
@@ -22573,7 +22573,7 @@ class ch {
       const n = s.getContext("2d");
       n && $t.returnCanvasAndContext({ canvas: s, context: n });
     }
-    t.resource = null, t.uploadMethodId = "unknown", t.alphaMode = "no-premultiply-alpha", pe.returnTexture(e, !0);
+    t.resource = null, t.uploadMethodId = "unknown", t.alphaMode = "no-premultiply-alpha", Be.returnTexture(e, !0);
   }
   /**
    * Renders text to its canvas, and updates its texture.
@@ -23512,12 +23512,12 @@ class zi {
   execute(e) {
     const t = this._renderer, s = e.mask.renderMaskToTexture;
     if (e.action === "pushMaskBegin") {
-      const n = ge.get(TB);
+      const n = de.get(TB);
       if (n.inverse = e.inverse, s) {
         e.mask.mask.measurable = !0;
         const i = ci(e.mask.mask, !0, yB);
         e.mask.mask.measurable = !1, i.ceil();
-        const o = t.renderTarget.renderTarget.colorTexture.source, a = pe.getOptimalTexture(
+        const o = t.renderTarget.renderTarget.colorTexture.source, a = Be.getOptimalTexture(
           i.width,
           i.height,
           o._resolution,
@@ -23550,7 +23550,7 @@ class zi {
     } else if (e.action === "popMaskEnd") {
       t.filter.pop();
       const n = this._activeMaskStage.pop();
-      s && pe.returnTexture(n.filterTexture), ge.return(n.filterEffect);
+      s && Be.returnTexture(n.filterTexture), de.return(n.filterEffect);
     }
   }
   destroy() {
@@ -24016,10 +24016,10 @@ class Xi {
     this._renderer = null;
   }
   _addRenderableDirect(e, t) {
-    this._renderer.renderPipes.batch.break(t), e._batchableRenderGroup && (ge.return(e._batchableRenderGroup), e._batchableRenderGroup = null), t.add(e);
+    this._renderer.renderPipes.batch.break(t), e._batchableRenderGroup && (de.return(e._batchableRenderGroup), e._batchableRenderGroup = null), t.add(e);
   }
   _addRenderableCacheAsTexture(e, t) {
-    const s = e._batchableRenderGroup ?? (e._batchableRenderGroup = ge.get(Gi));
+    const s = e._batchableRenderGroup ?? (e._batchableRenderGroup = de.get(Gi));
     s.renderable = e.root, s.transform = e.root.relativeGroupTransform, s.texture = e.texture, s.bounds = e._textureBounds, t.add(e), this._renderer.renderPipes.blendMode.pushBlendMode(e, e.root.groupBlendMode, t), this._renderer.renderPipes.batch.addToBatch(s, t), this._renderer.renderPipes.blendMode.popBlendMode(t);
   }
   _executeCacheAsTexture(e) {
@@ -24385,7 +24385,7 @@ function ni(r, e) {
   for (let t = e; t < r.length && r[t]; t++)
     r[t] = null;
 }
-const zB = new de(), $a = Gs | Rr | ui;
+const zB = new ue(), $a = Gs | Rr | ui;
 function Qh(r, e = !1) {
   YB(r);
   const t = r.childrenToUpdate, s = r.updateTick++;
@@ -24484,8 +24484,8 @@ class yh {
     if (e.invalidateMatrices(), e.isCachedAsTexture) {
       if (e.textureNeedsUpdate) {
         const s = e.root.getLocalBounds(), n = this._renderer, i = e.textureOptions.resolution || n.view.resolution, o = e.textureOptions.antialias ?? n.view.antialias, a = e.textureOptions.scaleMode ?? "linear", A = e.texture;
-        s.ceil(), e.texture && pe.returnTexture(e.texture, !0);
-        const c = pe.getOptimalTexture(
+        s.ceil(), e.texture && Be.returnTexture(e.texture, !0);
+        const c = Be.getOptimalTexture(
           s.width,
           s.height,
           i,
@@ -24493,7 +24493,7 @@ class yh {
         );
         c._source.style = new at({ scaleMode: a }), e.texture = c, e._textureBounds || (e._textureBounds = new we()), e._textureBounds.copyFrom(s), A !== e.texture && e.renderGroupParent && (e.renderGroupParent.structureDidChange = !0);
       }
-    } else e.texture && (pe.returnTexture(e.texture, !0), e.texture = null);
+    } else e.texture && (Be.returnTexture(e.texture, !0), e.texture = null);
   }
   _updateRenderGroups(e) {
     const t = this._renderer, s = t.renderPipes;
@@ -24599,7 +24599,7 @@ const yn = {
     this._renderer = e;
   }
   _normalizeOptions(e, t = {}) {
-    return e instanceof de || e instanceof S ? {
+    return e instanceof ue || e instanceof S ? {
       target: e,
       ...t
     } : {
@@ -24784,7 +24784,7 @@ const yn = {
   pixels(e) {
     e = this._normalizeOptions(e);
     const t = e.target, s = this._renderer, n = t instanceof S ? t : s.textureGenerator.generateTexture(e), i = s.texture.getPixels(n);
-    return t instanceof de && n.destroy(!0), i;
+    return t instanceof ue && n.destroy(!0), i;
   }
   /**
    * Creates a texture from a display object or existing texture.
@@ -24996,7 +24996,7 @@ class Mh {
    * @category rendering
    */
   generateTexture(e) {
-    e instanceof de && (e = {
+    e instanceof ue && (e = {
       target: e,
       frame: void 0,
       textureSourceOptions: {},
@@ -31469,7 +31469,7 @@ class lP {
       preference: "webgl",
       resolution: Math.max(1, Math.min(window.devicePixelRatio || 1, 2)),
       width: wt
-    }), e.innerHTML = "", e.appendChild(this.app.canvas), this.app.canvas.style.display = "block", this.app.canvas.style.width = "100%", this.app.canvas.style.height = "100%", await fP(), this.root = new de(), this.fxLayer = new de(), this.app.stage.addChild(this.root), this.paintBackdrop());
+    }), e.innerHTML = "", e.appendChild(this.app.canvas), this.app.canvas.style.display = "block", this.app.canvas.style.width = "100%", this.app.canvas.style.height = "100%", await fP(), this.root = new ue(), this.fxLayer = new ue(), this.app.stage.addChild(this.root), this.paintBackdrop());
   }
   destroy() {
     this.effects.splice(0).forEach((e) => e.destroy()), this.reels = [], this.root = null, this.fxLayer = null, this.app && (this.app.destroy(!0, { children: !0 }), this.app = null), this.host && (this.host.innerHTML = ""), this.host = null;
@@ -31513,7 +31513,7 @@ class lP {
       this.fxLayer
     ), this.reels = [];
     for (let f = 0; f < vt; f += 1) {
-      const u = i + f * (Ye + Cr), d = o, g = Ue(u - 8, d - 8, Ye + 16, pt + 16, 22, t, 0, t, 0.7, 0), v = Ue(u, d, Ye, pt, 18, 854548, 0.98, t, 0.18, 2), B = Ue(u, d, Ye, pt, 18, 591631, 0.98, 16777215, 0.12, 2), p = new de();
+      const u = i + f * (Ye + Cr), d = o, g = Ue(u - 8, d - 8, Ye + 16, pt + 16, 22, t, 0, t, 0.7, 0), v = Ue(u, d, Ye, pt, 18, 854548, 0.98, t, 0.18, 2), B = Ue(u, d, Ye, pt, 18, 591631, 0.98, 16777215, 0.12, 2), p = new ue();
       p.x = u + hA, p.y = d + Ts;
       const w = new xe();
       w.rect(u, d, Ye, pt).fill(16777215), p.mask = w, this.root.addChild(g, v, B, p, w), this.reels.push({ frame: B, glow: g, mask: w, strip: p, x: u, y: d });
@@ -31589,7 +31589,7 @@ class lP {
     });
   }
   createSymbolTile(e) {
-    const t = is(e), s = new de();
+    const t = is(e), s = new ue();
     s.symbolKey = e;
     const n = Ue(0, 8, Xe, es, 28, 0, 0.22, 0, 0, 0), i = Ue(0, 0, Xe, es, 28, 1708072, 1, 16777215, 0.08, 2), o = new xe();
     Rn(o, t.tint, 0.18, 0.45);
@@ -31846,10 +31846,10 @@ class PP {
 function CP(r) {
   const e = co(r);
   return r.me?.authenticated ? dA([
-    ["Balance", Be(r.rewards?.balance || r.me.user.balance || 0)],
+    ["Balance", ve(r.rewards?.balance || r.me.user.balance || 0)],
     ["Cabinets", String(r.games?.games.length || 0)],
     ["Free spins", String(e?.freeSpinsRemaining || 0)],
-    ["Wager limit", RP(r.rewards?.dailyCap ?? null)]
+    ["Wager limit", FP(r.rewards?.dailyCap ?? null)]
   ]) : dA([
     ["Machines", String(r.games?.games.length || 0)],
     ["Format", "5x3 live slots"],
@@ -31861,7 +31861,7 @@ function mP(r) {
   const e = r.authConfigured ? `/auth/discord/login?next=${encodeURIComponent(window.location.pathname)}` : r.devAuthEnabled ? `/auth/dev-login?next=${encodeURIComponent(window.location.pathname)}` : "";
   return `
     <div class="app-empty">
-      <p>Sign in to launch the Ghosted slot floor, sync your balance, and bank free spins on your account.</p>
+      <p>Sign in to play.</p>
       ${e ? `<a class="button" href="${e}">Sign In With Discord</a>` : '<p class="app-muted">Configure Discord auth to enable play.</p>'}
     </div>
   `;
@@ -31874,10 +31874,10 @@ function EP(r, e) {
   const t = e.user;
   return `
     <div class="app-user">
-      ${t.avatarUrl ? `<img class="app-user__avatar" src="${t.avatarUrl}" alt="${ue(t.displayName)}" />` : `<div class="app-user__avatar">${ue(t.displayName.slice(0, 1).toUpperCase())}</div>`}
+      ${t.avatarUrl ? `<img class="app-user__avatar" src="${t.avatarUrl}" alt="${pe(t.displayName)}" />` : `<div class="app-user__avatar">${pe(t.displayName.slice(0, 1).toUpperCase())}</div>`}
       <div>
-        <div><strong>${ue(t.displayName)}</strong></div>
-        <div class="app-muted">${Be(t.balance)} points</div>
+        <div><strong>${pe(t.displayName)}</strong></div>
+        <div class="app-muted">${ve(t.balance)} points</div>
       </div>
     </div>
     ${t.isAdmin ? '<a class="app-nav__link" href="/admin/">Admin</a>' : ""}
@@ -31892,13 +31892,12 @@ function DP(r) {
         <div class="casino-stage-shell__top">
           <div>
             <p class="app-kicker">Game App</p>
-            <h3>${ue(e.name)}</h3>
-            <p class="casino-shell__copy">${ue(e.flavor)}</p>
+            <h3>${pe(e.name)}</h3>
           </div>
           <div class="casino-stage-shell__chips">
-            <span class="app-chip">${Be(e.cost)} stake</span>
+            <span class="app-chip">${ve(e.cost)} stake</span>
             <span class="app-chip">${e.paylinesCount} paylines</span>
-            <span class="app-chip">${ue(e.volatility)} volatility</span>
+            <span class="app-chip">${pe(e.volatility)} volatility</span>
           </div>
         </div>
         <div class="casino-stage-shell__playfield">
@@ -31907,18 +31906,16 @@ function DP(r) {
         <div class="casino-stage-shell__info">
           <aside class="casino-stage-shell__panel">
             <div class="casino-console" data-console>
-              <div class="casino-console__eyebrow">Machine Feed</div>
-              <div class="casino-console__headline" data-console-headline>${ue(TP(r.latestResult, e))}</div>
-              <p class="casino-console__copy" data-console-copy>${ue(IP(r.latestResult, e))}</p>
+              <div class="casino-console__headline" data-console-headline>${pe(TP(r.latestResult, e))}</div>
             </div>
             <div class="casino-controls">
-              <button class="button casino-controls__spin" data-spin>${FP(e, r.spinning)}</button>
-              <div class="app-muted casino-controls__status" data-status>${ue(MP(r.latestResult, e, r.spinning))}</div>
+              <button class="button casino-controls__spin" data-spin>${MP(e, r.spinning)}</button>
+              <div class="app-muted casino-controls__status" data-status>${pe(IP(r.latestResult, e, r.spinning))}</div>
             </div>
             <div class="casino-panel-grid">
               <div class="casino-panel-stat">
                 <span class="app-muted">Jackpot</span>
-                <strong>${ue(e.jackpotLabel || Be(e.topPayout))}</strong>
+                <strong>${pe(e.jackpotLabel || ve(e.topPayout))}</strong>
               </div>
               <div class="casino-panel-stat">
                 <span class="app-muted">Return</span>
@@ -31937,7 +31934,7 @@ function DP(r) {
           <section class="app-card casino-stage-shell__card">
             <div class="app-card__row">
               <h3>Player Board</h3>
-              <span class="app-chip">${Be(r.rewards.balance)}</span>
+              <span class="app-chip">${ve(r.rewards.balance)}</span>
             </div>
             <div data-player-board>${QP(r)}</div>
           </section>
@@ -31973,13 +31970,13 @@ function DP(r) {
 }
 function xP(r, e) {
   return `
-    <button class="casino-machine-button ${e ? "is-active" : ""}" data-machine-pick="${ue(r.slug)}" type="button">
+    <button class="casino-machine-button ${e ? "is-active" : ""}" data-machine-pick="${pe(r.slug)}" type="button">
       <div class="casino-machine-button__top">
-        <strong>${ue(r.name)}</strong>
-        <span>${Be(r.cost)}</span>
+        <strong>${pe(r.name)}</strong>
+        <span>${ve(r.cost)}</span>
       </div>
       <div class="casino-machine-button__meta">
-        <span>${ue(r.volatility)} volatility</span>
+        <span>${pe(r.volatility)} volatility</span>
         <span>${r.freeSpinsRemaining ? `${r.freeSpinsRemaining} free spins` : `${r.paylinesCount} lines`}</span>
       </div>
       <div class="casino-machine-button__symbols">
@@ -31994,14 +31991,14 @@ function QP(r) {
   const s = e.spins.find((n) => n.payout > 0);
   return `
     <div class="casino-player-grid">
-      <div class="casino-player-stat"><span class="app-muted">Balance</span><strong>${Be(e.balance)}</strong></div>
-      <div class="casino-player-stat"><span class="app-muted">Machine</span><strong>${ue(t.name)}</strong></div>
-      <div class="casino-player-stat"><span class="app-muted">Wagered today</span><strong>${Be(e.dailyWagered)}</strong></div>
-      <div class="casino-player-stat"><span class="app-muted">Last win</span><strong>${s ? Be(s.payout) : "Waiting"}</strong></div>
+      <div class="casino-player-stat"><span class="app-muted">Balance</span><strong>${ve(e.balance)}</strong></div>
+      <div class="casino-player-stat"><span class="app-muted">Machine</span><strong>${pe(t.name)}</strong></div>
+      <div class="casino-player-stat"><span class="app-muted">Wagered today</span><strong>${ve(e.dailyWagered)}</strong></div>
+      <div class="casino-player-stat"><span class="app-muted">Last win</span><strong>${s ? ve(s.payout) : "Waiting"}</strong></div>
     </div>
     <div class="casino-meter">
-      <div class="casino-meter__track"><span class="casino-meter__fill" style="width:${HP(e.dailyWagered, e.dailyCap)}%"></span></div>
-      <div class="app-muted">${SP(e.dailyWagered, e.dailyRemaining, e.dailyCap)}</div>
+      <div class="casino-meter__track"><span class="casino-meter__fill" style="width:${RP(e.dailyWagered, e.dailyCap)}%"></span></div>
+      <div class="app-muted">${HP(e.dailyWagered, e.dailyRemaining, e.dailyCap)}</div>
     </div>
   `;
 }
@@ -32012,10 +32009,10 @@ function bP(r) {
         <div class="casino-paytable__row">
           <div class="casino-paytable__symbols">${e.symbols.map((t) => `<span class="slot-chip">${is(t).emoji}</span>`).join("")}</div>
           <div class="casino-paytable__copy">
-            <strong>${ue(e.label)}</strong>
+            <strong>${pe(e.label)}</strong>
             <span class="app-muted">${e.kind === "scatter" ? `${e.freeSpins || 0} free spins` : `${e.multiplier}x total bet`}</span>
           </div>
-          <div class="casino-paytable__value">${Be(e.payout)}</div>
+          <div class="casino-paytable__value">${ve(e.payout)}</div>
         </div>
       `).join("")}
     </div>
@@ -32027,26 +32024,23 @@ function yP(r) {
       ${r.slice(0, 8).map((e) => `
         <div class="casino-history__row">
           <div>
-            <strong>${ue(e.game)}</strong>
-            <div class="app-muted">${e.symbols.map((t) => is(t).emoji).join(" ")} ${ue(e.outcome.label)}</div>
+            <strong>${pe(e.game)}</strong>
+            <div class="app-muted">${e.symbols.map((t) => is(t).emoji).join(" ")} ${pe(e.outcome.label)}</div>
           </div>
-          <div class="app-muted">${e.usedFreeSpin ? "Free spin" : Be(e.wager)}</div>
-          <div class="casino-history__value ${e.payout > 0 ? "is-win" : ""}">${e.net >= 0 ? "+" : ""}${Be(e.net)}</div>
+          <div class="app-muted">${e.usedFreeSpin ? "Free spin" : ve(e.wager)}</div>
+          <div class="casino-history__value ${e.payout > 0 ? "is-win" : ""}">${e.net >= 0 ? "+" : ""}${ve(e.net)}</div>
         </div>
       `).join("")}
     </div>
   ` : '<div class="app-empty">The floor log starts filling in after your first spin.</div>';
 }
 function TP(r, e) {
-  return r?.outcome.headline || `${e.name} is loaded`;
+  return r?.outcome.headline || e.name;
 }
-function IP(r, e) {
-  return r ? r.outcome.detail : `${e.rows} rows, ${e.reelCount} reels, and server-resolved paylines. Wilds substitute. Scatters unlock the feature.`;
+function IP(r, e, t) {
+  return t ? "Spinning..." : r ? r.freeSpinsAwarded ? `${r.freeSpinsAwarded} free spins awarded` : r.usedFreeSpin ? `${r.freeSpinsRemaining} free spins left` : r.payout > 0 ? `${ve(r.payout)} paid` : "No win" : `${ve(e.cost)} stake`;
 }
-function MP(r, e, t) {
-  return t ? `${e.name} is spinning...` : r ? r.freeSpinsAwarded ? `${r.freeSpinsAwarded} free spins awarded with ${r.scatter.count} scatters.` : r.usedFreeSpin ? `${r.freeSpinsRemaining} free spins remain in the bank.` : r.payout > 0 ? `Paid ${Be(r.payout)} across ${r.lineWins.length || 1} winning lines.` : `No hit. Net ${Be(r.net)} on that spin.` : "Send the reels and watch the game board settle live.";
-}
-function FP(r, e) {
+function MP(r, e) {
   return e ? "Spinning..." : r.freeSpinsRemaining ? `Play Free Spin (${r.freeSpinsRemaining})` : `Spin ${r.name}`;
 }
 function co(r) {
@@ -32058,7 +32052,7 @@ function dA(r) {
     ([e, t]) => `
         <article class="app-stat">
           <div class="app-stat__value">${t}</div>
-          <div class="app-stat__label">${ue(e)}</div>
+          <div class="app-stat__label">${pe(e)}</div>
         </article>
       `
   ).join("");
@@ -32067,24 +32061,24 @@ function gA(r) {
   const e = Number(r || 0);
   return Number.isFinite(e) ? `${(e * 100).toFixed(e < 0.1 ? 1 : 0)}%` : "0%";
 }
-function Be(r) {
+function ve(r) {
   return `${Number(r || 0).toLocaleString()} pts`;
 }
-function RP(r) {
-  return r === null ? "Unlimited" : Be(r);
+function FP(r) {
+  return r === null ? "Unlimited" : ve(r);
 }
-function ue(r) {
+function pe(r) {
   return String(r ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
-function HP(r, e) {
+function RP(r, e) {
   return e === null || e <= 0 ? 100 : Math.min(100, r / e * 100);
 }
-function SP(r, e, t) {
-  return t === null ? `${Be(r)} wagered today. No limit is active right now.` : `${Be(e || 0)} remaining before the daily cap.`;
+function HP(r, e, t) {
+  return t === null ? `${ve(r)} wagered today. No limit is active right now.` : `${ve(e || 0)} remaining before the daily cap.`;
 }
 const ye = new PP();
 let gt = null, os = null;
-async function LP() {
+async function SP() {
   await ye.boot(), ye.subscribe(async (r) => {
     const e = r, t = document.querySelector("[data-auth]"), s = document.querySelector("[data-summary]"), n = document.querySelector("[data-content]");
     if (!t || !s || !n || !e.config || !e.me) {
@@ -32093,10 +32087,10 @@ async function LP() {
     }
     (!gt || vA(gt) !== vA(e)) && (t.innerHTML = EP(e.config, e.me), t.querySelector("[data-logout]")?.addEventListener("click", async () => {
       await Jl(), window.location.reload();
-    })), (!gt || BA(gt) !== BA(e)) && (s.innerHTML = CP(e)), !gt || pA(gt) !== pA(e) ? e.me.authenticated ? (n.innerHTML = DP(e), kP(), GP(), await _P()) : n.innerHTML = mP(e.config) : e.me.authenticated && zl(), gt = e;
+    })), (!gt || BA(gt) !== BA(e)) && (s.innerHTML = CP(e)), !gt || pA(gt) !== pA(e) ? e.me.authenticated ? (n.innerHTML = DP(e), LP(), kP(), await GP()) : n.innerHTML = mP(e.config) : e.me.authenticated && zl(), gt = e;
   });
 }
-function kP() {
+function LP() {
   document.querySelectorAll("[data-machine-pick]").forEach((r) => {
     r.addEventListener("click", () => {
       os?.armAudio();
@@ -32105,7 +32099,7 @@ function kP() {
     });
   });
 }
-function GP() {
+function kP() {
   const r = document.querySelector("[data-spin]"), e = document.querySelector("[data-status]"), t = ye.selectedGame();
   !r || !e || !t || r.addEventListener("click", async () => {
     os?.armAudio(), r.disabled = !0, r.textContent = "Spinning...", e.textContent = `${t.name} is spinning...`;
@@ -32117,7 +32111,7 @@ function GP() {
     }
   });
 }
-async function _P() {
+async function GP() {
   const r = document.querySelector("[data-game-stage]"), e = ye.selectedGame();
   !r || !e || (os ?? (os = new lP()), await os.mount(r), await os.showMachine(e, ye.state.latestResult?.gameSlug === e.slug ? ye.state.latestResult : null));
 }
@@ -32152,50 +32146,50 @@ function pA(r) {
 function zl() {
   const r = ye.state, e = ye.selectedGame();
   if (!r.me?.authenticated || !r.rewards || !e) return;
-  const t = document.querySelector("[data-console-headline]"), s = document.querySelector("[data-console-copy]"), n = document.querySelector("[data-status]"), i = document.querySelector("[data-spin]"), o = document.querySelector("[data-player-board]"), a = document.querySelector("[data-history]");
-  if (t && (t.textContent = r.latestResult?.outcome.headline || `${e.name} is loaded`), s && (s.textContent = r.latestResult?.outcome.detail || `${e.rows} rows, ${e.reelCount} reels, and server-resolved paylines. Wilds substitute. Scatters unlock the feature.`), n && (r.spinning ? n.textContent = `${e.name} is spinning...` : r.latestResult?.freeSpinsAwarded ? n.textContent = `${r.latestResult.freeSpinsAwarded} free spins awarded with ${r.latestResult.scatter.count} scatters.` : r.latestResult?.usedFreeSpin ? n.textContent = `${r.latestResult.freeSpinsRemaining} free spins remain in the bank.` : r.latestResult?.payout ? n.textContent = `Paid ${r.latestResult.payout.toLocaleString()} pts across ${r.latestResult.lineWins.length || 1} winning lines.` : r.latestResult && (n.textContent = `No hit. Net ${r.latestResult.net.toLocaleString()} pts on that spin.`)), i && (i.disabled = r.spinning, i.textContent = r.spinning ? "Spinning..." : e.freeSpinsRemaining ? `Play Free Spin (${e.freeSpinsRemaining})` : `Spin ${e.name}`), o) {
-    const A = r.rewards.spins.find((l) => l.payout > 0), c = r.rewards.dailyCap === null || r.rewards.dailyCap <= 0 ? 100 : Math.min(100, r.rewards.dailyWagered / r.rewards.dailyCap * 100), h = r.rewards.dailyCap === null ? `${r.rewards.dailyWagered.toLocaleString()} pts wagered today. No limit is active right now.` : `${(r.rewards.dailyRemaining || 0).toLocaleString()} pts remaining before the daily cap.`;
-    o.innerHTML = `
+  const t = document.querySelector("[data-console-headline]"), s = document.querySelector("[data-status]"), n = document.querySelector("[data-spin]"), i = document.querySelector("[data-player-board]"), o = document.querySelector("[data-history]");
+  if (t && (t.textContent = r.latestResult?.outcome.headline || e.name), s && (r.spinning ? s.textContent = "Spinning..." : r.latestResult?.freeSpinsAwarded ? s.textContent = `${r.latestResult.freeSpinsAwarded} free spins awarded` : r.latestResult?.usedFreeSpin ? s.textContent = `${r.latestResult.freeSpinsRemaining} free spins left` : r.latestResult?.payout ? s.textContent = `${r.latestResult.payout.toLocaleString()} pts paid` : r.latestResult ? s.textContent = "No win" : s.textContent = `${e.cost.toLocaleString()} pts stake`), n && (n.disabled = r.spinning, n.textContent = r.spinning ? "Spinning..." : e.freeSpinsRemaining ? `Play Free Spin (${e.freeSpinsRemaining})` : `Spin ${e.name}`), i) {
+    const a = r.rewards.spins.find((h) => h.payout > 0), A = r.rewards.dailyCap === null || r.rewards.dailyCap <= 0 ? 100 : Math.min(100, r.rewards.dailyWagered / r.rewards.dailyCap * 100), c = r.rewards.dailyCap === null ? `${r.rewards.dailyWagered.toLocaleString()} pts wagered today. No limit is active right now.` : `${(r.rewards.dailyRemaining || 0).toLocaleString()} pts remaining before the daily cap.`;
+    i.innerHTML = `
       <div class="casino-player-grid">
         <div class="casino-player-stat"><span class="app-muted">Balance</span><strong>${r.rewards.balance.toLocaleString()} pts</strong></div>
         <div class="casino-player-stat"><span class="app-muted">Machine</span><strong>${e.name}</strong></div>
         <div class="casino-player-stat"><span class="app-muted">Wagered today</span><strong>${r.rewards.dailyWagered.toLocaleString()} pts</strong></div>
-        <div class="casino-player-stat"><span class="app-muted">Last win</span><strong>${A ? `${A.payout.toLocaleString()} pts` : "Waiting"}</strong></div>
+        <div class="casino-player-stat"><span class="app-muted">Last win</span><strong>${a ? `${a.payout.toLocaleString()} pts` : "Waiting"}</strong></div>
       </div>
       <div class="casino-meter">
-        <div class="casino-meter__track"><span class="casino-meter__fill" style="width:${c}%"></span></div>
-        <div class="app-muted">${h}</div>
+        <div class="casino-meter__track"><span class="casino-meter__fill" style="width:${A}%"></span></div>
+        <div class="app-muted">${c}</div>
       </div>
     `;
   }
-  a && (r.rewards.spins.length ? a.innerHTML = `
+  o && (r.rewards.spins.length ? o.innerHTML = `
         <div class="casino-history">
-          ${r.rewards.spins.slice(0, 8).map((A) => `
+          ${r.rewards.spins.slice(0, 8).map((a) => `
             <div class="casino-history__row">
               <div>
-                <strong>${A.game}</strong>
-                <div class="app-muted">${A.symbols.join(" ")} ${A.outcome.label}</div>
+                <strong>${a.game}</strong>
+                <div class="app-muted">${a.symbols.join(" ")} ${a.outcome.label}</div>
               </div>
-              <div class="app-muted">${A.usedFreeSpin ? "Free spin" : `${A.wager.toLocaleString()} pts`}</div>
-              <div class="casino-history__value ${A.payout > 0 ? "is-win" : ""}">${A.net >= 0 ? "+" : ""}${A.net.toLocaleString()} pts</div>
+              <div class="app-muted">${a.usedFreeSpin ? "Free spin" : `${a.wager.toLocaleString()} pts`}</div>
+              <div class="casino-history__value ${a.payout > 0 ? "is-win" : ""}">${a.net >= 0 ? "+" : ""}${a.net.toLocaleString()} pts</div>
             </div>
           `).join("")}
         </div>
-      ` : a.innerHTML = '<div class="app-empty">The floor log starts filling in after your first spin.</div>');
+      ` : o.innerHTML = '<div class="app-empty">The floor log starts filling in after your first spin.</div>');
 }
-LP().catch((r) => {
+SP().catch((r) => {
   const e = document.querySelector("[data-banner]");
   e && (e.innerHTML = `<div class="app-banner is-error">${r instanceof Error ? r.message : "Casino boot failed."}</div>`);
 });
 z.add(ou);
-z.mixin(de, au);
+z.mixin(ue, au);
 z.add(Wc);
 z.add(Kc);
-z.mixin(de, xv);
+z.mixin(ue, xv);
 z.add(Vc);
 z.add(Jc);
-const UP = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _P = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null
-}, Symbol.toStringTag, { value: "Module" })), OP = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+}, Symbol.toStringTag, { value: "Module" })), UP = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null
 }, Symbol.toStringTag, { value: "Module" }));
