@@ -30,6 +30,7 @@ Optional Discord integrations:
 - `DISCORD_MEMBER_ROLE_ID`
 - `DISCORD_VIP_ROLE_ID`
 - `DISCORD_GIVEAWAY_ROLE_ID`
+- `DISCORD_ROLE_LABELS_JSON`
 - `DISCORD_WEBHOOK_URL`
 - `ADMIN_DISCORD_IDS`
 - `PUBLIC_BASE_URL`
@@ -57,6 +58,7 @@ http://localhost:8000/auth/dev-login?next=/app/
 - Balances, spins, and giveaway entries are validated on the backend.
 - SQLite data defaults to `data/ghosted.db`.
 - In production, set `DATABASE_PATH=/var/lib/ghosted/ghosted.db`.
+- `DISCORD_ROLE_LABELS_JSON` can override or supply role labels using a JSON map like `{"123":"VIP","456":"Giveaway Winners"}`.
 
 ## VPS deployment
 

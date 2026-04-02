@@ -7,6 +7,8 @@
     "test": "tests"
   },
   "scripts": {
+    "git:update": "powershell -ExecutionPolicy Bypass -File scripts/git-update.ps1",
+    "git:update:autostash": "powershell -ExecutionPolicy Bypass -File scripts/git-update.ps1 -Autostash",
     "build:casino": "vite build --config vite.casino.config.ts",
     "dev:casino": "vite --config vite.casino.config.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
