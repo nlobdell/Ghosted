@@ -6,6 +6,7 @@ type ReelView = {
   frame: Phaser.GameObjects.Rectangle;
   glow: Phaser.GameObjects.Rectangle;
   maskShape: Phaser.GameObjects.Graphics;
+  mask: Phaser.Display.Masks.GeometryMask;
   strip: Phaser.GameObjects.Container;
   x: number;
   y: number;
@@ -105,6 +106,10 @@ export class SlotScene extends Phaser.Scene {
   }
 
   private buildMachine(game: SlotGame) {
+    this.reels.forEach((reel) => {
+      reel.strip.clearMask(true);
+      reel.maskShape.destroy();
+    });
     this.root?.destroy(true);
     this.root = this.add.container(0, 0);
     this.resize(this.scale.width, this.scale.height);
@@ -150,9 +155,11 @@ export class SlotScene extends Phaser.Scene {
       const maskShape = this.add.graphics();
       maskShape.fillStyle(0xffffff);
       maskShape.fillRect(x, y, REEL_WIDTH, REEL_HEIGHT);
-      strip.setMask(maskShape.createGeometryMask());
+      maskShape.setVisible(false);
+      const mask = maskShape.createGeometryMask();
+      strip.setMask(mask);
       this.root.add([glow, frame, strip]);
-      this.reels.push({ frame, glow, maskShape, strip, x, y });
+      this.reels.push({ frame, glow, maskShape, mask, strip, x, y });
     }
   }
 
