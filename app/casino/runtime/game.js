@@ -31846,15 +31846,15 @@ class PP {
 function CP(r) {
   const e = co(r);
   return r.me?.authenticated ? dA([
-    ["Balance", ve(r.rewards?.balance || r.me.user.balance || 0)],
-    ["Machines", String(r.games?.games.length || 0)],
-    ["Free spins", String(e?.freeSpinsRemaining || 0)],
-    ["Daily limit", FP(r.rewards?.dailyCap ?? null)]
+    { label: "Balance", value: ve(r.rewards?.balance || r.me.user.balance || 0), href: "/app/rewards/" },
+    { label: "Machines", value: String(r.games?.games.length || 0), href: "/app/casino/" },
+    { label: "Free spins", value: String(e?.freeSpinsRemaining || 0), href: "/app/casino/" },
+    { label: "Daily limit", value: FP(r.rewards?.dailyCap ?? null), href: "/app/rewards/" }
   ]) : dA([
-    ["Machines", String(r.games?.games.length || 0)],
-    ["Grid", "5x3"],
-    ["Format", "Points only"],
-    ["Access", "Sign in"]
+    { label: "Machines", value: String(r.games?.games.length || 0), href: "/app/casino/" },
+    { label: "Grid", value: "5x3" },
+    { label: "Format", value: "Points only" },
+    { label: "Access", value: "Sign in" }
   ]);
 }
 function mP(r) {
@@ -32049,12 +32049,15 @@ function co(r) {
 }
 function dA(r) {
   return r.map(
-    ([e, t]) => `
-        <article class="app-stat">
-          <div class="app-stat__value">${t}</div>
-          <div class="app-stat__label">${pe(e)}</div>
-        </article>
-      `
+    (e) => {
+      const t = Array.isArray(e) ? { label: e[0], value: e[1], href: void 0 } : e, s = t.href ? "a" : "article", n = t.href ? ` href="${t.href}"` : "", i = t.href ? "app-stat app-stat--link" : "app-stat";
+      return `
+          <${s} class="${i}"${n}>
+            <div class="app-stat__value">${t.value}</div>
+            <div class="app-stat__label">${pe(t.label)}</div>
+          </${s}>
+        `;
+    }
   ).join("");
 }
 function gA(r) {

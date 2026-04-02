@@ -143,6 +143,13 @@
   padding: 1.15rem;
 }
 
+.app-panel,
+.app-card,
+.app-stat {
+  text-decoration: none;
+  color: inherit;
+}
+
 .app-kicker {
   margin: 0;
   text-transform: uppercase;
@@ -206,6 +213,18 @@
 .app-stat {
   border-radius: 1rem;
   padding: 0.95rem 1rem;
+}
+
+.app-stat--link,
+.app-panel--link {
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+
+.app-stat--link:hover,
+.app-panel--link:hover {
+  transform: translateY(-1px);
+  border-color: rgba(211, 192, 255, 0.24);
+  background: linear-gradient(180deg, rgba(31, 26, 43, 0.92), rgba(13, 11, 20, 0.97));
 }
 
 .app-stat__value {
