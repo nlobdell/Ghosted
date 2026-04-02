@@ -31,6 +31,11 @@ DAILY_WAGER_CAP = 500
 SPIN_COOLDOWN_SECONDS = 2
 REQUEST_TIMEOUT = 10
 RNG = random.SystemRandom()
+DEFAULT_DISCORD_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/135.0.0.0 Safari/537.36 GhostedBot/1.0"
+)
 STATIC_MIME_OVERRIDES = {
     ".js": "application/javascript; charset=utf-8",
     ".json": "application/json; charset=utf-8",
@@ -116,6 +121,16 @@ def session_cookie_header(token: str | None = None, *, delete: bool = False) -> 
 def admin_discord_ids() -> set[str]:
     raw = os.getenv("ADMIN_DISCORD_IDS", "")
     return {item.strip() for item in raw.split(",") if item.strip()}
+
+
+def discord_request_headers(extra: dict[str, str] | None = None) -> dict[str, str]:
+    headers = {
+        "User-Agent": os.getenv("DISCORD_USER_AGENT", DEFAULT_DISCORD_USER_AGENT),
+        "Accept": "application/json",
+    }
+    if extra:
+        headers.update(extra)
+    return headers
 
 
 def build_auth_config(base_url: str | None = None) -> AuthConfig:
@@ -519,7 +534,7 @@ def fetch_discord_token(code: str, auth_config: AuthConfig) -> dict[str, Any]:
     request = Request(
         "https://discord.com/api/oauth2/token",
         data=payload,
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        headers=discord_request_headers({"Content-Type": "application/x-www-form-urlencoded"}),
         method="POST",
     )
     try:
@@ -535,7 +550,7 @@ def fetch_discord_token(code: str, auth_config: AuthConfig) -> dict[str, Any]:
 def fetch_discord_identity(access_token: str) -> dict[str, Any]:
     request = Request(
         "https://discord.com/api/users/@me",
-        headers={"Authorization": f"Bearer {access_token}"},
+        headers=discord_request_headers({"Authorization": f"Bearer {access_token}"}),
     )
     try:
         with urlopen(request, timeout=REQUEST_TIMEOUT) as response:
@@ -549,7 +564,7 @@ def fetch_discord_roles(discord_id: str, auth_config: AuthConfig) -> list[str]:
         return []
     request = Request(
         f"https://discord.com/api/guilds/{auth_config.guild_id}/members/{discord_id}",
-        headers={"Authorization": f"Bot {auth_config.bot_token}"},
+        headers=discord_request_headers({"Authorization": f"Bot {auth_config.bot_token}"}),
     )
     try:
         with urlopen(request, timeout=REQUEST_TIMEOUT) as response:
