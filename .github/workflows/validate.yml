@@ -1,0 +1,46 @@
+name: Validate Static Site
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure required files exist
+        run: |
+          test -f index.html
+          test -f styles.css
+
+      - name: Block merge conflict markers
+        run: |
+          if rg -n "^(<<<<<<<|=======|>>>>>>>)" index.html styles.css; then
+            echo "Merge conflict markers found."
+            exit 1
+          fi
+
+      - name: Basic HTML sanity check
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class Parser(HTMLParser):
+              pass
+
+          content = Path('index.html').read_text(encoding='utf-8')
+          parser = Parser()
+          parser.feed(content)
+          parser.close()
+          print('HTML parsed successfully')
+          PY
+
+      - name: Validate Discord link presence
+        run: |
+          rg -n "discord.gg/ghosted" index.html
