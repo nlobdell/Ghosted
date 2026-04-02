@@ -38,6 +38,19 @@ body {
   align-items: center;
 }
 
+.nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.nav__link {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 700;
+}
+
 .brand {
   font-size: 1.15rem;
   font-weight: 800;
@@ -160,12 +173,27 @@ h1 span {
   text-align: center;
 }
 
+.cta__eyebrow {
+  color: var(--brand-2);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  margin-bottom: 0.65rem;
+}
+
 .cta h2 {
   margin-bottom: 0.8rem;
 }
 
 .cta p {
   margin-bottom: 1.4rem;
+}
+
+.cta__actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
 .footer {
@@ -175,6 +203,12 @@ h1 span {
 }
 
 @media (max-width: 850px) {
+  .nav {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.9rem;
+  }
+
   .hero__content {
     margin-top: 4rem;
   }
