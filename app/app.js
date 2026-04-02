@@ -1,6 +1,11 @@
 const state = {
   config: null,
   me: null,
+  admin: {
+    pages: [],
+    selectedPageSlug: null,
+    editor: null,
+  },
   casino: {
     selectedGameSlug: null,
     latestResult: null,
@@ -546,15 +551,94 @@ async function renderAdmin() {
   const summaryRoot = document.querySelector('[data-summary]');
   const contentRoot = document.querySelector('[data-content]');
   try {
-    const payload = await getJSON('/api/admin/overview');
+    const [payload, pagesPayload] = await Promise.all([
+      getJSON('/api/admin/overview'),
+      getJSON('/api/admin/pages'),
+    ]);
+    state.admin.pages = pagesPayload.pages;
+    if (!state.admin.selectedPageSlug || !state.admin.pages.some((page) => page.slug === state.admin.selectedPageSlug)) {
+      state.admin.selectedPageSlug = state.admin.pages[0]?.slug || null;
+    }
     summaryRoot.innerHTML = renderStats([
       ['Tracked users', String(payload.overview.users.length)],
       ['Giveaways', String(payload.overview.giveaways.length)],
+      ['Editable pages', String(state.admin.pages.length)],
       ['Actor', escapeHtml(payload.actor.displayName)],
-      ['Mode', 'Admin'],
+      ['Mode', 'Admin tools'],
     ]);
     contentRoot.innerHTML = `
       <div id="admin-result"></div>
+      <section class="app-card admin-editor-card">
+        <div class="app-card__row">
+          <div>
+            <p class="app-kicker">Visual Editor</p>
+            <h3>Edit page copy in a live preview.</h3>
+          </div>
+          <div class="admin-editor-actions">
+            <button class="button button--secondary button--small" type="button" data-editor-reload>Reload page</button>
+            <button class="button button--small" type="button" data-editor-save>Save page</button>
+          </div>
+        </div>
+        <div class="admin-editor-shell">
+          <aside class="admin-editor-sidebar">
+            <section class="admin-editor-panel">
+              <div class="app-card__row">
+                <strong>Pages</strong>
+                <span class="app-chip">${state.admin.pages.length} pages</span>
+              </div>
+              <div class="admin-editor-page-list" data-editor-page-list>
+                ${renderAdminPageButtons(state.admin.pages, state.admin.selectedPageSlug)}
+              </div>
+            </section>
+            <section class="admin-editor-panel">
+              <div class="app-card__row">
+                <strong>Page settings</strong>
+                <span class="app-chip" data-editor-preview-route>Loading</span>
+              </div>
+              <div class="admin-editor-meta" data-editor-page-meta></div>
+              <label for="editor-doc-title">Page title</label>
+              <input id="editor-doc-title" type="text" data-editor-doc-title />
+              <label for="editor-doc-description">Meta description</label>
+              <textarea id="editor-doc-description" data-editor-doc-description></textarea>
+            </section>
+            <section class="admin-editor-panel">
+              <div class="app-card__row">
+                <strong>Selected block</strong>
+                <span class="app-chip" data-editor-node-tag>Select one</span>
+              </div>
+              <div class="admin-editor-empty" data-editor-selection-empty>Click text in the preview to edit it.</div>
+              <div data-editor-fields hidden>
+                <label for="editor-node-text">Text</label>
+                <textarea id="editor-node-text" data-editor-node-text></textarea>
+                <div data-editor-link-fields hidden>
+                  <label for="editor-node-href">Link</label>
+                  <input id="editor-node-href" type="text" data-editor-node-href />
+                  <label class="admin-editor-checkbox">
+                    <input type="checkbox" data-editor-node-blank />
+                    <span>Open in new tab</span>
+                  </label>
+                </div>
+              </div>
+            </section>
+            <section class="admin-editor-panel">
+              <div class="app-card__row">
+                <strong>Editable blocks</strong>
+                <span class="app-chip" data-editor-node-count>0</span>
+              </div>
+              <div class="admin-editor-node-list" data-editor-node-list></div>
+            </section>
+          </aside>
+          <div class="admin-editor-preview-shell">
+            <div class="admin-editor-preview-bar">
+              <span class="app-chip">Preview</span>
+              <span class="app-muted">Scripts are disabled here so the layout stays stable while you edit.</span>
+            </div>
+            <div class="admin-editor-preview-frame">
+              <iframe title="Ghosted page editor preview" data-editor-preview sandbox="allow-same-origin"></iframe>
+            </div>
+          </div>
+        </div>
+      </section>
       <section class="app-grid app-grid--two">
         <form class="app-form" id="grant-form">
           <h3>Grant or deduct points</h3>
@@ -598,10 +682,27 @@ async function renderAdmin() {
       </section>
     `;
     bindAdminForms();
+    bindAdminEditorControls();
+    if (state.admin.selectedPageSlug) {
+      await loadAdminEditorPage(state.admin.selectedPageSlug);
+    }
   } catch (error) {
     renderBanner(error.message, 'error');
     renderSignInState(contentRoot, 'Only admins can view this panel.');
   }
+}
+
+function renderAdminPageButtons(pages, selectedSlug) {
+  return pages.map((page) => `
+    <button
+      class="admin-editor-page ${page.slug === selectedSlug ? 'is-selected' : ''}"
+      type="button"
+      data-page-editor-load="${escapeHtml(page.slug)}"
+    >
+      <strong>${escapeHtml(page.title)}</strong>
+      <span>${escapeHtml(page.route)}</span>
+    </button>
+  `).join('');
 }
 
 function bindAdminForms() {
@@ -644,6 +745,365 @@ function bindAdminForms() {
       }
     });
   });
+}
+
+function bindAdminEditorControls() {
+  document.querySelectorAll('[data-page-editor-load]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      state.admin.selectedPageSlug = button.dataset.pageEditorLoad;
+      syncAdminPageButtons();
+      await loadAdminEditorPage(state.admin.selectedPageSlug);
+    });
+  });
+
+  document.querySelector('[data-editor-reload]')?.addEventListener('click', async () => {
+    if (!state.admin.selectedPageSlug) return;
+    await loadAdminEditorPage(state.admin.selectedPageSlug);
+    renderBanner('Page reloaded from disk.', 'info', '#admin-result');
+  });
+
+  document.querySelector('[data-editor-save]')?.addEventListener('click', async () => {
+    const editor = state.admin.editor;
+    if (!editor?.page) return;
+    const button = document.querySelector('[data-editor-save]');
+    button.disabled = true;
+    try {
+      const payload = await getJSON(`/api/admin/pages/${editor.page.slug}`, {
+        method: 'POST',
+        body: JSON.stringify({ html: serializeAdminEditorDocument(editor.sourceDocument) }),
+      });
+      updateAdminPageMetadata(payload.page);
+      renderBanner(`Saved ${payload.page.title}.`, 'info', '#admin-result');
+      await loadAdminEditorPage(payload.page.slug);
+    } catch (error) {
+      renderBanner(error.message, 'error', '#admin-result');
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.querySelector('[data-editor-doc-title]')?.addEventListener('input', (event) => {
+    const value = event.currentTarget.value;
+    updateAdminEditorHeadField('title', value);
+  });
+
+  document.querySelector('[data-editor-doc-description]')?.addEventListener('input', (event) => {
+    const value = event.currentTarget.value;
+    updateAdminEditorHeadField('description', value);
+  });
+
+  document.querySelector('[data-editor-node-text]')?.addEventListener('input', (event) => {
+    updateAdminEditorNodeField('text', event.currentTarget.value);
+  });
+
+  document.querySelector('[data-editor-node-href]')?.addEventListener('input', (event) => {
+    updateAdminEditorNodeField('href', event.currentTarget.value);
+  });
+
+  document.querySelector('[data-editor-node-blank]')?.addEventListener('change', (event) => {
+    updateAdminEditorNodeField('blank', event.currentTarget.checked);
+  });
+}
+
+async function loadAdminEditorPage(slug) {
+  const previewFrame = document.querySelector('[data-editor-preview]');
+  if (!previewFrame) return;
+  previewFrame.srcdoc = '<!DOCTYPE html><html><body style="font-family:system-ui;padding:2rem;color:#fff;background:#100d18;">Loading preview...</body></html>';
+  try {
+    const payload = await getJSON(`/api/admin/pages/${slug}`);
+    state.admin.selectedPageSlug = slug;
+    updateAdminPageMetadata(payload.page);
+    state.admin.editor = createAdminEditorState(payload.page);
+    syncAdminPageButtons();
+    syncAdminEditorSidebar();
+    await mountAdminEditorPreview();
+    const firstNodeId = state.admin.editor.nodes[0]?.id || null;
+    if (firstNodeId) {
+      selectAdminEditorNode(firstNodeId, { scroll: false });
+    }
+  } catch (error) {
+    renderBanner(error.message, 'error', '#admin-result');
+  }
+}
+
+function updateAdminPageMetadata(page) {
+  const pages = state.admin.pages || [];
+  const index = pages.findIndex((entry) => entry.slug === page.slug);
+  const summary = {
+    slug: page.slug,
+    title: page.title,
+    route: page.route,
+    path: page.path,
+    updatedAt: page.updatedAt,
+  };
+  if (index >= 0) {
+    pages[index] = { ...pages[index], ...summary };
+  } else {
+    pages.push(summary);
+  }
+}
+
+function createAdminEditorState(page) {
+  const parser = new DOMParser();
+  const sourceDocument = parser.parseFromString(page.html, 'text/html');
+  const previewDocument = parser.parseFromString(page.html, 'text/html');
+  const selector = 'h1, h2, h3, h4, h5, h6, p, a, button, li, label, strong, small';
+  const sourceNodes = [...sourceDocument.querySelectorAll(selector)].filter(isEditablePreviewNode);
+  const previewNodes = [...previewDocument.querySelectorAll(selector)].filter(isEditablePreviewNode);
+  const nodes = sourceNodes.map((node, index) => {
+    const id = `ghosted-node-${index + 1}`;
+    const previewNode = previewNodes[index];
+    node.dataset.ghostedNodeId = id;
+    node.dataset.ghostedEditable = 'true';
+    if (previewNode) {
+      previewNode.dataset.ghostedNodeId = id;
+      previewNode.dataset.ghostedEditable = 'true';
+    }
+    return {
+      id,
+      tag: node.tagName.toLowerCase(),
+      label: describeEditableNode(node),
+      isLink: node.matches('a, button'),
+    };
+  });
+
+  const base = previewDocument.createElement('base');
+  base.href = new URL(page.route, window.location.origin).toString();
+  previewDocument.head.prepend(base);
+
+  const style = previewDocument.createElement('style');
+  style.textContent = `
+    [data-ghosted-editable="true"] { cursor: pointer; transition: outline-color 120ms ease, box-shadow 120ms ease; }
+    [data-ghosted-editable="true"]:hover { outline: 2px solid rgba(123, 223, 246, 0.95); outline-offset: 4px; }
+    [data-ghosted-editable="true"][data-ghosted-selected="true"] { outline: 3px solid rgba(255, 209, 102, 0.98); outline-offset: 4px; box-shadow: 0 0 0 8px rgba(255, 209, 102, 0.16); }
+    html { scroll-behavior: smooth; }
+  `;
+  previewDocument.head.append(style);
+
+  return {
+    page,
+    sourceDocument,
+    previewDocument,
+    nodes,
+    selectedNodeId: null,
+  };
+}
+
+function isEditablePreviewNode(node) {
+  if (!node) return false;
+  const text = node.textContent?.replace(/\s+/g, ' ').trim();
+  if (!text) return false;
+  if (node.closest('script, style, noscript')) return false;
+  return true;
+}
+
+function describeEditableNode(node) {
+  const text = node.textContent.replace(/\s+/g, ' ').trim();
+  const preview = text.length > 48 ? `${text.slice(0, 48)}…` : text;
+  return `${node.tagName.toLowerCase()} · ${preview}`;
+}
+
+async function mountAdminEditorPreview() {
+  const editor = state.admin.editor;
+  const previewFrame = document.querySelector('[data-editor-preview]');
+  if (!editor || !previewFrame) return;
+  const previewMarkup = serializeAdminEditorDocument(editor.previewDocument);
+  await new Promise((resolve) => {
+    previewFrame.onload = () => resolve();
+    previewFrame.srcdoc = previewMarkup;
+  });
+  const doc = previewFrame.contentDocument;
+  if (!doc) return;
+  doc.addEventListener('click', (event) => {
+    const node = event.target.closest('[data-ghosted-node-id]');
+    const link = event.target.closest('a');
+    if (link) {
+      event.preventDefault();
+    }
+    if (!node) return;
+    event.preventDefault();
+    selectAdminEditorNode(node.dataset.ghostedNodeId);
+  });
+}
+
+function syncAdminPageButtons() {
+  const pageList = document.querySelector('[data-editor-page-list]');
+  if (!pageList) return;
+  pageList.innerHTML = renderAdminPageButtons(state.admin.pages, state.admin.selectedPageSlug);
+  pageList.querySelectorAll('[data-page-editor-load]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      state.admin.selectedPageSlug = button.dataset.pageEditorLoad;
+      syncAdminPageButtons();
+      await loadAdminEditorPage(state.admin.selectedPageSlug);
+    });
+  });
+}
+
+function syncAdminEditorSidebar() {
+  const editor = state.admin.editor;
+  if (!editor) return;
+  const titleInput = document.querySelector('[data-editor-doc-title]');
+  const descriptionInput = document.querySelector('[data-editor-doc-description]');
+  const pageMeta = document.querySelector('[data-editor-page-meta]');
+  const previewRoute = document.querySelector('[data-editor-preview-route]');
+  const nodeCount = document.querySelector('[data-editor-node-count]');
+  const nodeList = document.querySelector('[data-editor-node-list]');
+  if (titleInput) {
+    titleInput.value = editor.sourceDocument.querySelector('title')?.textContent?.trim() || '';
+  }
+  if (descriptionInput) {
+    descriptionInput.value = getAdminMetaDescription(editor.sourceDocument);
+  }
+  if (pageMeta) {
+    pageMeta.innerHTML = `
+      <div><span>Route</span><strong>${escapeHtml(editor.page.route)}</strong></div>
+      <div><span>File</span><strong>${escapeHtml(editor.page.path)}</strong></div>
+      <div><span>Updated</span><strong>${formatDate(editor.page.updatedAt)}</strong></div>
+    `;
+  }
+  if (previewRoute) {
+    previewRoute.textContent = editor.page.route;
+  }
+  if (nodeCount) {
+    nodeCount.textContent = String(editor.nodes.length);
+  }
+  if (nodeList) {
+    nodeList.innerHTML = editor.nodes.map((node) => `
+      <button
+        class="admin-editor-node ${node.id === editor.selectedNodeId ? 'is-selected' : ''}"
+        type="button"
+        data-editor-node-select="${escapeHtml(node.id)}"
+      >
+        ${escapeHtml(node.label)}
+      </button>
+    `).join('');
+    nodeList.querySelectorAll('[data-editor-node-select]').forEach((button) => {
+      button.addEventListener('click', () => selectAdminEditorNode(button.dataset.editorNodeSelect));
+    });
+  }
+  syncAdminEditorSelectionFields();
+}
+
+function syncAdminEditorSelectionFields() {
+  const editor = state.admin.editor;
+  const empty = document.querySelector('[data-editor-selection-empty]');
+  const fields = document.querySelector('[data-editor-fields]');
+  const tag = document.querySelector('[data-editor-node-tag]');
+  const textInput = document.querySelector('[data-editor-node-text]');
+  const hrefInput = document.querySelector('[data-editor-node-href]');
+  const blankInput = document.querySelector('[data-editor-node-blank]');
+  const linkFields = document.querySelector('[data-editor-link-fields]');
+  if (!editor?.selectedNodeId) {
+    if (empty) empty.hidden = false;
+    if (fields) fields.hidden = true;
+    if (tag) tag.textContent = 'Select one';
+    return;
+  }
+  const sourceNode = getEditorNode(editor.sourceDocument, editor.selectedNodeId);
+  if (!sourceNode) return;
+  const isLink = sourceNode.matches('a, button');
+  if (empty) empty.hidden = true;
+  if (fields) fields.hidden = false;
+  if (tag) tag.textContent = sourceNode.tagName.toLowerCase();
+  if (textInput) textInput.value = sourceNode.textContent?.replace(/\s+/g, ' ').trim() || '';
+  if (hrefInput) hrefInput.value = sourceNode.getAttribute('href') || '';
+  if (blankInput) blankInput.checked = sourceNode.getAttribute('target') === '_blank';
+  if (linkFields) linkFields.hidden = !isLink;
+}
+
+function selectAdminEditorNode(nodeId, options = {}) {
+  const editor = state.admin.editor;
+  const previewDoc = document.querySelector('[data-editor-preview]')?.contentDocument;
+  if (!editor || !previewDoc) return;
+  const previous = editor.selectedNodeId ? getEditorNode(previewDoc, editor.selectedNodeId) : null;
+  if (previous) {
+    previous.removeAttribute('data-ghosted-selected');
+  }
+  editor.selectedNodeId = nodeId;
+  const next = getEditorNode(previewDoc, nodeId);
+  if (next) {
+    next.setAttribute('data-ghosted-selected', 'true');
+    if (options.scroll !== false) {
+      next.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    }
+  }
+  syncAdminEditorSidebar();
+}
+
+function updateAdminEditorHeadField(kind, value) {
+  const editor = state.admin.editor;
+  if (!editor) return;
+  if (kind === 'title') {
+    let title = editor.sourceDocument.querySelector('title');
+    if (!title) {
+      title = editor.sourceDocument.createElement('title');
+      editor.sourceDocument.head.append(title);
+    }
+    title.textContent = value;
+    return;
+  }
+  if (kind === 'description') {
+    setAdminMetaDescription(editor.sourceDocument, value);
+  }
+}
+
+function updateAdminEditorNodeField(kind, value) {
+  const editor = state.admin.editor;
+  const sourceNode = editor?.selectedNodeId ? getEditorNode(editor.sourceDocument, editor.selectedNodeId) : null;
+  const previewNode = editor?.selectedNodeId ? getEditorNode(document.querySelector('[data-editor-preview]')?.contentDocument, editor.selectedNodeId) : null;
+  if (!sourceNode || !previewNode) return;
+  if (kind === 'text') {
+    sourceNode.textContent = value;
+    previewNode.textContent = value;
+  }
+  if (kind === 'href') {
+    if (value) {
+      sourceNode.setAttribute('href', value);
+      previewNode.setAttribute('href', value);
+    } else {
+      sourceNode.removeAttribute('href');
+      previewNode.removeAttribute('href');
+    }
+  }
+  if (kind === 'blank') {
+    if (value) {
+      sourceNode.setAttribute('target', '_blank');
+      previewNode.setAttribute('target', '_blank');
+      sourceNode.setAttribute('rel', 'noopener noreferrer');
+      previewNode.setAttribute('rel', 'noopener noreferrer');
+    } else {
+      sourceNode.removeAttribute('target');
+      previewNode.removeAttribute('target');
+    }
+  }
+  editor.nodes = editor.nodes.map((node) => node.id === editor.selectedNodeId
+    ? { ...node, label: describeEditableNode(sourceNode), isLink: sourceNode.matches('a, button') }
+    : node);
+  syncAdminEditorSidebar();
+}
+
+function getAdminMetaDescription(doc) {
+  return doc?.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+}
+
+function setAdminMetaDescription(doc, value) {
+  if (!doc) return;
+  let meta = doc.querySelector('meta[name="description"]');
+  if (!meta) {
+    meta = doc.createElement('meta');
+    meta.setAttribute('name', 'description');
+    doc.head.append(meta);
+  }
+  meta.setAttribute('content', value);
+}
+
+function getEditorNode(doc, nodeId) {
+  if (!doc || !nodeId) return null;
+  return doc.querySelector(`[data-ghosted-node-id="${cssEscape(nodeId)}"]`);
+}
+
+function serializeAdminEditorDocument(doc) {
+  return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
 }
 
 function renderStats(items) {

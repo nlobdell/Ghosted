@@ -405,6 +405,129 @@
   color: var(--app-muted);
 }
 
+.admin-editor-card {
+  margin-bottom: 1rem;
+}
+
+.admin-editor-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-editor-shell {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.admin-editor-sidebar,
+.admin-editor-preview-shell {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.admin-editor-panel {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(211, 192, 255, 0.1);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.admin-editor-page-list,
+.admin-editor-node-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.admin-editor-page,
+.admin-editor-node {
+  width: 100%;
+  border: 1px solid rgba(211, 192, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--app-text);
+  border-radius: 0.95rem;
+  padding: 0.85rem 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, transform 140ms ease, background 140ms ease;
+}
+
+.admin-editor-page strong,
+.admin-editor-node strong {
+  display: block;
+}
+
+.admin-editor-page span,
+.admin-editor-node span,
+.admin-editor-meta span {
+  color: var(--app-muted);
+  font-size: 0.85rem;
+}
+
+.admin-editor-page.is-selected,
+.admin-editor-page:hover,
+.admin-editor-node.is-selected,
+.admin-editor-node:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 214, 102, 0.28);
+  background: rgba(255, 214, 102, 0.08);
+}
+
+.admin-editor-meta {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.admin-editor-meta strong {
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.admin-editor-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0;
+}
+
+.admin-editor-checkbox input {
+  width: auto;
+}
+
+.admin-editor-empty {
+  color: var(--app-muted);
+  font-size: 0.95rem;
+}
+
+.admin-editor-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.admin-editor-preview-frame {
+  min-height: 46rem;
+  border-radius: 1.2rem;
+  border: 1px solid rgba(211, 192, 255, 0.16);
+  background: rgba(5, 4, 9, 0.92);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.admin-editor-preview-frame iframe {
+  width: 100%;
+  min-height: 46rem;
+  border: 0;
+  background: #0a0810;
+}
+
 .casino-stage {
   margin-bottom: 1rem;
 }
@@ -833,6 +956,7 @@
 }
 
 @media (max-width: 960px) {
+  .admin-editor-shell,
   .casino-layout,
   .app-hero,
   .app-summary-grid,
@@ -871,6 +995,11 @@
 
   .casino-machine__display {
     padding: 0.8rem;
+  }
+
+  .admin-editor-preview-frame,
+  .admin-editor-preview-frame iframe {
+    min-height: 34rem;
   }
 
   .casino-paytable__row,
