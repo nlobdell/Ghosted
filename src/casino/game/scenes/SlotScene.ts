@@ -243,7 +243,7 @@ export class SlotScene extends Phaser.Scene {
       maskShape.fillRect(x, y, REEL_WIDTH, REEL_HEIGHT);
       maskShape.setVisible(false);
       strip.setMask(maskShape.createGeometryMask());
-      this.root.add([glow, symbolBack, frame, strip]);
+      this.root.add([glow, symbolBack, frame, strip, maskShape]);
       this.reels.push({ frame, glow, homeY: y + STRIP_PADDING_TOP, maskShape, strip, symbolBack, x, y });
     }
 
