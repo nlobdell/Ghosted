@@ -1,17 +1,14 @@
 import './style.css';
-import Phaser from 'phaser';
 import { logout } from './game/api';
-import { SlotScene } from './game/scenes/SlotScene';
+import { SlotRenderer } from './game/renderers/SlotRenderer';
 import { CasinoStore } from './game/store';
 import { renderAuth, renderCasinoApp, renderSignInState, renderSummary } from './game/ui';
 import type { CasinoState } from './game/types';
 
 const store = new CasinoStore();
 
-let phaserGame: Phaser.Game | null = null;
-let resizeObserver: ResizeObserver | null = null;
 let previousState: CasinoState | null = null;
-let slotScene: SlotScene | null = null;
+let slotRenderer: SlotRenderer | null = null;
 
 async function boot() {
   await store.boot();
@@ -57,7 +54,7 @@ async function boot() {
 function bindMachineButtons() {
   document.querySelectorAll<HTMLElement>('[data-machine-pick]').forEach((button) => {
     button.addEventListener('click', () => {
-      slotScene?.armAudio();
+      slotRenderer?.armAudio();
       const gameSlug = button.dataset.machinePick;
       if (!gameSlug) return;
       store.selectGame(gameSlug);
@@ -72,13 +69,13 @@ function bindSpinButton() {
   if (!button || !status || !game) return;
 
   button.addEventListener('click', async () => {
-    slotScene?.armAudio();
+    slotRenderer?.armAudio();
     button.disabled = true;
     button.textContent = 'Spinning...';
     status.textContent = `${game.name} is spinning...`;
     try {
       const pending = await store.spin();
-      await slotScene?.playSpin(game, pending.result);
+      await slotRenderer?.playSpin(game, pending.result);
       store.commitSpin(pending);
       syncCasinoPanels();
     } catch (error) {
@@ -95,46 +92,9 @@ async function mountStage() {
   const game = store.selectedGame();
   if (!host || !game) return;
 
-  if (phaserGame) {
-    resizeObserver?.disconnect();
-    phaserGame.destroy(true);
-    phaserGame = null;
-  }
-
-  slotScene = new SlotScene();
-  phaserGame = new Phaser.Game({
-    type: Phaser.AUTO,
-    backgroundColor: '#08050f',
-    height: 640,
-    parent: host,
-    render: {
-      antialias: true,
-      powerPreference: 'high-performance',
-      pixelArt: false,
-      roundPixels: false,
-    },
-    scale: {
-      autoCenter: Phaser.Scale.CENTER_BOTH,
-      height: 640,
-      mode: Phaser.Scale.NONE,
-      width: 920,
-    },
-    scene: [slotScene],
-    transparent: true,
-    width: 920,
-  });
-
-  await slotScene.ready;
-  await slotScene.showMachine(game, store.state.latestResult?.gameSlug === game.slug ? store.state.latestResult : null);
-  resizeStage(host);
-  resizeObserver = new ResizeObserver(() => resizeStage(host));
-  resizeObserver.observe(host);
-}
-
-function resizeStage(host: HTMLElement) {
-  const width = Math.max(620, host.clientWidth || 620);
-  const height = Math.max(520, Math.round(width * 0.72));
-  slotScene?.resize(width, height);
+  slotRenderer ??= new SlotRenderer();
+  await slotRenderer.mount(host);
+  await slotRenderer.showMachine(game, store.state.latestResult?.gameSlug === game.slug ? store.state.latestResult : null);
 }
 
 function authSignature(state: CasinoState) {
