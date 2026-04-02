@@ -31,11 +31,11 @@ DAILY_WAGER_CAP = 500
 SPIN_COOLDOWN_SECONDS = 2
 REQUEST_TIMEOUT = 10
 RNG = random.SystemRandom()
-DEFAULT_DISCORD_USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/135.0.0.0 Safari/537.36 GhostedBot/1.0"
-)
+DEFAULT_DISCORD_USER_AGENT = "DiscordBot (https://ghosted.smirkhub.com, 1.0)"
+DISCORD_HTTP_HEADERS = {
+    "User-Agent": DEFAULT_DISCORD_USER_AGENT,
+    "Accept": "application/json",
+}
 STATIC_MIME_OVERRIDES = {
     ".js": "application/javascript; charset=utf-8",
     ".json": "application/json; charset=utf-8",
@@ -124,10 +124,8 @@ def admin_discord_ids() -> set[str]:
 
 
 def discord_request_headers(extra: dict[str, str] | None = None) -> dict[str, str]:
-    headers = {
-        "User-Agent": os.getenv("DISCORD_USER_AGENT", DEFAULT_DISCORD_USER_AGENT),
-        "Accept": "application/json",
-    }
+    headers = dict(DISCORD_HTTP_HEADERS)
+    headers["User-Agent"] = os.getenv("DISCORD_USER_AGENT", headers["User-Agent"])
     if extra:
         headers.update(extra)
     return headers
@@ -585,7 +583,7 @@ def post_webhook(content: str, auth_config: AuthConfig) -> None:
     request = Request(
         auth_config.webhook_url,
         data=payload,
-        headers={"Content-Type": "application/json"},
+        headers=discord_request_headers({"Content-Type": "application/json"}),
         method="POST",
     )
     try:
