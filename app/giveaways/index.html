@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ghosted Apps | Giveaways</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/app/app.css" />
+  </head>
+  <body class="app-page">
+    <header class="app-header">
+      <div class="container app-header__inner">
+        <a class="brand" href="/">Ghosted</a>
+        <nav class="app-nav">
+          <a class="app-nav__link" href="/app/">Apps</a>
+          <a class="app-nav__link" href="/app/casino/">Casino</a>
+          <a class="app-nav__link is-active" href="/app/giveaways/">Giveaways</a>
+          <a class="app-nav__link" href="/app/rewards/">Rewards</a>
+          <a class="app-nav__link" href="/app/profile/">Profile</a>
+        </nav>
+        <div class="app-auth" data-auth></div>
+      </div>
+    </header>
+    <main class="container app-main" data-page="giveaways">
+      <section class="app-hero">
+        <div class="app-hero__copy">
+          <p class="app-kicker">Giveaways</p>
+          <h1 class="app-title">Entries, eligibility, and winner draws in one flow.</h1>
+          <p class="app-description">Browse public giveaways, then sign in with Discord to spend points or claim role-gated entries.</p>
+        </div>
+        <aside class="app-hero__meta" data-banner>
+          <h3>Discord tie-in</h3>
+          <p>Giveaways can optionally check guild roles, and admins can announce new drops straight back into Discord.</p>
+        </aside>
+      </section>
+      <section class="app-summary-grid" data-summary></section>
+      <section data-content></section>
+    </main>
+    <script src="/app/app.js"></script>
+  </body>
+</html>

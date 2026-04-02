@@ -1,12 +1,14 @@
 :root {
-  --bg: #07090f;
-  --bg-soft: #111726;
-  --text: #f5f7ff;
-  --muted: #bbc2d8;
-  --brand: #8b5cf6;
-  --brand-2: #22d3ee;
-  --card: #121a2b;
-  --border: #243149;
+  --bg: #08070c;
+  --bg-soft: #12101a;
+  --bg-panel: rgba(22, 18, 31, 0.9);
+  --text: #f3f1fb;
+  --muted: #b8b2ca;
+  --brand: #9d7cf2;
+  --brand-soft: #cec2f5;
+  --card: #161320;
+  --border: rgba(157, 124, 242, 0.16);
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
 }
 
 * {
@@ -17,8 +19,10 @@ html,
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: linear-gradient(180deg, #05070c, #0b1020 40%, #0a0f1d);
+  font-family: 'Manrope', system-ui, -apple-system, Segoe UI, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(157, 124, 242, 0.14), transparent 28%),
+    linear-gradient(180deg, #040308, #0a0810 40%, #0d0b13 100%);
   color: var(--text);
 }
 
@@ -29,7 +33,7 @@ body {
 
 .hero {
   padding: 1.25rem 0 5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .nav {
@@ -49,11 +53,13 @@ body {
   color: var(--muted);
   text-decoration: none;
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .brand {
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -64,7 +70,7 @@ body {
 }
 
 .eyebrow {
-  color: var(--brand-2);
+  color: var(--brand-soft);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.8rem;
@@ -74,6 +80,7 @@ body {
 h1,
 h2,
 h3 {
+  font-family: 'Space Grotesk', sans-serif;
   margin: 0;
 }
 
@@ -83,7 +90,7 @@ h1 {
 }
 
 h1 span {
-  background: linear-gradient(45deg, var(--brand), var(--brand-2));
+  background: linear-gradient(45deg, var(--brand), var(--brand-soft));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -107,22 +114,24 @@ h1 span {
   text-decoration: none;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(45deg, var(--brand), #6d28d9);
+  background: linear-gradient(180deg, #9d7cf2, #6040a8);
   padding: 0.8rem 1.1rem;
   border-radius: 0.7rem;
-  border: 1px solid transparent;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(235, 229, 255, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 12px 28px rgba(25, 16, 47, 0.4);
 }
 
 .button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.35);
+  box-shadow: 0 16px 34px rgba(25, 16, 47, 0.46);
 }
 
 .button--secondary {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.02);
   border-color: var(--border);
   color: var(--text);
+  box-shadow: none;
 }
 
 .button--small {
@@ -134,22 +143,32 @@ h1 span {
   padding: 4rem 0;
 }
 
+.section-label {
+  color: var(--brand-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  margin: 0 0 0.9rem;
+}
+
 .section h2 {
-  font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+  font-size: clamp(1.8rem, 2.8vw, 2.5rem);
   margin-bottom: 1.4rem;
+  max-width: 15ch;
 }
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
 }
 
 .card {
-  background: linear-gradient(180deg, rgba(18, 26, 43, 0.9), rgba(15, 21, 36, 0.95));
+  background: linear-gradient(180deg, rgba(31, 25, 44, 0.92), rgba(20, 16, 29, 0.96));
   border: 1px solid var(--border);
   padding: 1.2rem;
   border-radius: 0.8rem;
+  box-shadow: var(--shadow);
 }
 
 .card h3 {
@@ -164,9 +183,9 @@ h1 span {
 }
 
 .section--cta {
-  background: rgba(17, 23, 38, 0.7);
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(15, 12, 23, 0.82);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .cta {
@@ -174,7 +193,7 @@ h1 span {
 }
 
 .cta__eyebrow {
-  color: var(--brand-2);
+  color: var(--brand-soft);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.8rem;
