@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ghosted Clan | OSRS & More</title>
+    <title>Ghosted Clan | Old School RuneScape Hub</title>
     <meta
       name="description"
-      content="Ghosted is a gaming clan focused on Old School RuneScape and other games. Join our community on Discord and use our community apps."
+      content="Ghosted is a purple-lit Old School RuneScape clan hub with Discord at the center and lightweight community apps for rewards, giveaways, and side activities."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
@@ -19,10 +19,10 @@
   <body>
     <header class="hero">
       <nav class="nav container">
-        <div class="brand">Ghosted</div>
+        <a class="brand" href="/">Ghosted</a>
         <div class="nav__actions">
-          <a class="nav__link" href="design/">About Us</a>
-          <a class="nav__link" href="app/">Community Apps</a>
+          <a class="nav__link" href="design/">About</a>
+          <a class="nav__link" href="app/">App Hub</a>
           <a class="button button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
             Join Discord
           </a>
@@ -31,74 +31,120 @@
 
       <div class="hero__content container">
         <div class="hero__copy">
-          <p class="eyebrow">Gaming Clan</p>
-          <h1>Ghosted keeps it simple.</h1>
+          <p class="eyebrow">Old School RuneScape Clan</p>
+          <h1>Ghosted keeps the clan hall sharp.</h1>
           <p class="hero__subtitle">
-            OSRS first, other games welcome, Discord at the center. The site stays lightweight and handles only what is useful: orientation, rewards, giveaways, and a few community extras.
+            Discord stays at the center, the website handles only the useful pieces, and the whole platform reads like one purple-black guild hall instead of a pile of separate pages.
           </p>
           <div class="hero__actions">
-            <a class="button" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-              Join Discord
-            </a>
-            <a class="button button--secondary" href="app/">
-              Open Apps
-            </a>
-            <a class="button button--secondary" href="design/">
-              About Us
+            <a class="button" href="app/">Open App Hub</a>
+            <a class="button button--secondary" href="design/">See The Clan Map</a>
+            <a class="button button--secondary" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
+              Enter Discord
             </a>
           </div>
         </div>
-        <aside class="hero__panel">
-          <p class="hero__panel-label">At a Glance</p>
-          <p>Old School RuneScape is the home base. Discord is where the group actually moves. The site just removes friction.</p>
-          <div class="home-note__meta">
-            <div><strong>OSRS</strong><span>Main game</span></div>
-            <div><strong>Discord</strong><span>Home base</span></div>
-            <div><strong>Apps</strong><span>Utilities only</span></div>
+
+        <aside class="hero__aside">
+          <div class="hero__sigil" aria-hidden="true"><span>G</span></div>
+          <div>
+            <p class="hero__panel-label">World State</p>
+            <p class="hero__panel-copy">
+              Built around Old School RuneScape, trimmed down to the routes members actually use, and framed with a darker guild-board aesthetic.
+            </p>
+            <ul class="hero__list">
+              <li>OSRS is the home game and social anchor.</li>
+              <li>Discord is where parties form and events move.</li>
+              <li>The site covers rewards, giveaways, and the casino floor.</li>
+            </ul>
           </div>
         </aside>
+      </div>
+
+      <div class="hero__rail container">
+        <div class="hero__rail-item">
+          <strong>Clan-first</strong>
+          <span>Orientation on the front page, action in Discord, utilities behind the hub.</span>
+        </div>
+        <div class="hero__rail-item">
+          <strong>Purple / black / gray</strong>
+          <span>A darker rune-board palette replaces the flatter brochure look.</span>
+        </div>
+        <div class="hero__rail-item">
+          <strong>Less filler</strong>
+          <span>One route to join, one route to browse, one route to the live tools.</span>
+        </div>
       </div>
     </header>
 
     <main>
-      <section class="section container" id="games">
-        <p class="section-label">What Ghosted Is</p>
-        <h2>A small community built around playing together, not overbuilding the wrapper around it.</h2>
-        <div class="card-grid">
-          <article class="card">
-            <h3>OSRS first</h3>
-            <p>
-              Raids, bossing, skilling, and group events still make up the core of the clan.
-            </p>
+      <section class="section container">
+        <div class="section-heading">
+          <p class="section-label">Platform Layout</p>
+          <h2>Three lanes, no wasted clicks.</h2>
+          <p class="section-intro">
+            The redesign strips the platform down to the things Ghosted actually needs: a fast clan read, a member toolset, and a clean path back to Discord.
+          </p>
+        </div>
+        <div class="lane-grid">
+          <article class="lane">
+            <p class="lane__eyebrow">01. Clan Hall</p>
+            <h3>Understand the group fast</h3>
+            <p>The front page gives the vibe, the priorities, and the routes into the rest of the platform in one screen.</p>
           </article>
-          <article class="card">
-            <h3>Other games too</h3>
-            <p>
-              We rotate into whatever the group is actually playing without overcomplicating the setup.
-            </p>
+          <article class="lane">
+            <p class="lane__eyebrow">02. App Hub</p>
+            <h3>Use the tools that matter</h3>
+            <p>Rewards, giveaways, profile, and the casino floor live in one tighter member workspace instead of scattered utility pages.</p>
           </article>
-          <article class="card">
-            <h3>Low-friction community</h3>
-            <p>
-              Discord handles identity and coordination, while the site covers points, giveaways, and game-night extras.
-            </p>
+          <article class="lane">
+            <p class="lane__eyebrow">03. Discord Gate</p>
+            <h3>Jump back to the action</h3>
+            <p>When the site has done its job, it gets out of the way and sends people back where the clan actually talks and plays.</p>
           </article>
         </div>
       </section>
 
       <section class="section container">
-        <p class="section-label">Use The Site For</p>
-        <div class="home-note">
-          <div>
-            <h2>Orientation on the front, utilities behind the sign-in.</h2>
+        <div class="board">
+          <article class="board__copy">
+            <p class="section-label">Tonight's Routes</p>
+            <h2>Pick the lane that matches what you need right now.</h2>
             <p>
-              The homepage explains the shape of the clan. About Us gives the fuller picture. The app layer handles rewards, giveaways, and casino features without getting in the way of the actual community.
+              New visitors can map the clan, members can go straight to the tools, and everyone still has a clear Discord exit at every stage.
             </p>
-          </div>
-          <div class="home-note__meta">
-            <div><strong>Homepage</strong><span>Quick read</span></div>
-            <div><strong>About Us</strong><span>Community map</span></div>
-            <div><strong>Apps</strong><span>Member utilities</span></div>
+            <div class="board__stack">
+              <span>OSRS-led community</span>
+              <span>Discord-linked identity</span>
+              <span>Lightweight site-side tools</span>
+            </div>
+          </article>
+
+          <div class="board__routes">
+            <article class="route">
+              <div>
+                <p class="route__eyebrow">App Hub</p>
+                <h3>Rewards, giveaways, casino, profile</h3>
+                <p>Head straight into the member tools without bouncing through explanatory copy first.</p>
+              </div>
+              <a class="button button--secondary button--small" href="app/">Open</a>
+            </article>
+            <article class="route">
+              <div>
+                <p class="route__eyebrow">Clan Map</p>
+                <h3>See how Ghosted is organized</h3>
+                <p>Use the About page as the short-form map for PvM, skilling, social play, and how the site fits in.</p>
+              </div>
+              <a class="button button--secondary button--small" href="design/">Explore</a>
+            </article>
+            <article class="route">
+              <div>
+                <p class="route__eyebrow">Discord</p>
+                <h3>Meet the crew where they already gather</h3>
+                <p>Join the server, find the right channel, and move straight into whatever is active tonight.</p>
+              </div>
+              <a class="button button--secondary button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">Join</a>
+            </article>
           </div>
         </div>
       </section>
@@ -106,17 +152,14 @@
       <section class="section section--cta">
         <div class="container cta">
           <p class="cta__eyebrow">Discord-Centered</p>
-          <h2>Start where the clan actually lives.</h2>
-          <p>Join the server, use the site when you need it, and skip the filler.</p>
+          <h2>The platform points the way. The clan lives in the server.</h2>
+          <p>Use the site to orient, bank rewards, or spin the floor, then head back to Discord for the actual raid, grind, or social night.</p>
           <div class="cta__actions">
             <a class="button" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-              discord.gg/ghosted
+              Join Discord
             </a>
             <a class="button button--secondary" href="app/">
-              Launch Community Apps
-            </a>
-            <a class="button button--secondary" href="design/">
-              About Us
+              Launch App Hub
             </a>
           </div>
         </div>
@@ -125,7 +168,7 @@
 
     <footer class="footer">
       <div class="container">
-        <p>&copy; <span id="year"></span> Ghosted Clan. See you in-game.</p>
+        <p>&copy; <span id="year"></span> Ghosted Clan. See you in Gielinor.</p>
       </div>
     </footer>
 
