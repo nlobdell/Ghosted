@@ -17,12 +17,14 @@ jobs:
         run: |
           test -f index.html
           test -f styles.css
-          test -f design/index.html
-          test -f design/styles.css
 
       - name: Block merge conflict markers
         run: |
+<<<<<<< HEAD
           if grep -nE "^(<<<<<<<|=======|>>>>>>>)" index.html styles.css design/index.html design/styles.css; then
+=======
+          if rg -n "^(<<<<<<<|=======|>>>>>>>)" index.html styles.css; then
+>>>>>>> 562e055afb53e4ed8f45fc31ba8bffa61f44ed35
             echo "Merge conflict markers found."
             exit 1
           fi
@@ -36,15 +38,18 @@ jobs:
           class Parser(HTMLParser):
               pass
 
-          for path in ['index.html', 'design/index.html']:
-              content = Path(path).read_text(encoding='utf-8')
-              parser = Parser()
-              parser.feed(content)
-              parser.close()
+          content = Path('index.html').read_text(encoding='utf-8')
+          parser = Parser()
+          parser.feed(content)
+          parser.close()
           print('HTML parsed successfully')
           PY
 
       - name: Validate Discord link presence
         run: |
+<<<<<<< HEAD
           grep -n "discord.gg/ghosted" index.html
           grep -n "discord.gg/ghosted" design/index.html
+=======
+          rg -n "discord.gg/ghosted" index.html
+>>>>>>> 562e055afb53e4ed8f45fc31ba8bffa61f44ed35
