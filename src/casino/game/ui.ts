@@ -6,17 +6,17 @@ export function renderSummary(state: CasinoState) {
   if (!state.me?.authenticated) {
     return stats([
       ['Machines', String(state.games?.games.length || 0)],
-      ['Format', '5x3 live slots'],
-      ['Guardrail', 'Points only'],
-      ['Access', 'Sign in required'],
+      ['Grid', '5x3'],
+      ['Format', 'Points only'],
+      ['Access', 'Sign in'],
     ]);
   }
 
   return stats([
     ['Balance', formatPoints(state.rewards?.balance || state.me.user.balance || 0)],
-    ['Cabinets', String(state.games?.games.length || 0)],
+    ['Machines', String(state.games?.games.length || 0)],
     ['Free spins', String(game?.freeSpinsRemaining || 0)],
-    ['Wager limit', formatWagerLimit(state.rewards?.dailyCap ?? null)],
+    ['Daily limit', formatWagerLimit(state.rewards?.dailyCap ?? null)],
   ]);
 }
 
@@ -74,7 +74,7 @@ export function renderCasinoApp(state: CasinoState) {
       <article class="app-card casino-stage-shell">
         <div class="casino-stage-shell__top">
           <div>
-            <p class="app-kicker">Game App</p>
+            <p class="app-kicker">Casino</p>
             <h3>${escapeHtml(game.name)}</h3>
           </div>
           <div class="casino-stage-shell__chips">
@@ -116,14 +116,14 @@ export function renderCasinoApp(state: CasinoState) {
           </aside>
           <section class="app-card casino-stage-shell__card">
             <div class="app-card__row">
-              <h3>Player Board</h3>
+              <h3>Session</h3>
               <span class="app-chip">${formatPoints(state.rewards.balance)}</span>
             </div>
             <div data-player-board>${renderPlayerBoard(state)}</div>
           </section>
           <section class="app-card casino-stage-shell__card">
             <div class="app-card__row">
-              <h3>Cabinets</h3>
+              <h3>Machines</h3>
               <span class="app-chip">${state.games?.games.length || 0} live</span>
             </div>
             <div class="casino-machine-list">
@@ -142,7 +142,7 @@ export function renderCasinoApp(state: CasinoState) {
         </article>
         <article class="app-card">
           <div class="app-card__row">
-            <h3>Recent Spins</h3>
+            <h3>History</h3>
             <span class="app-chip">${state.rewards.spins.length} logged</span>
           </div>
           <div data-history>${renderHistory(state.rewards.spins)}</div>
@@ -208,7 +208,7 @@ function renderPaytable(game: SlotGame) {
 
 function renderHistory(spins: SpinResult[]) {
   if (!spins.length) {
-    return '<div class="app-empty">The floor log starts filling in after your first spin.</div>';
+    return '<div class="app-empty">No spins yet.</div>';
   }
   return `
     <div class="casino-history">
@@ -302,7 +302,7 @@ function meterWidth(wagered: number, cap: number | null) {
 
 function wagerMeterCopy(wagered: number, remaining: number | null, cap: number | null) {
   if (cap === null) {
-    return `${formatPoints(wagered)} wagered today. No limit is active right now.`;
+    return `${formatPoints(wagered)} wagered today. No cap is active.`;
   }
-  return `${formatPoints(remaining || 0)} remaining before the daily cap.`;
+  return `${formatPoints(remaining || 0)} left before the daily cap.`;
 }

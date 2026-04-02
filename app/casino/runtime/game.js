@@ -31847,14 +31847,14 @@ function CP(r) {
   const e = co(r);
   return r.me?.authenticated ? dA([
     ["Balance", ve(r.rewards?.balance || r.me.user.balance || 0)],
-    ["Cabinets", String(r.games?.games.length || 0)],
+    ["Machines", String(r.games?.games.length || 0)],
     ["Free spins", String(e?.freeSpinsRemaining || 0)],
-    ["Wager limit", FP(r.rewards?.dailyCap ?? null)]
+    ["Daily limit", FP(r.rewards?.dailyCap ?? null)]
   ]) : dA([
     ["Machines", String(r.games?.games.length || 0)],
-    ["Format", "5x3 live slots"],
-    ["Guardrail", "Points only"],
-    ["Access", "Sign in required"]
+    ["Grid", "5x3"],
+    ["Format", "Points only"],
+    ["Access", "Sign in"]
   ]);
 }
 function mP(r) {
@@ -31891,7 +31891,7 @@ function DP(r) {
       <article class="app-card casino-stage-shell">
         <div class="casino-stage-shell__top">
           <div>
-            <p class="app-kicker">Game App</p>
+            <p class="app-kicker">Casino</p>
             <h3>${pe(e.name)}</h3>
           </div>
           <div class="casino-stage-shell__chips">
@@ -31933,14 +31933,14 @@ function DP(r) {
           </aside>
           <section class="app-card casino-stage-shell__card">
             <div class="app-card__row">
-              <h3>Player Board</h3>
+              <h3>Session</h3>
               <span class="app-chip">${ve(r.rewards.balance)}</span>
             </div>
             <div data-player-board>${QP(r)}</div>
           </section>
           <section class="app-card casino-stage-shell__card">
             <div class="app-card__row">
-              <h3>Cabinets</h3>
+              <h3>Machines</h3>
               <span class="app-chip">${r.games?.games.length || 0} live</span>
             </div>
             <div class="casino-machine-list">
@@ -31959,7 +31959,7 @@ function DP(r) {
         </article>
         <article class="app-card">
           <div class="app-card__row">
-            <h3>Recent Spins</h3>
+            <h3>History</h3>
             <span class="app-chip">${r.rewards.spins.length} logged</span>
           </div>
           <div data-history>${yP(r.rewards.spins)}</div>
@@ -32032,7 +32032,7 @@ function yP(r) {
         </div>
       `).join("")}
     </div>
-  ` : '<div class="app-empty">The floor log starts filling in after your first spin.</div>';
+  ` : '<div class="app-empty">No spins yet.</div>';
 }
 function TP(r, e) {
   return r?.outcome.headline || e.name;
@@ -32074,7 +32074,7 @@ function RP(r, e) {
   return e === null || e <= 0 ? 100 : Math.min(100, r / e * 100);
 }
 function HP(r, e, t) {
-  return t === null ? `${ve(r)} wagered today. No limit is active right now.` : `${ve(e || 0)} remaining before the daily cap.`;
+  return t === null ? `${ve(r)} wagered today. No cap is active.` : `${ve(e || 0)} left before the daily cap.`;
 }
 const ye = new PP();
 let gt = null, os = null;
@@ -32148,7 +32148,7 @@ function zl() {
   if (!r.me?.authenticated || !r.rewards || !e) return;
   const t = document.querySelector("[data-console-headline]"), s = document.querySelector("[data-status]"), n = document.querySelector("[data-spin]"), i = document.querySelector("[data-player-board]"), o = document.querySelector("[data-history]");
   if (t && (t.textContent = r.latestResult?.outcome.headline || e.name), s && (r.spinning ? s.textContent = "Spinning..." : r.latestResult?.freeSpinsAwarded ? s.textContent = `${r.latestResult.freeSpinsAwarded} free spins awarded` : r.latestResult?.usedFreeSpin ? s.textContent = `${r.latestResult.freeSpinsRemaining} free spins left` : r.latestResult?.payout ? s.textContent = `${r.latestResult.payout.toLocaleString()} pts paid` : r.latestResult ? s.textContent = "No win" : s.textContent = `${e.cost.toLocaleString()} pts stake`), n && (n.disabled = r.spinning, n.textContent = r.spinning ? "Spinning..." : e.freeSpinsRemaining ? `Play Free Spin (${e.freeSpinsRemaining})` : `Spin ${e.name}`), i) {
-    const a = r.rewards.spins.find((h) => h.payout > 0), A = r.rewards.dailyCap === null || r.rewards.dailyCap <= 0 ? 100 : Math.min(100, r.rewards.dailyWagered / r.rewards.dailyCap * 100), c = r.rewards.dailyCap === null ? `${r.rewards.dailyWagered.toLocaleString()} pts wagered today. No limit is active right now.` : `${(r.rewards.dailyRemaining || 0).toLocaleString()} pts remaining before the daily cap.`;
+    const a = r.rewards.spins.find((h) => h.payout > 0), A = r.rewards.dailyCap === null || r.rewards.dailyCap <= 0 ? 100 : Math.min(100, r.rewards.dailyWagered / r.rewards.dailyCap * 100), c = r.rewards.dailyCap === null ? `${r.rewards.dailyWagered.toLocaleString()} pts wagered today. No cap is active.` : `${(r.rewards.dailyRemaining || 0).toLocaleString()} pts left before the daily cap.`;
     i.innerHTML = `
       <div class="casino-player-grid">
         <div class="casino-player-stat"><span class="app-muted">Balance</span><strong>${r.rewards.balance.toLocaleString()} pts</strong></div>
@@ -32175,7 +32175,7 @@ function zl() {
             </div>
           `).join("")}
         </div>
-      ` : o.innerHTML = '<div class="app-empty">The floor log starts filling in after your first spin.</div>');
+      ` : o.innerHTML = '<div class="app-empty">No spins yet.</div>');
 }
 SP().catch((r) => {
   const e = document.querySelector("[data-banner]");

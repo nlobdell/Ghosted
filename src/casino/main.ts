@@ -171,8 +171,8 @@ function syncCasinoPanels() {
       ? 100
       : Math.min(100, (state.rewards.dailyWagered / state.rewards.dailyCap) * 100);
     const meterCopy = state.rewards.dailyCap === null
-      ? `${state.rewards.dailyWagered.toLocaleString()} pts wagered today. No limit is active right now.`
-      : `${(state.rewards.dailyRemaining || 0).toLocaleString()} pts remaining before the daily cap.`;
+      ? `${state.rewards.dailyWagered.toLocaleString()} pts wagered today. No cap is active.`
+      : `${(state.rewards.dailyRemaining || 0).toLocaleString()} pts left before the daily cap.`;
     playerBoard.innerHTML = `
       <div class="casino-player-grid">
         <div class="casino-player-stat"><span class="app-muted">Balance</span><strong>${state.rewards.balance.toLocaleString()} pts</strong></div>
@@ -188,7 +188,7 @@ function syncCasinoPanels() {
   }
   if (history) {
     if (!state.rewards.spins.length) {
-      history.innerHTML = '<div class="app-empty">The floor log starts filling in after your first spin.</div>';
+      history.innerHTML = '<div class="app-empty">No spins yet.</div>';
     } else {
       history.innerHTML = `
         <div class="casino-history">
