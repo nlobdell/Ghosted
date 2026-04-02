@@ -106,21 +106,22 @@ async function renderDashboard() {
   const contentRoot = document.querySelector('[data-content]');
   if (!state.me.authenticated) {
     summaryRoot.innerHTML = '';
-    renderSignInState(contentRoot, 'Sign in to view your points, giveaways, and spins in one place.');
+    renderSignInState(contentRoot, 'Sign in to see your balance, giveaways, and recent spins.');
     return;
   }
 
   const [rewards, giveaways] = await Promise.all([getJSON('/api/rewards'), getJSON('/api/giveaways')]);
   const activeGiveaways = giveaways.giveaways.filter((item) => item.status === 'active').length;
   const recentSpins = rewards.spins.length;
-  const perksText = state.me.user.perks.length
-    ? escapeHtml(state.me.user.perks.join(', '))
-    : 'Role perks appear here once Discord roles sync.';
+  const perks = state.me.user.perks || [];
+  const perksMarkup = perks.length
+    ? `<div class="app-tags">${perks.map((perk) => `<span class="app-tag">${escapeHtml(perk)}</span>`).join('')}</div>`
+    : '<p class="app-panel-note">Perks show up here after roles sync.</p>';
   summaryRoot.innerHTML = renderStats([
     ['Balance', formatPoints(rewards.balance)],
     ['Active giveaways', String(activeGiveaways)],
     ['Recent spins', String(recentSpins)],
-    ['Recent entries', String(state.me.user.giveawayEntries)],
+    ['Entries used', String(state.me.user.giveawayEntries || 0)],
   ]);
 
   contentRoot.innerHTML = `
@@ -128,40 +129,47 @@ async function renderDashboard() {
       <article class="app-panel">
         <div class="app-panel__header">
           <div>
-            <p class="app-kicker">Launch Pad</p>
-            <h3>Pick the next lane.</h3>
+            <p class="app-kicker">Quick Start</p>
+            <h3>Open a tool</h3>
           </div>
           <span class="app-chip">${state.me.user.isAdmin ? 'Admin access' : 'Member tools'}</span>
         </div>
         <div class="app-route-list">
           <a class="app-route" href="/app/casino/">
             <div>
-              <strong>Casino floor</strong>
-              <p>Spin cabinets, trigger features, and keep the points loop moving.</p>
+              <strong>Casino</strong>
+              <p>Spin with points.</p>
             </div>
             <span class="app-route__meta">${recentSpins} logged</span>
           </a>
           <a class="app-route" href="/app/giveaways/">
             <div>
-              <strong>Giveaway board</strong>
-              <p>Check live drops, role gates, and how many entries you still have to send.</p>
+              <strong>Giveaways</strong>
+              <p>Browse active draws.</p>
             </div>
             <span class="app-route__meta">${activeGiveaways} active</span>
           </a>
           <a class="app-route" href="/app/rewards/">
             <div>
-              <strong>Rewards ledger</strong>
-              <p>See the record behind every wager, payout, grant, and giveaway entry.</p>
+              <strong>Rewards</strong>
+              <p>Check point history.</p>
             </div>
             <span class="app-route__meta">${rewards.entries.length} entries</span>
+          </a>
+          <a class="app-route" href="/app/profile/">
+            <div>
+              <strong>Profile</strong>
+              <p>Review synced roles.</p>
+            </div>
+            <span class="app-route__meta">${state.me.user.isAdmin ? 'Admin' : 'Member'}</span>
           </a>
         </div>
       </article>
       <article class="app-panel">
         <div class="app-panel__header">
           <div>
-            <p class="app-kicker">Account Bind</p>
-            <h3>Discord-linked status.</h3>
+            <p class="app-kicker">Account</p>
+            <h3>Discord status</h3>
           </div>
           <span class="app-chip">${formatPoints(rewards.balance)}</span>
         </div>
@@ -171,26 +179,26 @@ async function renderDashboard() {
             <strong>${escapeHtml(state.me.user.displayName)}</strong>
           </div>
           <div>
-            <span>Role perks</span>
-            <strong>${perksText}</strong>
+            <span>Username</span>
+            <strong>@${escapeHtml(state.me.user.username)}</strong>
           </div>
           <div>
-            <span>Giveaway entries used</span>
-            <strong>${state.me.user.giveawayEntries}</strong>
+            <span>Entries used</span>
+            <strong>${state.me.user.giveawayEntries || 0}</strong>
           </div>
           <div>
-            <span>Admin surface</span>
-            <strong>${state.me.user.isAdmin ? 'Unlocked' : 'Member only'}</strong>
+            <span>Access</span>
+            <strong>${state.me.user.isAdmin ? 'Admin' : 'Member'}</strong>
           </div>
         </div>
-        <p class="app-panel-note">Discord login anchors identity, roles, and access across the app.</p>
+        ${perksMarkup}
       </article>
     </section>
     <section class="app-ledger-shell">
-      <div class="app-card__row">
+      <div class="app-section-heading">
         <div>
           <p class="app-kicker">Recent Activity</p>
-          <h3>Latest ledger entries</h3>
+          <h3>Latest entries</h3>
         </div>
         <a class="button button--secondary button--small" href="/app/rewards/">Open full ledger</a>
       </div>
@@ -266,7 +274,8 @@ async function renderRewards() {
   const summaryRoot = document.querySelector('[data-summary]');
   const contentRoot = document.querySelector('[data-content]');
   if (!state.me.authenticated) {
-    renderSignInState(contentRoot, 'Sign in to see your balance, transaction history, and recent spins.');
+    summaryRoot.innerHTML = '';
+    renderSignInState(contentRoot, 'Sign in to see your balance and point history.');
     return;
   }
 
@@ -277,7 +286,17 @@ async function renderRewards() {
     ['Recent spins', String(rewards.spins.length)],
     ['Auth', 'Discord-linked'],
   ]);
-  contentRoot.innerHTML = renderLedgerTable(rewards.entries);
+  contentRoot.innerHTML = `
+    <section class="app-ledger-shell">
+      <div class="app-section-heading">
+        <div>
+          <h3>All activity</h3>
+          <p class="app-description">Casino, giveaways, grants, and deductions.</p>
+        </div>
+      </div>
+      ${renderLedgerTable(rewards.entries)}
+    </section>
+  `;
 }
 
 async function renderCasino() {
@@ -479,15 +498,27 @@ async function renderGiveaways() {
             <h3>${escapeHtml(item.title)}</h3>
             <span class="app-chip">${escapeHtml(item.status)}</span>
           </div>
-          <p>${escapeHtml(item.description)}</p>
-          <ul class="app-list--tight">
-            <li>Cost: ${formatPoints(item.pointCost)}</li>
-            <li>Entries used: ${item.userEntries} / ${item.maxEntries}</li>
-            <li>Closes: ${formatDate(item.endAt)}</li>
-            <li>${item.requiredRoleId ? `Role gated: ${escapeHtml(item.requiredRoleId)}` : 'Open to linked members'}</li>
-          </ul>
+          ${item.description ? `<p>${escapeHtml(item.description)}</p>` : ''}
+          <div class="app-metric-grid">
+            <div class="app-metric">
+              <span>Cost</span>
+              <strong>${formatPoints(item.pointCost)}</strong>
+            </div>
+            <div class="app-metric">
+              <span>Entries</span>
+              <strong>${item.userEntries} / ${item.maxEntries}</strong>
+            </div>
+            <div class="app-metric">
+              <span>Closes</span>
+              <strong>${formatDate(item.endAt)}</strong>
+            </div>
+            <div class="app-metric">
+              <span>Access</span>
+              <strong>${item.requiredRoleId ? escapeHtml(item.requiredRoleId) : 'Linked members'}</strong>
+            </div>
+          </div>
           <div class="app-actions">
-            <button class="button" data-enter="${item.id}" ${item.canEnter ? '' : 'disabled'}>Enter giveaway</button>
+            <button class="button" data-enter="${item.id}" ${item.canEnter ? '' : 'disabled'}>Enter</button>
           </div>
         </article>
       `).join('')}
@@ -500,7 +531,7 @@ async function renderGiveaways() {
       try {
         const result = await getJSON(`/api/giveaways/${button.dataset.enter}/enter`, { method: 'POST' });
         renderBanner(
-          `Entry submitted. ${formatPoints(result.result.balance)} remaining with ${result.result.entriesRemaining} entries left.`,
+          `Entry added. ${formatPoints(result.result.balance)} left with ${result.result.entriesRemaining} entries remaining.`,
           'info',
           '#giveaway-result'
         );
@@ -519,30 +550,68 @@ async function renderProfile() {
   const summaryRoot = document.querySelector('[data-summary]');
   const contentRoot = document.querySelector('[data-content]');
   if (!state.me.authenticated) {
-    renderSignInState(contentRoot, 'Sign in to see your linked Discord identity, perks, and stats.');
+    summaryRoot.innerHTML = '';
+    renderSignInState(contentRoot, 'Sign in to see your Discord profile and synced roles.');
     return;
   }
   const user = state.me.user;
+  const roles = user.roles || [];
+  const perks = user.perks || [];
+  const avatar = user.avatarUrl
+    ? `<div class="app-avatar"><img src="${user.avatarUrl}" alt="${escapeHtml(user.displayName)}" /></div>`
+    : `<div class="app-avatar">${escapeHtml(user.displayName.slice(0, 1).toUpperCase())}</div>`;
   summaryRoot.innerHTML = renderStats([
     ['Balance', formatPoints(user.balance)],
-    ['Discord ID', escapeHtml(user.discordId)],
-    ['Giveaway entries', String(user.giveawayEntries)],
-    ['Admin', user.isAdmin ? 'Yes' : 'No'],
+    ['Discord ID', escapeHtml(user.discordId || 'Not synced')],
+    ['Entries used', String(user.giveawayEntries || 0)],
+    ['Access', user.isAdmin ? 'Admin' : 'Member'],
   ]);
   contentRoot.innerHTML = `
     <section class="app-grid app-grid--two">
       <article class="app-card">
-        <h3>Identity</h3>
-        <p><strong>${escapeHtml(user.displayName)}</strong></p>
-        <p class="app-muted">@${escapeHtml(user.username)}</p>
-        <p>${user.avatarUrl ? `<img src="${user.avatarUrl}" alt="${escapeHtml(user.displayName)}" style="width:72px;height:72px;border-radius:999px;">` : ''}</p>
+        <div class="app-identity">
+          ${avatar}
+          <div>
+            <h3>${escapeHtml(user.displayName)}</h3>
+            <p class="app-muted">@${escapeHtml(user.username)}</p>
+          </div>
+        </div>
+        <div class="app-metric-grid">
+          <div class="app-metric">
+            <span>Discord ID</span>
+            <strong>${escapeHtml(user.discordId || 'Not synced')}</strong>
+          </div>
+          <div class="app-metric">
+            <span>Balance</span>
+            <strong>${formatPoints(user.balance)}</strong>
+          </div>
+          <div class="app-metric">
+            <span>Entries used</span>
+            <strong>${user.giveawayEntries || 0}</strong>
+          </div>
+          <div class="app-metric">
+            <span>Access</span>
+            <strong>${user.isAdmin ? 'Admin' : 'Member'}</strong>
+          </div>
+        </div>
       </article>
       <article class="app-card">
-        <h3>Perks and roles</h3>
-        <p>${user.perks.length ? escapeHtml(user.perks.join(' • ')) : 'No special perks synced yet.'}</p>
-        <ul class="app-list--tight">
-          ${user.roles.map((role) => `<li>${escapeHtml(role)}</li>`).join('') || '<li>No cached roles</li>'}
-        </ul>
+        <div class="app-card__row">
+          <h3>Roles and perks</h3>
+          <span class="app-chip">${roles.length} synced</span>
+        </div>
+        <div>
+          <p class="app-muted">Perks</p>
+          <div class="app-tags">
+            ${perks.length ? perks.map((perk) => `<span class="app-tag">${escapeHtml(perk)}</span>`).join('') : '<span class="app-tag">No synced perks</span>'}
+          </div>
+        </div>
+        <div>
+          <p class="app-muted">Roles</p>
+          <div class="app-tags">
+            ${roles.length ? roles.map((role) => `<span class="app-tag">${escapeHtml(role)}</span>`).join('') : '<span class="app-tag">No synced roles</span>'}
+          </div>
+        </div>
       </article>
     </section>
   `;
@@ -1159,7 +1228,7 @@ function renderStats(items) {
 
 function renderLedgerTable(entries) {
   if (!entries.length) {
-    return '<div class="app-empty">No ledger entries yet.</div>';
+    return '<div class="app-empty">No activity yet.</div>';
   }
   return `
     <section class="app-table">
