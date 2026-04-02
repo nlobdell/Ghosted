@@ -41,6 +41,27 @@ STATIC_MIME_OVERRIDES = {
     ".js": "application/javascript; charset=utf-8",
     ".json": "application/json; charset=utf-8",
 }
+
+
+@dataclass(frozen=True)
+class EditablePage:
+    slug: str
+    title: str
+    route: str
+    file_path: Path
+
+
+EDITABLE_PAGES = [
+    EditablePage("home", "Home", "/", BASE_DIR / "index.html"),
+    EditablePage("about", "About Us", "/design/", BASE_DIR / "design" / "index.html"),
+    EditablePage("app-hub", "App Hub", "/app/", BASE_DIR / "app" / "index.html"),
+    EditablePage("casino", "Casino", "/app/casino/", BASE_DIR / "app" / "casino" / "index.html"),
+    EditablePage("giveaways", "Giveaways", "/app/giveaways/", BASE_DIR / "app" / "giveaways" / "index.html"),
+    EditablePage("rewards", "Rewards", "/app/rewards/", BASE_DIR / "app" / "rewards" / "index.html"),
+    EditablePage("profile", "Profile", "/app/profile/", BASE_DIR / "app" / "profile" / "index.html"),
+    EditablePage("admin", "Admin", "/admin/", BASE_DIR / "admin" / "index.html"),
+]
+
 DEFAULT_CASINO_GAMES = [
     {
         "slug": "jigsaw-jackpot",
@@ -302,6 +323,49 @@ def build_auth_config(base_url: str | None = None) -> AuthConfig:
         giveaway_role_id=env_text("DISCORD_GIVEAWAY_ROLE_ID"),
         webhook_url=env_text("DISCORD_WEBHOOK_URL"),
     )
+
+
+def editable_page_for_slug(slug: str) -> EditablePage:
+    normalized = slugify(slug)
+    for page in EDITABLE_PAGES:
+        if page.slug == normalized:
+            return page
+    raise AppError("Editable page not found.", 404)
+
+
+def editable_page_payload(page: EditablePage) -> dict[str, Any]:
+    stat = page.file_path.stat()
+    return {
+        "slug": page.slug,
+        "title": page.title,
+        "route": page.route,
+        "path": page.file_path.relative_to(BASE_DIR).as_posix(),
+        "updatedAt": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
+    }
+
+
+def read_editable_page(page: EditablePage) -> dict[str, Any]:
+    payload = editable_page_payload(page)
+    payload["html"] = page.file_path.read_text(encoding="utf-8")
+    return payload
+
+
+def normalize_editable_html(value: str) -> str:
+    html = value.replace("\r\n", "\n").strip()
+    if not html:
+        raise AppError("HTML content is required.")
+    lowered = html.lower()
+    if "<html" not in lowered:
+        raise AppError("Saved content must include a full HTML document.")
+    if not lowered.startswith("<!doctype html"):
+        html = "<!DOCTYPE html>\n" + html
+    return html.rstrip() + "\n"
+
+
+def save_editable_page(page: EditablePage, html: str) -> dict[str, Any]:
+    normalized = normalize_editable_html(html)
+    page.file_path.write_text(normalized, encoding="utf-8")
+    return read_editable_page(page)
 
 
 def connect_database(path: Path = DB_PATH) -> sqlite3.Connection:
@@ -1726,6 +1790,31 @@ class GhostedHandler(BaseHTTPRequestHandler):
             actor = self.require_admin(connection)
             self.respond_json({"overview": admin_overview(connection), "actor": profile_payload(connection, actor)})
             return
+        if method == "GET" and path == "/api/admin/pages":
+            self.require_admin(connection)
+            self.respond_json({"pages": [editable_page_payload(page) for page in EDITABLE_PAGES]})
+            return
+        if path.startswith("/api/admin/pages/"):
+            actor = self.require_admin(connection)
+            slug = path.removeprefix("/api/admin/pages/").strip("/")
+            page = editable_page_for_slug(slug)
+            if method == "GET":
+                self.respond_json({"page": read_editable_page(page)})
+                return
+            if method == "POST":
+                payload = self.read_json_body()
+                saved_page = save_editable_page(page, str(payload.get("html", "")))
+                audit(
+                    connection,
+                    actor["id"],
+                    "edit_page",
+                    "page",
+                    page.slug,
+                    {"route": page.route, "path": saved_page["path"]},
+                )
+                connection.commit()
+                self.respond_json({"ok": True, "page": saved_page})
+                return
         if method == "POST" and path == "/api/admin/rewards/grant":
             actor = self.require_admin(connection)
             result = grant_points(connection, actor, self.read_json_body())
