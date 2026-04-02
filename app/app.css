@@ -301,6 +301,211 @@
   color: var(--app-muted);
 }
 
+.casino-stage {
+  margin-bottom: 1rem;
+}
+
+.casino-stage__copy {
+  margin-bottom: 1rem;
+}
+
+.casino-resultboard {
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 214, 102, 0.18);
+  background:
+    linear-gradient(135deg, rgba(255, 214, 102, 0.14), rgba(157, 124, 242, 0.1)),
+    rgba(11, 8, 18, 0.8);
+  padding: 1rem 1.1rem;
+}
+
+.casino-resultboard__label {
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ffd666;
+}
+
+.casino-resultboard__text {
+  color: var(--app-text);
+  font-size: 1.02rem;
+}
+
+.casino-machine {
+  position: relative;
+  overflow: hidden;
+}
+
+.casino-machine.is-busy {
+  border-color: rgba(255, 214, 102, 0.28);
+}
+
+.casino-machine__display {
+  position: relative;
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 1.4rem;
+  border: 1px solid rgba(255, 214, 102, 0.18);
+  background:
+    radial-gradient(circle at top center, rgba(255, 214, 102, 0.2), transparent 48%),
+    linear-gradient(180deg, rgba(34, 22, 14, 0.95), rgba(12, 8, 17, 0.96));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+    inset 0 20px 30px rgba(255, 214, 102, 0.06);
+}
+
+.casino-machine__glow {
+  position: absolute;
+  inset: 0.65rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 214, 102, 0.08);
+  pointer-events: none;
+}
+
+.casino-machine__payline {
+  position: absolute;
+  left: 1.2rem;
+  right: 1.2rem;
+  top: calc(50% - 2px);
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 102, 168, 0.92), transparent);
+  box-shadow: 0 0 16px rgba(255, 102, 168, 0.45);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.casino-reels {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.casino-reel {
+  --reel-height: 5.5rem;
+  position: relative;
+  height: var(--reel-height);
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.14)),
+    rgba(6, 5, 10, 0.88);
+  box-shadow:
+    inset 0 10px 20px rgba(0, 0, 0, 0.32),
+    inset 0 -10px 20px rgba(0, 0, 0, 0.32);
+}
+
+.casino-reel::before,
+.casino-reel::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1rem;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.casino-reel::before {
+  top: 0;
+  background: linear-gradient(180deg, rgba(3, 2, 6, 0.92), transparent);
+}
+
+.casino-reel::after {
+  bottom: 0;
+  background: linear-gradient(0deg, rgba(3, 2, 6, 0.92), transparent);
+}
+
+.casino-reel__track {
+  will-change: transform;
+}
+
+.casino-reel__item {
+  height: var(--reel-height);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.12rem;
+  text-align: center;
+}
+
+.casino-reel__emoji {
+  display: block;
+  font-size: 2.15rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.14));
+}
+
+.casino-reel__name {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.casino-reel.is-spinning .casino-reel__emoji,
+.casino-reel.is-settling .casino-reel__emoji {
+  animation: casinoSymbolPulse 160ms linear infinite alternate;
+}
+
+.casino-machine__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.casino-symbol {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 214, 102, 0.14);
+  background: rgba(255, 214, 102, 0.06);
+  color: var(--app-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.casino-symbol__emoji {
+  font-size: 1rem;
+}
+
+.casino-machine__status {
+  min-height: 2.8rem;
+  margin: 0.95rem 0 0;
+}
+
+.casino-machine__button {
+  min-width: 9rem;
+}
+
+@keyframes casinoReelLoop {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(calc(var(--loop-distance) * -1));
+  }
+}
+
+@keyframes casinoSymbolPulse {
+  from {
+    opacity: 0.88;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
 @media (max-width: 960px) {
   .app-hero,
   .app-summary-grid,
@@ -319,5 +524,13 @@
 
   .app-main {
     padding-top: 2rem;
+  }
+
+  .casino-reels {
+    gap: 0.6rem;
+  }
+
+  .casino-machine__display {
+    padding: 0.8rem;
   }
 }

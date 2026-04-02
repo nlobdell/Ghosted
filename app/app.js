@@ -3,6 +3,17 @@ const state = {
   me: null,
 };
 
+const SLOT_SYMBOLS = {
+  moon: { emoji: '🌙', label: 'Moon' },
+  rune: { emoji: '✨', label: 'Rune' },
+  coin: { emoji: '🪙', label: 'Coin' },
+  ghost: { emoji: '👻', label: 'Ghost' },
+  crown: { emoji: '👑', label: 'Crown' },
+};
+
+const REEL_ITEM_HEIGHT = 88;
+const MIN_SPIN_MS = 1100;
+
 document.addEventListener('DOMContentLoaded', () => {
   boot().catch((error) => {
     renderBanner(error.message || 'Something went wrong loading the app.', 'error');
@@ -202,6 +213,118 @@ async function renderRewards() {
     ['Auth', 'Discord-linked'],
   ]);
   contentRoot.innerHTML = renderLedgerTable(rewards.entries);
+}
+
+async function renderCasino() {
+  const summaryRoot = document.querySelector('[data-summary]');
+  const contentRoot = document.querySelector('[data-content]');
+  const gamesPayload = await getJSON('/api/casino/games');
+  const gamesBySlug = new Map(gamesPayload.games.map((game) => [game.slug, game]));
+  summaryRoot.innerHTML = renderStats([
+    ['Machines', String(gamesPayload.games.length)],
+    ['Daily wager cap', formatPoints(gamesPayload.dailyWagerCap)],
+    ['Points only', 'No cash value'],
+    ['Access', state.me.authenticated ? 'Signed in' : 'Sign in required'],
+  ]);
+
+  if (!state.me.authenticated) {
+    renderSignInState(contentRoot, 'Sign in to spin and earn rewards with community points.');
+    return;
+  }
+
+  contentRoot.innerHTML = `
+    <section class="app-card casino-stage">
+      <div class="app-card__row">
+        <div>
+          <p class="app-kicker">Casino Floor</p>
+          <h3>Animated reels, live results</h3>
+        </div>
+        <span class="app-chip">3 reel machines</span>
+      </div>
+      <p class="casino-stage__copy">Pull a lever and watch the reels settle on the exact symbols the server rolled for your spin.</p>
+      <div id="casino-result" class="casino-resultboard">
+        <div class="casino-resultboard__label">Floor feed</div>
+        <div class="casino-resultboard__text">Choose a machine to start a spin.</div>
+      </div>
+    </section>
+    <section class="app-grid app-grid--two">
+      ${gamesPayload.games.map((game) => `
+        <article class="app-card casino-machine" data-machine="${escapeHtml(game.slug)}">
+          <div class="app-card__row">
+            <h3>${escapeHtml(game.name)}</h3>
+            <span class="app-chip">${formatPoints(game.cost)} / spin</span>
+          </div>
+          <p>${escapeHtml(game.flavor)}</p>
+          <div class="casino-machine__display">
+            <div class="casino-machine__glow" aria-hidden="true"></div>
+            <div class="casino-machine__payline" aria-hidden="true"></div>
+            <div class="casino-reels">
+              ${renderReels(game.reelSymbols)}
+            </div>
+          </div>
+          <div class="app-inline">
+            <span class="app-muted">Top payout</span>
+            <strong>${formatPoints(game.topPayout)}</strong>
+          </div>
+          <div class="casino-machine__legend">
+            ${renderSymbolLegend(game.reelSymbols)}
+          </div>
+          <p class="casino-machine__status app-muted" data-machine-status>Ready for a clean pull.</p>
+          <div class="app-actions">
+            <button class="button casino-machine__button" data-spin="${escapeHtml(game.slug)}">Pull Lever</button>
+          </div>
+        </article>
+      `).join('')}
+    </section>
+  `;
+
+  hydrateCasinoMachines(contentRoot, gamesPayload.games);
+
+  contentRoot.querySelectorAll('[data-spin]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const game = gamesBySlug.get(button.dataset.spin);
+      const machine = button.closest('[data-machine]');
+      const status = machine?.querySelector('[data-machine-status]');
+      const resultRoot = contentRoot.querySelector('#casino-result');
+      const startedAt = performance.now();
+      button.disabled = true;
+      machine?.classList.add('is-busy');
+      if (status && game) {
+        status.textContent = `${game.name} is spinning up...`;
+      }
+      try {
+        const spinRequest = getJSON('/api/casino/spin', {
+          method: 'POST',
+          body: JSON.stringify({ gameSlug: button.dataset.spin }),
+        });
+        if (machine && game) {
+          startMachineSpin(machine, game);
+        }
+        const payload = await spinRequest;
+        await wait(Math.max(0, MIN_SPIN_MS - (performance.now() - startedAt)));
+        if (machine && game) {
+          await settleMachineSpin(machine, game, payload.result.symbols);
+        }
+        renderCasinoResult(resultRoot, payload.result);
+        if (status) {
+          status.textContent = describeSpinResult(payload.result);
+        }
+        state.me = await getJSON('/api/me');
+        renderAuth();
+      } catch (error) {
+        if (machine && game) {
+          resetMachine(machine, game.reelSymbols);
+        }
+        if (status) {
+          status.textContent = error.message;
+        }
+        renderBanner(error.message, 'error', resultRoot);
+      } finally {
+        button.disabled = false;
+        machine?.classList.remove('is-busy');
+      }
+    });
+  });
 }
 
 async function renderGiveaways() {
@@ -461,6 +584,159 @@ function formatDate(value) {
 function toIsoLocal(value) {
   if (!value) return '';
   return new Date(value).toISOString();
+}
+
+function renderReels(symbols) {
+  const safeSymbols = normalizeReelSymbols(symbols);
+  return [0, 1, 2].map((index) => {
+    const symbol = safeSymbols[index % safeSymbols.length];
+    return `
+      <div class="casino-reel" data-reel="${index}">
+        <div class="casino-reel__track">${renderReelItem(symbol)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSymbolLegend(symbols) {
+  return uniqueSymbols(symbols).map((symbol) => {
+    const meta = getSlotSymbol(symbol);
+    return `
+      <span class="casino-symbol">
+        <span class="casino-symbol__emoji" aria-hidden="true">${meta.emoji}</span>
+        <span>${escapeHtml(meta.label)}</span>
+      </span>
+    `;
+  }).join('');
+}
+
+function renderReelItem(symbol) {
+  const meta = getSlotSymbol(symbol);
+  return `
+    <div class="casino-reel__item" data-symbol="${escapeHtml(symbol)}">
+      <span class="casino-reel__emoji" aria-hidden="true">${meta.emoji}</span>
+      <span class="casino-reel__name">${escapeHtml(meta.label)}</span>
+    </div>
+  `;
+}
+
+function hydrateCasinoMachines(root, games) {
+  games.forEach((game) => {
+    const machine = root.querySelector(`[data-machine="${cssEscape(game.slug)}"]`);
+    if (machine) {
+      resetMachine(machine, game.reelSymbols);
+    }
+  });
+}
+
+function startMachineSpin(machine, game) {
+  machine.querySelectorAll('[data-reel]').forEach((reel, index) => {
+    const safeSymbols = normalizeReelSymbols(game.reelSymbols);
+    const orderedSymbols = rotateSymbols(safeSymbols, index);
+    const strip = repeatSymbols(orderedSymbols, 5);
+    const track = reel.querySelector('.casino-reel__track');
+    reel.classList.add('is-spinning');
+    reel.classList.remove('is-settling');
+    track.innerHTML = strip.map(renderReelItem).join('');
+    track.style.transition = 'none';
+    track.style.transform = 'translateY(0)';
+    track.style.setProperty('--loop-distance', `${orderedSymbols.length * REEL_ITEM_HEIGHT}px`);
+    track.getBoundingClientRect();
+    track.style.animation = `casinoReelLoop ${240 + (index * 45)}ms linear infinite`;
+  });
+}
+
+async function settleMachineSpin(machine, game, finalSymbols) {
+  const reels = [...machine.querySelectorAll('[data-reel]')];
+  await Promise.all(reels.map((reel, index) => settleReel(reel, game.reelSymbols, finalSymbols[index], index)));
+}
+
+async function settleReel(reel, symbols, finalSymbol, index) {
+  const safeSymbols = normalizeReelSymbols(symbols);
+  const track = reel.querySelector('.casino-reel__track');
+  const strip = [...repeatSymbols(rotateSymbols(safeSymbols, index + 1), 5), finalSymbol || safeSymbols[0]];
+  reel.classList.remove('is-spinning');
+  reel.classList.add('is-settling');
+  track.style.animation = 'none';
+  track.innerHTML = strip.map(renderReelItem).join('');
+  track.style.transition = 'none';
+  track.style.transform = 'translateY(0)';
+  track.getBoundingClientRect();
+  await wait(20);
+  track.style.transition = `transform ${960 + (index * 260)}ms cubic-bezier(0.12, 0.8, 0.2, 1)`;
+  track.style.transform = `translateY(-${(strip.length - 1) * REEL_ITEM_HEIGHT}px)`;
+  await wait(980 + (index * 260));
+  setReelFace(reel, finalSymbol || safeSymbols[0]);
+}
+
+function resetMachine(machine, symbols) {
+  const safeSymbols = normalizeReelSymbols(symbols);
+  machine.querySelectorAll('[data-reel]').forEach((reel, index) => {
+    setReelFace(reel, safeSymbols[index % safeSymbols.length]);
+  });
+}
+
+function setReelFace(reel, symbol) {
+  const track = reel.querySelector('.casino-reel__track');
+  reel.classList.remove('is-spinning', 'is-settling');
+  track.style.animation = 'none';
+  track.style.transition = 'none';
+  track.style.transform = 'translateY(0)';
+  track.innerHTML = renderReelItem(symbol);
+}
+
+function renderCasinoResult(root, result) {
+  if (!root) return;
+  const symbols = result.symbols.map((symbol) => getSlotSymbol(symbol).emoji).join(' ');
+  const tone = result.payout > 0 ? 'info' : 'warning';
+  const message = result.payout > 0
+    ? `${symbols} Line hit. Won ${formatPoints(result.payout)} and moved to ${formatPoints(result.balance)}.`
+    : `${symbols} No payout this time. Wager ${formatPoints(result.wager)}, balance ${formatPoints(result.balance)}.`;
+  renderBanner(message, tone, root);
+}
+
+function describeSpinResult(result) {
+  if (result.payout > 0) {
+    return `Paid ${formatPoints(result.payout)} on ${result.symbols.map((symbol) => getSlotSymbol(symbol).label).join(', ')}.`;
+  }
+  return `No line hit. Net ${formatPoints(result.net)} on that pull.`;
+}
+
+function normalizeReelSymbols(symbols) {
+  const filtered = (symbols || []).filter(Boolean);
+  return filtered.length ? filtered : ['coin', 'moon', 'ghost'];
+}
+
+function uniqueSymbols(symbols) {
+  return [...new Set(normalizeReelSymbols(symbols))];
+}
+
+function rotateSymbols(symbols, offset = 0) {
+  const safeSymbols = normalizeReelSymbols(symbols);
+  const normalizedOffset = ((offset % safeSymbols.length) + safeSymbols.length) % safeSymbols.length;
+  return safeSymbols.slice(normalizedOffset).concat(safeSymbols.slice(0, normalizedOffset));
+}
+
+function repeatSymbols(symbols, repeats) {
+  return Array.from({ length: repeats }, () => symbols).flat();
+}
+
+function getSlotSymbol(symbol) {
+  return SLOT_SYMBOLS[symbol] || {
+    emoji: '❔',
+    label: String(symbol || 'Unknown').replace(/[-_]+/g, ' ').replace(/\b\w/g, (match) => match.toUpperCase()),
+  };
+}
+
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function cssEscape(value) {
+  if (window.CSS?.escape) {
+    return window.CSS.escape(value);
+  }
+  return String(value).replace(/"/g, '\\"');
 }
 
 function escapeHtml(value) {
