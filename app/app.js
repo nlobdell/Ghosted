@@ -15,7 +15,7 @@ const SLOT_SYMBOLS = {
   crown: { emoji: '👑', label: 'Crown' },
 };
 
-const REEL_ITEM_HEIGHT = 88;
+const REEL_ITEM_HEIGHT = 68;
 const MIN_SPIN_MS = 1100;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -247,9 +247,9 @@ async function renderCasino() {
   summaryRoot.innerHTML = renderStats([
     ['Machines', String(gamesPayload.games.length)],
     ['Balance', formatPoints(rewards.balance)],
+    ['Free spins', String(selectedGame?.freeSpinsRemaining || 0)],
     ['Daily remaining', formatPoints(rewards.dailyRemaining)],
     ['Recent spins', String(rewards.spins.length)],
-    ['Selected', escapeHtml(selectedGame?.name || 'None')],
   ]);
 
   if (!selectedGame) {
@@ -276,12 +276,12 @@ async function renderCasino() {
             <div class="casino-machine__glow" aria-hidden="true"></div>
             <div class="casino-machine__payline" aria-hidden="true"></div>
             <div class="casino-reels casino-reels--hero">
-              ${renderReels(selectedGame.reelSymbols)}
+              ${renderReels(selectedGame)}
             </div>
           </div>
           <div class="casino-main__controls">
-            <button class="button casino-machine__button" data-spin="${escapeHtml(selectedGame.slug)}">Spin ${escapeHtml(selectedGame.name)}</button>
-            <div class="casino-machine__status app-muted" data-machine-status>${latestResult ? escapeHtml(describeSpinResult(latestResult)) : 'Pull the lever to start the round.'}</div>
+            <button class="button casino-machine__button" data-spin="${escapeHtml(selectedGame.slug)}">${selectedGame.freeSpinsRemaining ? `Play Free Spin (${selectedGame.freeSpinsRemaining})` : `Spin ${escapeHtml(selectedGame.name)}`}</button>
+            <div class="casino-machine__status app-muted" data-machine-status>${latestResult ? escapeHtml(describeSpinResult(latestResult)) : 'Five reels, three rows, and live feature triggers.'}</div>
           </div>
           <div id="casino-result" class="casino-resultboard">
             ${renderCasinoResultBoard(latestResult, selectedGame)}
@@ -293,16 +293,16 @@ async function renderCasino() {
             <strong>${escapeHtml(selectedGame.mood || 'Live machine')}</strong>
           </div>
           <div>
-            <div class="app-muted">Jackpot</div>
-            <strong>${escapeHtml(selectedGame.jackpotLabel || formatPoints(selectedGame.topPayout))}</strong>
+            <div class="app-muted">Free spins</div>
+            <strong>${selectedGame.freeSpinsRemaining ? `${selectedGame.freeSpinsRemaining} banked` : 'Trigger with 3 scatters'}</strong>
           </div>
           <div>
-            <div class="app-muted">Hit rate</div>
-            <strong>${formatPercent(selectedGame.hitRate)}</strong>
+            <div class="app-muted">Paylines</div>
+            <strong>${selectedGame.paylinesCount}</strong>
           </div>
           <div>
             <div class="app-muted">Top payout</div>
-            <strong>${formatPoints(selectedGame.topPayout)}</strong>
+            <strong>${escapeHtml(selectedGame.jackpotLabel || formatPoints(selectedGame.topPayout))}</strong>
           </div>
         </div>
       </article>
@@ -318,7 +318,7 @@ async function renderCasino() {
         </section>
         <section class="app-card">
           <h3>Player Board</h3>
-          ${renderCasinoPlayerStats(rewards)}
+          ${renderCasinoPlayerStats(rewards, selectedGame)}
         </section>
       </aside>
     </section>
@@ -371,7 +371,7 @@ async function renderCasino() {
         const payload = await spinRequest;
         await wait(Math.max(0, MIN_SPIN_MS - (performance.now() - startedAt)));
         if (machine) {
-          await settleMachineSpin(machine, selectedGame, payload.result.symbols);
+          await settleMachineSpin(machine, selectedGame, payload.result.grid || []);
         }
         state.casino.latestResult = payload.result;
         renderCasinoResultBoardInto(resultRoot, payload.result, selectedGame);
@@ -1073,6 +1073,322 @@ function getSlotSymbol(symbol) {
 
 function formatPercent(value) {
   return `${Math.round(Number(value || 0) * 100)}%`;
+}
+
+function renderMachinePickerButton(game, isSelected) {
+  return `
+    <button class="casino-picker ${isSelected ? 'is-selected' : ''}" data-machine-select="${escapeHtml(game.slug)}" type="button">
+      <div class="casino-picker__top">
+        <strong>${escapeHtml(game.name)}</strong>
+        <span>${formatPoints(game.cost)}</span>
+      </div>
+      <div class="casino-picker__meta">
+        <span>${escapeHtml(game.volatility || 'Medium')} volatility</span>
+        <span>${game.freeSpinsRemaining ? `${game.freeSpinsRemaining} free` : `${game.paylinesCount} lines`}</span>
+      </div>
+      <div class="casino-picker__legend">${renderSymbolLegend(game.reelSymbols)}</div>
+    </button>
+  `;
+}
+
+function renderCasinoPlayerStats(rewards, game) {
+  const latestWin = rewards.spins.find((spin) => spin.payout > 0);
+  return `
+    <div class="casino-player-grid">
+      <div class="casino-player-stat">
+        <span class="app-muted">Balance</span>
+        <strong>${formatPoints(rewards.balance)}</strong>
+      </div>
+      <div class="casino-player-stat">
+        <span class="app-muted">Selected machine</span>
+        <strong>${escapeHtml(game.name)}</strong>
+      </div>
+      <div class="casino-player-stat">
+        <span class="app-muted">Wagered today</span>
+        <strong>${formatPoints(rewards.dailyWagered)}</strong>
+      </div>
+      <div class="casino-player-stat">
+        <span class="app-muted">Latest win</span>
+        <strong>${latestWin ? formatPoints(latestWin.payout) : 'None yet'}</strong>
+      </div>
+    </div>
+    <div class="casino-meter">
+      <div class="casino-meter__bar">
+        <span class="casino-meter__fill" style="width: ${Math.min(100, Math.max(0, (rewards.dailyWagered / Math.max(1, rewards.dailyCap)) * 100))}%"></span>
+      </div>
+      <div class="app-muted">${formatPoints(rewards.dailyRemaining)} left before the daily cap closes the floor.</div>
+    </div>
+  `;
+}
+
+function renderPaytable(game) {
+  if (!game?.paytable?.length) {
+    return '<div class="app-empty">No paytable configured.</div>';
+  }
+
+  return `
+    <div class="casino-paytable">
+      ${game.paytable.map((entry) => `
+        <div class="casino-paytable__row">
+          <div class="casino-paytable__symbols">${entry.symbols.map(renderPaylineSymbol).join('')}</div>
+          <div class="casino-paytable__copy">
+            <strong>${escapeHtml(entry.label)}</strong>
+            <span class="app-muted">${entry.kind === 'scatter' ? `${entry.freeSpins || 0} free spins` : `${entry.multiplier}x total bet`}</span>
+          </div>
+          <div class="casino-paytable__payout">${formatPoints(entry.payout)}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderPaylineSymbol(symbol) {
+  if (symbol === 'any') {
+    return '<span class="casino-payline-symbol is-any">Any</span>';
+  }
+  const meta = getSlotSymbol(symbol);
+  return `<span class="casino-payline-symbol" title="${escapeHtml(meta.label)}">${meta.emoji}</span>`;
+}
+
+function renderCasinoHistory(spins) {
+  if (!spins.length) {
+    return '<div class="app-empty">Spin the cabinet and your run history shows up here.</div>';
+  }
+
+  return `
+    <div class="casino-history">
+      ${spins.slice(0, 8).map((spin) => `
+        <div class="casino-history__row">
+          <div>
+            <strong>${escapeHtml(spin.game)}</strong>
+            <div class="app-muted">${spin.symbols.map((symbol) => getSlotSymbol(symbol).emoji).join(' ')} ${escapeHtml(spin.outcome?.label || 'Spin')}</div>
+          </div>
+          <div class="casino-history__copy app-muted">${spin.usedFreeSpin ? 'Free spin' : formatPoints(spin.wager)}</div>
+          <div class="casino-history__value ${spin.payout > 0 ? 'is-win' : ''}">
+            ${spin.net >= 0 ? '+' : ''}${formatPoints(spin.net)}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderReels(game) {
+  const reelCount = Number(game?.reelCount || 5);
+  const rows = Number(game?.rows || 3);
+  const grid = buildIdleGrid(game);
+  return Array.from({ length: reelCount }, (_, index) => `
+    <div class="casino-reel" data-reel="${index}" style="--visible-rows:${rows}">
+      <div class="casino-reel__track">${renderReelColumn(grid[index] || [])}</div>
+    </div>
+  `).join('');
+}
+
+function renderReelColumn(symbols) {
+  return normalizeReelSymbols(symbols).map(renderReelItem).join('');
+}
+
+function renderSymbolLegend(symbols) {
+  return uniqueSymbols(symbols).map((symbol) => {
+    const meta = getSlotSymbol(symbol);
+    return `
+      <span class="casino-symbol">
+        <span class="casino-symbol__emoji" aria-hidden="true">${meta.emoji}</span>
+        <span>${escapeHtml(meta.label)}</span>
+      </span>
+    `;
+  }).join('');
+}
+
+function renderReelItem(symbol) {
+  const meta = getSlotSymbol(symbol);
+  return `
+    <div class="casino-reel__item" data-symbol="${escapeHtml(symbol)}">
+      <span class="casino-reel__emoji" aria-hidden="true">${meta.emoji}</span>
+      <span class="casino-reel__name">${escapeHtml(meta.label)}</span>
+    </div>
+  `;
+}
+
+function buildIdleGrid(game) {
+  const pool = normalizeReelSymbols(game?.reelSymbols || []);
+  const reelCount = Number(game?.reelCount || 5);
+  const rows = Number(game?.rows || 3);
+  return Array.from({ length: reelCount }, (_, reelIndex) =>
+    Array.from({ length: rows }, (_, rowIndex) => pool[(reelIndex + rowIndex) % pool.length] || 'coin')
+  );
+}
+
+function hydrateCasinoMachine(root, game, latestResult) {
+  const machine = root.querySelector(`[data-machine="${cssEscape(game.slug)}"]`);
+  if (!machine) return;
+  if (latestResult?.grid?.length) {
+    resetMachine(machine, latestResult.grid, game.rows);
+    return;
+  }
+  resetMachine(machine, buildIdleGrid(game), game.rows);
+}
+
+function startMachineSpin(machine, game) {
+  const rows = Number(game?.rows || 3);
+  machine.querySelectorAll('[data-reel]').forEach((reel, index) => {
+    const pool = normalizeReelSymbols(game.reelSymbols);
+    const orderedSymbols = rotateSymbols(pool, index);
+    const strip = repeatSymbols(orderedSymbols, 8);
+    const track = reel.querySelector('.casino-reel__track');
+    reel.classList.add('is-spinning');
+    reel.classList.remove('is-settling');
+    reel.style.setProperty('--visible-rows', String(rows));
+    track.innerHTML = renderReelColumn(strip);
+    track.style.transition = 'none';
+    track.style.transform = 'translateY(0)';
+    track.style.setProperty('--loop-distance', `${orderedSymbols.length * REEL_ITEM_HEIGHT}px`);
+    track.getBoundingClientRect();
+    track.style.animation = `casinoReelLoop ${220 + (index * 35)}ms linear infinite`;
+  });
+}
+
+async function settleMachineSpin(machine, game, finalGrid) {
+  const reels = [...machine.querySelectorAll('[data-reel]')];
+  const rows = Number(game?.rows || 3);
+  const grid = Array.isArray(finalGrid) && finalGrid.length ? finalGrid : buildIdleGrid(game);
+  await Promise.all(reels.map((reel, index) => settleReel(reel, game.reelSymbols, grid[index] || [], index, rows)));
+}
+
+async function settleReel(reel, symbolPool, finalReel, index, rows) {
+  const pool = normalizeReelSymbols(symbolPool);
+  const track = reel.querySelector('.casino-reel__track');
+  const target = normalizeReelSymbols(finalReel).slice(0, rows);
+  while (target.length < rows) {
+    target.push(pool[target.length % pool.length] || 'coin');
+  }
+  const strip = [...repeatSymbols(rotateSymbols(pool, index + 1), 6), ...target];
+  reel.classList.remove('is-spinning');
+  reel.classList.add('is-settling');
+  reel.style.setProperty('--visible-rows', String(rows));
+  track.style.animation = 'none';
+  track.innerHTML = renderReelColumn(strip);
+  track.style.transition = 'none';
+  track.style.transform = 'translateY(0)';
+  track.getBoundingClientRect();
+  await wait(20);
+  track.style.transition = `transform ${900 + (index * 180)}ms cubic-bezier(0.12, 0.8, 0.2, 1)`;
+  track.style.transform = `translateY(-${(strip.length - rows) * REEL_ITEM_HEIGHT}px)`;
+  await wait(920 + (index * 180));
+  setReelFace(reel, target, rows);
+}
+
+function resetMachine(machine, grid, rows = 3) {
+  machine.querySelectorAll('[data-reel]').forEach((reel, index) => {
+    setReelFace(reel, Array.isArray(grid[index]) ? grid[index] : [grid[index]], rows);
+  });
+}
+
+function setReelFace(reel, reelSymbols, rows = 3) {
+  const track = reel.querySelector('.casino-reel__track');
+  const normalized = normalizeReelSymbols(reelSymbols).slice(0, rows);
+  while (normalized.length < rows) {
+    normalized.push(normalized[normalized.length - 1] || 'coin');
+  }
+  reel.classList.remove('is-spinning', 'is-settling');
+  reel.style.setProperty('--visible-rows', String(rows));
+  track.style.animation = 'none';
+  track.style.transition = 'none';
+  track.style.transform = 'translateY(0)';
+  track.innerHTML = renderReelColumn(normalized);
+}
+
+function renderCasinoResultBoard(latestResult, game) {
+  if (!latestResult) {
+    return `
+      <div class="casino-resultboard__label">Floor feed</div>
+      <div class="casino-resultboard__headline">${escapeHtml(game.name)} is ready.</div>
+      <div class="casino-resultboard__text">Match symbols on the paylines. Three scatters open a free-spin round.</div>
+    `;
+  }
+
+  const outcome = latestResult.outcome || {};
+  const lineSummary = latestResult.lineWins?.length
+    ? `<div class="casino-resultboard__text">Paid lines: ${latestResult.lineWins.map((win) => `L${win.lineIndex + 1} ${getSlotSymbol(win.symbol).label} x${win.count}`).join(' | ')}</div>`
+    : '';
+  const featureSummary = latestResult.freeSpinsAwarded
+    ? `<div class="casino-resultboard__text">Feature trigger: +${latestResult.freeSpinsAwarded} free spins. ${latestResult.freeSpinsRemaining} total banked.</div>`
+    : latestResult.usedFreeSpin
+      ? `<div class="casino-resultboard__text">Free spin consumed. ${latestResult.freeSpinsRemaining} remaining.</div>`
+      : '';
+  return `
+    <div class="casino-resultboard__label">${escapeHtml(outcome.label || 'Result')}</div>
+    <div class="casino-resultboard__headline">${escapeHtml(outcome.headline || `${game.name} resolved.`)}</div>
+    <div class="casino-resultboard__text">${escapeHtml(outcome.detail || describeSpinResult(latestResult))}</div>
+    ${lineSummary}
+    ${featureSummary}
+    <div class="casino-resultboard__symbols">${latestResult.symbols.map((symbol) => renderPaylineSymbol(symbol)).join('')}</div>
+  `;
+}
+
+function renderCasinoResultBoardInto(root, latestResult, game) {
+  if (!root) return;
+  root.innerHTML = renderCasinoResultBoard(latestResult, game);
+}
+
+function describeSpinResult(result) {
+  if (result.freeSpinsAwarded) {
+    return `${result.freeSpinsAwarded} free spins awarded with ${result.scatter?.count || 0} scatters.`;
+  }
+  if (result.outcome?.detail) {
+    return result.outcome.detail;
+  }
+  if (result.payout > 0) {
+    return `Paid ${formatPoints(result.payout)} across ${result.lineWins?.length || 1} winning lines.`;
+  }
+  return result.usedFreeSpin
+    ? `Free spin used. ${result.freeSpinsRemaining || 0} remaining.`
+    : `No line hit. Net ${formatPoints(result.net)} on that pull.`;
+}
+
+function normalizeReelSymbols(symbols) {
+  const values = Array.isArray(symbols) ? symbols : [symbols];
+  const filtered = values.filter(Boolean);
+  return filtered.length ? filtered : ['coin', 'moon', 'ghost'];
+}
+
+function uniqueSymbols(symbols) {
+  return [...new Set(normalizeReelSymbols(symbols))];
+}
+
+function rotateSymbols(symbols, offset = 0) {
+  const pool = normalizeReelSymbols(symbols);
+  const normalizedOffset = ((offset % pool.length) + pool.length) % pool.length;
+  return pool.slice(normalizedOffset).concat(pool.slice(0, normalizedOffset));
+}
+
+function repeatSymbols(symbols, repeats) {
+  return Array.from({ length: repeats }, () => symbols).flat();
+}
+
+function getSlotSymbol(symbol) {
+  const slotSymbols = {
+    moon: { emoji: '\u{1F319}', label: 'Moon' },
+    rune: { emoji: '\u2728', label: 'Rune' },
+    coin: { emoji: '\u{1FA99}', label: 'Coin' },
+    ghost: { emoji: '\u{1F47B}', label: 'Ghost' },
+    crown: { emoji: '\u{1F451}', label: 'Crown' },
+    mask: { emoji: '\u{1F3AD}', label: 'Mask' },
+    gem: { emoji: '\u{1F48E}', label: 'Gem' },
+    lantern: { emoji: '\u{1F3EE}', label: 'Lantern' },
+    wild: { emoji: '\u{1F0CF}', label: 'Wild' },
+    scatter: { emoji: '\u{1F52E}', label: 'Scatter' },
+  };
+  return slotSymbols[symbol] || {
+    emoji: '\u2754',
+    label: String(symbol || 'Unknown').replace(/[-_]+/g, ' ').replace(/\b\w/g, (match) => match.toUpperCase()),
+  };
+}
+
+function formatPercent(value) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number)) return '0%';
+  return `${(number * 100).toFixed(number < 0.1 ? 1 : 0)}%`;
 }
 
 function escapeHtml(value) {

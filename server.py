@@ -43,67 +43,146 @@ STATIC_MIME_OVERRIDES = {
 }
 DEFAULT_CASINO_GAMES = [
     {
-        "slug": "moon-spark",
-        "name": "Moon Spark",
-        "cost": 10,
+        "slug": "jigsaw-jackpot",
+        "name": "Jigsaw Jackpot",
+        "cost": 20,
         "config": {
-            "reel_symbols": ["moon", "moon", "rune", "coin", "coin", "ghost"],
-            "triple": {"moon": 6, "ghost": 5, "rune": 4, "coin": 3},
-            "double": {"moon": 2, "ghost": 2},
-            "top_payout": 60,
-            "flavor": "Light stakes, quick spins, and enough hits to keep the floor lively.",
-            "volatility": "Low",
-            "mood": "Steady starter machine",
-            "jackpot_label": "Moonfall x6",
-            "accent": "#7bdff6",
-        },
-    },
-    {
-        "slug": "shadow-vault",
-        "name": "Shadow Vault",
-        "cost": 25,
-        "config": {
-            "reel_symbols": ["crown", "ghost", "rune", "coin", "coin", "moon"],
-            "triple": {"crown": 10, "ghost": 7, "rune": 5, "moon": 4},
-            "double": {"crown": 2, "ghost": 2, "rune": 1},
-            "top_payout": 250,
-            "flavor": "Balanced swings for players who want more tension without going broke.",
+            "rows": 3,
+            "paylines": [
+                [1, 1, 1, 1, 1],
+                [0, 0, 0, 0, 0],
+                [2, 2, 2, 2, 2],
+                [0, 1, 2, 1, 0],
+                [2, 1, 0, 1, 2],
+                [0, 0, 1, 0, 0],
+                [2, 2, 1, 2, 2],
+                [1, 0, 0, 0, 1],
+                [1, 2, 2, 2, 1],
+                [0, 1, 1, 1, 0],
+            ],
+            "reel_strips": [
+                ["coin", "moon", "ghost", "rune", "coin", "gem", "scatter", "moon", "coin", "mask", "wild", "ghost", "gem", "coin", "moon", "rune"],
+                ["ghost", "coin", "gem", "rune", "moon", "mask", "coin", "scatter", "ghost", "moon", "wild", "rune", "coin", "gem", "moon", "coin"],
+                ["moon", "coin", "ghost", "gem", "rune", "coin", "wild", "moon", "mask", "coin", "scatter", "ghost", "moon", "rune", "gem", "coin"],
+                ["coin", "mask", "moon", "rune", "ghost", "coin", "gem", "wild", "moon", "scatter", "coin", "ghost", "rune", "moon", "coin", "gem"],
+                ["gem", "coin", "moon", "ghost", "rune", "mask", "coin", "moon", "wild", "ghost", "coin", "scatter", "moon", "gem", "coin", "rune"],
+            ],
+            "symbol_payouts": {
+                "wild": {"3": 2.5, "4": 10, "5": 40},
+                "mask": {"3": 1.5, "4": 4, "5": 12},
+                "gem": {"3": 1.2, "4": 3, "5": 10},
+                "ghost": {"3": 0.8, "4": 2, "5": 6},
+                "moon": {"3": 0.6, "4": 1.5, "5": 4},
+                "rune": {"3": 0.5, "4": 1.2, "5": 3.5},
+                "coin": {"3": 0.4, "4": 1, "5": 2.5},
+            },
+            "wild_symbol": "wild",
+            "scatter_symbol": "scatter",
+            "scatter_payouts": {"3": 1, "4": 4, "5": 15},
+            "free_spins": {"3": 5, "4": 8, "5": 12},
+            "top_payout": 1200,
+            "flavor": "A 5x3 video slot with ten lines, sticky tension, and a classic free-spin trigger.",
             "volatility": "Medium",
-            "mood": "Controlled pressure",
-            "jackpot_label": "Vault Crown x10",
+            "mood": "Puzzle-box pressure",
+            "jackpot_label": "5 Wilds x40",
+            "accent": "#7bdff6",
+            "hit_rate": 0.31,
+            "return_rate": 0.93,
+        },
+    },
+    {
+        "slug": "ghost-lanterns",
+        "name": "Ghost Lanterns",
+        "cost": 35,
+        "config": {
+            "rows": 3,
+            "paylines": [
+                [1, 1, 1, 1, 1],
+                [0, 0, 0, 0, 0],
+                [2, 2, 2, 2, 2],
+                [0, 1, 2, 1, 0],
+                [2, 1, 0, 1, 2],
+                [1, 0, 1, 2, 1],
+                [1, 2, 1, 0, 1],
+                [0, 1, 0, 1, 2],
+                [2, 1, 2, 1, 0],
+                [0, 0, 1, 2, 2],
+            ],
+            "reel_strips": [
+                ["coin", "moon", "lantern", "ghost", "rune", "coin", "wild", "lantern", "coin", "moon", "scatter", "ghost", "rune", "coin", "lantern", "moon"],
+                ["ghost", "coin", "lantern", "rune", "moon", "coin", "ghost", "scatter", "wild", "moon", "rune", "coin", "lantern", "moon", "ghost", "coin"],
+                ["moon", "coin", "ghost", "lantern", "rune", "coin", "moon", "wild", "lantern", "coin", "scatter", "ghost", "moon", "rune", "lantern", "coin"],
+                ["coin", "lantern", "moon", "ghost", "rune", "coin", "wild", "lantern", "moon", "scatter", "coin", "ghost", "rune", "moon", "coin", "lantern"],
+                ["lantern", "coin", "moon", "ghost", "rune", "coin", "moon", "wild", "ghost", "coin", "scatter", "lantern", "moon", "rune", "coin", "ghost"],
+            ],
+            "symbol_payouts": {
+                "wild": {"3": 3, "4": 12, "5": 50},
+                "lantern": {"3": 1.8, "4": 5, "5": 16},
+                "ghost": {"3": 1.2, "4": 3.5, "5": 10},
+                "moon": {"3": 0.8, "4": 2, "5": 5},
+                "rune": {"3": 0.6, "4": 1.5, "5": 4},
+                "coin": {"3": 0.5, "4": 1.2, "5": 3},
+            },
+            "wild_symbol": "wild",
+            "scatter_symbol": "scatter",
+            "scatter_payouts": {"3": 1.5, "4": 5, "5": 18},
+            "free_spins": {"3": 6, "4": 10, "5": 14},
+            "top_payout": 2200,
+            "flavor": "Higher-volatility lantern slot with deeper free-spin awards and louder line wins.",
+            "volatility": "High",
+            "mood": "Haunted high-volatility cabinet",
+            "jackpot_label": "5 Wilds x50",
             "accent": "#ffd166",
+            "hit_rate": 0.27,
+            "return_rate": 0.95,
         },
     },
     {
-        "slug": "phantom-jackpot",
-        "name": "Phantom Jackpot",
-        "cost": 50,
+        "slug": "royal-heist",
+        "name": "Royal Heist",
+        "cost": 60,
         "config": {
-            "reel_symbols": ["crown", "crown", "ghost", "rune", "moon", "coin"],
-            "triple": {"crown": 16, "ghost": 10, "rune": 7, "moon": 5},
-            "double": {"crown": 3, "ghost": 2, "rune": 1},
-            "top_payout": 800,
-            "flavor": "Heavy swings, louder misses, and the kind of line hits people brag about.",
+            "rows": 3,
+            "paylines": [
+                [1, 1, 1, 1, 1],
+                [0, 0, 0, 0, 0],
+                [2, 2, 2, 2, 2],
+                [0, 1, 2, 1, 0],
+                [2, 1, 0, 1, 2],
+                [0, 1, 0, 1, 0],
+                [2, 1, 2, 1, 2],
+                [1, 0, 1, 0, 1],
+                [1, 2, 1, 2, 1],
+                [0, 1, 1, 1, 2],
+            ],
+            "reel_strips": [
+                ["coin", "crown", "gem", "moon", "coin", "wild", "ghost", "gem", "scatter", "coin", "crown", "moon", "rune", "coin", "ghost", "gem"],
+                ["gem", "coin", "crown", "ghost", "moon", "coin", "wild", "gem", "rune", "scatter", "coin", "moon", "crown", "ghost", "coin", "gem"],
+                ["coin", "gem", "crown", "ghost", "wild", "moon", "coin", "scatter", "gem", "crown", "rune", "coin", "ghost", "moon", "gem", "coin"],
+                ["ghost", "coin", "gem", "crown", "moon", "wild", "coin", "gem", "scatter", "rune", "coin", "crown", "ghost", "moon", "coin", "gem"],
+                ["coin", "gem", "ghost", "moon", "crown", "coin", "wild", "scatter", "gem", "ghost", "coin", "moon", "crown", "rune", "coin", "gem"],
+            ],
+            "symbol_payouts": {
+                "wild": {"3": 4, "4": 15, "5": 75},
+                "crown": {"3": 2.5, "4": 7, "5": 22},
+                "gem": {"3": 1.5, "4": 4.5, "5": 12},
+                "ghost": {"3": 1, "4": 2.8, "5": 8},
+                "moon": {"3": 0.8, "4": 2, "5": 5},
+                "rune": {"3": 0.7, "4": 1.6, "5": 4},
+                "coin": {"3": 0.5, "4": 1.3, "5": 3},
+            },
+            "wild_symbol": "wild",
+            "scatter_symbol": "scatter",
+            "scatter_payouts": {"3": 2, "4": 6, "5": 20},
+            "free_spins": {"3": 7, "4": 10, "5": 15},
+            "top_payout": 4500,
+            "flavor": "Big-bet five-reel slot with premium crowns, fat wild lines, and long free-spin chains.",
             "volatility": "High",
-            "mood": "Big risk centerpiece",
-            "jackpot_label": "Phantom Crown x16",
+            "mood": "High-limit centerpiece",
+            "jackpot_label": "5 Wilds x75",
             "accent": "#ff5d8f",
-        },
-    },
-    {
-        "slug": "ember-heist",
-        "name": "Ember Heist",
-        "cost": 75,
-        "config": {
-            "reel_symbols": ["crown", "ghost", "crown", "rune", "moon", "coin"],
-            "triple": {"crown": 18, "ghost": 12, "rune": 8, "moon": 6},
-            "double": {"crown": 4, "ghost": 2, "rune": 1},
-            "top_payout": 1350,
-            "flavor": "A raid-night closer built for players chasing one massive finish.",
-            "volatility": "High",
-            "mood": "Hot table closer",
-            "jackpot_label": "Heist Crown x18",
-            "accent": "#ff8c42",
+            "hit_rate": 0.24,
+            "return_rate": 0.96,
         },
     },
 ]
@@ -233,105 +312,230 @@ def connect_database(path: Path = DB_PATH) -> sqlite3.Connection:
     return connection
 
 
-def reel_symbol_counts(symbols: list[str]) -> Counter[str]:
-    return Counter(str(symbol) for symbol in symbols if symbol)
+def unique_in_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        item = str(value)
+        if item and item not in seen:
+            seen.add(item)
+            ordered.append(item)
+    return ordered
 
 
-def payout_multiplier_for_symbols(symbols: list[str], config: dict[str, Any]) -> int:
-    counts = Counter(symbols)
-    if len(counts) == 1 and symbols:
-        return int(config.get("triple", {}).get(symbols[0], 0))
+def slot_rows(config: dict[str, Any]) -> int:
+    return max(1, int(config.get("rows", 3)))
 
-    repeated = next((symbol for symbol, count in counts.items() if count == 2), None)
-    if repeated:
-        return int(config.get("double", {}).get(repeated, 0))
-    return 0
+
+def slot_paylines(config: dict[str, Any]) -> list[list[int]]:
+    return [list(map(int, line)) for line in config.get("paylines", [])]
+
+
+def slot_reel_strips(config: dict[str, Any]) -> list[list[str]]:
+    return [[str(symbol) for symbol in strip if symbol] for strip in config.get("reel_strips", [])]
+
+
+def slot_symbol_pool(config: dict[str, Any]) -> list[str]:
+    strips = slot_reel_strips(config)
+    return unique_in_order([symbol for strip in strips for symbol in strip])
+
+
+def slot_payout_table(config: dict[str, Any]) -> dict[str, dict[int, float]]:
+    payout_table: dict[str, dict[int, float]] = {}
+    for symbol, counts in config.get("symbol_payouts", {}).items():
+        payout_table[str(symbol)] = {int(count): float(multiplier) for count, multiplier in counts.items()}
+    return payout_table
+
+
+def slot_scatter_payouts(config: dict[str, Any]) -> dict[int, float]:
+    return {int(count): float(multiplier) for count, multiplier in config.get("scatter_payouts", {}).items()}
+
+
+def slot_free_spin_table(config: dict[str, Any]) -> dict[int, int]:
+    return {int(count): int(amount) for count, amount in config.get("free_spins", {}).items()}
+
+
+def round_points(value: float) -> int:
+    return int(round(value))
 
 
 def build_paytable(cost: int, config: dict[str, Any]) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
-    for symbol, multiplier in sorted(config.get("triple", {}).items(), key=lambda item: int(item[1]), reverse=True):
+    payout_table = slot_payout_table(config)
+    scatter_symbol = str(config.get("scatter_symbol", "scatter"))
+
+    for symbol, count_map in payout_table.items():
+        for count, multiplier in sorted(count_map.items(), reverse=True):
+            entries.append(
+                {
+                    "kind": "line",
+                    "symbol": symbol,
+                    "count": count,
+                    "symbols": [symbol] * count,
+                    "multiplier": float(multiplier),
+                    "payout": round_points(cost * float(multiplier)),
+                    "label": f"{count} {symbol.title()}",
+                }
+            )
+
+    for count, multiplier in sorted(slot_scatter_payouts(config).items(), reverse=True):
         entries.append(
             {
-                "kind": "triple",
-                "symbols": [symbol, symbol, symbol],
-                "multiplier": int(multiplier),
-                "payout": cost * int(multiplier),
-                "label": f"3 {symbol.title()}",
+                "kind": "scatter",
+                "symbol": scatter_symbol,
+                "count": count,
+                "symbols": [scatter_symbol] * count,
+                "multiplier": float(multiplier),
+                "payout": round_points(cost * float(multiplier)),
+                "freeSpins": slot_free_spin_table(config).get(count, 0),
+                "label": f"{count} Scatter",
             }
         )
-    for symbol, multiplier in sorted(config.get("double", {}).items(), key=lambda item: int(item[1]), reverse=True):
-        entries.append(
-            {
-                "kind": "double",
-                "symbols": [symbol, symbol, "any"],
-                "multiplier": int(multiplier),
-                "payout": cost * int(multiplier),
-                "label": f"2 {symbol.title()}",
-            }
-        )
-    return entries
+
+    return sorted(entries, key=lambda entry: (entry["payout"], entry["count"]), reverse=True)
 
 
 def calculate_machine_metrics(cost: int, config: dict[str, Any]) -> dict[str, float]:
-    symbols = [str(symbol) for symbol in config.get("reel_symbols", []) if symbol]
-    if not symbols:
-        return {"hit_rate": 0.0, "return_rate": 0.0}
-
-    counts = reel_symbol_counts(symbols)
-    total = len(symbols)
-    hit_rate = 0.0
-    return_rate = 0.0
-
-    for left, left_count in counts.items():
-        for middle, middle_count in counts.items():
-            for right, right_count in counts.items():
-                combo = [left, middle, right]
-                probability = (left_count / total) * (middle_count / total) * (right_count / total)
-                multiplier = payout_multiplier_for_symbols(combo, config)
-                if multiplier:
-                    hit_rate += probability
-                    return_rate += probability * (cost * multiplier)
-
     return {
-        "hit_rate": round(hit_rate, 4),
-        "return_rate": round(return_rate / cost if cost else 0.0, 4),
+        "hit_rate": float(config.get("hit_rate", 0.0)),
+        "return_rate": float(config.get("return_rate", 0.0)),
     }
 
 
-def outcome_summary(game_name: str, wager: int, symbols: list[str], payout: int) -> dict[str, Any]:
-    counts = Counter(symbols)
-    if payout <= 0:
-        repeated = next((symbol for symbol, count in counts.items() if count == 2), None)
-        if repeated:
-            return {
-                "type": "near_miss",
-                "label": "Near miss",
-                "headline": f"{game_name} nearly connected.",
-                "detail": f"Two {repeated} symbols showed, but the line did not pay.",
-            }
-        return {
-            "type": "miss",
-            "label": "Miss",
-            "headline": f"{game_name} came up cold.",
-            "detail": f"No line payout. {wager} points were wagered on this spin.",
-        }
+def visible_grid_from_strips(
+    strips: list[list[str]],
+    rows: int,
+    rng: random.Random | random.SystemRandom,
+) -> tuple[list[list[str]], list[int]]:
+    reels: list[list[str]] = []
+    stops: list[int] = []
+    for strip in strips:
+        stop = rng.randrange(len(strip))
+        reels.append([strip[(stop + offset) % len(strip)] for offset in range(rows)])
+        stops.append(stop)
+    return reels, stops
 
-    if len(counts) == 1:
-        return {
-            "type": "jackpot" if payout >= wager * 10 else "triple",
-            "label": "Jackpot" if payout >= wager * 10 else "Triple line",
-            "headline": f"{game_name} paid a full line hit.",
-            "detail": f"All three reels landed on {symbols[0]} for a {payout}-point payout.",
-        }
 
-    repeated = next((symbol for symbol, count in counts.items() if count == 2), None) or symbols[0]
+def line_symbol_for_evaluation(
+    line_symbols: list[str],
+    wild_symbol: str,
+    scatter_symbol: str,
+) -> str | None:
+    for symbol in line_symbols:
+        if symbol not in {wild_symbol, scatter_symbol}:
+            return symbol
+    return wild_symbol if line_symbols and all(symbol == wild_symbol for symbol in line_symbols) else None
+
+
+def evaluate_payline(
+    line: list[int],
+    reels: list[list[str]],
+    cost: int,
+    config: dict[str, Any],
+    line_index: int,
+) -> dict[str, Any] | None:
+    wild_symbol = str(config.get("wild_symbol", "wild"))
+    scatter_symbol = str(config.get("scatter_symbol", "scatter"))
+    payout_table = slot_payout_table(config)
+    line_symbols = [reels[reel_index][row_index] for reel_index, row_index in enumerate(line)]
+    target_symbol = line_symbol_for_evaluation(line_symbols, wild_symbol, scatter_symbol)
+    if not target_symbol:
+        return None
+
+    match_count = 0
+    positions: list[list[int]] = []
+    for reel_index, symbol in enumerate(line_symbols):
+        if symbol == scatter_symbol:
+            break
+        if symbol == target_symbol or (symbol == wild_symbol and target_symbol != scatter_symbol):
+            match_count += 1
+            positions.append([reel_index, line[reel_index]])
+            continue
+        break
+
+    payouts = payout_table.get(target_symbol, {})
+    if match_count < 3 or match_count not in payouts:
+        return None
+
+    payout = round_points(cost * payouts[match_count])
     return {
-        "type": "double",
-        "label": "Two of a kind",
-        "headline": f"{game_name} paid a partial line.",
-        "detail": f"Two {repeated} symbols connected for {payout} points.",
+        "lineIndex": line_index,
+        "symbol": target_symbol,
+        "count": match_count,
+        "positions": positions,
+        "symbols": line_symbols,
+        "multiplier": payouts[match_count],
+        "payout": payout,
     }
+
+
+def evaluate_scatter(reels: list[list[str]], cost: int, config: dict[str, Any]) -> dict[str, Any]:
+    scatter_symbol = str(config.get("scatter_symbol", "scatter"))
+    positions = [
+        [reel_index, row_index]
+        for reel_index, reel in enumerate(reels)
+        for row_index, symbol in enumerate(reel)
+        if symbol == scatter_symbol
+    ]
+    count = len(positions)
+    payouts = slot_scatter_payouts(config)
+    free_spins = slot_free_spin_table(config)
+    payout = round_points(cost * payouts.get(count, 0.0))
+    awarded = free_spins.get(count, 0)
+    return {
+        "count": count,
+        "positions": positions,
+        "payout": payout,
+        "freeSpinsAwarded": awarded,
+        "symbol": scatter_symbol,
+    }
+
+
+def summarize_slot_outcome(
+    game_name: str,
+    wager: int,
+    total_payout: int,
+    line_wins: list[dict[str, Any]],
+    scatter: dict[str, Any],
+    used_free_spin: bool,
+) -> dict[str, Any]:
+    if scatter["freeSpinsAwarded"]:
+        return {
+            "type": "bonus",
+            "label": "Bonus trigger",
+            "headline": f"{game_name} opened a free-spin round.",
+            "detail": f"{scatter['count']} scatters awarded {scatter['freeSpinsAwarded']} free spins.",
+        }
+    if line_wins:
+        top_line = max(line_wins, key=lambda item: item["payout"])
+        line_type = "Jackpot" if top_line["count"] == 5 and top_line["payout"] >= wager * 10 else "Line hit"
+        return {
+            "type": "jackpot" if line_type == "Jackpot" else "line_win",
+            "label": line_type,
+            "headline": f"{game_name} paid on line {top_line['lineIndex'] + 1}.",
+            "detail": f"{top_line['count']} {top_line['symbol']} symbols connected for {top_line['payout']} points.",
+        }
+    if scatter["count"] >= 2:
+        return {
+            "type": "near_miss",
+            "label": "Near miss",
+            "headline": f"{game_name} almost triggered the feature.",
+            "detail": f"{scatter['count']} scatters landed. One more would have opened free spins.",
+        }
+    return {
+        "type": "free_spin_miss" if used_free_spin else "miss",
+        "label": "No win",
+        "headline": f"{game_name} came up cold.",
+        "detail": "No paylines connected on that spin." if not used_free_spin else "The free spin landed dry this round.",
+    }
+
+
+def normalize_spin_storage(raw: Any) -> dict[str, Any]:
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, list):
+        return {"symbols": raw, "grid": [raw]}
+    return {"symbols": [], "grid": []}
 
 
 def init_database(connection: sqlite3.Connection) -> None:
@@ -392,6 +596,14 @@ def init_database(connection: sqlite3.Connection) -> None:
             created_at TEXT NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS casino_bonus_state (
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            game_id INTEGER NOT NULL REFERENCES casino_games(id) ON DELETE CASCADE,
+            free_spins_remaining INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (user_id, game_id)
+        );
+
         CREATE TABLE IF NOT EXISTS giveaways (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             slug TEXT NOT NULL UNIQUE,
@@ -446,6 +658,12 @@ def seed_default_games(connection: sqlite3.Connection) -> None:
             """,
             (game["slug"], game["name"], game["cost"], json.dumps(game["config"]), created_at),
         )
+    allowed_slugs = tuple(game["slug"] for game in DEFAULT_CASINO_GAMES)
+    placeholders = ", ".join("?" for _ in allowed_slugs)
+    connection.execute(
+        f"UPDATE casino_games SET active = CASE WHEN slug IN ({placeholders}) THEN 1 ELSE 0 END",
+        allowed_slugs,
+    )
 
 
 def seed_default_giveaway(connection: sqlite3.Connection) -> None:
@@ -740,14 +958,17 @@ def post_webhook(content: str, auth_config: AuthConfig) -> None:
         return
 
 
-def list_games(connection: sqlite3.Connection) -> list[dict[str, Any]]:
+def list_games(connection: sqlite3.Connection, user_id: int | None = None) -> list[dict[str, Any]]:
     rows = connection.execute(
         "SELECT * FROM casino_games WHERE active = 1 ORDER BY cost ASC, id ASC"
     ).fetchall()
+    bonuses = bonus_state_map(connection, user_id) if user_id is not None else {}
     games: list[dict[str, Any]] = []
     for row in rows:
         config = json_loads(row["config_json"], {})
         metrics = calculate_machine_metrics(row["cost"], config)
+        strips = slot_reel_strips(config)
+        symbol_pool = slot_symbol_pool(config)
         games.append(
             {
                 "id": row["id"],
@@ -760,10 +981,16 @@ def list_games(connection: sqlite3.Connection) -> list[dict[str, Any]]:
                 "mood": config.get("mood", ""),
                 "jackpotLabel": config.get("jackpot_label", ""),
                 "accent": config.get("accent", "#9d7cf2"),
-                "reelSymbols": config.get("reel_symbols", []),
+                "rows": slot_rows(config),
+                "reelCount": len(strips),
+                "paylinesCount": len(slot_paylines(config)),
+                "reelSymbols": symbol_pool,
                 "paytable": build_paytable(row["cost"], config),
                 "hitRate": metrics["hit_rate"],
                 "returnRate": metrics["return_rate"],
+                "wildSymbol": config.get("wild_symbol", "wild"),
+                "scatterSymbol": config.get("scatter_symbol", "scatter"),
+                "freeSpinsRemaining": bonuses.get(int(row["id"]), 0),
             }
         )
     return games
@@ -772,12 +999,31 @@ def list_games(connection: sqlite3.Connection) -> list[dict[str, Any]]:
 def evaluate_spin(
     game_row: sqlite3.Row,
     rng: random.Random | random.SystemRandom | None = None,
-) -> tuple[list[str], int, dict[str, Any]]:
+) -> dict[str, Any]:
     rng = rng or RNG
     config = json_loads(game_row["config_json"], {})
-    symbols = [rng.choice(config["reel_symbols"]) for _ in range(3)]
-    payout = int(game_row["cost"] * payout_multiplier_for_symbols(symbols, config))
-    return symbols, payout, outcome_summary(game_row["name"], int(game_row["cost"]), symbols, payout)
+    strips = slot_reel_strips(config)
+    rows = slot_rows(config)
+    paylines = slot_paylines(config)
+    reels, stops = visible_grid_from_strips(strips, rows, rng)
+    line_wins = [
+        win
+        for line_index, line in enumerate(paylines)
+        for win in [evaluate_payline(line, reels, int(game_row["cost"]), config, line_index)]
+        if win
+    ]
+    scatter = evaluate_scatter(reels, int(game_row["cost"]), config)
+    payout = sum(int(win["payout"]) for win in line_wins) + int(scatter["payout"])
+    center_row = min(1, max(0, rows - 1))
+    symbols = [reel[center_row] for reel in reels]
+    return {
+        "symbols": symbols,
+        "grid": reels,
+        "stops": stops,
+        "lineWins": line_wins,
+        "scatter": scatter,
+        "payout": payout,
+    }
 
 
 def total_wagered_today(connection: sqlite3.Connection, user_id: int) -> int:
@@ -802,6 +1048,44 @@ def daily_wager_status(connection: sqlite3.Connection, user_id: int) -> dict[str
     }
 
 
+def bonus_state_map(connection: sqlite3.Connection, user_id: int) -> dict[int, int]:
+    rows = connection.execute(
+        "SELECT game_id, free_spins_remaining FROM casino_bonus_state WHERE user_id = ?",
+        (user_id,),
+    ).fetchall()
+    return {int(row["game_id"]): int(row["free_spins_remaining"]) for row in rows}
+
+
+def free_spins_remaining(connection: sqlite3.Connection, user_id: int, game_id: int) -> int:
+    row = connection.execute(
+        """
+        SELECT free_spins_remaining
+        FROM casino_bonus_state
+        WHERE user_id = ? AND game_id = ?
+        """,
+        (user_id, game_id),
+    ).fetchone()
+    return int(row["free_spins_remaining"]) if row else 0
+
+
+def set_free_spins_remaining(
+    connection: sqlite3.Connection,
+    user_id: int,
+    game_id: int,
+    remaining: int,
+) -> None:
+    connection.execute(
+        """
+        INSERT INTO casino_bonus_state (user_id, game_id, free_spins_remaining, updated_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id, game_id) DO UPDATE SET
+            free_spins_remaining = excluded.free_spins_remaining,
+            updated_at = excluded.updated_at
+        """,
+        (user_id, game_id, max(0, int(remaining)), utc_iso()),
+    )
+
+
 def last_spin_time(connection: sqlite3.Connection, user_id: int) -> datetime | None:
     row = connection.execute(
         "SELECT created_at FROM casino_spins WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
@@ -823,51 +1107,97 @@ def spin_game(
     if not game_row:
         raise AppError("That machine does not exist.", 404)
 
-    balance = get_balance(connection, user_row["id"])
-    if balance < game_row["cost"]:
-        raise AppError("You do not have enough points for that spin.", 400)
-
-    if total_wagered_today(connection, user_row["id"]) + game_row["cost"] > DAILY_WAGER_CAP:
-        raise AppError("You have reached the daily wager cap. Try again tomorrow.", 429)
-
     previous_spin = last_spin_time(connection, user_row["id"])
     if previous_spin and (utc_now() - previous_spin).total_seconds() < SPIN_COOLDOWN_SECONDS:
         raise AppError("Slow down a little between spins.", 429)
 
-    append_ledger(
-        connection,
-        user_row["id"],
-        -game_row["cost"],
-        "casino_wager",
-        f"Wagered on {game_row['name']}.",
-        {"game_slug": game_slug, "cost": game_row["cost"]},
-    )
-    symbols, payout, outcome = evaluate_spin(game_row, rng=rng)
+    remaining_before = free_spins_remaining(connection, user_row["id"], int(game_row["id"]))
+    used_free_spin = remaining_before > 0
+    wager = 0 if used_free_spin else int(game_row["cost"])
+    balance = get_balance(connection, user_row["id"])
+    if not used_free_spin and balance < game_row["cost"]:
+        raise AppError("You do not have enough points for that spin.", 400)
+
+    if not used_free_spin and total_wagered_today(connection, user_row["id"]) + game_row["cost"] > DAILY_WAGER_CAP:
+        raise AppError("You have reached the daily wager cap. Try again tomorrow.", 429)
+
+    if wager:
+        append_ledger(
+            connection,
+            user_row["id"],
+            -wager,
+            "casino_wager",
+            f"Wagered on {game_row['name']}.",
+            {"game_slug": game_slug, "cost": wager},
+        )
+
+    spin = evaluate_spin(game_row, rng=rng)
+    free_spin_award = int(spin["scatter"]["freeSpinsAwarded"])
+    remaining_after = max(0, remaining_before - (1 if used_free_spin else 0)) + free_spin_award
+    set_free_spins_remaining(connection, user_row["id"], int(game_row["id"]), remaining_after)
     connection.execute(
         """
         INSERT INTO casino_spins (user_id, game_id, wager, payout, symbols_json, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (user_row["id"], game_row["id"], game_row["cost"], payout, json.dumps(symbols), utc_iso()),
+        (
+            user_row["id"],
+            game_row["id"],
+            wager,
+            int(spin["payout"]),
+            json.dumps(
+                {
+                    "symbols": spin["symbols"],
+                    "grid": spin["grid"],
+                    "stops": spin["stops"],
+                    "lineWins": spin["lineWins"],
+                    "scatter": spin["scatter"],
+                    "freeSpinsAwarded": free_spin_award,
+                    "freeSpinsRemaining": remaining_after,
+                    "usedFreeSpin": used_free_spin,
+                }
+            ),
+            utc_iso(),
+        ),
     )
-    if payout:
+    if spin["payout"]:
         append_ledger(
             connection,
             user_row["id"],
-            payout,
+            int(spin["payout"]),
             "casino_payout",
-            f"Hit a payout on {game_row['name']}.",
-            {"game_slug": game_slug, "symbols": symbols, "payout": payout},
+            f"Hit a payout on {game_row['name']}{' (free spin)' if used_free_spin else ''}.",
+            {
+                "game_slug": game_slug,
+                "symbols": spin["symbols"],
+                "payout": int(spin["payout"]),
+                "used_free_spin": used_free_spin,
+            },
         )
     connection.commit()
 
+    outcome = summarize_slot_outcome(
+        game_row["name"],
+        wager or int(game_row["cost"]),
+        int(spin["payout"]),
+        spin["lineWins"],
+        spin["scatter"],
+        used_free_spin,
+    )
     result = {
         "game": game_row["name"],
         "gameSlug": game_slug,
-        "symbols": symbols,
-        "wager": game_row["cost"],
-        "payout": payout,
-        "net": payout - game_row["cost"],
+        "symbols": spin["symbols"],
+        "grid": spin["grid"],
+        "lineWins": spin["lineWins"],
+        "scatter": spin["scatter"],
+        "wager": wager,
+        "baseWager": int(game_row["cost"]),
+        "payout": int(spin["payout"]),
+        "net": int(spin["payout"]) - wager,
+        "usedFreeSpin": used_free_spin,
+        "freeSpinsAwarded": free_spin_award,
+        "freeSpinsRemaining": remaining_after,
         "balance": get_balance(connection, user_row["id"]),
         "outcome": outcome,
     }
@@ -1048,12 +1378,25 @@ def recent_spins(connection: sqlite3.Connection, user_id: int, limit: int = 5) -
             "wager": row["wager"],
             "payout": row["payout"],
             "net": int(row["payout"]) - int(row["wager"]),
-            "symbols": symbols,
+            "symbols": payload.get("symbols", []),
+            "grid": payload.get("grid", []),
+            "lineWins": payload.get("lineWins", []),
+            "scatter": payload.get("scatter", {"count": 0, "payout": 0, "freeSpinsAwarded": 0}),
+            "usedFreeSpin": bool(payload.get("usedFreeSpin", False)),
+            "freeSpinsAwarded": int(payload.get("freeSpinsAwarded", 0)),
+            "freeSpinsRemaining": int(payload.get("freeSpinsRemaining", 0)),
             "createdAt": row["created_at"],
-            "outcome": outcome_summary(row["name"], int(row["wager"]), symbols, int(row["payout"])),
+            "outcome": summarize_slot_outcome(
+                row["name"],
+                int(row["wager"]) or 1,
+                int(row["payout"]),
+                payload.get("lineWins", []),
+                payload.get("scatter", {"count": 0, "payout": 0, "freeSpinsAwarded": 0}),
+                bool(payload.get("usedFreeSpin", False)),
+            ),
         }
         for row in rows
-        for symbols in [json_loads(row["symbols_json"], [])]
+        for payload in [normalize_spin_storage(json_loads(row["symbols_json"], {}))]
     ]
 
 
@@ -1357,7 +1700,13 @@ class GhostedHandler(BaseHTTPRequestHandler):
             self.handle_api_rewards(connection)
             return
         if method == "GET" and path == "/api/casino/games":
-            self.respond_json({"games": list_games(connection), "dailyWagerCap": DAILY_WAGER_CAP})
+            user = self.current_user(connection)
+            self.respond_json(
+                {
+                    "games": list_games(connection, user["id"] if user else None),
+                    "dailyWagerCap": DAILY_WAGER_CAP,
+                }
+            )
             return
         if method == "POST" and path == "/api/casino/spin":
             self.handle_api_spin(connection)
