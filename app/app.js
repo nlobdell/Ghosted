@@ -99,6 +99,7 @@ async function renderDashboard() {
   const summaryRoot = document.querySelector('[data-summary]');
   const contentRoot = document.querySelector('[data-content]');
   if (!state.me.authenticated) {
+    summaryRoot.innerHTML = '';
     renderSignInState(contentRoot, 'Sign in to view your points, giveaways, and spins in one place.');
     return;
   }
@@ -106,6 +107,9 @@ async function renderDashboard() {
   const [rewards, giveaways] = await Promise.all([getJSON('/api/rewards'), getJSON('/api/giveaways')]);
   const activeGiveaways = giveaways.giveaways.filter((item) => item.status === 'active').length;
   const recentSpins = rewards.spins.length;
+  const perksText = state.me.user.perks.length
+    ? escapeHtml(state.me.user.perks.join(', '))
+    : 'Role perks appear here once Discord roles sync.';
   summaryRoot.innerHTML = renderStats([
     ['Balance', formatPoints(rewards.balance)],
     ['Active giveaways', String(activeGiveaways)],
@@ -114,27 +118,78 @@ async function renderDashboard() {
   ]);
 
   contentRoot.innerHTML = `
-    <section class="app-grid app-grid--two">
-      <article class="app-card">
-        <h3>Quick launch</h3>
-        <p>Jump into the parts of the app that actually move each week.</p>
-        <div class="app-actions">
-          <a class="button" href="/app/casino/">Open Casino</a>
-          <a class="button button--secondary" href="/app/giveaways/">See Giveaways</a>
-          <a class="button button--secondary" href="/app/rewards/">View Ledger</a>
+    <section class="app-dashboard-grid">
+      <article class="app-panel">
+        <div class="app-panel__header">
+          <div>
+            <p class="app-kicker">Launch Pad</p>
+            <h3>Pick the next lane.</h3>
+          </div>
+          <span class="app-chip">${state.me.user.isAdmin ? 'Admin access' : 'Member tools'}</span>
+        </div>
+        <div class="app-route-list">
+          <a class="app-route" href="/app/casino/">
+            <div>
+              <strong>Casino floor</strong>
+              <p>Spin cabinets, trigger features, and keep the points loop moving.</p>
+            </div>
+            <span class="app-route__meta">${recentSpins} logged</span>
+          </a>
+          <a class="app-route" href="/app/giveaways/">
+            <div>
+              <strong>Giveaway board</strong>
+              <p>Check live drops, role gates, and how many entries you still have to send.</p>
+            </div>
+            <span class="app-route__meta">${activeGiveaways} active</span>
+          </a>
+          <a class="app-route" href="/app/rewards/">
+            <div>
+              <strong>Rewards ledger</strong>
+              <p>See the record behind every wager, payout, grant, and giveaway entry.</p>
+            </div>
+            <span class="app-route__meta">${rewards.entries.length} entries</span>
+          </a>
         </div>
       </article>
-      <article class="app-card">
-        <h3>Role perks</h3>
-        <p>${state.me.user.perks.length ? escapeHtml(state.me.user.perks.join(' • ')) : 'No synced perks yet. Link Discord roles and this panel will populate.'}</p>
-        <ul class="app-list--tight">
-          <li>Discord login creates your app account and wallet.</li>
-          <li>Roles can gate giveaways and unlock reward perks.</li>
-          <li>Admins get a separate surface for grants and winner draws.</li>
-        </ul>
+      <article class="app-panel">
+        <div class="app-panel__header">
+          <div>
+            <p class="app-kicker">Account Bind</p>
+            <h3>Discord-linked status.</h3>
+          </div>
+          <span class="app-chip">${formatPoints(rewards.balance)}</span>
+        </div>
+        <div class="app-panel-list">
+          <div>
+            <span>Display name</span>
+            <strong>${escapeHtml(state.me.user.displayName)}</strong>
+          </div>
+          <div>
+            <span>Role perks</span>
+            <strong>${perksText}</strong>
+          </div>
+          <div>
+            <span>Giveaway entries used</span>
+            <strong>${state.me.user.giveawayEntries}</strong>
+          </div>
+          <div>
+            <span>Admin surface</span>
+            <strong>${state.me.user.isAdmin ? 'Unlocked' : 'Member only'}</strong>
+          </div>
+        </div>
+        <p class="app-panel-note">Discord login anchors identity, roles, and access across the app.</p>
       </article>
     </section>
-    ${renderLedgerTable(rewards.entries.slice(0, 8))}
+    <section class="app-ledger-shell">
+      <div class="app-card__row">
+        <div>
+          <p class="app-kicker">Recent Activity</p>
+          <h3>Latest ledger entries</h3>
+        </div>
+        <a class="button button--secondary button--small" href="/app/rewards/">Open full ledger</a>
+      </div>
+      ${renderLedgerTable(rewards.entries.slice(0, 6))}
+    </section>
   `;
 }
 
