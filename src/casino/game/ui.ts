@@ -86,6 +86,8 @@ export function renderCasinoApp(state: CasinoState) {
         </div>
         <div class="casino-stage-shell__playfield">
           <div class="casino-stage-shell__canvas" data-game-stage></div>
+        </div>
+        <div class="casino-stage-shell__info">
           <aside class="casino-stage-shell__panel">
             <div class="casino-console" data-console>
               <div class="casino-console__eyebrow">Machine Feed</div>
@@ -115,42 +117,40 @@ export function renderCasinoApp(state: CasinoState) {
               </div>
             </div>
           </aside>
+          <section class="app-card casino-stage-shell__card">
+            <div class="app-card__row">
+              <h3>Player Board</h3>
+              <span class="app-chip">${formatPoints(state.rewards.balance)}</span>
+            </div>
+            <div data-player-board>${renderPlayerBoard(state)}</div>
+          </section>
+          <section class="app-card casino-stage-shell__card">
+            <div class="app-card__row">
+              <h3>Cabinets</h3>
+              <span class="app-chip">${state.games?.games.length || 0} live</span>
+            </div>
+            <div class="casino-machine-list">
+              ${(state.games?.games || []).map((item) => renderMachineButton(item, item.slug === game.slug)).join('')}
+            </div>
+          </section>
         </div>
       </article>
-      <aside class="casino-shell__sidebar">
-        <section class="app-card">
+      <section class="casino-shell__bottom">
+        <article class="app-card">
           <div class="app-card__row">
-            <h3>Cabinets</h3>
-            <span class="app-chip">${state.games?.games.length || 0} live</span>
+            <h3>Paytable</h3>
+            <span class="app-chip">${uniqueSymbols(game.reelSymbols).length} symbols</span>
           </div>
-          <div class="casino-machine-list">
-            ${(state.games?.games || []).map((item) => renderMachineButton(item, item.slug === game.slug)).join('')}
-          </div>
-        </section>
-        <section class="app-card">
+          ${renderPaytable(game)}
+        </article>
+        <article class="app-card">
           <div class="app-card__row">
-            <h3>Player Board</h3>
-            <span class="app-chip">${formatPoints(state.rewards.balance)}</span>
+            <h3>Recent Spins</h3>
+            <span class="app-chip">${state.rewards.spins.length} logged</span>
           </div>
-          <div data-player-board>${renderPlayerBoard(state)}</div>
-        </section>
-      </aside>
-    </section>
-    <section class="casino-shell__bottom">
-      <article class="app-card">
-        <div class="app-card__row">
-          <h3>Paytable</h3>
-          <span class="app-chip">${uniqueSymbols(game.reelSymbols).length} symbols</span>
-        </div>
-        ${renderPaytable(game)}
-      </article>
-      <article class="app-card">
-        <div class="app-card__row">
-          <h3>Recent Spins</h3>
-          <span class="app-chip">${state.rewards.spins.length} logged</span>
-        </div>
-        <div data-history>${renderHistory(state.rewards.spins)}</div>
-      </article>
+          <div data-history>${renderHistory(state.rewards.spins)}</div>
+        </article>
+      </section>
     </section>
   `;
 }

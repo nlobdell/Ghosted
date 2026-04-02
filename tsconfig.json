@@ -13,5 +13,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "vite.casino.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "vite.casino.config.ts"]
 }
