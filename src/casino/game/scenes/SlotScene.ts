@@ -83,7 +83,7 @@ export class SlotScene extends Phaser.Scene {
     const background = this.add.graphics();
     background.fillGradientStyle(0x1b1030, 0x090511, 0x06040c, 0x120c20, 1);
     background.fillRect(0, 0, STAGE_WIDTH, STAGE_HEIGHT);
-    for (let index = 0; index < 28; index += 1) {
+    for (let index = 0; index < 14; index += 1) {
       const orb = this.add.circle(
         Phaser.Math.Between(40, STAGE_WIDTH - 40),
         Phaser.Math.Between(30, STAGE_HEIGHT - 30),
@@ -268,14 +268,16 @@ export class SlotScene extends Phaser.Scene {
   private animateReel(reelIndex: number, rows: number, pool: string[], finalReel: string[]) {
     return new Promise<void>((resolve) => {
       let ticks = 0;
-      const totalTicks = 10 + reelIndex * 3;
+      let leadIndex = reelIndex % pool.length;
+      const totalTicks = 7 + reelIndex * 2;
       const timer = this.time.addEvent({
-        delay: 68,
+        delay: 90,
         loop: true,
         callback: () => {
           ticks += 1;
+          leadIndex = (leadIndex + 1) % pool.length;
           for (let rowIndex = 0; rowIndex < rows; rowIndex += 1) {
-            const symbol = Phaser.Utils.Array.GetRandom(pool);
+            const symbol = pool[(leadIndex + rowIndex) % pool.length] || pool[0];
             this.setCellSymbol(reelIndex, rowIndex, symbol);
           }
           if (ticks >= totalTicks) {

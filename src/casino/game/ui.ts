@@ -87,10 +87,10 @@ export function renderCasinoApp(state: CasinoState) {
         <div class="casino-stage-shell__playfield">
           <div class="casino-stage-shell__canvas" data-game-stage></div>
           <aside class="casino-stage-shell__panel">
-            <div class="casino-console">
+            <div class="casino-console" data-console>
               <div class="casino-console__eyebrow">Machine Feed</div>
-              <div class="casino-console__headline">${escapeHtml(resultHeadline(state.latestResult, game))}</div>
-              <p class="casino-console__copy">${escapeHtml(resultCopy(state.latestResult, game))}</p>
+              <div class="casino-console__headline" data-console-headline>${escapeHtml(resultHeadline(state.latestResult, game))}</div>
+              <p class="casino-console__copy" data-console-copy>${escapeHtml(resultCopy(state.latestResult, game))}</p>
             </div>
             <div class="casino-controls">
               <button class="button casino-controls__spin" data-spin>${spinLabel(game, state.spinning)}</button>
@@ -132,7 +132,7 @@ export function renderCasinoApp(state: CasinoState) {
             <h3>Player Board</h3>
             <span class="app-chip">${formatPoints(state.rewards.balance)}</span>
           </div>
-          ${renderPlayerBoard(state)}
+          <div data-player-board>${renderPlayerBoard(state)}</div>
         </section>
       </aside>
     </section>
@@ -149,7 +149,7 @@ export function renderCasinoApp(state: CasinoState) {
           <h3>Recent Spins</h3>
           <span class="app-chip">${state.rewards.spins.length} logged</span>
         </div>
-        ${renderHistory(state.rewards.spins)}
+        <div data-history>${renderHistory(state.rewards.spins)}</div>
       </article>
     </section>
   `;
