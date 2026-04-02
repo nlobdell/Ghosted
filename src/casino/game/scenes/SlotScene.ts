@@ -33,18 +33,18 @@ type MotionProfile = {
   stagger: number;
 };
 
-const STAGE_WIDTH = 860;
-const STAGE_HEIGHT = 560;
+const STAGE_WIDTH = 920;
+const STAGE_HEIGHT = 640;
 const REEL_COUNT = 5;
 const VISIBLE_ROWS = 3;
-const REEL_WIDTH = 128;
-const REEL_HEIGHT = 336;
-const REEL_GAP = 14;
-const ROW_HEIGHT = 108;
-const TILE_WIDTH = 112;
-const TILE_HEIGHT = 100;
-const STRIP_PADDING_TOP = 8;
-const STRIP_PADDING_LEFT = 8;
+const REEL_WIDTH = 142;
+const REEL_HEIGHT = 402;
+const REEL_GAP = 16;
+const ROW_HEIGHT = 130;
+const TILE_WIDTH = 124;
+const TILE_HEIGHT = 120;
+const STRIP_PADDING_TOP = 6;
+const STRIP_PADDING_LEFT = 9;
 
 const MOTION_BY_GAME: Record<string, MotionProfile> = {
   'ghost-lanterns': {
@@ -196,28 +196,28 @@ export class SlotScene extends Phaser.Scene {
     this.resize(this.scale.width, this.scale.height);
 
     const accent = parseColor(game.accent, 0xb989ff);
-    const cabinetGlow = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5, 782, 484, accent, 0.06);
-    const cabinet = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5, 768, 470, 0x150d21, 0.98);
+    const cabinetGlow = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5, 860, 560, accent, 0.06);
+    const cabinet = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5, 844, 542, 0x150d21, 0.98);
     cabinet.setStrokeStyle(3, accent, 0.56);
-    const window = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5 + 10, 720, 400, 0x0a0711, 0.96);
+    const window = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5 + 16, 792, 470, 0x0a0711, 0.96);
     window.setStrokeStyle(1, 0xffffff, 0.08);
-    const payline = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5 + 10, 662, 4, 0xff5d8f, 0.92);
-    const reelShelf = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5 + 10, 690, 356, 0x120a1e, 0.72);
+    const payline = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5 + 16, 720, 4, 0xff5d8f, 0.92);
+    const reelShelf = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5 + 16, 748, 422, 0x120a1e, 0.72);
     reelShelf.setStrokeStyle(1, 0xffffff, 0.04);
-    const topBar = this.add.rectangle(STAGE_WIDTH * 0.5, 86, 720, 50, 0x201132, 0.92);
+    const topBar = this.add.rectangle(STAGE_WIDTH * 0.5, 102, 792, 54, 0x201132, 0.92);
     topBar.setStrokeStyle(1, accent, 0.3);
-    const topLabel = this.add.text(78, 68, game.name.toUpperCase(), {
+    const topLabel = this.add.text(86, 82, game.name.toUpperCase(), {
       color: '#fff4dc',
       fontFamily: '"Space Grotesk", sans-serif',
-      fontSize: '24px',
+      fontSize: '26px',
       fontStyle: '700',
       letterSpacing: 1.4,
     });
-    const topMeta = this.add.text(782, 72, `${game.paylinesCount} LINES`, {
+    const topMeta = this.add.text(834, 86, `${game.paylinesCount} LINES`, {
       align: 'right',
       color: '#ffd68a',
       fontFamily: '"Space Grotesk", sans-serif',
-      fontSize: '16px',
+      fontSize: '17px',
       fontStyle: '700',
     });
     topMeta.setOrigin(1, 0);
@@ -227,12 +227,12 @@ export class SlotScene extends Phaser.Scene {
 
     this.reels = [];
     const reelsStartX = (STAGE_WIDTH - (REEL_COUNT * REEL_WIDTH + (REEL_COUNT - 1) * REEL_GAP)) * 0.5;
-    const reelsStartY = 140;
+    const reelsStartY = 156;
 
     for (let reelIndex = 0; reelIndex < REEL_COUNT; reelIndex += 1) {
       const x = reelsStartX + reelIndex * (REEL_WIDTH + REEL_GAP);
       const y = reelsStartY;
-      const glow = this.add.rectangle(x + REEL_WIDTH * 0.5, y + REEL_HEIGHT * 0.5, REEL_WIDTH + 12, REEL_HEIGHT + 12, accent, 0);
+      const glow = this.add.rectangle(x + REEL_WIDTH * 0.5, y + REEL_HEIGHT * 0.5, REEL_WIDTH + 14, REEL_HEIGHT + 14, accent, 0);
       const symbolBack = this.add.rectangle(x + REEL_WIDTH * 0.5, y + REEL_HEIGHT * 0.5, REEL_WIDTH, REEL_HEIGHT, 0x0c0814, 0.95);
       symbolBack.setStrokeStyle(1, accent, 0.16);
       const frame = this.add.rectangle(x + REEL_WIDTH * 0.5, y + REEL_HEIGHT * 0.5, REEL_WIDTH, REEL_HEIGHT, 0x09070f, 0.98);
@@ -442,26 +442,26 @@ export class SlotScene extends Phaser.Scene {
     const shadow = this.add.rectangle(TILE_WIDTH * 0.5, TILE_HEIGHT * 0.5 + 3, TILE_WIDTH, TILE_HEIGHT, 0x000000, 0.22);
     const body = this.add.rectangle(TILE_WIDTH * 0.5, TILE_HEIGHT * 0.5, TILE_WIDTH, TILE_HEIGHT, 0x1a1028, 1);
     body.setStrokeStyle(1, 0xffffff, 0.08);
-    const badge = this.add.circle(TILE_WIDTH * 0.5, 34, 21, meta.tint, 0.18);
+    const badge = this.add.circle(TILE_WIDTH * 0.5, 40, 22, meta.tint, 0.18);
     badge.setStrokeStyle(2, meta.tint, 0.45);
 
-    const sprite = this.add.image(TILE_WIDTH * 0.5, 40, meta.textureKey);
-    sprite.setDisplaySize(54, 54);
+    const sprite = this.add.image(TILE_WIDTH * 0.5, 48, meta.textureKey);
+    sprite.setDisplaySize(62, 62);
     sprite.setOrigin(0.5);
 
-    const glyph = this.add.text(TILE_WIDTH * 0.5, 40, meta.glyph, {
+    const glyph = this.add.text(TILE_WIDTH * 0.5, 48, meta.glyph, {
       color: '#ffffff',
       fontFamily: '"Space Grotesk", sans-serif',
-      fontSize: '10px',
+      fontSize: '11px',
       fontStyle: '700',
       letterSpacing: 0.8,
     });
     glyph.setOrigin(0.5);
 
-    const label = this.add.text(TILE_WIDTH * 0.5, 76, meta.label.toUpperCase(), {
+    const label = this.add.text(TILE_WIDTH * 0.5, 92, meta.label.toUpperCase(), {
       color: '#f2e9ff',
       fontFamily: '"Space Grotesk", sans-serif',
-      fontSize: '12px',
+      fontSize: '13px',
       fontStyle: '700',
       letterSpacing: 1.1,
     });
