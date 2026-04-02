@@ -22,7 +22,7 @@ jobs:
 
       - name: Block merge conflict markers
         run: |
-          if rg -n "^(<<<<<<<|=======|>>>>>>>)" index.html styles.css design/index.html design/styles.css; then
+          if grep -nE "^(<<<<<<<|=======|>>>>>>>)" index.html styles.css design/index.html design/styles.css; then
             echo "Merge conflict markers found."
             exit 1
           fi
@@ -46,5 +46,5 @@ jobs:
 
       - name: Validate Discord link presence
         run: |
-          rg -n "discord.gg/ghosted" index.html
-          rg -n "discord.gg/ghosted" design/index.html
+          grep -n "discord.gg/ghosted" index.html
+          grep -n "discord.gg/ghosted" design/index.html
