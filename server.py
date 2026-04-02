@@ -22,7 +22,7 @@ from urllib.request import Request, urlopen
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_DIR = BASE_DIR / "data"
-DB_PATH = DB_DIR / "ghosted.db"
+DB_PATH = Path(os.getenv("DATABASE_PATH", str(DB_DIR / "ghosted.db"))).expanduser()
 SESSION_COOKIE = "ghosted_session"
 SESSION_LIFETIME_DAYS = 14
 STARTING_BALANCE = 250
@@ -95,6 +95,22 @@ def env_flag(name: str, default: bool = False) -> bool:
     if value is None:
         return default
     return value.lower() in {"1", "true", "yes", "on"}
+
+
+def session_cookie_header(token: str | None = None, *, delete: bool = False) -> str:
+    secure = env_flag("SESSION_COOKIE_SECURE", False)
+    max_age = 0 if delete else SESSION_LIFETIME_DAYS * 86400
+    value = "deleted" if delete else token
+    parts = [
+        f"{SESSION_COOKIE}={value}",
+        "Path=/",
+        "HttpOnly",
+        f"Max-Age={max_age}",
+        "SameSite=Lax",
+    ]
+    if secure:
+        parts.append("Secure")
+    return "; ".join(parts)
 
 
 def admin_discord_ids() -> set[str]:
@@ -1205,10 +1221,7 @@ class GhostedHandler(BaseHTTPRequestHandler):
             destroy_session(connection, self.current_session_token())
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header(
-                "Set-Cookie",
-                f"{SESSION_COOKIE}=deleted; Path=/; HttpOnly; Max-Age=0; SameSite=Lax",
-            )
+            self.send_header("Set-Cookie", session_cookie_header(delete=True))
             self.end_headers()
             self.wfile.write(json.dumps({"ok": True}).encode("utf-8"))
             return
@@ -1304,13 +1317,7 @@ class GhostedHandler(BaseHTTPRequestHandler):
         session_token = create_session(connection, row["id"])
         self.send_response(HTTPStatus.FOUND)
         self.send_header("Location", next_path)
-        self.send_header(
-            "Set-Cookie",
-            (
-                f"{SESSION_COOKIE}={session_token}; Path=/; HttpOnly; Max-Age={SESSION_LIFETIME_DAYS * 86400}; "
-                "SameSite=Lax"
-            ),
-        )
+        self.send_header("Set-Cookie", session_cookie_header(session_token))
         self.end_headers()
 
     def handle_dev_login(self, connection: sqlite3.Connection, parsed: Any) -> None:
@@ -1333,13 +1340,7 @@ class GhostedHandler(BaseHTTPRequestHandler):
         next_path = params.get("next", ["/app/"])[0]
         self.send_response(HTTPStatus.FOUND)
         self.send_header("Location", next_path)
-        self.send_header(
-            "Set-Cookie",
-            (
-                f"{SESSION_COOKIE}={token}; Path=/; HttpOnly; Max-Age={SESSION_LIFETIME_DAYS * 86400}; "
-                "SameSite=Lax"
-            ),
-        )
+        self.send_header("Set-Cookie", session_cookie_header(token))
         self.end_headers()
 
     def static_target(self, path: str) -> Path | None:
@@ -1418,15 +1419,16 @@ class GhostedHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
-def create_server(port: int = 8000) -> ThreadingHTTPServer:
+def create_server(port: int = 8000, host: str = "0.0.0.0") -> ThreadingHTTPServer:
     connection = connect_database()
     init_database(connection)
     connection.close()
-    return ThreadingHTTPServer(("0.0.0.0", port), GhostedHandler)
+    return ThreadingHTTPServer((host, port), GhostedHandler)
 
 
 if __name__ == "__main__":
+    host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
-    server = create_server(port)
-    print(f"Ghosted app running at http://localhost:{port}")
+    server = create_server(port, host)
+    print(f"Ghosted app running at http://{host}:{port}")
     server.serve_forever()

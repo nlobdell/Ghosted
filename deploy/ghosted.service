@@ -1,0 +1,19 @@
+[Unit]
+Description=Ghosted Community App
+After=network.target
+
+[Service]
+Type=simple
+User=ghosted
+Group=ghosted
+WorkingDirectory=/opt/ghosted
+EnvironmentFile=/etc/ghosted/ghosted.env
+ExecStart=/usr/bin/python3 /opt/ghosted/server.py
+Restart=always
+RestartSec=5
+
+# Keep the writable runtime state outside the repo checkout.
+ReadWritePaths=/var/lib/ghosted
+
+[Install]
+WantedBy=multi-user.target
