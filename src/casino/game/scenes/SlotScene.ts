@@ -11,6 +11,11 @@ type ReelView = {
   y: number;
 };
 
+type SymbolTile = Phaser.GameObjects.Container & {
+  iconText?: Phaser.GameObjects.Text;
+  glyphText?: Phaser.GameObjects.Text;
+};
+
 const STAGE_WIDTH = 760;
 const STAGE_HEIGHT = 500;
 const REEL_COUNT = 5;
@@ -167,10 +172,12 @@ export class SlotScene extends Phaser.Scene {
       reel.glow.setAlpha(0);
       reel.frame.setStrokeStyle(2, 0xffffff, 0.08);
       reel.strip.iterate((child: Phaser.GameObjects.GameObject) => {
-        const container = child as Phaser.GameObjects.Container;
-        const icon = container.list[2] as Phaser.GameObjects.Text | undefined;
-        if (icon) {
-          icon.setScale(1);
+        const tile = child as SymbolTile;
+        if (tile.iconText) {
+          tile.iconText.setScale(1);
+        }
+        if (tile.glyphText) {
+          tile.glyphText.setScale(1);
         }
       });
     });
@@ -194,12 +201,10 @@ export class SlotScene extends Phaser.Scene {
     reel.glow.setAlpha(1);
     reel.frame.setStrokeStyle(3, color, 0.92);
 
-    const tile = reel.strip.list[rowIndex] as Phaser.GameObjects.Container | undefined;
+    const tile = reel.strip.list[rowIndex] as SymbolTile | undefined;
     if (!tile) return;
-    const icon = tile.list[2] as Phaser.GameObjects.Text | undefined;
-    if (!icon) return;
     this.tweens.add({
-      targets: icon,
+      targets: [tile.iconText, tile.glyphText].filter(Boolean),
       scale: 1.08,
       duration: 160,
       repeat: 3,
@@ -236,7 +241,7 @@ export class SlotScene extends Phaser.Scene {
   private renderStrip(reel: ReelView, symbols: string[], offsetY: number) {
     reel.strip.removeAll(true);
     symbols.forEach((symbol, index) => {
-      const tile = this.createSymbolTile(symbol);
+    const tile = this.createSymbolTile(symbol);
       tile.x = 0;
       tile.y = index * ROW_HEIGHT + offsetY;
       reel.strip.add(tile);
@@ -245,7 +250,7 @@ export class SlotScene extends Phaser.Scene {
 
   private createSymbolTile(symbol: string) {
     const meta = symbolMeta(symbol);
-    const tile = this.add.container(0, 0);
+    const tile = this.add.container(0, 0) as SymbolTile;
 
     const shadow = this.add.rectangle(TILE_WIDTH * 0.5, TILE_HEIGHT * 0.5 + 3, TILE_WIDTH, TILE_HEIGHT, 0x000000, 0.22);
     const body = this.add.rectangle(TILE_WIDTH * 0.5, TILE_HEIGHT * 0.5, TILE_WIDTH, TILE_HEIGHT, 0x1a1028, 1);
@@ -253,12 +258,18 @@ export class SlotScene extends Phaser.Scene {
     const badge = this.add.circle(TILE_WIDTH * 0.5, 33, 18, meta.tint, 0.18);
     badge.setStrokeStyle(2, meta.tint, 0.45);
     const icon = this.add.text(TILE_WIDTH * 0.5, 32, meta.emoji, {
-      color: Phaser.Display.Color.IntegerToColor(meta.tint).rgba,
       fontFamily: '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif',
-      fontSize: '28px',
-      fontStyle: '700',
+      fontSize: '26px',
     });
     icon.setOrigin(0.5);
+    const glyph = this.add.text(TILE_WIDTH * 0.5, 33, meta.glyph, {
+      color: Phaser.Display.Color.IntegerToColor(meta.tint).rgba,
+      fontFamily: '"Space Grotesk", sans-serif',
+      fontSize: '15px',
+      fontStyle: '700',
+      letterSpacing: 1.2,
+    });
+    glyph.setOrigin(0.5);
     const label = this.add.text(TILE_WIDTH * 0.5, 68, meta.label.toUpperCase(), {
       color: '#f2e9ff',
       fontFamily: '"Space Grotesk", sans-serif',
@@ -268,7 +279,9 @@ export class SlotScene extends Phaser.Scene {
     });
     label.setOrigin(0.5);
 
-    tile.add([shadow, body, badge, icon, label]);
+    tile.iconText = icon;
+    tile.glyphText = glyph;
+    tile.add([shadow, body, badge, icon, glyph, label]);
     return tile;
   }
 }
