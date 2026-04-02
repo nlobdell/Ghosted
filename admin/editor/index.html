@@ -19,6 +19,7 @@
         <a class="brand" href="/">Ghosted</a>
         <nav class="app-nav">
           <a class="app-nav__link" href="/app/">Apps</a>
+          <a class="app-nav__link" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">Twitch</a>
           <a class="app-nav__link" href="/admin/">Admin</a>
           <a class="app-nav__link is-active" href="/admin/editor/">Editor</a>
         </nav>
@@ -26,17 +27,14 @@
       </div>
     </header>
     <main class="container app-main" data-page="page-editor">
-      <section class="app-hero">
-        <div class="app-hero__copy">
+      <section class="app-masthead">
+        <div class="app-masthead__copy">
           <p class="app-kicker">Page Editor</p>
-          <h1 class="app-title">Edit pages in their own workspace.</h1>
-          <p class="app-description">Pick a page, click a block in the preview, and save changes back to the site files.</p>
+          <h1 class="app-title">Edit pages in their own workspace</h1>
+          <p class="app-description">Update the site copy and links for Ghosted, Discord, and the vghosted Twitch channel.</p>
         </div>
-        <aside class="app-hero__meta" data-banner>
-          <h3>Preview</h3>
-          <p>Scripts stay disabled inside the preview so the layout stays stable while you edit.</p>
-        </aside>
       </section>
+      <div class="app-banner-slot" data-banner></div>
       <section class="app-summary-grid" data-summary></section>
       <section data-content></section>
     </main>
