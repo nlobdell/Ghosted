@@ -1,24 +1,39 @@
-import Phaser from 'phaser';
 import { AUDIO_ASSETS } from './assets';
 
-export function preloadSlotAudio(scene: Phaser.Scene) {
-  Object.values(AUDIO_ASSETS).forEach((asset) => {
-    if (!scene.cache.audio.exists(asset.key)) {
-      scene.load.audio(asset.key, asset.url);
-    }
-  });
-}
+type AudioKey = keyof typeof AUDIO_ASSETS;
+type PlayOptions = {
+  playbackRate?: number;
+  volume?: number;
+};
 
-export function armSceneAudio(scene: Phaser.Scene) {
-  const manager = scene.sound as Phaser.Sound.WebAudioSoundManager & { context?: AudioContext };
-  const context = manager.context;
-  if (context && context.state === 'suspended') {
-    void context.resume();
+export class SlotAudio {
+  private armed = false;
+  private pool = new Map<AudioKey, HTMLAudioElement[]>();
+
+  arm() {
+    if (this.armed) return;
+    this.armed = true;
+    (Object.keys(AUDIO_ASSETS) as AudioKey[]).forEach((key) => {
+      const audio = new Audio(AUDIO_ASSETS[key].url);
+      audio.preload = 'auto';
+      this.pool.set(key, [audio]);
+    });
   }
-}
 
-export function playSceneSound(scene: Phaser.Scene, key: keyof typeof AUDIO_ASSETS, config: Phaser.Types.Sound.SoundConfig = {}) {
-  const asset = AUDIO_ASSETS[key];
-  if (!asset || !scene.cache.audio.exists(asset.key)) return;
-  scene.sound.play(asset.key, config);
+  play(key: AudioKey, options: PlayOptions = {}) {
+    this.arm();
+    const stack = this.pool.get(key);
+    if (!stack?.length) return;
+
+    const source = stack.find((audio) => audio.paused || audio.ended) || new Audio(AUDIO_ASSETS[key].url);
+    if (!stack.includes(source)) {
+      source.preload = 'auto';
+      stack.push(source);
+    }
+
+    source.currentTime = 0;
+    source.playbackRate = options.playbackRate ?? 1;
+    source.volume = options.volume ?? 0.6;
+    void source.play().catch(() => {});
+  }
 }

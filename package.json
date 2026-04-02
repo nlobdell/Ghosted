@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/nlobdell/Ghosted#readme",
   "dependencies": {
-    "phaser": "^3.90.0"
+    "pixi.js": "^8.13.2"
   },
   "devDependencies": {
     "@types/node": "^24.8.1",
