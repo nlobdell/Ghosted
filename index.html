@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ghosted | OSRS Clan</title>
+    <meta
+      name="description"
+      content="Ghosted is an OSRS-first clan focused on raids, PvM, skilling, and community. Join us at discord.gg/ghosted."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero" id="top">
+      <nav class="nav container" aria-label="Primary">
+        <a class="brand" href="#top">Ghosted</a>
+        <a class="button button--sm" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer"
+          >Join Discord</a
+        >
+      </nav>
+
+      <div class="container hero__content">
+        <p class="kicker">OSRS Clan • Dark Fantasy</p>
+        <h1>Forged in the grind.<br /><span>Bound by Ghosted.</span></h1>
+        <p>
+          We mainly play Old School RuneScape—raids, bossing, skilling, and clan events.
+          We also jump into other games when the team wants a new challenge.
+        </p>
+        <div class="actions">
+          <a class="button" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">Enter Discord</a>
+          <a class="button button--ghost" href="#about">Learn More</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="about" class="section container">
+        <h2>What Ghosted is about</h2>
+        <div class="cards">
+          <article class="card">
+            <h3>OSRS First</h3>
+            <p>Raids, PvM trips, skilling goals, and helping each other progress.</p>
+          </article>
+          <article class="card">
+            <h3>Good Culture</h3>
+            <p>Active, welcoming, and low-drama. Show respect and have fun.</p>
+          </article>
+          <article class="card">
+            <h3>Beyond RuneScape</h3>
+            <p>When the clan wants variety, we run nights in other games too.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section section--panel">
+        <div class="container panel">
+          <div>
+            <p class="kicker">Join Ghosted</p>
+            <h2>Start in under a minute</h2>
+            <p>Hop in Discord, introduce yourself, share your RSN, and you’re in.</p>
+          </div>
+          <a class="button" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">discord.gg/ghosted</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p>© <span id="year"></span> Ghosted Clan</p>
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>
