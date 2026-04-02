@@ -111,8 +111,8 @@ Example cron entry:
 ## 9. Deploy updates
 
 ```bash
-sudo rsync -av --delete ./ /opt/ghosted/
-sudo chown -R ghosted:ghosted /opt/ghosted
+git pull --ff-only origin main
+npm run build:casino
 sudo systemctl restart ghosted
 ```
 
