@@ -379,14 +379,14 @@
 .casino-reels {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   gap: 0.85rem;
 }
 
 .casino-reel {
-  --reel-height: 5.5rem;
+  --cell-height: 68px;
   position: relative;
-  height: var(--reel-height);
+  height: calc(var(--visible-rows, 3) * var(--cell-height));
   overflow: hidden;
   border-radius: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -424,7 +424,7 @@
 }
 
 .casino-reel__item {
-  height: var(--reel-height);
+  height: var(--cell-height);
   display: grid;
   place-items: center;
   align-content: center;
@@ -434,13 +434,13 @@
 
 .casino-reel__emoji {
   display: block;
-  font-size: 2.15rem;
+  font-size: 1.85rem;
   line-height: 1;
   filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.14));
 }
 
 .casino-reel__name {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.72);
@@ -519,13 +519,18 @@
 }
 
 .casino-machine__display--hero {
-  min-height: 18rem;
+  min-height: 16rem;
   display: grid;
   align-items: center;
+  overflow-x: auto;
 }
 
 .casino-reels--hero .casino-reel {
-  --reel-height: 6.5rem;
+  --cell-height: 68px;
+}
+
+.casino-reels--hero {
+  min-width: 28rem;
 }
 
 .casino-machine-meta {
@@ -681,6 +686,10 @@
 .casino-paytable__payout,
 .casino-history__value {
   font-weight: 800;
+}
+
+.casino-history__copy {
+  text-align: center;
 }
 
 .casino-history__value.is-win {
