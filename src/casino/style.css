@@ -5,12 +5,12 @@
 }
 
 .casino-shell {
-  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.95fr);
+  grid-template-columns: minmax(0, 1fr);
   margin-bottom: 1rem;
 }
 
 .casino-stage-shell,
-.casino-shell__sidebar {
+.casino-stage-shell__info {
   display: grid;
   gap: 1rem;
 }
@@ -36,8 +36,12 @@
 .casino-stage-shell__playfield {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
   align-items: stretch;
+}
+
+.casino-stage-shell__info {
+  grid-template-columns: minmax(0, 1.1fr) repeat(2, minmax(260px, 1fr));
+  align-items: start;
 }
 
 .casino-stage-shell__canvas,
@@ -50,8 +54,8 @@
 }
 
 .casino-stage-shell__canvas {
-  min-height: 620px;
-  padding: 0.45rem;
+  min-height: 760px;
+  padding: 0.55rem;
   overflow: hidden;
   display: flex;
   align-items: stretch;
@@ -68,7 +72,11 @@
   display: grid;
   gap: 0.85rem;
   align-content: start;
-  grid-template-columns: 1.15fr 0.85fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.85fr);
+}
+
+.casino-stage-shell__card {
+  min-height: 100%;
 }
 
 .casino-console {
@@ -253,13 +261,16 @@
 }
 
 @media (max-width: 1120px) {
+  .casino-stage-shell__info {
+    grid-template-columns: 1fr;
+  }
+
   .casino-stage-shell__canvas {
-    min-height: 540px;
+    min-height: 640px;
   }
 }
 
 @media (max-width: 960px) {
-  .casino-shell,
   .casino-shell__bottom {
     grid-template-columns: 1fr;
   }
@@ -267,7 +278,7 @@
 
 @media (max-width: 720px) {
   .casino-stage-shell__canvas {
-    min-height: 440px;
+    min-height: 500px;
   }
 
   .casino-stage-shell__panel {
