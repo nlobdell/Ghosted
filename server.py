@@ -7,6 +7,7 @@ import random
 import re
 import secrets
 import sqlite3
+import sys
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -102,6 +103,16 @@ def env_flag(name: str, default: bool = False) -> bool:
     return value.lower() in {"1", "true", "yes", "on"}
 
 
+def env_text(name: str) -> str | None:
+    value = os.getenv(name)
+    if value is None:
+        return None
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        value = value[1:-1].strip()
+    return value or None
+
+
 def session_cookie_header(token: str | None = None, *, delete: bool = False) -> str:
     secure = env_flag("SESSION_COOKIE_SECURE", False)
     max_age = 0 if delete else SESSION_LIFETIME_DAYS * 86400
@@ -119,32 +130,32 @@ def session_cookie_header(token: str | None = None, *, delete: bool = False) -> 
 
 
 def admin_discord_ids() -> set[str]:
-    raw = os.getenv("ADMIN_DISCORD_IDS", "")
+    raw = env_text("ADMIN_DISCORD_IDS") or ""
     return {item.strip() for item in raw.split(",") if item.strip()}
 
 
 def discord_request_headers(extra: dict[str, str] | None = None) -> dict[str, str]:
     headers = dict(DISCORD_HTTP_HEADERS)
-    headers["User-Agent"] = os.getenv("DISCORD_USER_AGENT", headers["User-Agent"])
+    headers["User-Agent"] = env_text("DISCORD_USER_AGENT") or headers["User-Agent"]
     if extra:
         headers.update(extra)
     return headers
 
 
 def build_auth_config(base_url: str | None = None) -> AuthConfig:
-    redirect_uri = os.getenv("DISCORD_REDIRECT_URI")
+    redirect_uri = env_text("DISCORD_REDIRECT_URI")
     if not redirect_uri and base_url:
         redirect_uri = f"{base_url}/auth/discord/callback"
     return AuthConfig(
-        client_id=os.getenv("DISCORD_CLIENT_ID"),
-        client_secret=os.getenv("DISCORD_CLIENT_SECRET"),
+        client_id=env_text("DISCORD_CLIENT_ID"),
+        client_secret=env_text("DISCORD_CLIENT_SECRET"),
         redirect_uri=redirect_uri,
-        guild_id=os.getenv("DISCORD_GUILD_ID"),
-        bot_token=os.getenv("DISCORD_BOT_TOKEN"),
-        member_role_id=os.getenv("DISCORD_MEMBER_ROLE_ID"),
-        vip_role_id=os.getenv("DISCORD_VIP_ROLE_ID"),
-        giveaway_role_id=os.getenv("DISCORD_GIVEAWAY_ROLE_ID"),
-        webhook_url=os.getenv("DISCORD_WEBHOOK_URL"),
+        guild_id=env_text("DISCORD_GUILD_ID"),
+        bot_token=env_text("DISCORD_BOT_TOKEN"),
+        member_role_id=env_text("DISCORD_MEMBER_ROLE_ID"),
+        vip_role_id=env_text("DISCORD_VIP_ROLE_ID"),
+        giveaway_role_id=env_text("DISCORD_GIVEAWAY_ROLE_ID"),
+        webhook_url=env_text("DISCORD_WEBHOOK_URL"),
     )
 
 
@@ -569,11 +580,18 @@ def fetch_discord_roles(discord_id: str, auth_config: AuthConfig) -> list[str]:
             payload = json.loads(response.read().decode("utf-8"))
             return [str(role) for role in payload.get("roles", [])]
     except HTTPError as exc:
-        if exc.code == 404:
-            return []
-        raise AppError(f"Discord role sync failed: {exc}", 502) from exc
+        body = exc.read().decode("utf-8", errors="replace")
+        print(
+            f"Discord role sync warning for guild {auth_config.guild_id} user {discord_id}: HTTP {exc.code}: {body}",
+            file=sys.stderr,
+        )
+        return []
     except URLError as exc:
-        raise AppError(f"Discord role sync failed: {exc}", 502) from exc
+        print(
+            f"Discord role sync warning for guild {auth_config.guild_id} user {discord_id}: {exc}",
+            file=sys.stderr,
+        )
+        return []
 
 
 def post_webhook(content: str, auth_config: AuthConfig) -> None:
