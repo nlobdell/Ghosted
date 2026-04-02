@@ -42,26 +42,6 @@ STATIC_MIME_OVERRIDES = {
     ".json": "application/json; charset=utf-8",
 }
 
-
-@dataclass(frozen=True)
-class EditablePage:
-    slug: str
-    title: str
-    route: str
-    file_path: Path
-
-
-EDITABLE_PAGES = [
-    EditablePage("home", "Home", "/", BASE_DIR / "index.html"),
-    EditablePage("about", "About Us", "/design/", BASE_DIR / "design" / "index.html"),
-    EditablePage("app-hub", "App Hub", "/app/", BASE_DIR / "app" / "index.html"),
-    EditablePage("casino", "Casino", "/app/casino/", BASE_DIR / "app" / "casino" / "index.html"),
-    EditablePage("giveaways", "Giveaways", "/app/giveaways/", BASE_DIR / "app" / "giveaways" / "index.html"),
-    EditablePage("rewards", "Rewards", "/app/rewards/", BASE_DIR / "app" / "rewards" / "index.html"),
-    EditablePage("profile", "Profile", "/app/profile/", BASE_DIR / "app" / "profile" / "index.html"),
-    EditablePage("admin", "Admin", "/admin/", BASE_DIR / "admin" / "index.html"),
-]
-
 DEFAULT_CASINO_GAMES = [
     {
         "slug": "jigsaw-jackpot",
@@ -325,47 +305,44 @@ def build_auth_config(base_url: str | None = None) -> AuthConfig:
     )
 
 
-def editable_page_for_slug(slug: str) -> EditablePage:
-    normalized = slugify(slug)
-    for page in EDITABLE_PAGES:
-        if page.slug == normalized:
-            return page
-    raise AppError("Editable page not found.", 404)
+def role_label_overrides() -> dict[str, str]:
+    raw = env_text("DISCORD_ROLE_LABELS_JSON")
+    if not raw:
+        return {}
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        print(f"DISCORD_ROLE_LABELS_JSON is invalid JSON: {exc}", file=sys.stderr)
+        return {}
+    if not isinstance(payload, dict):
+        print("DISCORD_ROLE_LABELS_JSON must be a JSON object of role IDs to labels.", file=sys.stderr)
+        return {}
+
+    overrides: dict[str, str] = {}
+    for role_id, label in payload.items():
+        normalized_id = str(role_id).strip()
+        normalized_label = str(label).strip()
+        if normalized_id and normalized_label:
+            overrides[normalized_id] = normalized_label
+    return overrides
 
 
-def editable_page_payload(page: EditablePage) -> dict[str, Any]:
-    stat = page.file_path.stat()
-    return {
-        "slug": page.slug,
-        "title": page.title,
-        "route": page.route,
-        "path": page.file_path.relative_to(BASE_DIR).as_posix(),
-        "updatedAt": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
-    }
+def resolved_role(role_id: str | None, role_directory: dict[str, dict[str, str]]) -> dict[str, str] | None:
+    normalized_id = str(role_id or "").strip()
+    if not normalized_id:
+        return None
+    role = role_directory.get(normalized_id)
+    if role:
+        return dict(role)
+    return {"id": normalized_id, "label": normalized_id, "source": "id"}
 
 
-def read_editable_page(page: EditablePage) -> dict[str, Any]:
-    payload = editable_page_payload(page)
-    payload["html"] = page.file_path.read_text(encoding="utf-8")
-    return payload
+def resolve_roles(role_ids: list[str], role_directory: dict[str, dict[str, str]]) -> list[dict[str, str]]:
+    return [resolved for role_id in unique_in_order(role_ids) if (resolved := resolved_role(role_id, role_directory))]
 
 
-def normalize_editable_html(value: str) -> str:
-    html = value.replace("\r\n", "\n").strip()
-    if not html:
-        raise AppError("HTML content is required.")
-    lowered = html.lower()
-    if "<html" not in lowered:
-        raise AppError("Saved content must include a full HTML document.")
-    if not lowered.startswith("<!doctype html"):
-        html = "<!DOCTYPE html>\n" + html
-    return html.rstrip() + "\n"
-
-
-def save_editable_page(page: EditablePage, html: str) -> dict[str, Any]:
-    normalized = normalize_editable_html(html)
-    page.file_path.write_text(normalized, encoding="utf-8")
-    return read_editable_page(page)
+def sorted_role_options(role_directory: dict[str, dict[str, str]]) -> list[dict[str, str]]:
+    return sorted(role_directory.values(), key=lambda item: (item["label"].lower(), item["id"]))
 
 
 def connect_database(path: Path = DB_PATH) -> sqlite3.Connection:
@@ -1005,6 +982,58 @@ def fetch_discord_roles(discord_id: str, auth_config: AuthConfig) -> list[str]:
         return []
 
 
+def fetch_discord_guild_roles(auth_config: AuthConfig) -> dict[str, str]:
+    if not auth_config.guild_ready:
+        return {}
+    request = Request(
+        f"https://discord.com/api/guilds/{auth_config.guild_id}/roles",
+        headers=discord_request_headers({"Authorization": f"Bot {auth_config.bot_token}"}),
+    )
+    try:
+        with urlopen(request, timeout=REQUEST_TIMEOUT) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        print(
+            f"Discord guild role lookup warning for guild {auth_config.guild_id}: HTTP {exc.code}: {body}",
+            file=sys.stderr,
+        )
+        return {}
+    except URLError as exc:
+        print(
+            f"Discord guild role lookup warning for guild {auth_config.guild_id}: {exc}",
+            file=sys.stderr,
+        )
+        return {}
+
+    if not isinstance(payload, list):
+        print(
+            f"Discord guild role lookup warning for guild {auth_config.guild_id}: unexpected payload shape.",
+            file=sys.stderr,
+        )
+        return {}
+
+    roles: dict[str, str] = {}
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        role_id = str(item.get("id", "")).strip()
+        role_name = str(item.get("name", "")).strip()
+        if role_id and role_name:
+            roles[role_id] = role_name
+    return roles
+
+
+def build_role_directory(auth_config: AuthConfig) -> dict[str, dict[str, str]]:
+    directory = {
+        role_id: {"id": role_id, "label": label, "source": "discord"}
+        for role_id, label in fetch_discord_guild_roles(auth_config).items()
+    }
+    for role_id, label in role_label_overrides().items():
+        directory[role_id] = {"id": role_id, "label": label, "source": "alias"}
+    return directory
+
+
 def post_webhook(content: str, auth_config: AuthConfig) -> None:
     if not auth_config.webhook_url:
         return
@@ -1287,7 +1316,11 @@ def giveaway_status(row: sqlite3.Row) -> str:
     return row["status"]
 
 
-def list_giveaways(connection: sqlite3.Connection, user_row: sqlite3.Row | None = None) -> list[dict[str, Any]]:
+def list_giveaways(
+    connection: sqlite3.Connection,
+    user_row: sqlite3.Row | None = None,
+    role_directory: dict[str, dict[str, str]] | None = None,
+) -> list[dict[str, Any]]:
     rows = connection.execute(
         """
         SELECT
@@ -1312,11 +1345,13 @@ def list_giveaways(connection: sqlite3.Connection, user_row: sqlite3.Row | None 
     ).fetchall()
 
     giveaways = []
+    role_directory = role_directory or {}
     roles = set(user_roles(user_row))
     balance = get_balance(connection, user_row["id"]) if user_row else 0
     for row in rows:
         status = giveaway_status(row)
         required_role = row["required_role_id"]
+        required_role_ref = resolved_role(required_role, role_directory)
         role_ok = not required_role or required_role in roles
         max_entries = row["max_entries"]
         user_entry_count = int(row["user_entries"])
@@ -1341,6 +1376,7 @@ def list_giveaways(connection: sqlite3.Connection, user_row: sqlite3.Row | None 
                 "userEntries": user_entry_count,
                 "totalEntries": int(row["total_entries"]),
                 "requiredRoleId": required_role,
+                "requiredRole": required_role_ref,
                 "status": status,
                 "winnerUserId": row["winner_user_id"],
                 "canEnter": can_enter,
@@ -1469,10 +1505,16 @@ def recent_spins(connection: sqlite3.Connection, user_id: int, limit: int = 5) -
     ]
 
 
-def profile_payload(connection: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any]:
+def profile_payload(
+    connection: sqlite3.Connection,
+    row: sqlite3.Row,
+    auth_config: AuthConfig | None = None,
+    role_directory: dict[str, dict[str, str]] | None = None,
+) -> dict[str, Any]:
     roles = user_roles(row)
     perks = []
-    auth_config = build_auth_config()
+    auth_config = auth_config or build_auth_config()
+    role_directory = role_directory or {}
     if auth_config.member_role_id and auth_config.member_role_id in roles:
         perks.append("Verified Ghosted member")
     if auth_config.vip_role_id and auth_config.vip_role_id in roles:
@@ -1491,6 +1533,7 @@ def profile_payload(connection: sqlite3.Connection, row: sqlite3.Row) -> dict[st
         "username": row["username"],
         "avatarUrl": avatar_url(row),
         "roles": roles,
+        "roleDetails": resolve_roles(roles, role_directory),
         "perks": perks,
         "isAdmin": bool(row["is_admin"]),
         "balance": get_balance(connection, row["id"]),
@@ -1645,7 +1688,10 @@ def grant_points(
     return {"userId": target["id"], "balance": get_balance(connection, target["id"])}
 
 
-def admin_overview(connection: sqlite3.Connection) -> dict[str, Any]:
+def admin_overview(
+    connection: sqlite3.Connection,
+    role_directory: dict[str, dict[str, str]] | None = None,
+) -> dict[str, Any]:
     users = connection.execute(
         """
         SELECT
@@ -1673,7 +1719,7 @@ def admin_overview(connection: sqlite3.Connection) -> dict[str, Any]:
             }
             for row in users
         ],
-        "giveaways": list_giveaways(connection),
+        "giveaways": list_giveaways(connection, role_directory=role_directory or {}),
     }
 
 
@@ -1788,33 +1834,27 @@ class GhostedHandler(BaseHTTPRequestHandler):
             return
         if method == "GET" and path == "/api/admin/overview":
             actor = self.require_admin(connection)
-            self.respond_json({"overview": admin_overview(connection), "actor": profile_payload(connection, actor)})
+            auth_config = build_auth_config(self.base_url())
+            role_directory = build_role_directory(auth_config)
+            self.respond_json(
+                {
+                    "overview": admin_overview(connection, role_directory=role_directory),
+                    "actor": profile_payload(connection, actor, auth_config=auth_config, role_directory=role_directory),
+                }
+            )
             return
-        if method == "GET" and path == "/api/admin/pages":
+        if method == "GET" and path == "/api/admin/discord-roles":
             self.require_admin(connection)
-            self.respond_json({"pages": [editable_page_payload(page) for page in EDITABLE_PAGES]})
+            auth_config = build_auth_config(self.base_url())
+            role_directory = build_role_directory(auth_config)
+            self.respond_json(
+                {
+                    "roles": sorted_role_options(role_directory),
+                    "guildSyncConfigured": auth_config.guild_ready,
+                    "aliasCount": len(role_label_overrides()),
+                }
+            )
             return
-        if path.startswith("/api/admin/pages/"):
-            actor = self.require_admin(connection)
-            slug = path.removeprefix("/api/admin/pages/").strip("/")
-            page = editable_page_for_slug(slug)
-            if method == "GET":
-                self.respond_json({"page": read_editable_page(page)})
-                return
-            if method == "POST":
-                payload = self.read_json_body()
-                saved_page = save_editable_page(page, str(payload.get("html", "")))
-                audit(
-                    connection,
-                    actor["id"],
-                    "edit_page",
-                    "page",
-                    page.slug,
-                    {"route": page.route, "path": saved_page["path"]},
-                )
-                connection.commit()
-                self.respond_json({"ok": True, "page": saved_page})
-                return
         if method == "POST" and path == "/api/admin/rewards/grant":
             actor = self.require_admin(connection)
             result = grant_points(connection, actor, self.read_json_body())
@@ -1848,6 +1888,9 @@ class GhostedHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"ok": True}).encode("utf-8"))
             return
+        if method == "GET" and path in {"/admin/editor", "/admin/editor/", "/admin/editor/index.html"}:
+            self.redirect("/admin/")
+            return
 
         if method == "GET":
             self.serve_static(path)
@@ -1871,7 +1914,14 @@ class GhostedHandler(BaseHTTPRequestHandler):
         if not row:
             self.respond_json({"authenticated": False})
             return
-        self.respond_json({"authenticated": True, "user": profile_payload(connection, row)})
+        auth_config = build_auth_config(self.base_url())
+        role_directory = build_role_directory(auth_config)
+        self.respond_json(
+            {
+                "authenticated": True,
+                "user": profile_payload(connection, row, auth_config=auth_config, role_directory=role_directory),
+            }
+        )
 
     def handle_api_rewards(self, connection: sqlite3.Connection) -> None:
         row = self.require_user(connection)
@@ -1893,7 +1943,8 @@ class GhostedHandler(BaseHTTPRequestHandler):
 
     def handle_api_giveaways(self, connection: sqlite3.Connection) -> None:
         row = self.current_user(connection)
-        self.respond_json({"giveaways": list_giveaways(connection, row)})
+        role_directory = build_role_directory(build_auth_config(self.base_url()))
+        self.respond_json({"giveaways": list_giveaways(connection, row, role_directory=role_directory)})
 
     def handle_api_giveaway_enter(self, connection: sqlite3.Connection, path: str) -> None:
         row = self.require_user(connection)

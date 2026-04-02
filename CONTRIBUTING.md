@@ -28,6 +28,21 @@ git add <resolved files>
 git rebase --continue
 ```
 
+## Repo Shortcut
+From the repo root, you can run the helper script for the same workflow:
+
+```powershell
+npm run git:update
+```
+
+The script will prompt for Administrator approval before running git commands.
+
+If you want it to temporarily stash uncommitted work before rebasing:
+
+```powershell
+npm run git:update:autostash
+```
+
 ## Open a PR
 - Keep PR scope small (one theme/feature per PR).
 - Fill in `.github/pull_request_template.md`.
