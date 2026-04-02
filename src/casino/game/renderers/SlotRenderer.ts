@@ -43,6 +43,19 @@ const TILE_WIDTH = 202;
 const TILE_HEIGHT = 176;
 const STRIP_PADDING_LEFT = 13;
 const STRIP_PADDING_TOP = 12;
+const CABINET_X = 42;
+const CABINET_Y = 32;
+const CABINET_WIDTH = STAGE_WIDTH - 84;
+const CABINET_HEIGHT = STAGE_HEIGHT - 64;
+const WINDOW_X = 74;
+const WINDOW_Y = 88;
+const WINDOW_WIDTH = STAGE_WIDTH - 148;
+const WINDOW_HEIGHT = STAGE_HEIGHT - 176;
+const INNER_X = 124;
+const INNER_Y = 140;
+const INNER_WIDTH = STAGE_WIDTH - 248;
+const INNER_HEIGHT = STAGE_HEIGHT - 280;
+const HEADER_HEIGHT = 98;
 
 const MOTION_BY_GAME: Record<string, MotionProfile> = {
   'ghost-lanterns': { baseDuration: 1180, cycles: 8, overshoot: 24, settleEase: easeOutBack, spinEase: easeInOutSine, stagger: 210 },
@@ -161,22 +174,31 @@ export class SlotRenderer {
     this.effects.splice(0).forEach((item) => item.destroy());
 
     const accent = parseColor(game.accent, 0xb989ff);
+    const reelWindowX = INNER_X + 42;
+    const reelWindowY = INNER_Y + HEADER_HEIGHT + 42;
+    const reelsStartX = reelWindowX + (INNER_WIDTH - 84 - (REEL_COUNT * REEL_WIDTH + (REEL_COUNT - 1) * REEL_GAP)) * 0.5;
+    const reelsStartY = reelWindowY;
+    const paylineY = reelsStartY + STRIP_PADDING_TOP + ROW_HEIGHT + TILE_HEIGHT * 0.5;
+    const reelShelfX = reelsStartX - 18;
+    const reelShelfY = reelsStartY - 18;
+    const reelShelfWidth = REEL_COUNT * REEL_WIDTH + (REEL_COUNT - 1) * REEL_GAP + 36;
+    const reelShelfHeight = REEL_HEIGHT + 36;
+
     this.root.addChild(
-      roundedRect(42, 32, STAGE_WIDTH - 84, STAGE_HEIGHT - 64, 36, 0x160d24, 0.98, accent, 0.42, 6),
-      roundedRect(74, 88, STAGE_WIDTH - 148, STAGE_HEIGHT - 176, 20, 0x0a0711, 0.98, 0x74d8ff, 0.72, 6),
-      roundedRect(124, 140, STAGE_WIDTH - 248, STAGE_HEIGHT - 280, 14, 0x140d21, 0.95, 0xffffff, 0.08, 2),
-      roundedRect(124, 142, STAGE_WIDTH - 248, 98, 10, 0x231137, 0.98, 0x5e4a86, 0.65, 2),
-      new Graphics().rect(210, 510, STAGE_WIDTH - 420, 6).fill({ color: 0xff5d8f, alpha: 0.94 }),
+      roundedRect(CABINET_X, CABINET_Y, CABINET_WIDTH, CABINET_HEIGHT, 36, 0x160d24, 0.98, accent, 0.42, 6),
+      roundedRect(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT, 20, 0x0a0711, 0.98, 0x74d8ff, 0.72, 6),
+      roundedRect(INNER_X, INNER_Y, INNER_WIDTH, INNER_HEIGHT, 14, 0x140d21, 0.95, 0xffffff, 0.08, 2),
+      roundedRect(INNER_X, INNER_Y + 2, INNER_WIDTH, HEADER_HEIGHT, 10, 0x231137, 0.98, 0x5e4a86, 0.65, 2),
+      roundedRect(reelShelfX, reelShelfY, reelShelfWidth, reelShelfHeight, 22, 0x0b0913, 0.92, accent, 0.16, 2),
+      new Graphics().rect(reelsStartX - 10, paylineY - 3, REEL_COUNT * REEL_WIDTH + (REEL_COUNT - 1) * REEL_GAP + 20, 6).fill({ color: 0xff5d8f, alpha: 0.94 }),
     );
     this.root.addChild(
-      makeText(game.name.toUpperCase(), 160, 190, '#fff4dc', 58, 0),
-      makeText(`${game.paylinesCount} LINES`, STAGE_WIDTH - 180, 192, '#ffd68a', 28, 1),
+      makeText(game.name.toUpperCase(), INNER_X + 38, INNER_Y + HEADER_HEIGHT * 0.5 + 2, '#fff4dc', 58, 0),
+      makeText(`${game.paylinesCount} LINES`, INNER_X + INNER_WIDTH - 36, INNER_Y + HEADER_HEIGHT * 0.5 + 4, '#ffd68a', 28, 1),
       this.fxLayer,
     );
 
     this.reels = [];
-    const reelsStartX = (STAGE_WIDTH - (REEL_COUNT * REEL_WIDTH + (REEL_COUNT - 1) * REEL_GAP)) * 0.5;
-    const reelsStartY = 274;
 
     for (let reelIndex = 0; reelIndex < REEL_COUNT; reelIndex += 1) {
       const x = reelsStartX + reelIndex * (REEL_WIDTH + REEL_GAP);
