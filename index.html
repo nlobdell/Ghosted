@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ghosted Clan | OSRS & More</title>
+    <meta
+      name="description"
+      content="Ghosted is a gaming clan focused on Old School RuneScape and other games. Join our community on Discord."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <nav class="nav container">
+        <div class="brand">Ghosted</div>
+        <a class="button button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
+          Join Discord
+        </a>
+      </nav>
+
+      <div class="hero__content container">
+        <p class="eyebrow">Gaming Clan</p>
+        <h1>Welcome to <span>Ghosted</span></h1>
+        <p class="hero__subtitle">
+          We mainly play <strong>Old School RuneScape</strong>, but we also squad up across other games.
+          If you're looking for chill vibes, active chat, and people to game with—you'll fit right in.
+        </p>
+        <div class="hero__actions">
+          <a class="button" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
+            Join us on Discord
+          </a>
+          <a class="button button--secondary" href="#games">
+            See what we play
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section container" id="games">
+        <h2>What we play</h2>
+        <div class="card-grid">
+          <article class="card">
+            <h3>OSRS First</h3>
+            <p>
+              From raids and skilling grinds to bossing and group events, OSRS is our home base.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Other Games Too</h3>
+            <p>
+              We rotate into whatever the crew is into—from co-op titles to competitive games.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Community Focused</h3>
+            <p>
+              New player or veteran, everyone is welcome. Bring good energy and hop in voice.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section section--cta">
+        <div class="container cta">
+          <h2>Ready to join Ghosted?</h2>
+          <p>Come hang out, find a group, and start gaming with us today.</p>
+          <a class="button" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
+            discord.gg/ghosted
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p>© <span id="year"></span> Ghosted Clan. See you in-game.</p>
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>

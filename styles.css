@@ -1,0 +1,185 @@
+:root {
+  --bg: #07090f;
+  --bg-soft: #111726;
+  --text: #f5f7ff;
+  --muted: #bbc2d8;
+  --brand: #8b5cf6;
+  --brand-2: #22d3ee;
+  --card: #121a2b;
+  --border: #243149;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: linear-gradient(180deg, #05070c, #0b1020 40%, #0a0f1d);
+  color: var(--text);
+}
+
+.container {
+  width: min(1100px, 92vw);
+  margin-inline: auto;
+}
+
+.hero {
+  padding: 1.25rem 0 5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brand {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero__content {
+  margin-top: 5.5rem;
+  max-width: 700px;
+}
+
+.eyebrow {
+  color: var(--brand-2);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1.06;
+}
+
+h1 span {
+  background: linear-gradient(45deg, var(--brand), var(--brand-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero__subtitle {
+  margin: 1.2rem 0 2rem;
+  line-height: 1.7;
+  color: var(--muted);
+  font-size: 1.08rem;
+}
+
+.hero__actions {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.button {
+  display: inline-block;
+  text-decoration: none;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(45deg, var(--brand), #6d28d9);
+  padding: 0.8rem 1.1rem;
+  border-radius: 0.7rem;
+  border: 1px solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.35);
+}
+
+.button--secondary {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.button--small {
+  padding: 0.55rem 0.85rem;
+  font-size: 0.92rem;
+}
+
+.section {
+  padding: 4rem 0;
+}
+
+.section h2 {
+  font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+  margin-bottom: 1.4rem;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  background: linear-gradient(180deg, rgba(18, 26, 43, 0.9), rgba(15, 21, 36, 0.95));
+  border: 1px solid var(--border);
+  padding: 1.2rem;
+  border-radius: 0.8rem;
+}
+
+.card h3 {
+  margin-bottom: 0.6rem;
+}
+
+.card p,
+.cta p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.section--cta {
+  background: rgba(17, 23, 38, 0.7);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cta {
+  text-align: center;
+}
+
+.cta h2 {
+  margin-bottom: 0.8rem;
+}
+
+.cta p {
+  margin-bottom: 1.4rem;
+}
+
+.footer {
+  padding: 1.4rem 0 2rem;
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
+@media (max-width: 850px) {
+  .hero__content {
+    margin-top: 4rem;
+  }
+
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
