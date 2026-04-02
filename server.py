@@ -28,7 +28,7 @@ SESSION_COOKIE = "ghosted_session"
 SESSION_LIFETIME_DAYS = 14
 STARTING_BALANCE = 250
 MEMBER_ROLE_BONUS = 100
-DAILY_WAGER_CAP = 500
+DAILY_WAGER_CAP: int | None = None
 SPIN_COOLDOWN_SECONDS = 2
 REQUEST_TIMEOUT = 10
 RNG = random.SystemRandom()
@@ -1039,11 +1039,12 @@ def total_wagered_today(connection: sqlite3.Connection, user_id: int) -> int:
     return int(row["total"])
 
 
-def daily_wager_status(connection: sqlite3.Connection, user_id: int) -> dict[str, int]:
+def daily_wager_status(connection: sqlite3.Connection, user_id: int) -> dict[str, int | None]:
     wagered = total_wagered_today(connection, user_id)
+    remaining = None if DAILY_WAGER_CAP is None else max(0, DAILY_WAGER_CAP - wagered)
     return {
         "dailyWagered": wagered,
-        "dailyRemaining": max(0, DAILY_WAGER_CAP - wagered),
+        "dailyRemaining": remaining,
         "dailyCap": DAILY_WAGER_CAP,
     }
 
@@ -1118,7 +1119,11 @@ def spin_game(
     if not used_free_spin and balance < game_row["cost"]:
         raise AppError("You do not have enough points for that spin.", 400)
 
-    if not used_free_spin and total_wagered_today(connection, user_row["id"]) + game_row["cost"] > DAILY_WAGER_CAP:
+    if (
+        not used_free_spin
+        and DAILY_WAGER_CAP is not None
+        and total_wagered_today(connection, user_row["id"]) + game_row["cost"] > DAILY_WAGER_CAP
+    ):
         raise AppError("You have reached the daily wager cap. Try again tomorrow.", 429)
 
     if wager:
