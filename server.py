@@ -525,7 +525,10 @@ def fetch_discord_token(code: str, auth_config: AuthConfig) -> dict[str, Any]:
     try:
         with urlopen(request, timeout=REQUEST_TIMEOUT) as response:
             return json.loads(response.read().decode("utf-8"))
-    except (HTTPError, URLError) as exc:
+    except HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise AppError(f"Discord token exchange failed: HTTP {exc.code}: {body}", 502) from exc
+    except URLError as exc:
         raise AppError(f"Discord token exchange failed: {exc}", 502) from exc
 
 
