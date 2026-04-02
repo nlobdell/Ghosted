@@ -118,10 +118,10 @@ async function renderDashboard() {
     ? `<div class="app-tags">${perks.map((perk) => `<span class="app-tag">${escapeHtml(perk)}</span>`).join('')}</div>`
     : '<p class="app-panel-note">Perks show up here after roles sync.</p>';
   summaryRoot.innerHTML = renderStats([
-    ['Balance', formatPoints(rewards.balance)],
-    ['Active giveaways', String(activeGiveaways)],
-    ['Recent spins', String(recentSpins)],
-    ['Entries used', String(state.me.user.giveawayEntries || 0)],
+    { label: 'Balance', value: formatPoints(rewards.balance), href: '/app/rewards/' },
+    { label: 'Active giveaways', value: String(activeGiveaways), href: '/app/giveaways/' },
+    { label: 'Recent spins', value: String(recentSpins), href: '/app/casino/' },
+    { label: 'Entries used', value: String(state.me.user.giveawayEntries || 0), href: '/app/profile/' },
   ]);
 
   contentRoot.innerHTML = `
@@ -165,7 +165,7 @@ async function renderDashboard() {
           </a>
         </div>
       </article>
-      <article class="app-panel">
+      <a class="app-panel app-panel--link" href="/app/profile/">
         <div class="app-panel__header">
           <div>
             <p class="app-kicker">Account</p>
@@ -192,7 +192,7 @@ async function renderDashboard() {
           </div>
         </div>
         ${perksMarkup}
-      </article>
+      </a>
     </section>
     <section class="app-ledger-shell">
       <div class="app-section-heading">
@@ -281,10 +281,10 @@ async function renderRewards() {
 
   const rewards = await getJSON('/api/rewards');
   summaryRoot.innerHTML = renderStats([
-    ['Balance', formatPoints(rewards.balance)],
-    ['Ledger entries', String(rewards.entries.length)],
-    ['Recent spins', String(rewards.spins.length)],
-    ['Auth', 'Discord-linked'],
+    { label: 'Balance', value: formatPoints(rewards.balance), href: '/app/rewards/' },
+    { label: 'Ledger entries', value: String(rewards.entries.length), href: '/app/rewards/' },
+    { label: 'Recent spins', value: String(rewards.spins.length), href: '/app/casino/' },
+    { label: 'Auth', value: 'Discord-linked', href: '/app/profile/' },
   ]);
   contentRoot.innerHTML = `
     <section class="app-ledger-shell">
@@ -483,10 +483,10 @@ async function renderGiveaways() {
   const payload = await getJSON('/api/giveaways');
   const activeCount = payload.giveaways.filter((item) => item.status === 'active').length;
   summaryRoot.innerHTML = renderStats([
-    ['Total giveaways', String(payload.giveaways.length)],
-    ['Active now', String(activeCount)],
-    ['Entry type', 'Points + roles'],
-    ['Sign-in', state.me.authenticated ? 'Ready' : 'Optional to browse'],
+    { label: 'Total giveaways', value: String(payload.giveaways.length), href: '/app/giveaways/' },
+    { label: 'Active now', value: String(activeCount), href: '/app/giveaways/' },
+    { label: 'Entry type', value: 'Points + roles' },
+    { label: 'Sign-in', value: state.me.authenticated ? 'Ready' : 'Optional to browse', href: '/app/profile/' },
   ]);
 
   contentRoot.innerHTML = `
@@ -561,10 +561,10 @@ async function renderProfile() {
     ? `<div class="app-avatar"><img src="${user.avatarUrl}" alt="${escapeHtml(user.displayName)}" /></div>`
     : `<div class="app-avatar">${escapeHtml(user.displayName.slice(0, 1).toUpperCase())}</div>`;
   summaryRoot.innerHTML = renderStats([
-    ['Balance', formatPoints(user.balance)],
-    ['Discord ID', escapeHtml(user.discordId || 'Not synced')],
-    ['Entries used', String(user.giveawayEntries || 0)],
-    ['Access', user.isAdmin ? 'Admin' : 'Member'],
+    { label: 'Balance', value: formatPoints(user.balance), href: '/app/rewards/' },
+    { label: 'Discord ID', value: escapeHtml(user.discordId || 'Not synced') },
+    { label: 'Entries used', value: String(user.giveawayEntries || 0), href: '/app/giveaways/' },
+    { label: 'Access', value: user.isAdmin ? 'Admin' : 'Member', href: user.isAdmin ? '/admin/' : '/app/' },
   ]);
   contentRoot.innerHTML = `
     <section class="app-grid app-grid--two">
@@ -1218,12 +1218,20 @@ function serializeAdminEditorDocument(doc) {
 }
 
 function renderStats(items) {
-  return items.map(([label, value]) => `
-    <article class="app-stat">
-      <div class="app-stat__value">${value}</div>
-      <div class="app-stat__label">${escapeHtml(label)}</div>
-    </article>
-  `).join('');
+  return items.map((item) => {
+    const normalized = Array.isArray(item)
+      ? { label: item[0], value: item[1], href: null }
+      : { href: null, ...item };
+    const tag = normalized.href ? 'a' : 'article';
+    const href = normalized.href ? ` href="${normalized.href}"` : '';
+    const className = normalized.href ? 'app-stat app-stat--link' : 'app-stat';
+    return `
+      <${tag} class="${className}"${href}>
+        <div class="app-stat__value">${normalized.value}</div>
+        <div class="app-stat__label">${escapeHtml(normalized.label)}</div>
+      </${tag}>
+    `;
+  }).join('');
 }
 
 function renderLedgerTable(entries) {

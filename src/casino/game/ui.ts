@@ -5,18 +5,18 @@ export function renderSummary(state: CasinoState) {
   const game = selectedGame(state);
   if (!state.me?.authenticated) {
     return stats([
-      ['Machines', String(state.games?.games.length || 0)],
-      ['Grid', '5x3'],
-      ['Format', 'Points only'],
-      ['Access', 'Sign in'],
+      { label: 'Machines', value: String(state.games?.games.length || 0), href: '/app/casino/' },
+      { label: 'Grid', value: '5x3' },
+      { label: 'Format', value: 'Points only' },
+      { label: 'Access', value: 'Sign in' },
     ]);
   }
 
   return stats([
-    ['Balance', formatPoints(state.rewards?.balance || state.me.user.balance || 0)],
-    ['Machines', String(state.games?.games.length || 0)],
-    ['Free spins', String(game?.freeSpinsRemaining || 0)],
-    ['Daily limit', formatWagerLimit(state.rewards?.dailyCap ?? null)],
+    { label: 'Balance', value: formatPoints(state.rewards?.balance || state.me.user.balance || 0), href: '/app/rewards/' },
+    { label: 'Machines', value: String(state.games?.games.length || 0), href: '/app/casino/' },
+    { label: 'Free spins', value: String(game?.freeSpinsRemaining || 0), href: '/app/casino/' },
+    { label: 'Daily limit', value: formatWagerLimit(state.rewards?.dailyCap ?? null), href: '/app/rewards/' },
   ]);
 }
 
@@ -259,15 +259,23 @@ function selectedGame(state: CasinoState) {
   return games.find((game) => game.slug === state.selectedGameSlug) || games[0] || null;
 }
 
-function stats(items: Array<[string, string]>) {
+function stats(items: Array<[string, string] | { label: string; value: string; href?: string }>) {
   return items
     .map(
-      ([label, value]) => `
-        <article class="app-stat">
-          <div class="app-stat__value">${value}</div>
-          <div class="app-stat__label">${escapeHtml(label)}</div>
-        </article>
-      `
+      (item) => {
+        const normalized = Array.isArray(item)
+          ? { label: item[0], value: item[1], href: undefined }
+          : item;
+        const tag = normalized.href ? 'a' : 'article';
+        const href = normalized.href ? ` href="${normalized.href}"` : '';
+        const className = normalized.href ? 'app-stat app-stat--link' : 'app-stat';
+        return `
+          <${tag} class="${className}"${href}>
+            <div class="app-stat__value">${normalized.value}</div>
+            <div class="app-stat__label">${escapeHtml(normalized.label)}</div>
+          </${tag}>
+        `;
+      }
     )
     .join('');
 }
