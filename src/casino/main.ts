@@ -1,12 +1,14 @@
 import './style.css';
 import Phaser from 'phaser';
 import { logout } from './game/api';
+import { SlotAudio } from './game/audio';
 import { SlotScene } from './game/scenes/SlotScene';
 import { CasinoStore } from './game/store';
 import { renderAuth, renderCasinoApp, renderSignInState, renderSummary } from './game/ui';
 import type { CasinoState } from './game/types';
 
 const store = new CasinoStore();
+const slotAudio = new SlotAudio();
 
 let phaserGame: Phaser.Game | null = null;
 let resizeObserver: ResizeObserver | null = null;
@@ -57,6 +59,7 @@ async function boot() {
 function bindMachineButtons() {
   document.querySelectorAll<HTMLElement>('[data-machine-pick]').forEach((button) => {
     button.addEventListener('click', () => {
+      slotAudio.arm();
       const gameSlug = button.dataset.machinePick;
       if (!gameSlug) return;
       store.selectGame(gameSlug);
@@ -71,6 +74,7 @@ function bindSpinButton() {
   if (!button || !status || !game) return;
 
   button.addEventListener('click', async () => {
+    slotAudio.arm();
     button.disabled = true;
     button.textContent = 'Spinning...';
     status.textContent = `${game.name} is spinning...`;
@@ -99,11 +103,11 @@ async function mountStage() {
     phaserGame = null;
   }
 
-  slotScene = new SlotScene();
+  slotScene = new SlotScene(slotAudio);
   phaserGame = new Phaser.Game({
     type: Phaser.AUTO,
     backgroundColor: '#08050f',
-    height: 500,
+    height: 560,
     parent: host,
     render: {
       antialias: true,
@@ -113,13 +117,13 @@ async function mountStage() {
     },
     scale: {
       autoCenter: Phaser.Scale.CENTER_BOTH,
-      height: 500,
+      height: 560,
       mode: Phaser.Scale.NONE,
-      width: 760,
+      width: 860,
     },
     scene: [slotScene],
     transparent: true,
-    width: 760,
+    width: 860,
   });
 
   await slotScene.ready;
@@ -131,7 +135,7 @@ async function mountStage() {
 
 function resizeStage(host: HTMLElement) {
   const width = Math.max(520, host.clientWidth || 520);
-  const height = Math.max(360, Math.round(width * 0.66));
+  const height = Math.max(420, Math.round(width * 0.68));
   slotScene?.resize(width, height);
 }
 

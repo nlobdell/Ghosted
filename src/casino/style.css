@@ -50,8 +50,8 @@
 }
 
 .casino-stage-shell__canvas {
-  min-height: 540px;
-  padding: 0.35rem;
+  min-height: 620px;
+  padding: 0.45rem;
   overflow: hidden;
   display: flex;
   align-items: stretch;
@@ -254,7 +254,7 @@
 
 @media (max-width: 1120px) {
   .casino-stage-shell__canvas {
-    min-height: 500px;
+    min-height: 540px;
   }
 }
 
@@ -267,7 +267,7 @@
 
 @media (max-width: 720px) {
   .casino-stage-shell__canvas {
-    min-height: 400px;
+    min-height: 440px;
   }
 
   .casino-stage-shell__panel {

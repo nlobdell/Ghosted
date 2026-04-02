@@ -1,33 +1,40 @@
 import Phaser from 'phaser';
+import { SlotAudio } from '../audio';
 import { symbolMeta } from '../symbols';
 import type { SlotGame, SpinResult } from '../types';
 
 type ReelView = {
   frame: Phaser.GameObjects.Rectangle;
   glow: Phaser.GameObjects.Rectangle;
+  homeY: number;
   maskShape: Phaser.GameObjects.Graphics;
   mask: Phaser.Display.Masks.GeometryMask;
   strip: Phaser.GameObjects.Container;
+  symbolBack: Phaser.GameObjects.Rectangle;
   x: number;
   y: number;
 };
 
 type SymbolTile = Phaser.GameObjects.Container & {
+  badge?: Phaser.GameObjects.Arc;
+  bodyRect?: Phaser.GameObjects.Rectangle;
   glyphText?: Phaser.GameObjects.Text;
+  icon?: Phaser.GameObjects.GameObject;
+  labelText?: Phaser.GameObjects.Text;
 };
 
-const STAGE_WIDTH = 760;
-const STAGE_HEIGHT = 500;
+const STAGE_WIDTH = 860;
+const STAGE_HEIGHT = 560;
 const REEL_COUNT = 5;
 const VISIBLE_ROWS = 3;
-const REEL_WIDTH = 112;
-const REEL_HEIGHT = 316;
-const REEL_GAP = 12;
-const ROW_HEIGHT = 96;
-const TILE_WIDTH = 98;
-const TILE_HEIGHT = 88;
-const STRIP_PADDING_TOP = 14;
-const STRIP_PADDING_LEFT = 7;
+const REEL_WIDTH = 128;
+const REEL_HEIGHT = 336;
+const REEL_GAP = 14;
+const ROW_HEIGHT = 108;
+const TILE_WIDTH = 112;
+const TILE_HEIGHT = 100;
+const STRIP_PADDING_TOP = 8;
+const STRIP_PADDING_LEFT = 8;
 
 export class SlotScene extends Phaser.Scene {
   private readyResolve!: () => void;
@@ -35,12 +42,17 @@ export class SlotScene extends Phaser.Scene {
     this.readyResolve = resolve;
   });
 
+  private readonly audio?: SlotAudio;
+  private fxLayer?: Phaser.GameObjects.Container;
   private root?: Phaser.GameObjects.Container;
   private reels: ReelView[] = [];
   private activeGame: SlotGame | null = null;
+  private fxObjects: Phaser.GameObjects.GameObject[] = [];
+  private anticipationTweens: Phaser.Tweens.Tween[] = [];
 
-  constructor() {
+  constructor(audio?: SlotAudio) {
     super('slot-scene');
+    this.audio = audio;
   }
 
   create() {
@@ -64,12 +76,23 @@ export class SlotScene extends Phaser.Scene {
       return;
     }
 
+    this.audio?.playSpinStart();
+    this.clearEffects();
     this.applyHighlights(null);
     await Promise.all(
       this.reels.map((reel, reelIndex) =>
-        this.spinReel(reel, reelIndex, game.reelSymbols, result.grid[reelIndex] || [])
+        this.spinReel(reel, reelIndex, game.reelSymbols, result.grid[reelIndex] || [], result)
       )
     );
+    if (result.freeSpinsAwarded) {
+      this.playFeatureTransition();
+      this.audio?.playFeatureTrigger();
+      await wait(this, 420);
+    } else if (result.payout > 0) {
+      this.audio?.playWin(result.payout);
+    } else {
+      this.audio?.playMiss();
+    }
     this.applyHighlights(result);
   }
 
@@ -106,6 +129,9 @@ export class SlotScene extends Phaser.Scene {
   }
 
   private buildMachine(game: SlotGame) {
+    this.clearEffects();
+    this.anticipationTweens.forEach((tween) => tween.stop());
+    this.anticipationTweens = [];
     this.reels.forEach((reel) => {
       reel.strip.clearMask(true);
       reel.maskShape.destroy();
@@ -115,22 +141,24 @@ export class SlotScene extends Phaser.Scene {
     this.resize(this.scale.width, this.scale.height);
 
     const accent = parseColor(game.accent, 0xb989ff);
-    const cabinetGlow = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5, 702, 430, accent, 0.06);
-    const cabinet = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5, 690, 418, 0x150d21, 0.98);
+    const cabinetGlow = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5, 782, 484, accent, 0.06);
+    const cabinet = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5, 768, 470, 0x150d21, 0.98);
     cabinet.setStrokeStyle(3, accent, 0.56);
-    const window = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5, 650, 366, 0x0a0711, 0.96);
+    const window = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5 + 10, 720, 400, 0x0a0711, 0.96);
     window.setStrokeStyle(1, 0xffffff, 0.08);
-    const payline = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5, 598, 4, 0xff5d8f, 0.92);
-    const topBar = this.add.rectangle(STAGE_WIDTH * 0.5, 84, 650, 48, 0x201132, 0.92);
+    const payline = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5 + 10, 662, 4, 0xff5d8f, 0.92);
+    const reelShelf = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5 + 10, 690, 356, 0x120a1e, 0.72);
+    reelShelf.setStrokeStyle(1, 0xffffff, 0.04);
+    const topBar = this.add.rectangle(STAGE_WIDTH * 0.5, 86, 720, 50, 0x201132, 0.92);
     topBar.setStrokeStyle(1, accent, 0.3);
-    const topLabel = this.add.text(88, 68, game.name.toUpperCase(), {
+    const topLabel = this.add.text(78, 68, game.name.toUpperCase(), {
       color: '#fff4dc',
       fontFamily: '"Space Grotesk", sans-serif',
       fontSize: '24px',
       fontStyle: '700',
       letterSpacing: 1.4,
     });
-    const topMeta = this.add.text(672, 72, `${game.paylinesCount} LINES`, {
+    const topMeta = this.add.text(782, 72, `${game.paylinesCount} LINES`, {
       align: 'right',
       color: '#ffd68a',
       fontFamily: '"Space Grotesk", sans-serif',
@@ -138,17 +166,20 @@ export class SlotScene extends Phaser.Scene {
       fontStyle: '700',
     });
     topMeta.setOrigin(1, 0);
+    this.fxLayer = this.add.container(0, 0);
 
-    this.root.add([cabinetGlow, cabinet, window, topBar, payline, topLabel, topMeta]);
+    this.root.add([cabinetGlow, cabinet, window, reelShelf, topBar, payline, topLabel, topMeta, this.fxLayer]);
 
     this.reels = [];
     const reelsStartX = (STAGE_WIDTH - (REEL_COUNT * REEL_WIDTH + (REEL_COUNT - 1) * REEL_GAP)) * 0.5;
-    const reelsStartY = (STAGE_HEIGHT - REEL_HEIGHT) * 0.5;
+    const reelsStartY = 140;
 
     for (let reelIndex = 0; reelIndex < REEL_COUNT; reelIndex += 1) {
       const x = reelsStartX + reelIndex * (REEL_WIDTH + REEL_GAP);
       const y = reelsStartY;
-      const glow = this.add.rectangle(x + REEL_WIDTH * 0.5, y + REEL_HEIGHT * 0.5, REEL_WIDTH + 8, REEL_HEIGHT + 8, accent, 0);
+      const glow = this.add.rectangle(x + REEL_WIDTH * 0.5, y + REEL_HEIGHT * 0.5, REEL_WIDTH + 12, REEL_HEIGHT + 12, accent, 0);
+      const symbolBack = this.add.rectangle(x + REEL_WIDTH * 0.5, y + REEL_HEIGHT * 0.5, REEL_WIDTH, REEL_HEIGHT, 0x0c0814, 0.95);
+      symbolBack.setStrokeStyle(1, accent, 0.16);
       const frame = this.add.rectangle(x + REEL_WIDTH * 0.5, y + REEL_HEIGHT * 0.5, REEL_WIDTH, REEL_HEIGHT, 0x09070f, 0.98);
       frame.setStrokeStyle(2, 0xffffff, 0.08);
       const strip = this.add.container(x + STRIP_PADDING_LEFT, y + STRIP_PADDING_TOP);
@@ -158,9 +189,11 @@ export class SlotScene extends Phaser.Scene {
       maskShape.setVisible(false);
       const mask = maskShape.createGeometryMask();
       strip.setMask(mask);
-      this.root.add([glow, frame, strip]);
-      this.reels.push({ frame, glow, maskShape, mask, strip, x, y });
+      this.root.add([glow, symbolBack, frame, strip]);
+      this.reels.push({ frame, glow, homeY: y + STRIP_PADDING_TOP, maskShape, mask, strip, symbolBack, x, y });
     }
+
+    this.root.bringToTop(this.fxLayer);
   }
 
   private setIdleState(grid: string[][]) {
@@ -174,19 +207,27 @@ export class SlotScene extends Phaser.Scene {
   }
 
   private applyHighlights(result: SpinResult | null) {
+    this.clearEffects();
     this.reels.forEach((reel) => {
       reel.glow.setAlpha(0);
       reel.frame.setStrokeStyle(2, 0xffffff, 0.08);
+      reel.symbolBack.setFillStyle(0x0c0814, 0.95);
       reel.strip.iterate((child: Phaser.GameObjects.GameObject) => {
         const tile = child as SymbolTile;
+        this.tweens.killTweensOf(tile);
+        if (tile.glyphText) {
+          this.tweens.killTweensOf(tile.glyphText);
+        }
         if (tile.glyphText) {
           tile.glyphText.setScale(1);
         }
+        tile.setScale(1);
       });
     });
 
     if (!result) return;
 
+    this.renderPaylines(result);
     for (const win of result.lineWins || []) {
       for (const [reelIndex, rowIndex] of win.positions) {
         this.highlightTile(reelIndex, rowIndex, 0xffd166);
@@ -203,39 +244,71 @@ export class SlotScene extends Phaser.Scene {
     reel.glow.setFillStyle(color, 0.18);
     reel.glow.setAlpha(1);
     reel.frame.setStrokeStyle(3, color, 0.92);
+    reel.symbolBack.setFillStyle(0x161020, 1);
 
     const tile = reel.strip.list[rowIndex] as SymbolTile | undefined;
     if (!tile) return;
+    tile.bodyRect?.setStrokeStyle(2, color, 0.92);
+    tile.badge?.setStrokeStyle(2, color, 0.92);
+    this.tweens.add({
+      targets: tile,
+      scaleX: 1.04,
+      scaleY: 1.04,
+      duration: 180,
+      repeat: 3,
+      yoyo: true,
+    });
     this.tweens.add({
       targets: [tile.glyphText].filter(Boolean),
-      scale: 1.08,
+      scale: 1.12,
       duration: 160,
       repeat: 3,
       yoyo: true,
     });
   }
 
-  private spinReel(reel: ReelView, reelIndex: number, poolSource: string[], finalReel: string[]) {
+  private spinReel(reel: ReelView, reelIndex: number, poolSource: string[], finalReel: string[], result: SpinResult) {
     const pool = poolSource.length ? poolSource : ['coin', 'moon', 'ghost'];
     const target = normalizeReel(finalReel, pool);
-    const cycles = 5 + reelIndex;
+    const cycles = 6 + reelIndex;
     const travelSymbols = Array.from({ length: cycles * pool.length }, (_, index) => pool[(index + reelIndex) % pool.length]);
     const stripSymbols = [...travelSymbols, ...target];
-    const targetOffset = -((stripSymbols.length - VISIBLE_ROWS) * ROW_HEIGHT);
+    const targetY = reel.homeY - ((stripSymbols.length - VISIBLE_ROWS) * ROW_HEIGHT);
+    const anticipation = this.shouldAnticipate(result, reelIndex);
+    const spinTween = this.tweens.add({
+      targets: reel.glow,
+      alpha: anticipation ? { from: 0.12, to: 0.52 } : { from: 0.08, to: 0.22 },
+      duration: anticipation ? 220 : 180,
+      repeat: -1,
+      yoyo: true,
+    });
+    this.anticipationTweens.push(spinTween);
 
     this.renderStrip(reel, stripSymbols, 0);
-    reel.strip.y = reel.y + STRIP_PADDING_TOP;
+    reel.strip.y = reel.homeY;
 
     return new Promise<void>((resolve) => {
       this.tweens.add({
         targets: reel.strip,
-        y: reel.y + STRIP_PADDING_TOP + targetOffset,
-        duration: 1050 + reelIndex * 180,
-        ease: 'Cubic.out',
+        y: targetY - 18,
+        duration: 980 + reelIndex * 210 + (anticipation ? 240 : 0),
+        ease: anticipation ? 'Cubic.inOut' : 'Cubic.out',
         onComplete: () => {
-          this.renderStrip(reel, target, 0);
-          reel.strip.y = reel.y + STRIP_PADDING_TOP;
-          resolve();
+          this.tweens.add({
+            targets: reel.strip,
+            y: targetY,
+            duration: 120,
+            ease: 'Back.out',
+            onComplete: () => {
+              spinTween.stop();
+              reel.glow.setAlpha(0.16);
+              this.flashReelStop(reelIndex, anticipation);
+              this.audio?.playReelStop(reelIndex);
+              this.renderStrip(reel, target, 0);
+              reel.strip.y = reel.homeY;
+              resolve();
+            },
+          });
         },
       });
     });
@@ -244,7 +317,7 @@ export class SlotScene extends Phaser.Scene {
   private renderStrip(reel: ReelView, symbols: string[], offsetY: number) {
     reel.strip.removeAll(true);
     symbols.forEach((symbol, index) => {
-    const tile = this.createSymbolTile(symbol);
+      const tile = this.createSymbolTile(symbol);
       tile.x = 0;
       tile.y = index * ROW_HEIGHT + offsetY;
       reel.strip.add(tile);
@@ -258,29 +331,146 @@ export class SlotScene extends Phaser.Scene {
     const shadow = this.add.rectangle(TILE_WIDTH * 0.5, TILE_HEIGHT * 0.5 + 3, TILE_WIDTH, TILE_HEIGHT, 0x000000, 0.22);
     const body = this.add.rectangle(TILE_WIDTH * 0.5, TILE_HEIGHT * 0.5, TILE_WIDTH, TILE_HEIGHT, 0x1a1028, 1);
     body.setStrokeStyle(1, 0xffffff, 0.08);
-    const badge = this.add.circle(TILE_WIDTH * 0.5, 33, 18, meta.tint, 0.18);
+    const badge = this.add.circle(TILE_WIDTH * 0.5, 34, 20, meta.tint, 0.18);
     badge.setStrokeStyle(2, meta.tint, 0.45);
-    const icon = drawIcon(this, meta.icon, TILE_WIDTH * 0.5, 33, meta.tint);
-    const glyph = this.add.text(TILE_WIDTH * 0.5, 33, meta.glyph, {
+    const icon = drawIcon(this, meta.icon, TILE_WIDTH * 0.5, 34, meta.tint);
+    const glyph = this.add.text(TILE_WIDTH * 0.5, 34, meta.glyph, {
       color: Phaser.Display.Color.IntegerToColor(meta.tint).rgba,
       fontFamily: '"Space Grotesk", sans-serif',
-      fontSize: '13px',
+      fontSize: '14px',
       fontStyle: '700',
       letterSpacing: 1.2,
     });
     glyph.setOrigin(0.5);
-    const label = this.add.text(TILE_WIDTH * 0.5, 68, meta.label.toUpperCase(), {
+    const label = this.add.text(TILE_WIDTH * 0.5, 74, meta.label.toUpperCase(), {
       color: '#f2e9ff',
       fontFamily: '"Space Grotesk", sans-serif',
-      fontSize: '11px',
+      fontSize: '12px',
       fontStyle: '700',
       letterSpacing: 1.1,
     });
     label.setOrigin(0.5);
 
+    tile.badge = badge;
+    tile.bodyRect = body;
     tile.glyphText = glyph;
+    tile.icon = icon;
+    tile.labelText = label;
     tile.add([shadow, body, badge, icon, glyph, label]);
     return tile;
+  }
+
+  private shouldAnticipate(result: SpinResult, reelIndex: number) {
+    if (result.freeSpinsAwarded && reelIndex >= 3) return true;
+    if (result.scatter?.count >= 2 && reelIndex >= 3) return true;
+    return result.lineWins.some((line) => line.count >= 4 && reelIndex === 4);
+  }
+
+  private flashReelStop(reelIndex: number, anticipation: boolean) {
+    if (!this.fxLayer) return;
+    const reel = this.reels[reelIndex];
+    const flash = this.add.rectangle(
+      reel.x + REEL_WIDTH * 0.5,
+      reel.y + REEL_HEIGHT * 0.5,
+      REEL_WIDTH + 12,
+      REEL_HEIGHT + 12,
+      anticipation ? 0xffd166 : 0xffffff,
+      anticipation ? 0.2 : 0.12
+    );
+    this.fxLayer.add(flash);
+    this.fxObjects.push(flash);
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: anticipation ? 260 : 180,
+      onComplete: () => {
+        Phaser.Utils.Array.Remove(this.fxObjects, flash);
+        flash.destroy();
+      },
+    });
+  }
+
+  private playFeatureTransition() {
+    if (!this.fxLayer) return;
+    const flash = this.add.rectangle(STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5, 740, 430, 0x8cffc1, 0);
+    this.fxLayer.add(flash);
+    this.fxObjects.push(flash);
+    this.tweens.add({
+      targets: flash,
+      alpha: { from: 0, to: 0.22 },
+      duration: 180,
+      yoyo: true,
+      repeat: 1,
+      onComplete: () => {
+        Phaser.Utils.Array.Remove(this.fxObjects, flash);
+        flash.destroy();
+      },
+    });
+  }
+
+  private renderPaylines(result: SpinResult) {
+    if (!this.fxLayer) return;
+    const fxLayer = this.fxLayer;
+
+    const colors = [0xffd166, 0x7bdff6, 0xff5d8f, 0x8cffc1, 0xd6b8ff];
+    result.lineWins.forEach((win, index) => {
+      const points = win.positions
+        .slice()
+        .sort((left, right) => left[0] - right[0])
+        .map(([reelIndex, rowIndex]) => this.tileCenter(reelIndex, rowIndex));
+      if (points.length < 2) return;
+
+      const color = colors[index % colors.length];
+      const firstPoint = points[0];
+      if (!firstPoint) return;
+      const path = this.add.graphics();
+      path.lineStyle(5, color, 0.95);
+      path.beginPath();
+      path.moveTo(firstPoint.x, firstPoint.y);
+      for (let pointIndex = 1; pointIndex < points.length; pointIndex += 1) {
+        path.lineTo(points[pointIndex].x, points[pointIndex].y);
+      }
+      path.strokePath();
+      fxLayer.add(path);
+      this.fxObjects.push(path);
+
+      const markers = points.map((point) => {
+        const marker = this.add.circle(point.x, point.y, 8, color, 0.85);
+        marker.setStrokeStyle(3, 0xffffff, 0.72);
+        fxLayer.add(marker);
+        this.fxObjects.push(marker);
+        this.tweens.add({
+          targets: marker,
+          scale: 1.18,
+          alpha: 0.5,
+          duration: 240,
+          yoyo: true,
+          repeat: 2,
+        });
+        return marker;
+      });
+
+      this.tweens.add({
+        targets: [path, ...markers],
+        alpha: { from: 0.2, to: 1 },
+        duration: 170,
+        yoyo: true,
+        repeat: 2,
+      });
+    });
+  }
+
+  private tileCenter(reelIndex: number, rowIndex: number) {
+    const reel = this.reels[reelIndex];
+    return new Phaser.Math.Vector2(
+      reel.x + STRIP_PADDING_LEFT + TILE_WIDTH * 0.5,
+      reel.y + STRIP_PADDING_TOP + rowIndex * ROW_HEIGHT + TILE_HEIGHT * 0.5
+    );
+  }
+
+  private clearEffects() {
+    this.fxObjects.forEach((item) => item.destroy());
+    this.fxObjects = [];
   }
 }
 
@@ -409,4 +599,10 @@ function drawIcon(scene: Phaser.Scene, kind: string, x: number, y: number, tint:
   }
 
   return icon;
+}
+
+function wait(scene: Phaser.Scene, duration: number) {
+  return new Promise<void>((resolve) => {
+    scene.time.delayedCall(duration, () => resolve());
+  });
 }
