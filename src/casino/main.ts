@@ -103,7 +103,7 @@ async function mountStage() {
   phaserGame = new Phaser.Game({
     type: Phaser.AUTO,
     backgroundColor: '#08050f',
-    height: 680,
+    height: 500,
     parent: host,
     render: {
       antialias: true,
@@ -113,13 +113,13 @@ async function mountStage() {
     },
     scale: {
       autoCenter: Phaser.Scale.CENTER_BOTH,
-      height: 680,
+      height: 500,
       mode: Phaser.Scale.NONE,
-      width: 1100,
+      width: 760,
     },
     scene: [slotScene],
     transparent: true,
-    width: 1100,
+    width: 760,
   });
 
   await slotScene.ready;
@@ -131,7 +131,7 @@ async function mountStage() {
 
 function resizeStage(host: HTMLElement) {
   const width = Math.max(520, host.clientWidth || 520);
-  const height = Math.max(560, Math.round(width * 0.68));
+  const height = Math.max(360, Math.round(width * 0.66));
   slotScene?.resize(width, height);
 }
 
