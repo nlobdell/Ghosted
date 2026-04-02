@@ -42,6 +42,7 @@ async function boot() {
     giveaways: renderGiveaways,
     profile: renderProfile,
     admin: renderAdmin,
+    'page-editor': renderPageEditor,
   };
   const handler = handlers[page];
   if (handler) {
@@ -556,86 +557,24 @@ async function renderAdmin() {
       getJSON('/api/admin/pages'),
     ]);
     state.admin.pages = pagesPayload.pages;
-    if (!state.admin.selectedPageSlug || !state.admin.pages.some((page) => page.slug === state.admin.selectedPageSlug)) {
-      state.admin.selectedPageSlug = state.admin.pages[0]?.slug || null;
-    }
     summaryRoot.innerHTML = renderStats([
       ['Tracked users', String(payload.overview.users.length)],
       ['Giveaways', String(payload.overview.giveaways.length)],
       ['Editable pages', String(state.admin.pages.length)],
       ['Actor', escapeHtml(payload.actor.displayName)],
-      ['Mode', 'Admin tools'],
+      ['Mode', 'Control desk'],
     ]);
     contentRoot.innerHTML = `
       <div id="admin-result"></div>
-      <section class="app-card admin-editor-card">
+      <section class="app-card">
         <div class="app-card__row">
           <div>
             <p class="app-kicker">Visual Editor</p>
-            <h3>Edit page copy in a live preview.</h3>
+            <h3>Open the dedicated page editor.</h3>
+            <p class="app-description">Edit page copy and links in a full-width preview without crowding the control desk.</p>
           </div>
           <div class="admin-editor-actions">
-            <button class="button button--secondary button--small" type="button" data-editor-reload>Reload page</button>
-            <button class="button button--small" type="button" data-editor-save>Save page</button>
-          </div>
-        </div>
-        <div class="admin-editor-shell">
-          <aside class="admin-editor-sidebar">
-            <section class="admin-editor-panel">
-              <div class="app-card__row">
-                <strong>Pages</strong>
-                <span class="app-chip">${state.admin.pages.length} pages</span>
-              </div>
-              <div class="admin-editor-page-list" data-editor-page-list>
-                ${renderAdminPageButtons(state.admin.pages, state.admin.selectedPageSlug)}
-              </div>
-            </section>
-            <section class="admin-editor-panel">
-              <div class="app-card__row">
-                <strong>Page settings</strong>
-                <span class="app-chip" data-editor-preview-route>Loading</span>
-              </div>
-              <div class="admin-editor-meta" data-editor-page-meta></div>
-              <label for="editor-doc-title">Page title</label>
-              <input id="editor-doc-title" type="text" data-editor-doc-title />
-              <label for="editor-doc-description">Meta description</label>
-              <textarea id="editor-doc-description" data-editor-doc-description></textarea>
-            </section>
-            <section class="admin-editor-panel">
-              <div class="app-card__row">
-                <strong>Selected block</strong>
-                <span class="app-chip" data-editor-node-tag>Select one</span>
-              </div>
-              <div class="admin-editor-empty" data-editor-selection-empty>Click text in the preview to edit it.</div>
-              <div data-editor-fields hidden>
-                <label for="editor-node-text">Text</label>
-                <textarea id="editor-node-text" data-editor-node-text></textarea>
-                <div data-editor-link-fields hidden>
-                  <label for="editor-node-href">Link</label>
-                  <input id="editor-node-href" type="text" data-editor-node-href />
-                  <label class="admin-editor-checkbox">
-                    <input type="checkbox" data-editor-node-blank />
-                    <span>Open in new tab</span>
-                  </label>
-                </div>
-              </div>
-            </section>
-            <section class="admin-editor-panel">
-              <div class="app-card__row">
-                <strong>Editable blocks</strong>
-                <span class="app-chip" data-editor-node-count>0</span>
-              </div>
-              <div class="admin-editor-node-list" data-editor-node-list></div>
-            </section>
-          </aside>
-          <div class="admin-editor-preview-shell">
-            <div class="admin-editor-preview-bar">
-              <span class="app-chip">Preview</span>
-              <span class="app-muted">Scripts are disabled here so the layout stays stable while you edit.</span>
-            </div>
-            <div class="admin-editor-preview-frame">
-              <iframe title="Ghosted page editor preview" data-editor-preview sandbox="allow-same-origin"></iframe>
-            </div>
+            <a class="button" href="/admin/editor/">Open Page Editor</a>
           </div>
         </div>
       </section>
@@ -682,14 +621,117 @@ async function renderAdmin() {
       </section>
     `;
     bindAdminForms();
+  } catch (error) {
+    renderBanner(error.message, 'error');
+    renderSignInState(contentRoot, 'Only admins can view this panel.');
+  }
+}
+
+async function renderPageEditor() {
+  const summaryRoot = document.querySelector('[data-summary]');
+  const contentRoot = document.querySelector('[data-content]');
+  try {
+    const pagesPayload = await getJSON('/api/admin/pages');
+    state.admin.pages = pagesPayload.pages;
+    if (!state.admin.selectedPageSlug || !state.admin.pages.some((page) => page.slug === state.admin.selectedPageSlug)) {
+      state.admin.selectedPageSlug = state.admin.pages[0]?.slug || null;
+    }
+    const selectedPage = state.admin.pages.find((page) => page.slug === state.admin.selectedPageSlug) || state.admin.pages[0];
+    summaryRoot.innerHTML = renderStats([
+      ['Editable pages', String(state.admin.pages.length)],
+      ['Selected', escapeHtml(selectedPage?.title || 'None')],
+      ['Route', escapeHtml(selectedPage?.route || '—')],
+      ['Mode', 'Visual editor'],
+    ]);
+    contentRoot.innerHTML = `
+      <div id="admin-result"></div>
+      ${renderAdminEditorWorkspace()}
+    `;
     bindAdminEditorControls();
     if (state.admin.selectedPageSlug) {
       await loadAdminEditorPage(state.admin.selectedPageSlug);
     }
   } catch (error) {
     renderBanner(error.message, 'error');
-    renderSignInState(contentRoot, 'Only admins can view this panel.');
+    renderSignInState(contentRoot, 'Only admins can view this editor.');
   }
+}
+
+function renderAdminEditorWorkspace() {
+  return `
+    <section class="app-card admin-editor-card">
+      <div class="app-card__row">
+        <div>
+          <p class="app-kicker">Visual Editor</p>
+          <h3>Edit page copy in a live preview.</h3>
+        </div>
+        <div class="admin-editor-actions">
+          <a class="button button--secondary button--small" href="/admin/">Back to Admin</a>
+          <button class="button button--secondary button--small" type="button" data-editor-reload>Reload page</button>
+          <button class="button button--small" type="button" data-editor-save>Save page</button>
+        </div>
+      </div>
+      <div class="admin-editor-shell">
+        <aside class="admin-editor-sidebar">
+          <section class="admin-editor-panel">
+            <div class="app-card__row">
+              <strong>Pages</strong>
+              <span class="app-chip">${state.admin.pages.length} pages</span>
+            </div>
+            <div class="admin-editor-page-list" data-editor-page-list>
+              ${renderAdminPageButtons(state.admin.pages, state.admin.selectedPageSlug)}
+            </div>
+          </section>
+          <section class="admin-editor-panel">
+            <div class="app-card__row">
+              <strong>Page settings</strong>
+              <span class="app-chip" data-editor-preview-route>Loading</span>
+            </div>
+            <div class="admin-editor-meta" data-editor-page-meta></div>
+            <label for="editor-doc-title">Page title</label>
+            <input id="editor-doc-title" type="text" data-editor-doc-title />
+            <label for="editor-doc-description">Meta description</label>
+            <textarea id="editor-doc-description" data-editor-doc-description></textarea>
+          </section>
+          <section class="admin-editor-panel">
+            <div class="app-card__row">
+              <strong>Selected block</strong>
+              <span class="app-chip" data-editor-node-tag>Select one</span>
+            </div>
+            <div class="admin-editor-empty" data-editor-selection-empty>Click text in the preview to edit it.</div>
+            <div data-editor-fields hidden>
+              <label for="editor-node-text">Text</label>
+              <textarea id="editor-node-text" data-editor-node-text></textarea>
+              <div data-editor-link-fields hidden>
+                <label for="editor-node-href">Link</label>
+                <input id="editor-node-href" type="text" data-editor-node-href />
+                <label class="admin-editor-checkbox">
+                  <input type="checkbox" data-editor-node-blank />
+                  <span>Open in new tab</span>
+                </label>
+              </div>
+            </div>
+          </section>
+          <section class="admin-editor-panel">
+            <div class="app-card__row">
+              <strong>Editable blocks</strong>
+              <span class="app-chip" data-editor-node-count>0</span>
+            </div>
+            <div class="admin-editor-node-list" data-editor-node-list></div>
+          </section>
+        </aside>
+        <div class="admin-editor-preview-shell">
+          <div class="admin-editor-preview-bar">
+            <span class="app-chip">Preview</span>
+            <span class="app-muted">Scripts are disabled here so the layout stays stable while you edit.</span>
+          </div>
+          <div class="admin-editor-preview-frame">
+            <iframe title="Ghosted page editor preview" data-editor-preview sandbox="allow-same-origin"></iframe>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function renderAdminPageButtons(pages, selectedSlug) {
