@@ -28,7 +28,7 @@ export function renderSignInState(config: ApiConfig) {
       : '';
   return `
     <div class="app-empty">
-      <p>Sign in to launch the Ghosted slot floor, sync your balance, and bank free spins on your account.</p>
+      <p>Sign in to play.</p>
       ${loginHref ? `<a class="button" href="${loginHref}">Sign In With Discord</a>` : '<p class="app-muted">Configure Discord auth to enable play.</p>'}
     </div>
   `;
@@ -76,7 +76,6 @@ export function renderCasinoApp(state: CasinoState) {
           <div>
             <p class="app-kicker">Game App</p>
             <h3>${escapeHtml(game.name)}</h3>
-            <p class="casino-shell__copy">${escapeHtml(game.flavor)}</p>
           </div>
           <div class="casino-stage-shell__chips">
             <span class="app-chip">${formatPoints(game.cost)} stake</span>
@@ -90,9 +89,7 @@ export function renderCasinoApp(state: CasinoState) {
         <div class="casino-stage-shell__info">
           <aside class="casino-stage-shell__panel">
             <div class="casino-console" data-console>
-              <div class="casino-console__eyebrow">Machine Feed</div>
               <div class="casino-console__headline" data-console-headline>${escapeHtml(resultHeadline(state.latestResult, game))}</div>
-              <p class="casino-console__copy" data-console-copy>${escapeHtml(resultCopy(state.latestResult, game))}</p>
             </div>
             <div class="casino-controls">
               <button class="button casino-controls__spin" data-spin>${spinLabel(game, state.spinning)}</button>
@@ -230,33 +227,26 @@ function renderHistory(spins: SpinResult[]) {
 }
 
 function resultHeadline(result: SpinResult | null, game: SlotGame) {
-  return result?.outcome.headline || `${game.name} is loaded`;
-}
-
-function resultCopy(result: SpinResult | null, game: SlotGame) {
-  if (!result) {
-    return `${game.rows} rows, ${game.reelCount} reels, and server-resolved paylines. Wilds substitute. Scatters unlock the feature.`;
-  }
-  return result.outcome.detail;
+  return result?.outcome.headline || game.name;
 }
 
 function statusCopy(result: SpinResult | null, game: SlotGame, spinning: boolean) {
   if (spinning) {
-    return `${game.name} is spinning...`;
+    return 'Spinning...';
   }
   if (!result) {
-    return 'Send the reels and watch the game board settle live.';
+    return `${formatPoints(game.cost)} stake`;
   }
   if (result.freeSpinsAwarded) {
-    return `${result.freeSpinsAwarded} free spins awarded with ${result.scatter.count} scatters.`;
+    return `${result.freeSpinsAwarded} free spins awarded`;
   }
   if (result.usedFreeSpin) {
-    return `${result.freeSpinsRemaining} free spins remain in the bank.`;
+    return `${result.freeSpinsRemaining} free spins left`;
   }
   if (result.payout > 0) {
-    return `Paid ${formatPoints(result.payout)} across ${result.lineWins.length || 1} winning lines.`;
+    return `${formatPoints(result.payout)} paid`;
   }
-  return `No hit. Net ${formatPoints(result.net)} on that spin.`;
+  return 'No win';
 }
 
 function spinLabel(game: SlotGame, spinning: boolean) {
