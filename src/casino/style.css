@@ -1,0 +1,274 @@
+.slot-layout,
+.slot-bottom {
+  display: grid;
+  gap: 1rem;
+}
+
+.slot-layout {
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.95fr);
+  margin-bottom: 1rem;
+}
+
+.slot-main,
+.slot-sidebar {
+  display: grid;
+  gap: 1rem;
+}
+
+.slot-main__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.slot-copy {
+  max-width: 54ch;
+}
+
+.slot-chips {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.slot-cabinet {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 214, 102, 0.22);
+  background:
+    radial-gradient(circle at top center, rgba(255, 214, 102, 0.08), transparent 46%),
+    linear-gradient(180deg, rgba(16, 12, 24, 0.96), rgba(7, 6, 12, 0.98));
+  padding: 1rem;
+}
+
+.slot-stage {
+  overflow-x: auto;
+  padding-bottom: 0.4rem;
+}
+
+.slot-stage canvas {
+  display: block;
+  width: min(100%, 940px);
+  max-width: none;
+  margin: 0 auto;
+}
+
+.slot-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.slot-spin {
+  min-width: 12rem;
+}
+
+.slot-status {
+  flex: 1 1 280px;
+}
+
+.slot-result {
+  margin-top: 1rem;
+  border-color: rgba(255, 214, 102, 0.2);
+  background: rgba(255, 214, 102, 0.08);
+}
+
+.slot-result__label {
+  color: #ffd166;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+}
+
+.slot-result__headline {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  margin-bottom: 0.35rem;
+}
+
+.slot-result__symbols {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+}
+
+.slot-footer,
+.slot-player-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.slot-footer {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.slot-footer strong,
+.slot-player-stat strong {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.slot-cabinet-list,
+.slot-paytable,
+.slot-history {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.slot-machine-button {
+  width: 100%;
+  text-align: left;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(157, 124, 242, 0.08), rgba(0, 0, 0, 0)),
+    rgba(18, 14, 28, 0.94);
+  color: var(--app-text);
+  cursor: pointer;
+  padding: 1rem;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.slot-machine-button:hover,
+.slot-machine-button.is-active {
+  transform: translateY(-1px);
+  border-color: rgba(255, 214, 102, 0.28);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24);
+}
+
+.slot-machine-button__top,
+.slot-machine-button__meta,
+.slot-history__row,
+.slot-paytable__row {
+  display: grid;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.slot-machine-button__top,
+.slot-machine-button__meta {
+  grid-template-columns: 1fr auto;
+}
+
+.slot-machine-button__meta {
+  color: var(--app-muted);
+  font-size: 0.84rem;
+  margin-top: 0.35rem;
+}
+
+.slot-machine-button__symbols,
+.slot-paytable__symbols {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.slot-player-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.slot-player-stat {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.9rem;
+}
+
+.slot-meter {
+  margin-top: 1rem;
+}
+
+.slot-meter__track {
+  height: 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  margin-bottom: 0.45rem;
+}
+
+.slot-meter__fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #7bdff6, #ffd166, #ff5d8f);
+}
+
+.slot-bottom {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.slot-paytable__row,
+.slot-history__row {
+  grid-template-columns: auto 1fr auto;
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.95rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.slot-paytable__copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.slot-paytable__value,
+.slot-history__value {
+  font-weight: 800;
+}
+
+.slot-history__value.is-win {
+  color: #ffd166;
+}
+
+.slot-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
+  min-height: 2.1rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 214, 102, 0.08);
+  border: 1px solid rgba(255, 214, 102, 0.14);
+  font-size: 1.1rem;
+}
+
+@media (max-width: 960px) {
+  .slot-layout,
+  .slot-bottom {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .slot-footer,
+  .slot-player-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .slot-controls {
+    align-items: stretch;
+  }
+
+  .slot-spin {
+    width: 100%;
+  }
+
+  .slot-paytable__row,
+  .slot-history__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .slot-footer,
+  .slot-player-grid {
+    grid-template-columns: 1fr;
+  }
+}

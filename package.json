@@ -1,0 +1,34 @@
+{
+  "name": "ghosted",
+  "version": "1.0.0",
+  "description": "Ghosted is now a lightweight Python web app with:",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build:casino": "vite build --config vite.casino.config.ts",
+    "dev:casino": "vite --config vite.casino.config.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nlobdell/Ghosted.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/nlobdell/Ghosted/issues"
+  },
+  "homepage": "https://github.com/nlobdell/Ghosted#readme",
+  "dependencies": {
+    "pixi.js": "^8.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.8.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.10"
+  }
+}
