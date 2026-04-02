@@ -1,4 +1,4 @@
-name: Validate Static Site
+name: Validate Site And App
 
 on:
   pull_request:
@@ -13,18 +13,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
       - name: Ensure required files exist
         run: |
           test -f index.html
           test -f styles.css
+          test -f design/index.html
+          test -f design/styles.css
+          test -f server.py
+          test -f app/index.html
+          test -f app/app.js
+          test -f app/app.css
+          test -f admin/index.html
 
       - name: Block merge conflict markers
         run: |
-<<<<<<< HEAD
-          if grep -nE "^(<<<<<<<|=======|>>>>>>>)" index.html styles.css design/index.html design/styles.css; then
-=======
-          if rg -n "^(<<<<<<<|=======|>>>>>>>)" index.html styles.css; then
->>>>>>> 562e055afb53e4ed8f45fc31ba8bffa61f44ed35
+          if grep -R -nE "^(<<<<<<<|=======|>>>>>>>)" .; then
             echo "Merge conflict markers found."
             exit 1
           fi
@@ -38,18 +46,26 @@ jobs:
           class Parser(HTMLParser):
               pass
 
-          content = Path('index.html').read_text(encoding='utf-8')
-          parser = Parser()
-          parser.feed(content)
-          parser.close()
+          for path in [
+              'index.html',
+              'design/index.html',
+              'app/index.html',
+              'app/casino/index.html',
+              'app/rewards/index.html',
+              'app/giveaways/index.html',
+              'app/profile/index.html',
+              'admin/index.html',
+          ]:
+              parser = Parser()
+              parser.feed(Path(path).read_text(encoding='utf-8'))
+              parser.close()
           print('HTML parsed successfully')
           PY
 
       - name: Validate Discord link presence
         run: |
-<<<<<<< HEAD
           grep -n "discord.gg/ghosted" index.html
           grep -n "discord.gg/ghosted" design/index.html
-=======
-          rg -n "discord.gg/ghosted" index.html
->>>>>>> 562e055afb53e4ed8f45fc31ba8bffa61f44ed35
+
+      - name: Compile server
+        run: python -m py_compile server.py
