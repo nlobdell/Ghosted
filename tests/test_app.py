@@ -414,6 +414,10 @@ class GhostedAppTests(unittest.TestCase):
         self.assertEqual(handler.status, 200)
         self.assertFalse(handler.payload["authenticated"])
         self.assertIsNone(handler.payload["user"])
+        self.assertEqual(handler.payload["brand"]["label"], "Ghosted")
+        self.assertEqual(handler.payload["links"]["discord"]["href"], "https://discord.gg/ghosted")
+        self.assertEqual(handler.payload["utilityGroups"]["public"], ["twitch", "discord"])
+        self.assertEqual(handler.payload["activeRouteKey"], "app")
         self.assertEqual(handler.payload["navigation"][0]["key"], "home")
 
     def test_site_shell_signed_in_without_wom_link(self):
@@ -424,7 +428,9 @@ class GhostedAppTests(unittest.TestCase):
         self.assertEqual(handler.status, 200)
         self.assertTrue(handler.payload["authenticated"])
         self.assertFalse(handler.payload["wom"]["linked"])
+        self.assertEqual(handler.payload["activeRouteKey"], "profile")
         self.assertEqual(handler.payload["profile"]["rolesCount"], 0)
+        self.assertIn("admin", [item["key"] for item in handler.payload["navigation"]])
 
     @patch("server.wom_cached_json")
     def test_site_shell_signed_in_with_wom_rank(self, wom_cached_json):
@@ -451,6 +457,31 @@ class GhostedAppTests(unittest.TestCase):
         self.assertTrue(handler.payload["wom"]["linked"])
         self.assertFalse(handler.payload["wom"]["inGroup"])
         self.assertIsNone(handler.payload["wom"]["membership"])
+
+    def test_site_shell_hides_admin_navigation_for_non_admin_user(self):
+        member = server.create_or_update_user(
+            self.connection,
+            {"id": "member-user", "username": "member", "global_name": "Member", "avatar": None},
+            [],
+        )
+        server.ensure_user_rewards(self.connection, member, server.build_auth_config("http://localhost:8000"))
+        member = server.get_user_by_discord_id(self.connection, "member-user")
+
+        payload = server.site_shell_payload(self.connection, member, base_url="http://localhost:8000", next_path="/app/clan/")
+
+        self.assertEqual(payload["activeRouteKey"], "community")
+        self.assertNotIn("admin", [item["key"] for item in payload["navigation"]])
+
+    def test_site_shell_marks_admin_route_for_admin_user(self):
+        payload = server.site_shell_payload(self.connection, self.user, base_url="http://localhost:8000", next_path="/admin/")
+
+        self.assertEqual(payload["activeRouteKey"], "admin")
+        self.assertIn("admin", [item["key"] for item in payload["navigation"]])
+
+    def test_active_route_key_groups_related_routes(self):
+        self.assertEqual(server.active_route_key("/app/clan/"), "community")
+        self.assertEqual(server.active_route_key("/app/competitions/"), "community")
+        self.assertEqual(server.active_route_key("/app/casino/"), "casino")
 
     @patch("server.wom_cached_json")
     def test_wom_hiscores_endpoint(self, wom_cached_json):
