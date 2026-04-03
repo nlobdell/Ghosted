@@ -17,6 +17,7 @@ type SymbolTile = Container & {
   body?: Graphics;
   badge?: Graphics;
   glyph?: Text;
+  halo?: Graphics;
   labelText?: Text;
   sprite?: Sprite;
   symbolKey: string;
@@ -36,13 +37,14 @@ const STAGE_HEIGHT = 960;
 const REEL_COUNT = 5;
 const VISIBLE_ROWS = 3;
 const REEL_WIDTH = 228;
-const REEL_HEIGHT = 600;
 const REEL_GAP = 24;
-const ROW_HEIGHT = 190;
-const TILE_WIDTH = 202;
-const TILE_HEIGHT = 176;
-const STRIP_PADDING_LEFT = 13;
 const STRIP_PADDING_TOP = 12;
+const STRIP_PADDING_BOTTOM = 12;
+const ROW_HEIGHT = 164;
+const TILE_WIDTH = 202;
+const TILE_HEIGHT = 156;
+const REEL_HEIGHT = STRIP_PADDING_TOP + STRIP_PADDING_BOTTOM + (VISIBLE_ROWS - 1) * ROW_HEIGHT + TILE_HEIGHT;
+const STRIP_PADDING_LEFT = 13;
 const CABINET_X = 42;
 const CABINET_Y = 32;
 const CABINET_WIDTH = STAGE_WIDTH - 84;
@@ -56,6 +58,19 @@ const INNER_Y = 140;
 const INNER_WIDTH = STAGE_WIDTH - 248;
 const INNER_HEIGHT = STAGE_HEIGHT - 280;
 const HEADER_HEIGHT = 98;
+const REEL_WINDOW_MARGIN_X = 42;
+const REEL_WINDOW_MARGIN_Y = 28;
+const TILE_BADGE_X = 16;
+const TILE_BADGE_Y = 16;
+const TILE_BADGE_WIDTH = 48;
+const TILE_BADGE_HEIGHT = 28;
+const TILE_BADGE_RADIUS = 14;
+const TILE_GLYPH_X = TILE_BADGE_X + TILE_BADGE_WIDTH * 0.5;
+const TILE_GLYPH_Y = TILE_BADGE_Y + TILE_BADGE_HEIGHT * 0.5 + 1;
+const TILE_ART_CENTER_Y = 66;
+const TILE_HALO_RADIUS = 38;
+const TILE_LABEL_Y = TILE_HEIGHT - 20;
+const TILE_SPRITE_SIZE = 80;
 
 const MOTION_BY_GAME: Record<string, MotionProfile> = {
   'ghost-lanterns': { baseDuration: 1180, cycles: 8, overshoot: 24, settleEase: easeOutBack, spinEase: easeInOutSine, stagger: 210 },
@@ -190,10 +205,12 @@ export class SlotRenderer {
     this.paintBackdrop();
 
     const accent = parseColor(game.accent, 0xb989ff);
-    const reelWindowX = INNER_X + 42;
-    const reelWindowY = INNER_Y + HEADER_HEIGHT + 42;
-    const reelsStartX = reelWindowX + (INNER_WIDTH - 84 - (REEL_COUNT * REEL_WIDTH + (REEL_COUNT - 1) * REEL_GAP)) * 0.5;
-    const reelsStartY = reelWindowY;
+    const reelWindowX = INNER_X + REEL_WINDOW_MARGIN_X;
+    const reelWindowY = INNER_Y + HEADER_HEIGHT + REEL_WINDOW_MARGIN_Y;
+    const reelWindowWidth = INNER_WIDTH - REEL_WINDOW_MARGIN_X * 2;
+    const reelWindowHeight = INNER_HEIGHT - HEADER_HEIGHT - REEL_WINDOW_MARGIN_Y * 2;
+    const reelsStartX = reelWindowX + (reelWindowWidth - (REEL_COUNT * REEL_WIDTH + (REEL_COUNT - 1) * REEL_GAP)) * 0.5;
+    const reelsStartY = reelWindowY + Math.max(0, (reelWindowHeight - REEL_HEIGHT) * 0.5);
     const paylineY = reelsStartY + STRIP_PADDING_TOP + ROW_HEIGHT + TILE_HEIGHT * 0.5;
     const reelShelfX = reelsStartX - 18;
     const reelShelfY = reelsStartY - 18;
@@ -220,7 +237,7 @@ export class SlotRenderer {
       const y = reelsStartY;
       const glow = roundedRect(x - 8, y - 8, REEL_WIDTH + 16, REEL_HEIGHT + 16, 22, accent, 0, accent, 0.7, 0);
       const symbolBack = roundedRect(x, y, REEL_WIDTH, REEL_HEIGHT, 18, 0x0d0a14, 0.98, accent, 0.18, 2);
-      const frame = roundedRect(x, y, REEL_WIDTH, REEL_HEIGHT, 18, 0x09070f, 0.98, 0xffffff, 0.12, 2);
+      const frame = roundedRect(x, y, REEL_WIDTH, REEL_HEIGHT, 18, 0xffffff, 0, 0xffffff, 0.12, 2);
       const strip = new Container();
       strip.x = x + STRIP_PADDING_LEFT;
       strip.y = y + STRIP_PADDING_TOP;
@@ -262,10 +279,13 @@ export class SlotRenderer {
   private resetTile(tile: SymbolTile) {
     tile.scale.set(1);
     if (tile.body) {
-      redrawTileBody(tile.body, 0x1a1028, 0xffffff, 0.08);
+      redrawTileBody(tile.body, 0x1d152d, 0xffffff, 0.08);
     }
     if (tile.badge) {
-      redrawTileBadge(tile.badge, symbolMeta(tile.symbolKey).tint, 0.18, 0.45);
+      redrawTileBadge(tile.badge, symbolMeta(tile.symbolKey).tint, 0.22, 0.52);
+    }
+    if (tile.halo) {
+      redrawTileHalo(tile.halo, symbolMeta(tile.symbolKey).tint, 0.1, 0.32);
     }
     if (tile.sprite) {
       tile.sprite.scale.set(1);
@@ -273,7 +293,7 @@ export class SlotRenderer {
       tile.sprite.alpha = 1;
       tile.sprite.tint = 0xffffff;
       tile.sprite.x = TILE_WIDTH * 0.5;
-      tile.sprite.y = 54;
+      tile.sprite.y = TILE_ART_CENTER_Y;
     }
   }
 
@@ -285,8 +305,9 @@ export class SlotRenderer {
 
     const tile = reel.strip.children[rowIndex] as SymbolTile | undefined;
     if (!tile) return;
-    if (tile.body) redrawTileBody(tile.body, 0x241832, color, 0.9);
-    if (tile.badge) redrawTileBadge(tile.badge, color, 0.22, 0.88);
+    if (tile.body) redrawTileBody(tile.body, 0x281c3a, color, 0.9);
+    if (tile.badge) redrawTileBadge(tile.badge, color, 0.28, 0.88);
+    if (tile.halo) redrawTileHalo(tile.halo, color, 0.16, 0.72);
     void animate(320, (progress) => {
       tile.scale.set(1 + Math.sin(progress * Math.PI * 3) * 0.05);
     }, easeInOutSine);
@@ -362,25 +383,28 @@ export class SlotRenderer {
     const tile = new Container() as SymbolTile;
     tile.symbolKey = symbol;
 
-    const shadow = roundedRect(0, 8, TILE_WIDTH, TILE_HEIGHT, 28, 0x000000, 0.22, 0x000000, 0, 0);
-    const body = roundedRect(0, 0, TILE_WIDTH, TILE_HEIGHT, 28, 0x1a1028, 1, 0xffffff, 0.08, 2);
+    const shadow = roundedRect(0, 8, TILE_WIDTH, TILE_HEIGHT, 28, 0x000000, 0.18, 0x000000, 0, 0);
+    const body = roundedRect(0, 0, TILE_WIDTH, TILE_HEIGHT, 28, 0x1d152d, 1, 0xffffff, 0.08, 2);
     const badge = new Graphics();
-    redrawTileBadge(badge, meta.tint, 0.18, 0.45);
+    redrawTileBadge(badge, meta.tint, 0.22, 0.52);
+    const halo = new Graphics();
+    redrawTileHalo(halo, meta.tint, 0.1, 0.32);
     const sprite = Sprite.from(Texture.from(meta.textureUrl));
-    sprite.width = 76;
-    sprite.height = 76;
+    sprite.width = TILE_SPRITE_SIZE;
+    sprite.height = TILE_SPRITE_SIZE;
     sprite.anchor.set(0.5);
     sprite.x = TILE_WIDTH * 0.5;
-    sprite.y = 54;
-    const glyph = makeText(meta.glyph, TILE_WIDTH * 0.5, 52, '#ffffff', 12, 0.5);
-    const label = makeText(meta.label.toUpperCase(), TILE_WIDTH * 0.5, 132, '#f2e9ff', 13, 0.5);
+    sprite.y = TILE_ART_CENTER_Y;
+    const glyph = makeText(meta.glyph, TILE_GLYPH_X, TILE_GLYPH_Y, '#fff9ef', 11, 0.5);
+    const label = makeText(meta.label.toUpperCase(), TILE_WIDTH * 0.5, TILE_LABEL_Y, '#f8f0ff', 13, 0.5);
 
     tile.body = body;
     tile.badge = badge;
     tile.glyph = glyph;
+    tile.halo = halo;
     tile.labelText = label;
     tile.sprite = sprite;
-    tile.addChild(shadow, body, badge, sprite, glyph, label);
+    tile.addChild(shadow, body, halo, sprite, badge, glyph, label);
     return tile;
   }
 
@@ -521,12 +545,17 @@ function redrawTileBody(graphic: Graphics, fill: number, stroke: number, strokeA
 
 function redrawTileBadge(graphic: Graphics, color: number, fillAlpha: number, strokeAlpha: number) {
   graphic.clear();
-  graphic.circle(TILE_WIDTH * 0.5, 40, 24).fill({ color, alpha: fillAlpha }).stroke({ color, alpha: strokeAlpha, width: 3 });
+  graphic.roundRect(TILE_BADGE_X, TILE_BADGE_Y, TILE_BADGE_WIDTH, TILE_BADGE_HEIGHT, TILE_BADGE_RADIUS).fill({ color, alpha: fillAlpha }).stroke({ color, alpha: strokeAlpha, width: 3 });
+}
+
+function redrawTileHalo(graphic: Graphics, color: number, fillAlpha: number, strokeAlpha: number) {
+  graphic.clear();
+  graphic.circle(TILE_WIDTH * 0.5, TILE_ART_CENTER_Y, TILE_HALO_RADIUS).fill({ color, alpha: fillAlpha });
+  graphic.circle(TILE_WIDTH * 0.5, TILE_ART_CENTER_Y, TILE_HALO_RADIUS).stroke({ color, alpha: strokeAlpha, width: 2 });
 }
 
 function resetReelFrame(graphic: Graphics, x: number, y: number, stroke: number, strokeAlpha: number, strokeWidth = 2) {
   graphic.clear();
-  graphic.roundRect(x, y, REEL_WIDTH, REEL_HEIGHT, 18).fill({ color: 0x09070f, alpha: 0.98 });
   graphic.roundRect(x, y, REEL_WIDTH, REEL_HEIGHT, 18).stroke({ color: stroke, alpha: strokeAlpha, width: strokeWidth });
 }
 
