@@ -210,6 +210,24 @@
     url('/src/casino/assets/symbols/ghost.svg') 82% 78%/5rem no-repeat;
 }
 
+.app-context--slim {
+  grid-template-columns: 1fr;
+  padding: 1rem 1.25rem;
+  gap: 0.6rem;
+}
+
+.app-context--slim .app-title {
+  font-size: clamp(1.55rem, 3vw, 2.2rem);
+}
+
+.app-context__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .app-context__aside {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   align-content: start;
