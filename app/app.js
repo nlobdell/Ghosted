@@ -4,10 +4,6 @@ const state = {
   admin: {
     roleOptions: [],
   },
-  ui: {
-    pendingExternalLink: null,
-    twitchConfirmReady: false,
-  },
   casino: {
     selectedGameSlug: null,
     latestResult: null,
@@ -34,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
 async function boot() {
   state.config = await getJSON('/api/config');
   state.me = await getJSON('/api/me');
-  initTwitchLeaveConfirmation();
   renderAuth();
   const page = document.querySelector('[data-page]')?.dataset.page;
   if (!page) return;
@@ -77,7 +72,7 @@ function renderAuth() {
         ${avatar}
         <div>
           <div><strong>${escapeHtml(user.displayName)}</strong></div>
-          <div class="app-muted">${formatPoints(user.balance)} points</div>
+          <div class="app-muted">Signed in</div>
         </div>
       </div>
       ${user.isAdmin ? '<a class="app-nav__link" href="/admin/">Admin</a>' : ''}
@@ -165,7 +160,7 @@ async function renderDashboard() {
             </div>
             <span class="app-route__meta">${state.me.user.isAdmin ? 'Admin' : 'Member'}</span>
           </a>
-          <a class="app-route" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">
+          <a class="app-route" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">
             <div>
               <strong>Twitch</strong>
               <p>Watch vghosted live.</p>
@@ -180,7 +175,7 @@ async function renderDashboard() {
             <p class="app-kicker">Account</p>
             <h3>Discord status</h3>
           </div>
-          <span class="app-chip">${formatPoints(rewards.balance)}</span>
+          <span class="app-chip">Discord linked</span>
         </div>
         <div class="app-panel-list">
           <div>
@@ -263,8 +258,8 @@ async function renderCasinoLegacy() {
           body: JSON.stringify({ gameSlug: button.dataset.spin }),
         });
         renderBanner(
-          `${payload.result.symbols.join(' • ')} | Wager ${formatPoints(payload.result.wager)} | ` +
-          `Payout ${formatPoints(payload.result.payout)} | Balance ${formatPoints(payload.result.balance)}`,
+          `${payload.result.symbols.join(' • ')} | Wager ${formatPointsFull(payload.result.wager)} | ` +
+          `Payout ${formatPointsFull(payload.result.payout)} | Balance ${formatPointsFull(payload.result.balance)}`,
           'info',
           '#casino-result'
         );
@@ -540,7 +535,7 @@ async function renderGiveaways() {
       try {
         const result = await getJSON(`/api/giveaways/${button.dataset.enter}/enter`, { method: 'POST' });
         renderBanner(
-          `Entry added. ${formatPoints(result.result.balance)} left with ${result.result.entriesRemaining} entries remaining.`,
+          `Entry added. ${formatPointsFull(result.result.balance)} left with ${result.result.entriesRemaining} entries remaining.`,
           'info',
           '#giveaway-result'
         );
@@ -592,8 +587,8 @@ async function renderProfile() {
             <strong>${escapeHtml(user.discordId || 'Not synced')}</strong>
           </div>
           <div class="app-metric">
-            <span>Balance</span>
-            <strong>${formatPoints(user.balance)}</strong>
+            <span>Roles synced</span>
+            <strong>${roleDetails.length}</strong>
           </div>
           <div class="app-metric">
             <span>Entries used</span>
@@ -651,31 +646,31 @@ async function renderAdmin() {
           <h3>Grant or deduct points</h3>
           <p>Use an internal user id or Discord id to write a ledger entry.</p>
           <div class="app-form-grid">
-            <div><label for="grant-user-id">User ID</label><input id="grant-user-id" name="userId" placeholder="1" /></div>
-            <div><label for="grant-discord-id">Discord ID</label><input id="grant-discord-id" name="discordId" placeholder="Optional alternate lookup" /></div>
-            <div><label for="grant-amount">Amount</label><input id="grant-amount" name="amount" type="number" value="100" /></div>
-            <div><label for="grant-description">Description</label><input id="grant-description" name="description" value="Clan reward grant" /></div>
+            <div><label for="grant-user-id">User ID</label><input id="grant-user-id" name="userId" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="1" /></div>
+            <div><label for="grant-discord-id">Discord ID</label><input id="grant-discord-id" name="discordId" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Optional alternate lookup" /></div>
+            <div><label for="grant-amount">Amount</label><input id="grant-amount" name="amount" type="number" inputmode="numeric" autocomplete="off" value="100" /></div>
+            <div><label for="grant-description">Description</label><input id="grant-description" name="description" type="text" autocomplete="off" value="Clan reward grant" /></div>
           </div>
           <div class="app-actions"><button class="button" type="submit">Write ledger entry</button></div>
         </form>
         <form class="app-form" id="giveaway-form">
           <h3>Create giveaway</h3>
           <div class="app-form-grid">
-            <div><label for="giveaway-title">Title</label><input id="giveaway-title" name="title" value="Weekly Ghosted Drop" /></div>
-            <div><label for="giveaway-cost">Point cost</label><input id="giveaway-cost" name="pointCost" type="number" value="25" /></div>
-            <div><label for="giveaway-start">Start</label><input id="giveaway-start" name="startAt" type="datetime-local" /></div>
-            <div><label for="giveaway-end">End</label><input id="giveaway-end" name="endAt" type="datetime-local" /></div>
-            <div><label for="giveaway-max">Max entries</label><input id="giveaway-max" name="maxEntries" type="number" value="3" /></div>
+            <div><label for="giveaway-title">Title</label><input id="giveaway-title" name="title" type="text" autocomplete="off" value="Weekly Ghosted Drop" /></div>
+            <div><label for="giveaway-cost">Point cost</label><input id="giveaway-cost" name="pointCost" type="number" inputmode="numeric" autocomplete="off" value="25" /></div>
+            <div><label for="giveaway-start">Start</label><input id="giveaway-start" name="startAt" type="datetime-local" autocomplete="off" /></div>
+            <div><label for="giveaway-end">End</label><input id="giveaway-end" name="endAt" type="datetime-local" autocomplete="off" /></div>
+            <div><label for="giveaway-max">Max entries</label><input id="giveaway-max" name="maxEntries" type="number" inputmode="numeric" autocomplete="off" value="3" /></div>
             <div>
               <label for="giveaway-role">Required Discord role</label>
-              <select id="giveaway-role" name="requiredRoleId" ${state.admin.roleOptions.length ? '' : 'disabled'}>
+              <select id="giveaway-role" name="requiredRoleId" aria-describedby="giveaway-role-note" ${state.admin.roleOptions.length ? '' : 'disabled'}>
                 ${renderRoleOptions(state.admin.roleOptions)}
               </select>
-              <p class="app-field-note">${escapeHtml(renderRoleHelperText(rolePayload))}</p>
+              <p class="app-field-note" id="giveaway-role-note">${escapeHtml(renderRoleHelperText(rolePayload))}</p>
             </div>
           </div>
           <label for="giveaway-description">Description</label>
-          <textarea id="giveaway-description" name="description">Launch-ready clan giveaway.</textarea>
+          <textarea id="giveaway-description" name="description" autocomplete="off">Launch-ready clan giveaway.</textarea>
           <div class="app-actions"><button class="button" type="submit">Create giveaway</button></div>
         </form>
       </section>
@@ -811,22 +806,8 @@ function renderLedgerTable(entries) {
 function renderBanner(message, variant = 'info', target = '[data-banner]') {
   const root = typeof target === 'string' ? document.querySelector(target) : target;
   if (!root) return;
-  root.innerHTML = `<div class="app-banner ${variant === 'error' ? 'is-error' : variant === 'warning' ? 'is-warning' : ''}">${escapeHtml(message)}</div>`;
-}
-
-function initTwitchLeaveConfirmation() {
-  if (state.ui.twitchConfirmReady) return;
-  state.ui.twitchConfirmReady = true;
-  if (!document.querySelector('[data-twitch-confirm]')) {
-    document.body.insertAdjacentHTML('beforeend', renderTwitchLeaveDialog());
-  }
-  const dialog = document.querySelector('[data-twitch-confirm]');
-  dialog?.querySelector('[data-twitch-cancel]')?.addEventListener('click', () => closeTwitchLeaveDialog());
-  dialog?.querySelector('[data-twitch-confirm-open]')?.addEventListener('click', () => confirmTwitchLeave());
-  dialog?.addEventListener('close', () => {
-    state.ui.pendingExternalLink = null;
-  });
-  document.addEventListener('click', handleTwitchLeaveLinkClick);
+  root.innerHTML = `<div class="app-banner ${variant === 'error' ? 'is-error' : variant === 'warning' ? 'is-warning' : ''}" role="${variant === 'error' ? 'alert' : 'status'}">${escapeHtml(message)}</div>`;
+  window.GhostedSite?.announce?.(message);
 }
 
 function renderTwitchLeaveDialog() {
@@ -928,6 +909,10 @@ function renderSignInState(root, message) {
 
 function formatPoints(value) {
   return `${Number(value).toLocaleString()} pts`;
+}
+
+function formatPointsFull(value) {
+  return `${Number(value).toLocaleString()} points`;
 }
 
 function formatDate(value) {
@@ -1043,16 +1028,16 @@ function renderCasinoResult(root, result) {
   const symbols = result.symbols.map((symbol) => getSlotSymbol(symbol).emoji).join(' ');
   const tone = result.payout > 0 ? 'info' : 'warning';
   const message = result.payout > 0
-    ? `${symbols} Line hit. Won ${formatPoints(result.payout)} and moved to ${formatPoints(result.balance)}.`
-    : `${symbols} No payout this time. Wager ${formatPoints(result.wager)}, balance ${formatPoints(result.balance)}.`;
+    ? `${symbols} Line hit. Won ${formatPointsFull(result.payout)} and moved to ${formatPointsFull(result.balance)}.`
+    : `${symbols} No payout this time. Wager ${formatPointsFull(result.wager)}, balance ${formatPointsFull(result.balance)}.`;
   renderBanner(message, tone, root);
 }
 
 function describeSpinResult(result) {
   if (result.payout > 0) {
-    return `Paid ${formatPoints(result.payout)} on ${result.symbols.map((symbol) => getSlotSymbol(symbol).label).join(', ')}.`;
+    return `Paid ${formatPointsFull(result.payout)} on ${result.symbols.map((symbol) => getSlotSymbol(symbol).label).join(', ')}.`;
   }
-  return `No line hit. Net ${formatPoints(result.net)} on that pull.`;
+  return `No line hit. Net ${formatPointsFull(result.net)} on that pull.`;
 }
 
 function normalizeReelSymbols(symbols) {
@@ -1316,9 +1301,9 @@ function describeSpinResult(result) {
     return result.outcome.detail;
   }
   if (result.payout > 0) {
-    return `Paid ${formatPoints(result.payout)} on ${result.symbols.map((symbol) => getSlotSymbol(symbol).label).join(', ')}.`;
+    return `Paid ${formatPointsFull(result.payout)} on ${result.symbols.map((symbol) => getSlotSymbol(symbol).label).join(', ')}.`;
   }
-  return `No line hit. Net ${formatPoints(result.net)} on that pull.`;
+  return `No line hit. Net ${formatPointsFull(result.net)} on that pull.`;
 }
 
 function normalizeReelSymbols(symbols) {
@@ -1399,7 +1384,7 @@ function renderCasinoPlayerStats(rewards, game) {
       <div class="casino-meter__bar">
         <span class="casino-meter__fill" style="width: ${Math.min(100, Math.max(0, (rewards.dailyWagered / Math.max(1, rewards.dailyCap)) * 100))}%"></span>
       </div>
-      <div class="app-muted">${formatPoints(rewards.dailyRemaining)} left before the daily cap closes the floor.</div>
+      <div class="app-muted">${formatPointsFull(rewards.dailyRemaining)} left before the daily cap closes the floor.</div>
     </div>
   `;
 }
@@ -1622,11 +1607,11 @@ function describeSpinResult(result) {
     return result.outcome.detail;
   }
   if (result.payout > 0) {
-    return `Paid ${formatPoints(result.payout)} across ${result.lineWins?.length || 1} winning lines.`;
+    return `Paid ${formatPointsFull(result.payout)} across ${result.lineWins?.length || 1} winning lines.`;
   }
   return result.usedFreeSpin
     ? `Free spin used. ${result.freeSpinsRemaining || 0} remaining.`
-    : `No line hit. Net ${formatPoints(result.net)} on that pull.`;
+    : `No line hit. Net ${formatPointsFull(result.net)} on that pull.`;
 }
 
 function normalizeReelSymbols(symbols) {

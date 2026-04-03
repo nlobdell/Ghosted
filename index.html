@@ -17,15 +17,16 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <a class="site-skip-link" href="#main-content">Skip to main content</a>
     <header class="hero">
-      <nav class="nav container">
+      <nav class="nav container" aria-label="Primary">
         <a class="brand" href="/">Ghosted</a>
         <div class="nav__actions">
           <a class="nav__link" href="design/">About</a>
           <a class="nav__link" href="app/">App Hub</a>
-          <a class="nav__link" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">Twitch</a>
+          <a class="nav__link" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
           <a class="button button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-            Join Discord
+            Discord
           </a>
         </div>
       </nav>
@@ -34,15 +35,13 @@
         <div class="hero__copy">
           <p class="eyebrow">Old School RuneScape Community</p>
           <h1>Ghosted keeps the clan and stream in sync.</h1>
-          <p class="hero__subtitle">Discord runs the day-to-day, vghosted on Twitch sets the live energy, and the site keeps rewards, giveaways, and member tools easy to reach.</p>
+          <p class="hero__subtitle">Start on Twitch, meet the clan in Discord, then use the App Hub for rewards, giveaways, and member tools.</p>
           <div class="hero__actions">
-            <a class="button" href="app/">Open App Hub</a>
-            <a class="button button--secondary" href="design/">About Us</a>
-            <a class="button button--secondary" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">
-              Watch vghosted
+            <a class="button" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">
+              Watch Twitch
             </a>
             <a class="button button--secondary" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-              Enter Discord
+              Join Discord
             </a>
           </div>
         </div>
@@ -53,9 +52,9 @@
             <p class="hero__panel-label">Overview</p>
             <ul class="hero__list">
               <li>OSRS clan</li>
-              <li>Live stream at twitch.tv/vghosted</li>
-              <li>Discord first</li>
-              <li>Site tools: rewards, giveaways, casino</li>
+              <li>Live on twitch.tv/vghosted</li>
+              <li>Discord for daily coordination</li>
+              <li>App Hub for rewards, giveaways, casino, and profile</li>
             </ul>
           </div>
         </aside>
@@ -77,32 +76,27 @@
       </div>
     </header>
 
-    <main>
+    <main id="main-content">
       <section class="section container">
         <div class="section-heading">
           <p class="section-label">Platform Layout</p>
-          <h2>Four routes.</h2>
+          <h2>Three stops.</h2>
         </div>
         <div class="lane-grid">
           <article class="lane">
             <p class="lane__eyebrow">01. Clan Hall</p>
-            <h3>Home</h3>
-            <p>Quick overview.</p>
-          </article>
-          <article class="lane">
-            <p class="lane__eyebrow">02. Stream</p>
             <h3>Twitch</h3>
-            <p>Watch vghosted live.</p>
+            <p>Catch vghosted live.</p>
           </article>
           <article class="lane">
-            <p class="lane__eyebrow">03. App Hub</p>
-            <h3>Apps</h3>
-            <p>Member tools.</p>
-          </article>
-          <article class="lane">
-            <p class="lane__eyebrow">04. Discord Gate</p>
+            <p class="lane__eyebrow">02. Community</p>
             <h3>Discord</h3>
-            <p>Main hub.</p>
+            <p>Join the server and stay in sync.</p>
+          </article>
+          <article class="lane">
+            <p class="lane__eyebrow">03. Tools</p>
+            <h3>App Hub</h3>
+            <p>Use rewards, giveaways, casino, and profile tools.</p>
           </article>
         </div>
       </section>
@@ -111,12 +105,11 @@
         <div class="board">
           <article class="board__copy">
             <p class="section-label">Tonight's Routes</p>
-            <h2>Pick a route.</h2>
+            <h2>Follow the flow.</h2>
             <div class="board__stack">
-              <span>OSRS</span>
               <span>Twitch</span>
               <span>Discord</span>
-              <span>Site tools</span>
+              <span>App Hub</span>
             </div>
           </article>
 
@@ -124,30 +117,23 @@
             <article class="route">
               <div>
                 <p class="route__eyebrow">Live Channel</p>
-                <h3>Watch vghosted on Twitch</h3>
+                <h3>Start with Twitch</h3>
               </div>
-              <a class="button button--secondary button--small" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">Watch</a>
+              <a class="button button--secondary button--small" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Watch</a>
             </article>
             <article class="route">
               <div>
-                <p class="route__eyebrow">App Hub</p>
-                <h3>Rewards, giveaways, casino, profile</h3>
-              </div>
-              <a class="button button--secondary button--small" href="app/">Open</a>
-            </article>
-            <article class="route">
-              <div>
-                <p class="route__eyebrow">About Us</p>
-                <h3>Clan overview</h3>
-              </div>
-              <a class="button button--secondary button--small" href="design/">Explore</a>
-            </article>
-            <article class="route">
-              <div>
-                <p class="route__eyebrow">Discord</p>
-                <h3>Join the server</h3>
+                <p class="route__eyebrow">Community</p>
+                <h3>Join Discord</h3>
               </div>
               <a class="button button--secondary button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">Join</a>
+            </article>
+            <article class="route">
+              <div>
+                <p class="route__eyebrow">Tools</p>
+                <h3>Open the App Hub</h3>
+              </div>
+              <a class="button button--secondary button--small" href="app/">Open</a>
             </article>
           </div>
         </div>
@@ -155,17 +141,14 @@
 
       <section class="section section--cta">
         <div class="container cta">
-          <p class="cta__eyebrow">Live + Discord</p>
-          <h2>Watch on Twitch, then join the clan in Discord.</h2>
+          <p class="cta__eyebrow">Next Step</p>
+          <h2>Use the App Hub once you are in the Discord community.</h2>
           <div class="cta__actions">
-            <a class="button" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">
-              Watch vghosted
+            <a class="button" href="app/">
+              Open App Hub
             </a>
-            <a class="button" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
+            <a class="button button--secondary" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
               Join Discord
-            </a>
-            <a class="button button--secondary" href="app/">
-              Launch App Hub
             </a>
           </div>
         </div>
@@ -177,7 +160,7 @@
         <p>&copy; <span id="year"></span> Ghosted Clan. See you in Gielinor.</p>
       </div>
     </footer>
-
+    <script src="/site.js"></script>
     <script>
       document.getElementById('year').textContent = new Date().getFullYear();
     </script>
