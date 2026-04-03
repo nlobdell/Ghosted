@@ -2851,9 +2851,13 @@ class GhostedHandler(BaseHTTPRequestHandler):
             return BASE_DIR / "index.html"
         if path == "/styles.css":
             return BASE_DIR / "styles.css"
+        if path == "/site.js":
+            return BASE_DIR / "site.js"
         if path in {"/design", "/design/"}:
             return BASE_DIR / "design" / "index.html"
         if path.startswith("/design/"):
+            return (BASE_DIR / path.lstrip("/")).resolve()
+        if path.startswith("/src/"):
             return (BASE_DIR / path.lstrip("/")).resolve()
         if path in {"/app", "/app/"}:
             return BASE_DIR / "app" / "index.html"
