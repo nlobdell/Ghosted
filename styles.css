@@ -923,18 +923,14 @@
       position: fixed;
       inset: 0;
       z-index: 40;
-      display: grid;
+      display: none;
       justify-items: end;
       background: rgba(5, 4, 6, 0.74);
       backdrop-filter: blur(10px);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity var(--ease-standard);
     }
 
     [data-site-shell][data-nav-open='true'] .site-nav-drawer {
-      opacity: 1;
-      pointer-events: auto;
+      display: grid;
     }
 
     .site-nav-drawer > * {
@@ -949,6 +945,12 @@
       justify-items: stretch;
       gap: 0.7rem;
       overscroll-behavior: contain;
+      transform: translateX(100%);
+      transition: transform var(--ease-standard);
+    }
+
+    [data-site-shell][data-nav-open='true'] .site-nav-drawer > * {
+      transform: translateX(0);
     }
 
     .nav__actions,
