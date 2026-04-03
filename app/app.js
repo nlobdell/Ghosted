@@ -1173,7 +1173,6 @@ function renderHighlight({ eyebrow = '', title, copy = '', actions = [], chips =
         <div class="app-highlight__content">
           ${eyebrow ? `<p class="app-kicker">${escapeHtml(eyebrow)}</p>` : ''}
           <h3>${escapeHtml(title)}</h3>
-          ${copy ? `<p>${escapeHtml(copy)}</p>` : ''}
           <div class="app-inline-actions">
             ${actions.join('')}
           </div>
@@ -1190,7 +1189,6 @@ function renderSectionHeading({ eyebrow = '', title, copy = '', action = '' }) {
       <div>
         ${eyebrow ? `<p class="app-kicker">${escapeHtml(eyebrow)}</p>` : ''}
         <h3>${escapeHtml(title)}</h3>
-        ${copy ? `<p class="app-description">${escapeHtml(copy)}</p>` : ''}
       </div>
       ${action || ''}
     </div>
@@ -1210,7 +1208,6 @@ function renderPanel({ eyebrow = '', title, chip = '', body = '', copy = '', hre
         <div>
           ${eyebrow ? `<p class="app-kicker">${escapeHtml(eyebrow)}</p>` : ''}
           <h3>${escapeHtml(title)}</h3>
-          ${copy ? `<p>${escapeHtml(copy)}</p>` : ''}
         </div>
         ${chip ? `<span class="app-chip">${escapeHtml(chip)}</span>` : ''}
       </div>
