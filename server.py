@@ -2482,6 +2482,16 @@ class GhostedHandler(BaseHTTPRequestHandler):
         finally:
             connection.close()
 
+    def do_HEAD(self) -> None:
+        connection = connect_database()
+        try:
+            prune_expired_sessions(connection)
+            self.route_request("HEAD", connection)
+        except AppError as exc:
+            self.respond_error(exc.status, exc.message)
+        finally:
+            connection.close()
+
     def do_POST(self) -> None:
         connection = connect_database()
         try:
@@ -2677,8 +2687,8 @@ class GhostedHandler(BaseHTTPRequestHandler):
             self.redirect("/admin/")
             return
 
-        if method == "GET":
-            self.serve_static(path)
+        if method in {"GET", "HEAD"}:
+            self.serve_static(path, send_body=method == "GET")
             return
 
         raise AppError("Not found.", 404)
@@ -2875,7 +2885,7 @@ class GhostedHandler(BaseHTTPRequestHandler):
             return candidate
         return None
 
-    def serve_static(self, path: str) -> None:
+    def serve_static(self, path: str, *, send_body: bool = True) -> None:
         target = self.static_target(path)
         if not target:
             raise AppError("Not found.", 404)
@@ -2890,8 +2900,12 @@ class GhostedHandler(BaseHTTPRequestHandler):
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", mime)
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.end_headers()
-        self.wfile.write(body)
+        if send_body:
+            self.wfile.write(body)
 
     def redirect(self, location: str) -> None:
         self.send_response(HTTPStatus.FOUND)
