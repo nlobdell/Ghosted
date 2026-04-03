@@ -11,7 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css?v=20260402k" />
-    <link rel="stylesheet" href="/app/app.css?v=20260402m" />
+    <link rel="stylesheet" href="/app/app.css?v=20260402p" />
   </head>
   <body class="app-page">
     <a class="site-skip-link" href="#main-content">Skip to main content</a>
@@ -19,10 +19,14 @@
       <div class="container app-header__inner">
         <a class="brand" href="/">Ghosted</a>
         <div class="app-header__shell" data-site-shell>
-          <div class="site-nav-drawer">
-            <div class="app-nav-panel">
-              <button class="button button--secondary button--small site-nav-close" type="button" data-site-nav-close>Close</button>
-              <nav class="app-nav" aria-label="Primary" data-site-nav>
+          <div class="site-nav-drawer" data-site-nav-drawer hidden>
+            <div class="site-nav-backdrop" data-site-nav-close tabindex="-1" aria-hidden="true"></div>
+            <div class="site-nav-panel" role="dialog" aria-modal="true" aria-label="Primary navigation">
+              <div class="site-nav-panel__header">
+                <a class="brand" href="/">Ghosted</a>
+                <button class="button button--secondary button--small site-nav-close" type="button" data-site-nav-close aria-label="Close navigation menu">Close</button>
+              </div>
+              <nav class="app-nav app-nav--mobile" aria-label="Mobile" data-site-nav>
                 <a class="app-nav__link" href="/">Home</a>
                 <a class="app-nav__link" href="/design/">About</a>
                 <a class="app-nav__link" href="/app/">App Hub</a>
@@ -34,6 +38,16 @@
               </nav>
             </div>
           </div>
+          <nav class="app-nav app-nav--desktop" aria-label="Primary" data-site-nav-desktop>
+            <a class="app-nav__link" href="/">Home</a>
+            <a class="app-nav__link" href="/design/">About</a>
+            <a class="app-nav__link" href="/app/">App Hub</a>
+            <a class="app-nav__link" href="/app/community/">Community</a>
+            <a class="app-nav__link" href="/app/rewards/">Rewards</a>
+            <a class="app-nav__link" href="/app/giveaways/">Giveaways</a>
+            <a class="app-nav__link" href="/app/casino/">Casino</a>
+            <a class="app-nav__link is-active" href="/app/profile/" aria-current="page">Profile</a>
+          </nav>
           <div class="app-header__tools">
             <a class="button button--secondary button--small app-header__utility" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
             <div class="app-auth" data-auth></div>
@@ -90,6 +104,7 @@
     <script src="/app/app.js?v=20260402e"></script>
   </body>
 </html>
+
 
 
 
