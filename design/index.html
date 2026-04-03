@@ -18,15 +18,17 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="design-page">
+    <a class="site-skip-link" href="#main-content">Skip to main content</a>
     <div class="design-shell">
       <header class="design-hero">
-        <nav class="design-nav container">
+        <nav class="design-nav container" aria-label="Primary">
           <a class="design-brand" href="../">Ghosted</a>
           <div class="design-nav__actions">
+            <a class="design-nav__link" href="./" aria-current="page">About</a>
             <a class="design-nav__link" href="../app/">App Hub</a>
-            <a class="design-nav__link" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">Twitch</a>
+            <a class="design-nav__link" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
             <a class="button button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-              Join Discord
+              Discord
             </a>
           </div>
         </nav>
@@ -35,16 +37,13 @@
           <div class="design-hero__copy">
             <p class="design-kicker">Clan Map</p>
             <h1>Ghosted runs on stream, Discord, and site tools.</h1>
-            <p class="hero__subtitle">The live layer starts on <a href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">twitch.tv/vghosted</a>, Discord handles the community, and the site supports points, giveaways, and member tracking.</p>
+            <p class="hero__subtitle">Start on <a href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">twitch.tv/vghosted</a>, keep the community in Discord, and use the App Hub for points, giveaways, and member tracking.</p>
             <div class="design-hero__actions">
-              <a class="button" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">
-                Watch vghosted
+              <a class="button" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">
+                Watch Twitch
               </a>
-              <a class="button" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-                Enter Discord
-              </a>
-              <a class="button button--secondary" href="../app/">
-                Open App Hub
+              <a class="button button--secondary" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
+                Join Discord
               </a>
             </div>
           </div>
@@ -54,8 +53,8 @@
             <ul class="signal-panel__list">
               <li>OSRS-first clan</li>
               <li>Live on twitch.tv/vghosted</li>
-              <li>Discord-centered</li>
-              <li>Site tools for rewards, giveaways, casino, and profile</li>
+              <li>Discord-centered coordination</li>
+              <li>App Hub for rewards, giveaways, casino, and profile</li>
             </ul>
             <div class="signal-tags">
               <span>PvM</span>
@@ -67,7 +66,7 @@
         </section>
       </header>
 
-      <main>
+      <main id="main-content">
         <section class="design-section container" id="flow">
           <div class="section-heading">
             <p class="section-heading__kicker">How It Works</p>
@@ -86,8 +85,8 @@
             </article>
             <article class="path-card">
               <span class="path-card__index">03</span>
-              <h3>Apps</h3>
-              <p>Rewards, giveaways, and profile tools.</p>
+              <h3>App Hub</h3>
+              <p>Open rewards, giveaways, casino, and profile tools.</p>
             </article>
           </div>
         </section>
@@ -146,16 +145,13 @@
         <section class="design-section design-section--cta">
           <div class="container design-cta">
             <p class="section-heading__kicker">Next Step</p>
-            <h2>Catch the stream, then join the clan.</h2>
+            <h2>Open the App Hub after you join the community.</h2>
             <div class="design-cta__actions">
-              <a class="button" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">
-                Watch vghosted
-              </a>
-              <a class="button" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-                Join Discord
-              </a>
-              <a class="button button--secondary" href="../app/">
+              <a class="button" href="../app/">
                 Open App Hub
+              </a>
+              <a class="button button--secondary" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
+                Join Discord
               </a>
               <a class="button button--secondary" href="../">
                 Back Home
@@ -165,5 +161,6 @@
         </section>
       </main>
     </div>
+    <script src="/site.js"></script>
   </body>
 </html>

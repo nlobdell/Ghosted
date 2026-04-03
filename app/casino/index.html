@@ -15,13 +15,15 @@
     <link rel="stylesheet" href="/app/casino/runtime/game.css?v=20260402b" />
   </head>
   <body class="app-page">
+    <a class="site-skip-link" href="#main-content">Skip to main content</a>
     <header class="app-header">
       <div class="container app-header__inner">
         <a class="brand" href="/">Ghosted</a>
-        <nav class="app-nav">
-          <a class="app-nav__link" href="/app/">Apps</a>
-          <a class="app-nav__link" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">Twitch</a>
-          <a class="app-nav__link is-active" href="/app/casino/">Casino</a>
+        <nav class="app-nav" aria-label="Primary">
+          <a class="app-nav__link" href="/design/">About</a>
+          <a class="app-nav__link" href="/app/">App Hub</a>
+          <a class="app-nav__link" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
+          <a class="app-nav__link is-active" href="/app/casino/" aria-current="page">Casino</a>
           <a class="app-nav__link" href="/app/giveaways/">Giveaways</a>
           <a class="app-nav__link" href="/app/rewards/">Rewards</a>
           <a class="app-nav__link" href="/app/profile/">Profile</a>
@@ -29,7 +31,7 @@
         <div class="app-auth" data-auth></div>
       </div>
     </header>
-    <main class="container app-main">
+    <main class="container app-main" id="main-content">
       <section class="app-masthead">
         <div class="app-masthead__copy">
           <p class="app-kicker">Casino</p>
@@ -41,6 +43,7 @@
       <section class="app-summary-grid" data-summary></section>
       <section data-content></section>
     </main>
+    <script src="/site.js"></script>
     <script type="module" src="/app/casino/runtime/game.js?v=20260402b"></script>
   </body>
 </html>

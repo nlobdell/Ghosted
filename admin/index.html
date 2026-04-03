@@ -14,29 +14,31 @@
     <link rel="stylesheet" href="/app/app.css" />
   </head>
   <body class="app-page">
+    <a class="site-skip-link" href="#main-content">Skip to main content</a>
     <header class="app-header">
       <div class="container app-header__inner">
         <a class="brand" href="/">Ghosted</a>
-        <nav class="app-nav">
-          <a class="app-nav__link" href="/app/">Apps</a>
-          <a class="app-nav__link" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">Twitch</a>
-          <a class="app-nav__link is-active" href="/admin/">Admin</a>
+        <nav class="app-nav" aria-label="Primary">
+          <a class="app-nav__link" href="/app/">App Hub</a>
+          <a class="app-nav__link" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
+          <a class="app-nav__link is-active" href="/admin/" aria-current="page">Admin</a>
         </nav>
         <div class="app-auth" data-auth></div>
       </div>
     </header>
-    <main class="container app-main" data-page="admin">
+    <main class="container app-main" id="main-content" data-page="admin">
       <section class="app-masthead">
         <div class="app-masthead__copy">
           <p class="app-kicker">Admin Surface</p>
           <h1 class="app-title">Operate the control desk</h1>
-          <p class="app-description">Manage rewards, giveaways, and site content for the Ghosted and vghosted community.</p>
+          <p class="app-description">Manage rewards and giveaways for the Ghosted and vghosted community.</p>
         </div>
       </section>
       <div class="app-banner-slot" data-banner></div>
       <section class="app-summary-grid" data-summary></section>
       <section data-content></section>
     </main>
+    <script src="/site.js"></script>
     <script src="/app/app.js"></script>
   </body>
 </html>
