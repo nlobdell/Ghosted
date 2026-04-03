@@ -129,37 +129,32 @@ async function renderDashboard() {
   ]);
 
   const actionsPanel = renderPanel({
-    eyebrow: 'Next actions',
-    title: 'Move through Ghosted',
+    eyebrow: 'Next',
+    title: 'Routes',
     chip: state.me.user.isAdmin ? 'Admin enabled' : 'Member tools',
     body: renderRouteList([
       {
-        copy: 'See clan health, live competitions, and recent momentum in one place.',
         href: '/app/community/',
         label: 'Community',
         meta: `${clan?.group?.memberCount || 0} members`,
         featured: true,
       },
       {
-        copy: 'Check balance, daily limits, and your full points ledger.',
         href: '/app/rewards/',
         label: 'Rewards',
         meta: formatPoints(rewards.balance),
       },
       {
-        copy: 'See what is live and whether you can enter right now.',
         href: '/app/giveaways/',
         label: 'Giveaways',
         meta: `${activeGiveaways} active`,
       },
       {
-        copy: 'Use the points floor without leaving the member app.',
         href: '/app/casino/',
         label: 'Casino',
         meta: `${recentSpins} logged`,
       },
       {
-        copy: 'Manage your Discord identity, roles, and RSN/WOM link.',
         href: '/app/profile/',
         label: 'Profile',
         meta: womLink.linked ? 'Linked' : 'Needs setup',
@@ -168,9 +163,9 @@ async function renderDashboard() {
   });
 
   const profilePanel = renderPanel({
-    eyebrow: 'Account snapshot',
+    eyebrow: 'Account',
     href: '/app/profile/',
-    title: 'Identity and access',
+    title: 'Identity',
     chip: womLink.linked ? 'WOM linked' : 'Discord only',
     link: true,
     body:
@@ -201,9 +196,9 @@ async function renderDashboard() {
 
   contentRoot.innerHTML = [
     renderHighlight({
-      eyebrow: 'Member workspace',
-      title: 'Everything a member needs lives here.',
-      copy: 'The new shell keeps Ghosted useful on every return visit: scan account status, jump into the next action, and move between community, rewards, drops, and play without reorienting.',
+      eyebrow: 'Workspace',
+      title: 'Scan. choose. move.',
+      copy: 'Balance, live drops, clan pulse, and play stay in one flow.',
       actions: [
         renderLinkButton('/app/community/', 'Open Community', true),
         renderLinkButton('/app/rewards/', 'Open Rewards'),
@@ -212,6 +207,7 @@ async function renderDashboard() {
         state.me.user.isAdmin ? 'Admin path available' : 'Member view',
         womLink.linked ? 'WOM ready' : 'Profile setup pending',
       ],
+      theme: 'dashboard',
     }),
     `<section class="app-grid app-grid--two">${actionsPanel}${profilePanel}</section>`,
     `<section class="app-grid app-grid--two">${communityPanel}${competitionPanel}</section>`,
@@ -264,17 +260,18 @@ async function renderCommunity() {
 
   contentRoot.innerHTML = [
     renderHighlight({
-      eyebrow: 'Community overview',
+      eyebrow: 'Overview',
       title: clan.group.name || 'Ghosted',
-      copy: clan.group.description || 'Track the current state of the Ghosted Wise Old Man group and jump deeper when you need full detail.',
+      copy: clan.group.description || 'Group status, comps, and leaders in one glance.',
       actions: [
-        renderLinkButton('/app/clan/', 'Open clan detail', true),
-        renderLinkButton('/app/competitions/', 'Open competitions'),
+        renderLinkButton('/app/clan/', 'Clan detail', true),
+        renderLinkButton('/app/competitions/', 'Competitions'),
       ],
       chips: [
         `${clan.linkCoverage.unlinkedUsers || 0} unlinked`,
         `${liveCompetitions} competitions live`,
       ],
+      theme: 'community',
     }),
     `<section class="app-grid app-grid--two">
       ${renderPanel({
@@ -330,26 +327,27 @@ async function renderRewards() {
 
   contentRoot.innerHTML = [
     renderHighlight({
-      eyebrow: 'Rewards status',
+      eyebrow: 'Rewards',
       title: `${formatPointsFull(rewards.balance)} available`,
       copy:
         rewards.dailyCap === null
-          ? 'No daily wager cap is active.'
-          : `${formatPointsFull(rewards.dailyRemaining)} left before the daily wager cap resets.`,
+          ? 'No daily cap is active.'
+          : `${formatPointsFull(rewards.dailyRemaining)} left today.`,
       actions: [
-        renderLinkButton('/app/casino/', 'Open casino', true),
-        renderLinkButton('/app/giveaways/', 'Open giveaways'),
+        renderLinkButton('/app/casino/', 'Open Casino', true),
+        renderLinkButton('/app/giveaways/', 'Open Giveaways'),
       ],
       chips: [
         rewards.dailyCap === null ? 'Unlimited daily cap' : `${formatPoints(rewards.dailyRemaining)} left today`,
         `${rewards.entries.length} ledger rows`,
       ],
+      theme: 'rewards',
     }),
     `<section class="app-ledger-shell">
       ${renderSectionHeading({
         eyebrow: 'Full ledger',
         title: 'Points timeline',
-        copy: 'Casino, giveaways, grants, and deductions all sit in one operational history.',
+        copy: 'Every point movement in one table.',
       })}
       ${renderLedgerTable(rewards.entries)}
     </section>`,
@@ -377,14 +375,15 @@ async function renderGiveaways() {
   contentRoot.innerHTML = [
     '<div id="giveaway-result"></div>',
     renderHighlight({
-      eyebrow: 'Giveaway flow',
-      title: 'Act on live drops first.',
-      copy: 'Ghosted sorts active giveaways to the top so you can see what is open, what it costs, and whether your roles allow entry.',
+      eyebrow: 'Giveaways',
+      title: 'Live drops first.',
+      copy: 'Active entries stay on top with cost and access visible.',
       actions: [
-        renderLinkButton('/app/rewards/', 'Check balance', true),
-        renderLinkButton('/app/profile/', 'Review roles'),
+        renderLinkButton('/app/rewards/', 'Check Balance', true),
+        renderLinkButton('/app/profile/', 'Review Roles'),
       ],
       chips: [`${activeCount} active`, state.me.authenticated ? 'Member entry enabled' : 'Browse mode'],
+      theme: 'giveaways',
     }),
     `<section class="app-grid app-grid--two">
       ${sortedGiveaways.length
@@ -449,7 +448,7 @@ async function renderClan() {
         eyebrow: 'Group',
         title: clan.group.name || 'Ghosted',
         chip: clan.group.verified ? 'Verified' : 'Tracked',
-        copy: clan.group.description || 'Wise Old Man group overview for Ghosted.',
+        copy: clan.group.description || 'Roster and group stats.',
         body: renderMetricGrid([
           ['Clan chat', clan.group.clanChat || 'Not listed'],
           ['Home world', clan.group.homeworld || 'Unknown'],
@@ -470,7 +469,7 @@ async function renderClan() {
           ]) +
           (!state.me.authenticated || state.me.user.womLink?.linked
             ? ''
-            : '<p class="app-panel-note">Link your RSN from the profile page so Ghosted can match your Discord identity to WOM data.</p>'),
+            : '<p class="app-panel-note">Link your RSN from Profile to match Discord and WOM.</p>'),
       })}
     </section>`,
     `<section class="app-grid app-grid--two">
@@ -604,8 +603,8 @@ async function renderProfile() {
           renderWomLinkPanel(womLink),
       })}
       ${renderPanel({
-        eyebrow: 'Roles and perks',
-        title: 'Current access',
+        eyebrow: 'Access',
+        title: 'Roles and perks',
         chip: `${roleDetails.length} synced`,
         body:
           renderTagBlock('Perks', perks, 'No synced perks') +
@@ -647,13 +646,14 @@ async function renderAdmin() {
     contentRoot.innerHTML = [
       '<div id="admin-result"></div>',
       renderHighlight({
-        eyebrow: 'Operator view',
-        title: 'Run Ghosted from a denser console.',
-        copy: 'Use the top actions to grant rewards, launch giveaways, and refresh community data before you drop into tables and audits.',
+        eyebrow: 'Admin',
+        title: 'Run Ghosted',
+        copy: 'Grant points, launch drops, and refresh WOM data.',
         chips: [
           `Actor: ${payload.actor.displayName}`,
           payload.overview.wom?.configured ? 'WOM live' : 'WOM offline',
         ],
+        theme: 'admin',
       }),
       `<section class="app-grid app-grid--two">
         ${renderAdminGrantForm()}
@@ -925,7 +925,7 @@ function renderWomLinkPanel(womLink) {
       chip: 'Linked',
       subtle: true,
       body: `
-        <p>Ghosted is linked to <strong>${escapeHtml(womLink.displayName || womLink.username)}</strong> in the configured clan group.</p>
+        <p>Linked to <strong>${escapeHtml(womLink.displayName || womLink.username)}</strong>.</p>
         <div class="app-actions">
           <button class="button button--secondary" type="button" data-wom-unlink>Remove local link</button>
         </div>
@@ -937,7 +937,7 @@ function renderWomLinkPanel(womLink) {
     <form class="app-form" id="wom-link-form">
       <p class="app-kicker">Wise Old Man</p>
       <h3>Link RuneScape account</h3>
-      <p>Enter the RSN that belongs to you in the Ghosted Wise Old Man group. Ghosted will track it and attach it to your Discord account.</p>
+      <p>Enter your RSN to sync Ghosted with WOM.</p>
       <div class="app-form-grid">
         <div>
           <label for="wom-username">RuneScape username</label>
@@ -961,8 +961,8 @@ function renderProfileWomDetails(womProfile, womLink) {
         title: womLink.linked ? 'Waiting for profile data' : 'Link to unlock OSRS sync',
         chip: womLink.linked ? 'Loading' : 'Not linked',
         body: `<p>${womLink.linked
-          ? 'Ghosted will show your weekly gains, achievements, and live competition entries here once the WOM profile loads.'
-          : 'Link your account above to unlock Ghosted-to-WOM profile syncing.'}</p>`,
+          ? 'Weekly gains and competition activity will appear here once WOM loads.'
+          : 'Link your account above to unlock OSRS sync.'}</p>`,
       })}
     </section>`;
   }
@@ -979,7 +979,7 @@ function renderProfileWomDetails(womProfile, womLink) {
           ['EHB', formatMaybeNumber(womProfile.player.ehb)],
           ['Last import', womProfile.player.lastImportedAt ? formatDate(womProfile.player.lastImportedAt) : 'Pending'],
         ]) +
-        `<pre class="app-codeblock">${escapeHtml(JSON.stringify(womProfile.gains, null, 2))}</pre>`,
+        renderWomGainSummary(womProfile.gains),
     })}
     ${renderPanel({
       eyebrow: 'Achievements and competitions',
@@ -1083,14 +1083,15 @@ function renderCompetitionList(entries, { compact = false } = {}) {
   }
 
   return `
-    <div class="app-feed">
+    <div class="app-feed app-feed--timeline">
       ${entries.map((entry) => `
         <article class="app-feed__item ${compact ? 'is-compact' : ''}">
           <div class="app-card__row">
             <strong>${escapeHtml(entry.title || 'Competition')}</strong>
             <span class="app-chip">${escapeHtml(entry.status || 'unknown')}</span>
           </div>
-          <div class="app-muted">${escapeHtml(entry.metric || 'overall')} / ${formatCompetitionWindow(entry)}</div>
+          <div class="app-muted">${escapeHtml(entry.metric || 'overall')}</div>
+          <div class="app-feed__meta">${formatCompetitionWindow(entry)}</div>
         </article>
       `).join('')}
     </div>
@@ -1133,7 +1134,7 @@ function renderGiveawayPanel(item) {
     title: item.title,
     chip: item.status,
     body: `
-      ${item.description ? `<p>${escapeHtml(item.description)}</p>` : ''}
+      ${item.description ? `<p class="app-panel-note">${escapeHtml(item.description)}</p>` : ''}
       ${renderMetricGrid([
         ['Cost', formatPoints(item.pointCost)],
         ['Entries', `${item.userEntries} / ${item.maxEntries}`],
@@ -1165,18 +1166,20 @@ function renderStatStrip(items) {
   }).join('');
 }
 
-function renderHighlight({ eyebrow = '', title, copy = '', actions = [], chips = [] }) {
+function renderHighlight({ eyebrow = '', title, copy = '', actions = [], chips = [], theme = 'dashboard' }) {
   return `
     <section class="app-split-callout">
       <article class="app-highlight">
-        ${eyebrow ? `<p class="app-kicker">${escapeHtml(eyebrow)}</p>` : ''}
-        <h3>${escapeHtml(title)}</h3>
-        ${copy ? `<p>${escapeHtml(copy)}</p>` : ''}
+        <div class="app-highlight__content">
+          ${eyebrow ? `<p class="app-kicker">${escapeHtml(eyebrow)}</p>` : ''}
+          <h3>${escapeHtml(title)}</h3>
+          ${copy ? `<p>${escapeHtml(copy)}</p>` : ''}
+          <div class="app-inline-actions">
+            ${actions.join('')}
+          </div>
+        </div>
+        ${renderFlavorStage(theme, chips)}
       </article>
-      <div class="app-inline-actions">
-        ${actions.join('')}
-        ${chips.map((chip) => `<span class="app-chip">${escapeHtml(chip)}</span>`).join('')}
-      </div>
     </section>
   `;
 }
@@ -1211,7 +1214,7 @@ function renderPanel({ eyebrow = '', title, chip = '', body = '', copy = '', hre
         </div>
         ${chip ? `<span class="app-chip">${escapeHtml(chip)}</span>` : ''}
       </div>
-      ${body}
+      <div class="app-panel__body">${body}</div>
     </${tag}>
   `;
 }
@@ -1236,12 +1239,59 @@ function renderRouteList(routes) {
         <a class="app-route ${route.featured ? 'app-route--featured' : ''}" href="${route.href}">
           <div>
             <strong>${escapeHtml(route.label)}</strong>
-            <p>${escapeHtml(route.copy)}</p>
+            ${route.copy ? `<p>${escapeHtml(route.copy)}</p>` : ''}
           </div>
           <span class="app-route__meta">${escapeHtml(route.meta)}</span>
         </a>
       `).join('')}
     </div>
+  `;
+}
+
+function renderFlavorStage(theme, chips) {
+  const themes = {
+    admin: {
+      label: 'Control room',
+      title: 'Operator lane',
+      art: ['/src/casino/assets/symbols/crown.svg', '/src/casino/assets/symbols/rune.svg'],
+    },
+    community: {
+      label: 'Clan watch',
+      title: 'Roster and comps',
+      art: ['/src/casino/assets/symbols/rune.svg', '/src/casino/assets/symbols/ghost.svg'],
+    },
+    giveaways: {
+      label: 'Drop board',
+      title: 'Live entries',
+      art: ['/src/casino/assets/symbols/scatter.svg', '/src/casino/assets/symbols/crown.svg'],
+    },
+    rewards: {
+      label: 'Ledger',
+      title: 'Balance rail',
+      art: ['/src/casino/assets/symbols/coin.svg', '/src/casino/assets/symbols/rune.svg'],
+    },
+    dashboard: {
+      label: 'Command center',
+      title: 'Ghosted flow',
+      art: ['/src/casino/assets/symbols/ghost.svg', '/src/casino/assets/symbols/rune.svg'],
+    },
+  };
+  const selected = themes[theme] || themes.dashboard;
+  return `
+    <aside class="app-stage" aria-label="${escapeHtml(selected.label)}">
+      <div class="app-stage__header">
+        <span>${escapeHtml(selected.label)}</span>
+        <strong>${escapeHtml(selected.title)}</strong>
+      </div>
+      <div class="app-stage__art">
+        ${selected.art.map((src, index) => `
+          <img src="${src}" alt="" class="app-stage__icon app-stage__icon--${index + 1}" />
+        `).join('')}
+      </div>
+      <div class="app-stage__chips">
+        ${chips.map((chip) => `<span class="app-chip">${escapeHtml(chip)}</span>`).join('')}
+      </div>
+    </aside>
   `;
 }
 
@@ -1288,6 +1338,27 @@ function renderLedgerTable(entries) {
     ]),
     'No activity yet.'
   );
+}
+
+function renderWomGainSummary(gains) {
+  const records = Object.entries(gains || {})
+    .filter(([, value]) => value !== null && value !== undefined && value !== '')
+    .slice(0, 6);
+
+  if (!records.length) {
+    return '<p class="app-panel-note">No gain snapshot yet.</p>';
+  }
+
+  return `
+    <div class="app-feed app-feed--timeline">
+      ${records.map(([label, value]) => `
+        <article class="app-feed__item is-compact">
+          <strong>${escapeHtml(label.replaceAll('_', ' '))}</strong>
+          <div class="app-feed__meta">${escapeHtml(formatMaybeNumber(value))}</div>
+        </article>
+      `).join('')}
+    </div>
+  `;
 }
 
 function renderEmptyStateHtml(message, actionHtml = '') {
