@@ -176,16 +176,17 @@
 
         const drawer = getNavDrawer(root);
         const toggle = root.querySelector('[data-site-menu-toggle]');
-        const focusable = getFocusableElements(drawer);
+        if (!drawer) return;
 
         root.setAttribute('data-nav-open', 'true');
         toggle?.setAttribute('aria-expanded', 'true');
-        drawer?.removeAttribute('hidden');
+        drawer.removeAttribute('hidden');
         document.body.classList.add('has-site-nav-open');
         state.navRoot = root;
         state.trigger = toggle || null;
 
         window.requestAnimationFrame(() => {
+            const focusable = getFocusableElements(drawer);
             focusable[0]?.focus();
         });
     }
