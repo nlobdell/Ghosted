@@ -9,10 +9,8 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  padding-top: var(--safe-top);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(8, 7, 9, 0.78);
-  backdrop-filter: blur(18px);
+  padding-top: calc(var(--safe-top) + 0.85rem);
+  background: transparent;
 }
 
 .app-header__inner,
@@ -35,7 +33,13 @@
 .app-header__inner {
   justify-content: space-between;
   gap: 1rem;
-  min-height: 4.9rem;
+  min-height: var(--header-height);
+  padding: 0.85rem 1.1rem;
+  border: 1px solid rgba(255, 244, 224, 0.08);
+  border-radius: var(--radius-pill);
+  background: rgba(10, 9, 11, 0.76);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-soft);
 }
 
 .app-header__shell,
@@ -121,7 +125,7 @@
   display: grid;
   gap: 1.2rem;
   align-content: start;
-  padding: 1.9rem 0 calc(4rem + var(--safe-bottom));
+  padding: 1.35rem 0 calc(4rem + var(--safe-bottom));
 }
 
 .app-context {
@@ -575,6 +579,14 @@
 }
 
 @media (max-width: 980px) {
+  .app-header {
+    padding-top: calc(var(--safe-top) + 0.5rem);
+  }
+
+  .app-header__inner {
+    border-radius: var(--radius-md);
+  }
+
   [data-site-shell][data-nav-open='true'] .site-nav-drawer > .app-nav {
     display: grid !important;
   }
