@@ -519,6 +519,41 @@
   font-size: 0.84rem;
 }
 
+.app-card--subtle {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(211, 192, 255, 0.08);
+}
+
+.app-feed {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.app-feed__item {
+  padding: 0.9rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(211, 192, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.app-feed__item.is-compact {
+  padding: 0.75rem 0.85rem;
+}
+
+.app-codeblock {
+  margin: 0;
+  padding: 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(211, 192, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--app-text);
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
 .casino-stage {
   margin-bottom: 1rem;
 }
