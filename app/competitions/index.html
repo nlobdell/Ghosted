@@ -18,26 +18,35 @@
     <header class="app-header">
       <div class="container app-header__inner">
         <a class="brand" href="/">Ghosted</a>
-        <nav class="app-nav" aria-label="Primary">
-          <a class="app-nav__link" href="/design/">About</a>
-          <a class="app-nav__link" href="/app/">App Hub</a>
-          <a class="app-nav__link" href="/app/clan/">Clan</a>
-          <a class="app-nav__link is-active" href="/app/competitions/" aria-current="page">Competitions</a>
-          <a class="app-nav__link" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
-          <a class="app-nav__link" href="/app/casino/">Casino</a>
-          <a class="app-nav__link" href="/app/giveaways/">Giveaways</a>
-          <a class="app-nav__link" href="/app/rewards/">Rewards</a>
-          <a class="app-nav__link" href="/app/profile/">Profile</a>
-        </nav>
-        <div class="app-auth" data-auth></div>
+        <div class="app-header__shell" data-site-shell>
+          <div class="site-nav-drawer">
+            <nav class="app-nav" aria-label="Primary" data-site-nav>
+              <button class="button button--secondary button--small site-nav-close" type="button" data-site-nav-close>Close</button>
+              <a class="app-nav__link" href="/design/">About</a>
+              <a class="app-nav__link" href="/app/">App Hub</a>
+              <a class="app-nav__link is-active" href="/app/community/" aria-current="page">Community</a>
+              <a class="app-nav__link" href="/app/rewards/">Rewards</a>
+              <a class="app-nav__link" href="/app/giveaways/">Giveaways</a>
+              <a class="app-nav__link" href="/app/casino/">Casino</a>
+              <a class="app-nav__link" href="/app/profile/">Profile</a>
+            </nav>
+          </div>
+          <div class="app-header__tools">
+            <a class="button button--secondary button--small app-header__utility" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
+            <div class="app-auth" data-auth></div>
+            <button class="button button--secondary button--small site-menu-toggle" type="button" data-site-menu-toggle aria-label="Open navigation">
+              <span class="site-menu-toggle__bars" aria-hidden="true"></span>
+            </button>
+          </div>
+        </div>
       </div>
     </header>
     <main class="container app-main" id="main-content" data-page="competitions">
       <section class="app-masthead">
         <div class="app-masthead__copy">
-          <p class="app-kicker">Competitions</p>
-          <h1 class="app-title">Group event board</h1>
-          <p class="app-description">See which Wise Old Man competitions are live, who is leading, and how Ghosted events are pacing.</p>
+          <p class="app-kicker">Community Detail</p>
+          <h1 class="app-title">Competition board</h1>
+          <p class="app-description">Dive into live and upcoming Wise Old Man competitions for the Ghosted community.</p>
         </div>
       </section>
       <div class="app-banner-slot" data-banner></div>
