@@ -27,6 +27,24 @@ PLAYER_GROUPS = [
     {
         "groupId": 123,
         "group": {"id": 123, "name": "Ghosted"},
+        "role": "event_captain",
+        "rankOrder": 4,
+    }
+]
+
+PLAYER_GROUPS_NO_RANK = [
+    {
+        "groupId": 123,
+        "group": {"id": 123, "name": "Ghosted"},
+        "role": "member",
+    }
+]
+
+OUTSIDER_GROUPS = [
+    {
+        "groupId": 999,
+        "group": {"id": 999, "name": "Elsewhere"},
+        "role": "member",
     }
 ]
 
@@ -342,6 +360,7 @@ class GhostedAppTests(unittest.TestCase):
 
         self.assertEqual(handler.status, 201)
         self.assertTrue(handler.payload["result"]["linked"])
+        self.assertEqual(handler.payload["result"]["membership"]["rankLabel"], "Event Captain")
 
     @patch("server.wom_cached_json")
     def test_wom_clan_endpoint(self, wom_cached_json):
@@ -365,6 +384,73 @@ class GhostedAppTests(unittest.TestCase):
         self.assertEqual(handler.status, 200)
         self.assertEqual(handler.payload["player"]["id"], PLAYER["id"])
         self.assertEqual(handler.payload["competitions"][0]["id"], COMPETITION["id"])
+        self.assertEqual(handler.payload["membership"]["rankLabel"], "Event Captain")
+
+    @patch("server.wom_cached_json")
+    def test_wom_me_normalizes_membership_when_optional_fields_are_missing(self, wom_cached_json):
+        server.save_user_game_account(self.connection, self.user["id"], "osrs", PLAYER)
+
+        def side_effect(connection, path, *, query=None, force_refresh=False, allow_stale=True):
+            if path == "/players/GhostedRSN/groups":
+                return PLAYER_GROUPS_NO_RANK
+            return self.wom_cached_side_effect(
+                connection,
+                path,
+                query=query,
+                force_refresh=force_refresh,
+                allow_stale=allow_stale,
+            )
+
+        wom_cached_json.side_effect = side_effect
+        payload = server.wom_me_payload(self.connection, self.user)
+
+        self.assertEqual(payload["membership"]["rankLabel"], "Member")
+
+    def test_site_shell_signed_out_response(self):
+        handler = self.make_handler("/api/site-shell?next=/app/")
+
+        server.GhostedHandler.route_request(handler, "GET", self.connection)
+
+        self.assertEqual(handler.status, 200)
+        self.assertFalse(handler.payload["authenticated"])
+        self.assertIsNone(handler.payload["user"])
+        self.assertEqual(handler.payload["navigation"][0]["key"], "home")
+
+    def test_site_shell_signed_in_without_wom_link(self):
+        handler = self.make_handler("/api/site-shell?next=/app/profile/", user=self.user)
+
+        server.GhostedHandler.route_request(handler, "GET", self.connection)
+
+        self.assertEqual(handler.status, 200)
+        self.assertTrue(handler.payload["authenticated"])
+        self.assertFalse(handler.payload["wom"]["linked"])
+        self.assertEqual(handler.payload["profile"]["rolesCount"], 0)
+
+    @patch("server.wom_cached_json")
+    def test_site_shell_signed_in_with_wom_rank(self, wom_cached_json):
+        server.save_user_game_account(self.connection, self.user["id"], "osrs", PLAYER)
+        wom_cached_json.return_value = PLAYER_GROUPS
+        handler = self.make_handler("/api/site-shell?next=/app/profile/", user=self.user)
+
+        server.GhostedHandler.route_request(handler, "GET", self.connection)
+
+        self.assertEqual(handler.status, 200)
+        self.assertTrue(handler.payload["wom"]["linked"])
+        self.assertTrue(handler.payload["wom"]["inGroup"])
+        self.assertEqual(handler.payload["wom"]["membership"]["rankLabel"], "Event Captain")
+
+    @patch("server.wom_cached_json")
+    def test_site_shell_signed_in_with_linked_player_outside_group(self, wom_cached_json):
+        server.save_user_game_account(self.connection, self.user["id"], "osrs", PLAYER)
+        wom_cached_json.return_value = OUTSIDER_GROUPS
+        handler = self.make_handler("/api/site-shell?next=/app/profile/", user=self.user)
+
+        server.GhostedHandler.route_request(handler, "GET", self.connection)
+
+        self.assertEqual(handler.status, 200)
+        self.assertTrue(handler.payload["wom"]["linked"])
+        self.assertFalse(handler.payload["wom"]["inGroup"])
+        self.assertIsNone(handler.payload["wom"]["membership"])
 
     @patch("server.wom_cached_json")
     def test_wom_hiscores_endpoint(self, wom_cached_json):
