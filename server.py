@@ -706,6 +706,7 @@ def normalize_group_gains(entries: list[dict[str, Any]]) -> list[dict[str, Any]]
     normalized: list[dict[str, Any]] = []
     for index, entry in enumerate(entries, start=1):
         player = entry.get("player") or {}
+        data = entry.get("data") or {}
         normalized.append(
             {
                 "rank": index,
@@ -714,7 +715,7 @@ def normalize_group_gains(entries: list[dict[str, Any]]) -> list[dict[str, Any]]
                     "username": player.get("username"),
                     "displayName": player.get("displayName") or player.get("username"),
                 },
-                "gained": entry.get("gained", 0),
+                "gained": data.get("gained", entry.get("gained", 0)),
                 "raw": entry,
             }
         )
