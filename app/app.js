@@ -993,9 +993,9 @@ function renderProfileWomDetails(womProfile, womLink) {
           ['Total XP', formatMaybeNumber(womProfile.player.exp)],
           ['EHP', formatMaybeNumber(womProfile.player.ehp)],
           ['EHB', formatMaybeNumber(womProfile.player.ehb)],
-          ['Account type', womProfile.player.type || 'Unknown'],
-          ['Build', womProfile.player.build || 'Standard'],
-          ['Last import', womProfile.player.lastImportedAt ? formatDate(womProfile.player.lastImportedAt) : 'Pending'],
+          ['Account type', formatWomPlayerType(womProfile.player.type)],
+          ['Build', formatWomPlayerBuild(womProfile.player.build)],
+          ['Last import', womProfile.player.lastImportedAt ? formatDate(womProfile.player.lastImportedAt) : 'Not imported yet'],
         ]) +
         renderWomGainSummary(womProfile.gains),
     })}
@@ -1076,7 +1076,7 @@ function renderAchievementFeed(entries) {
         <article class="app-feed__item">
           <strong>${escapeHtml(entry.name || 'Achievement')}</strong>
           <div class="app-feed__meta-row">
-            <span class="app-feed__eyebrow">${escapeHtml(entry.player?.displayName || entry.player?.username || 'Unknown')}</span>
+            <span class="app-feed__eyebrow">${escapeHtml(entry.player?.displayName || entry.player?.username || 'Player')}</span>
             <span class="app-feed__eyebrow">${escapeHtml(formatAchievementMeasure(entry))}</span>
           </div>
           <div class="app-muted">${escapeHtml(formatAchievementDetail(entry))}</div>
@@ -1095,7 +1095,7 @@ function renderActivityFeed(entries) {
     <div class="app-feed">
       ${entries.map((entry) => `
         <article class="app-feed__item">
-          <strong>${escapeHtml(entry.player?.displayName || entry.player?.username || 'Unknown')}</strong>
+          <strong>${escapeHtml(entry.player?.displayName || entry.player?.username || 'Player')}</strong>
           <div class="app-feed__meta-row">
             <span class="app-feed__eyebrow">${escapeHtml(formatActivityType(entry.type))}</span>
             ${entry.role ? `<span class="app-feed__eyebrow">${escapeHtml(entry.role)}</span>` : ''}
@@ -1118,7 +1118,7 @@ function renderCompetitionList(entries, { compact = false } = {}) {
         <article class="app-feed__item ${compact ? 'is-compact' : ''}">
           <div class="app-card__row">
             <strong>${escapeHtml(entry.title || 'Competition')}</strong>
-            <span class="app-chip">${escapeHtml(entry.status || 'unknown')}</span>
+            <span class="app-chip">${escapeHtml(entry.status || 'tracked')}</span>
           </div>
           <div class="app-feed__meta-row">
             <span class="app-feed__eyebrow">${escapeHtml(formatMetricLabel(entry.metric || 'overall'))}</span>
@@ -1137,7 +1137,7 @@ function renderCompetitionDetail(payload) {
   return [
     renderMetricGrid([
       ['Metric', competition.metric || 'overall'],
-      ['Status', competition.status || 'unknown'],
+      ['Status', competition.status || 'Tracked'],
       ['Starts', competition.startsAt ? formatDate(competition.startsAt) : 'TBD'],
       ['Ends', competition.endsAt ? formatDate(competition.endsAt) : 'TBD'],
     ]),
@@ -1153,7 +1153,7 @@ function renderCompetitionDetail(payload) {
       ? `<div class="app-feed">
           ${payload.topHistory.map((entry) => `
             <article class="app-feed__item">
-              <strong>${escapeHtml(entry.player?.displayName || entry.player?.username || 'Unknown')}</strong>
+              <strong>${escapeHtml(entry.player?.displayName || entry.player?.username || 'Player')}</strong>
               <div class="app-muted">${entry.history.length} datapoint${entry.history.length === 1 ? '' : 's'}</div>
             </article>
           `).join('')}
@@ -1206,6 +1206,7 @@ function renderHighlight({ eyebrow = '', title, copy = '', actions = [], chips =
         <div class="app-highlight__content">
           ${eyebrow ? `<p class="app-kicker">${escapeHtml(eyebrow)}</p>` : ''}
           <h3>${escapeHtml(title)}</h3>
+          ${copy ? `<p>${escapeHtml(copy)}</p>` : ''}
           <div class="app-inline-actions">
             ${actions.join('')}
           </div>
@@ -1358,7 +1359,7 @@ function renderDenseTable(columns, rows, emptyMessage) {
 }
 
 function renderPlayerCell(player) {
-  const display = player?.displayName || player?.username || 'Unknown';
+  const display = player?.displayName || player?.username || 'Player';
   const username = player?.username && player.username !== display ? `@${player.username}` : '';
 
   return `
@@ -1438,6 +1439,16 @@ function formatMetricLabel(value) {
   return String(value || '')
     .replaceAll('_', ' ')
     .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function formatWomPlayerType(value) {
+  if (!value) return 'Not listed';
+  return formatMetricLabel(value);
+}
+
+function formatWomPlayerBuild(value) {
+  if (!value) return 'Not listed';
+  return formatMetricLabel(value);
 }
 
 function renderLedgerTable(entries) {
