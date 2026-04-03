@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import parse_qs, quote, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 
@@ -33,8 +33,16 @@ SPIN_COOLDOWN_SECONDS = 2
 REQUEST_TIMEOUT = 10
 RNG = random.SystemRandom()
 DEFAULT_DISCORD_USER_AGENT = "DiscordBot (https://ghosted.smirkhub.com, 1.0)"
+DEFAULT_WOM_API_BASE = "https://api.wiseoldman.net/v2"
+DEFAULT_WOM_CACHE_TTL_SECONDS = 900
+DEFAULT_WOM_PERIOD = "week"
+DEFAULT_WOM_HISCORE_METRIC = "overall"
 DISCORD_HTTP_HEADERS = {
     "User-Agent": DEFAULT_DISCORD_USER_AGENT,
+    "Accept": "application/json",
+}
+WOM_HTTP_HEADERS = {
+    "User-Agent": "GhostedApp/0.1 (+https://ghosted.smirkhub.com)",
     "Accept": "application/json",
 }
 STATIC_MIME_OVERRIDES = {
@@ -228,7 +236,8 @@ def utc_iso(value: datetime | None = None) -> str:
 def parse_iso(value: str | None) -> datetime | None:
     if not value:
         return None
-    return datetime.fromisoformat(value)
+    normalized = value.replace("Z", "+00:00")
+    return datetime.fromisoformat(normalized)
 
 
 def json_loads(value: str | None, default: Any) -> Any:
@@ -257,6 +266,34 @@ def env_text(name: str) -> str | None:
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
         value = value[1:-1].strip()
     return value or None
+
+
+def env_int(name: str, default: int) -> int:
+    value = env_text(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
+def wom_api_base() -> str:
+    return (env_text("WOM_API_BASE") or DEFAULT_WOM_API_BASE).rstrip("/")
+
+
+def wom_group_id() -> int | None:
+    value = env_text("WOM_GROUP_ID")
+    if not value:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
+def wom_cache_ttl_seconds() -> int:
+    return max(60, env_int("WOM_CACHE_TTL_SECONDS", DEFAULT_WOM_CACHE_TTL_SECONDS))
 
 
 def session_cookie_header(token: str | None = None, *, delete: bool = False) -> str:
@@ -362,6 +399,444 @@ def unique_in_order(values: list[str]) -> list[str]:
             seen.add(item)
             ordered.append(item)
     return ordered
+
+
+def require_wom_group_id() -> int:
+    group_id = wom_group_id()
+    if group_id is None:
+        raise AppError("Wise Old Man integration is not configured yet.", 503)
+    return group_id
+
+
+def wom_url(path: str, query: dict[str, Any] | None = None) -> str:
+    base = wom_api_base()
+    normalized_query = {
+        key: value
+        for key, value in (query or {}).items()
+        if value is not None and value != ""
+    }
+    query_string = urlencode(normalized_query, doseq=True)
+    return f"{base}/{path.lstrip('/')}{'?' + query_string if query_string else ''}"
+
+
+def wom_cache_key(path: str, query: dict[str, Any] | None = None) -> str:
+    normalized_query = []
+    for key, value in sorted((query or {}).items()):
+        if value is None or value == "":
+            continue
+        if isinstance(value, list):
+            for item in value:
+                normalized_query.append((key, str(item)))
+        else:
+            normalized_query.append((key, str(value)))
+    if not normalized_query:
+        return path.lstrip("/")
+    return f"{path.lstrip('/')}?{urlencode(normalized_query, doseq=True)}"
+
+
+def wom_http_error_message(exc: HTTPError) -> str:
+    body = exc.read().decode("utf-8", errors="replace")
+    return body or exc.reason or f"HTTP {exc.code}"
+
+
+def wom_request_json(
+    path: str,
+    *,
+    method: str = "GET",
+    payload: dict[str, Any] | None = None,
+    query: dict[str, Any] | None = None,
+) -> Any:
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    headers = dict(WOM_HTTP_HEADERS)
+    if data is not None:
+        headers["Content-Type"] = "application/json"
+    request = Request(
+        wom_url(path, query),
+        data=data,
+        headers=headers,
+        method=method,
+    )
+    try:
+        with urlopen(request, timeout=REQUEST_TIMEOUT) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        raise AppError(f"Wise Old Man request failed: {wom_http_error_message(exc)}", 502) from exc
+    except URLError as exc:
+        raise AppError(f"Wise Old Man request failed: {exc}", 502) from exc
+
+
+def get_wom_cache_entry(connection: sqlite3.Connection, cache_key: str) -> sqlite3.Row | None:
+    return connection.execute("SELECT * FROM wom_cache WHERE cache_key = ?", (cache_key,)).fetchone()
+
+
+def set_wom_cache_entry(connection: sqlite3.Connection, cache_key: str, payload: Any) -> None:
+    fetched_at = utc_now()
+    connection.execute(
+        """
+        INSERT INTO wom_cache (cache_key, payload_json, fetched_at, expires_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(cache_key) DO UPDATE SET
+            payload_json = excluded.payload_json,
+            fetched_at = excluded.fetched_at,
+            expires_at = excluded.expires_at
+        """,
+        (
+            cache_key,
+            json.dumps(payload),
+            utc_iso(fetched_at),
+            utc_iso(fetched_at + timedelta(seconds=wom_cache_ttl_seconds())),
+        ),
+    )
+    connection.commit()
+
+
+def wom_cached_json(
+    connection: sqlite3.Connection,
+    path: str,
+    *,
+    query: dict[str, Any] | None = None,
+    force_refresh: bool = False,
+    allow_stale: bool = True,
+) -> Any:
+    cache_key = wom_cache_key(path, query)
+    cached_row = None if force_refresh else get_wom_cache_entry(connection, cache_key)
+    if cached_row:
+        cached_payload = json_loads(cached_row["payload_json"], {})
+        expires_at = parse_iso(cached_row["expires_at"])
+        if expires_at and expires_at >= utc_now():
+            return cached_payload
+    else:
+        cached_payload = None
+
+    try:
+        payload = wom_request_json(path, query=query)
+        set_wom_cache_entry(connection, cache_key, payload)
+        return payload
+    except AppError:
+        if cached_row and allow_stale:
+            return cached_payload
+        raise
+
+
+def invalidate_wom_cache(connection: sqlite3.Connection, prefix: str | None = None) -> int:
+    if prefix:
+        cursor = connection.execute("DELETE FROM wom_cache WHERE cache_key LIKE ?", (f"{prefix}%",))
+    else:
+        cursor = connection.execute("DELETE FROM wom_cache")
+    connection.commit()
+    return int(cursor.rowcount or 0)
+
+
+def get_user_game_account(connection: sqlite3.Connection, user_id: int, game: str = "osrs") -> sqlite3.Row | None:
+    return connection.execute(
+        """
+        SELECT *
+        FROM user_game_accounts
+        WHERE user_id = ? AND game = ?
+        ORDER BY is_primary DESC, id ASC
+        LIMIT 1
+        """,
+        (user_id, game),
+    ).fetchone()
+
+
+def count_linked_game_accounts(connection: sqlite3.Connection, game: str = "osrs") -> int:
+    row = connection.execute(
+        "SELECT COUNT(*) AS count FROM user_game_accounts WHERE game = ? AND is_primary = 1",
+        (game,),
+    ).fetchone()
+    return int(row["count"])
+
+
+def save_user_game_account(
+    connection: sqlite3.Connection,
+    user_id: int,
+    game: str,
+    player: dict[str, Any],
+) -> sqlite3.Row:
+    existing = get_user_game_account(connection, user_id, game)
+    now = utc_iso()
+    try:
+        connection.execute(
+            """
+            INSERT INTO user_game_accounts (
+                user_id, game, wom_player_id, username, display_name, status, is_primary, linked_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+            ON CONFLICT(user_id, game) DO UPDATE SET
+                wom_player_id = excluded.wom_player_id,
+                username = excluded.username,
+                display_name = excluded.display_name,
+                status = excluded.status,
+                is_primary = 1,
+                updated_at = excluded.updated_at
+            """,
+            (
+                user_id,
+                game,
+                int(player["id"]),
+                str(player.get("username") or "").strip(),
+                str(player.get("displayName") or player.get("username") or "").strip(),
+                str(player.get("status") or "unknown").strip() or "unknown",
+                existing["linked_at"] if existing else now,
+                now,
+            ),
+        )
+    except sqlite3.IntegrityError as exc:
+        raise AppError("That Wise Old Man account is already linked to another Ghosted user.", 409) from exc
+    connection.commit()
+    return get_user_game_account(connection, user_id, game)
+
+
+def delete_user_game_account(connection: sqlite3.Connection, user_id: int, game: str = "osrs") -> None:
+    connection.execute("DELETE FROM user_game_accounts WHERE user_id = ? AND game = ?", (user_id, game))
+    connection.commit()
+
+
+def player_in_group(group_id: int, memberships: list[dict[str, Any]]) -> bool:
+    target = str(group_id)
+    for membership in memberships:
+        if str(membership.get("groupId")) == target:
+            return True
+        group = membership.get("group") or {}
+        if str(group.get("id")) == target:
+            return True
+    return False
+
+
+def wom_link_payload(connection: sqlite3.Connection, user_id: int) -> dict[str, Any]:
+    account = get_user_game_account(connection, user_id, "osrs")
+    if not account:
+        return {
+            "linked": False,
+            "playerId": None,
+            "username": None,
+            "displayName": None,
+            "inGroup": False,
+            "lastSyncedAt": None,
+            "status": "unlinked",
+        }
+    return {
+        "linked": True,
+        "playerId": int(account["wom_player_id"]),
+        "username": account["username"],
+        "displayName": account["display_name"],
+        "inGroup": True,
+        "lastSyncedAt": account["updated_at"],
+        "status": account["status"],
+    }
+
+
+def link_wom_account(connection: sqlite3.Connection, user_row: sqlite3.Row, username: str) -> dict[str, Any]:
+    normalized_username = str(username or "").strip()
+    if not normalized_username:
+        raise AppError("Runescape username is required.", 400)
+
+    group_id = require_wom_group_id()
+    player = wom_request_json(f"/players/{quote(normalized_username)}", method="POST")
+    memberships = wom_cached_json(connection, f"/players/{quote(player['username'])}/groups")
+    if not player_in_group(group_id, memberships):
+        raise AppError("That Wise Old Man player is not in the configured Ghosted group.", 400)
+
+    account = save_user_game_account(connection, int(user_row["id"]), "osrs", player)
+    audit(
+        connection,
+        int(user_row["id"]),
+        "link_wom_account",
+        "user_game_account",
+        str(account["id"]),
+        {
+            "game": "osrs",
+            "womPlayerId": int(account["wom_player_id"]),
+            "username": account["username"],
+        },
+    )
+    connection.commit()
+    return wom_link_payload(connection, int(user_row["id"]))
+
+
+def unlink_wom_account(connection: sqlite3.Connection, user_row: sqlite3.Row) -> dict[str, Any]:
+    account = get_user_game_account(connection, int(user_row["id"]), "osrs")
+    if account:
+        delete_user_game_account(connection, int(user_row["id"]), "osrs")
+        audit(
+            connection,
+            int(user_row["id"]),
+            "unlink_wom_account",
+            "user_game_account",
+            str(account["id"]),
+            {"game": "osrs", "womPlayerId": int(account["wom_player_id"])},
+        )
+        connection.commit()
+    return wom_link_payload(connection, int(user_row["id"]))
+
+
+def competition_status(starts_at: str | None, ends_at: str | None, now: datetime | None = None) -> str:
+    current = now or utc_now()
+    starts = parse_iso(starts_at)
+    ends = parse_iso(ends_at)
+    if starts and current < starts:
+        return "upcoming"
+    if ends and current > ends:
+        return "finished"
+    return "ongoing"
+
+
+def normalize_group_hiscores(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for index, entry in enumerate(entries, start=1):
+        player = entry.get("player") or {}
+        data = entry.get("data") or {}
+        normalized.append(
+            {
+                "rank": int(data.get("rank") or index),
+                "player": {
+                    "id": player.get("id"),
+                    "username": player.get("username"),
+                    "displayName": player.get("displayName") or player.get("username"),
+                },
+                "value": data.get("experience", data.get("kills", data.get("score", data.get("value", 0)))),
+                "raw": data,
+            }
+        )
+    return normalized
+
+
+def normalize_group_gains(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for index, entry in enumerate(entries, start=1):
+        player = entry.get("player") or {}
+        normalized.append(
+            {
+                "rank": index,
+                "player": {
+                    "id": player.get("id"),
+                    "username": player.get("username"),
+                    "displayName": player.get("displayName") or player.get("username"),
+                },
+                "gained": entry.get("gained", 0),
+                "raw": entry,
+            }
+        )
+    return normalized
+
+
+def normalize_group_activity(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for entry in entries:
+        player = entry.get("player") or {}
+        normalized.append(
+            {
+                "type": entry.get("type"),
+                "role": entry.get("role"),
+                "createdAt": entry.get("createdAt"),
+                "player": {
+                    "id": player.get("id"),
+                    "username": player.get("username"),
+                    "displayName": player.get("displayName") or player.get("username"),
+                },
+            }
+        )
+    return normalized
+
+
+def normalize_achievements(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for entry in entries:
+        player = entry.get("player") or {}
+        normalized.append(
+            {
+                "name": entry.get("name"),
+                "metric": entry.get("metric"),
+                "measure": entry.get("measure"),
+                "threshold": entry.get("threshold"),
+                "createdAt": entry.get("createdAt"),
+                "player": {
+                    "id": player.get("id"),
+                    "username": player.get("username"),
+                    "displayName": player.get("displayName") or player.get("username"),
+                },
+            }
+        )
+    return normalized
+
+
+def normalize_competition_item(entry: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": entry.get("id"),
+        "title": entry.get("title"),
+        "metric": entry.get("metric"),
+        "type": entry.get("type"),
+        "startsAt": entry.get("startsAt"),
+        "endsAt": entry.get("endsAt"),
+        "groupId": entry.get("groupId"),
+        "score": entry.get("score"),
+        "status": competition_status(entry.get("startsAt"), entry.get("endsAt")),
+        "participantCount": len(entry.get("participants") or []),
+        "raw": entry,
+    }
+
+
+def normalize_competition_participants(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for index, entry in enumerate(entries, start=1):
+        player = entry.get("player") or {}
+        progress = entry.get("progress") or {}
+        normalized.append(
+            {
+                "rank": int(entry.get("rank") or index),
+                "player": {
+                    "id": player.get("id"),
+                    "username": player.get("username"),
+                    "displayName": player.get("displayName") or player.get("username"),
+                },
+                "progress": {
+                    "start": progress.get("start"),
+                    "end": progress.get("end"),
+                    "gained": progress.get("gained", entry.get("gained", 0)),
+                },
+                "updatedAt": entry.get("updatedAt") or player.get("updatedAt"),
+                "raw": entry,
+            }
+        )
+    return normalized
+
+
+def normalize_competition_history(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for entry in entries:
+        player = entry.get("player") or {}
+        normalized.append(
+            {
+                "player": {
+                    "id": player.get("id"),
+                    "username": player.get("username"),
+                    "displayName": player.get("displayName") or player.get("username"),
+                },
+                "history": entry.get("history") or [],
+            }
+        )
+    return normalized
+
+
+def group_link_coverage(connection: sqlite3.Connection, group: dict[str, Any] | None = None) -> dict[str, int]:
+    total_users = connection.execute("SELECT COUNT(*) AS count FROM users").fetchone()["count"]
+    linked_users = count_linked_game_accounts(connection, "osrs")
+    member_count = int((group or {}).get("memberCount") or 0)
+    return {
+        "trackedUsers": int(total_users),
+        "linkedUsers": linked_users,
+        "unlinkedUsers": max(0, int(total_users) - linked_users),
+        "groupMemberCount": member_count,
+    }
+
+
+def average_skill(statistics: dict[str, Any], metric: str) -> dict[str, Any]:
+    return (((statistics.get("averageStats") or {}).get("data") or {}).get("skills") or {}).get(metric) or {}
+
+
+def average_computed(statistics: dict[str, Any], metric: str) -> dict[str, Any]:
+    return (((statistics.get("averageStats") or {}).get("data") or {}).get("computed") or {}).get(metric) or {}
 
 
 def slot_rows(config: dict[str, Any]) -> int:
@@ -676,6 +1151,27 @@ def init_database(connection: sqlite3.Connection) -> None:
             target_id TEXT NOT NULL,
             payload_json TEXT NOT NULL DEFAULT '{}',
             created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS user_game_accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            game TEXT NOT NULL,
+            wom_player_id INTEGER NOT NULL UNIQUE,
+            username TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            status TEXT NOT NULL,
+            is_primary INTEGER NOT NULL DEFAULT 1,
+            linked_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(user_id, game)
+        );
+
+        CREATE TABLE IF NOT EXISTS wom_cache (
+            cache_key TEXT PRIMARY KEY,
+            payload_json TEXT NOT NULL,
+            fetched_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL
         );
         """
     )
@@ -1539,7 +2035,253 @@ def profile_payload(
         "balance": get_balance(connection, row["id"]),
         "giveawayEntries": int(entries),
         "recentSpins": recent_spins(connection, row["id"], limit=3),
+        "womLink": wom_link_payload(connection, int(row["id"])),
     }
+
+
+def wom_clan_payload(connection: sqlite3.Connection, *, force_refresh: bool = False) -> dict[str, Any]:
+    group_id = require_wom_group_id()
+    group = wom_cached_json(connection, f"/groups/{group_id}", force_refresh=force_refresh)
+    statistics = wom_cached_json(connection, f"/groups/{group_id}/statistics", force_refresh=force_refresh)
+    achievements = wom_cached_json(
+        connection,
+        f"/groups/{group_id}/achievements",
+        query={"limit": 6},
+        force_refresh=force_refresh,
+    )
+    activity = wom_cached_json(
+        connection,
+        f"/groups/{group_id}/activity",
+        query={"limit": 8},
+        force_refresh=force_refresh,
+    )
+    hiscores = wom_cached_json(
+        connection,
+        f"/groups/{group_id}/hiscores",
+        query={"metric": DEFAULT_WOM_HISCORE_METRIC, "limit": 5},
+        force_refresh=force_refresh,
+    )
+    gains = wom_cached_json(
+        connection,
+        f"/groups/{group_id}/gained",
+        query={"metric": DEFAULT_WOM_HISCORE_METRIC, "period": DEFAULT_WOM_PERIOD, "limit": 5},
+        force_refresh=force_refresh,
+    )
+    return {
+        "group": {
+            "id": group.get("id"),
+            "name": group.get("name"),
+            "clanChat": group.get("clanChat"),
+            "description": group.get("description"),
+            "homeworld": group.get("homeworld"),
+            "memberCount": group.get("memberCount"),
+            "score": group.get("score"),
+            "verified": group.get("verified"),
+            "updatedAt": group.get("updatedAt"),
+        },
+        "statistics": {
+            "maxedCombatCount": statistics.get("maxedCombatCount", 0),
+            "maxedTotalCount": statistics.get("maxedTotalCount", 0),
+            "maxed200msCount": statistics.get("maxed200msCount", 0),
+            "averageOverallLevel": average_skill(statistics, "overall").get("level"),
+            "averageOverallExperience": average_skill(statistics, "overall").get("experience"),
+            "averageEhp": average_computed(statistics, "ehp").get("value"),
+            "averageEhb": average_computed(statistics, "ehb").get("value"),
+            "raw": statistics,
+        },
+        "linkCoverage": group_link_coverage(connection, group),
+        "featuredHiscores": {
+            "metric": DEFAULT_WOM_HISCORE_METRIC,
+            "entries": normalize_group_hiscores(hiscores),
+        },
+        "featuredGains": {
+            "metric": DEFAULT_WOM_HISCORE_METRIC,
+            "period": DEFAULT_WOM_PERIOD,
+            "entries": normalize_group_gains(gains),
+        },
+        "recentAchievements": normalize_achievements(achievements),
+        "recentActivity": normalize_group_activity(activity),
+    }
+
+
+def wom_group_hiscores_payload(
+    connection: sqlite3.Connection,
+    *,
+    metric: str = DEFAULT_WOM_HISCORE_METRIC,
+    limit: int = 10,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    group_id = require_wom_group_id()
+    entries = wom_cached_json(
+        connection,
+        f"/groups/{group_id}/hiscores",
+        query={"metric": metric or DEFAULT_WOM_HISCORE_METRIC, "limit": max(1, min(limit, 50))},
+        force_refresh=force_refresh,
+    )
+    return {
+        "metric": metric or DEFAULT_WOM_HISCORE_METRIC,
+        "entries": normalize_group_hiscores(entries),
+    }
+
+
+def wom_group_gains_payload(
+    connection: sqlite3.Connection,
+    *,
+    metric: str = DEFAULT_WOM_HISCORE_METRIC,
+    period: str = DEFAULT_WOM_PERIOD,
+    limit: int = 10,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    group_id = require_wom_group_id()
+    entries = wom_cached_json(
+        connection,
+        f"/groups/{group_id}/gained",
+        query={"metric": metric or DEFAULT_WOM_HISCORE_METRIC, "period": period or DEFAULT_WOM_PERIOD, "limit": max(1, min(limit, 50))},
+        force_refresh=force_refresh,
+    )
+    return {
+        "metric": metric or DEFAULT_WOM_HISCORE_METRIC,
+        "period": period or DEFAULT_WOM_PERIOD,
+        "entries": normalize_group_gains(entries),
+    }
+
+
+def wom_me_payload(connection: sqlite3.Connection, user_row: sqlite3.Row, *, force_refresh: bool = False) -> dict[str, Any]:
+    account = get_user_game_account(connection, int(user_row["id"]), "osrs")
+    if not account:
+        raise AppError("Link a Wise Old Man RuneScape account first.", 404)
+
+    player = wom_cached_json(connection, f"/players/id/{int(account['wom_player_id'])}", force_refresh=force_refresh)
+    username = str(player.get("username") or account["username"])
+    save_user_game_account(connection, int(user_row["id"]), "osrs", player)
+    gains = wom_cached_json(
+        connection,
+        f"/players/{quote(username)}/gained",
+        query={"period": DEFAULT_WOM_PERIOD},
+        force_refresh=force_refresh,
+    )
+    achievements = wom_cached_json(
+        connection,
+        f"/players/{quote(username)}/achievements",
+        force_refresh=force_refresh,
+    )
+    standings = wom_cached_json(
+        connection,
+        f"/players/{quote(username)}/competitions/standings",
+        query={"status": "ongoing"},
+        force_refresh=force_refresh,
+    )
+    return {
+        "player": {
+            "id": player.get("id"),
+            "username": player.get("username"),
+            "displayName": player.get("displayName") or player.get("username"),
+            "type": player.get("type"),
+            "build": player.get("build"),
+            "status": player.get("status"),
+            "exp": player.get("exp"),
+            "ehp": player.get("ehp"),
+            "ehb": player.get("ehb"),
+            "updatedAt": player.get("updatedAt"),
+            "lastChangedAt": player.get("lastChangedAt"),
+            "lastImportedAt": player.get("lastImportedAt"),
+        },
+        "gains": gains,
+        "achievements": normalize_achievements(achievements),
+        "competitions": [normalize_competition_item(entry) for entry in standings],
+    }
+
+
+def wom_competitions_payload(
+    connection: sqlite3.Connection,
+    *,
+    limit: int = 12,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    group_id = require_wom_group_id()
+    competitions = wom_cached_json(
+        connection,
+        f"/groups/{group_id}/competitions",
+        query={"limit": max(1, min(limit, 25))},
+        force_refresh=force_refresh,
+    )
+    return {
+        "competitions": [normalize_competition_item(entry) for entry in competitions],
+    }
+
+
+def wom_competition_detail_payload(
+    connection: sqlite3.Connection,
+    competition_id: int,
+    *,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
+    competition = wom_cached_json(
+        connection,
+        f"/competitions/{competition_id}",
+        force_refresh=force_refresh,
+    )
+    top_history = wom_cached_json(
+        connection,
+        f"/competitions/{competition_id}/top-history",
+        force_refresh=force_refresh,
+    )
+    return {
+        "competition": {
+            **normalize_competition_item(competition),
+            "participants": normalize_competition_participants(competition.get("participants") or []),
+        },
+        "topHistory": normalize_competition_history(top_history),
+    }
+
+
+def refresh_wom_data(
+    connection: sqlite3.Connection,
+    actor_row: sqlite3.Row,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    scope = str(payload.get("scope") or "all").strip().lower()
+    deleted = 0
+    refreshed: dict[str, Any] = {"scope": scope}
+
+    if scope == "all":
+        deleted += invalidate_wom_cache(connection)
+        refreshed["clan"] = wom_clan_payload(connection, force_refresh=True)
+        refreshed["competitions"] = wom_competitions_payload(connection, force_refresh=True)
+    elif scope == "group":
+        group_id = require_wom_group_id()
+        deleted += invalidate_wom_cache(connection, f"groups/{group_id}")
+        refreshed["clan"] = wom_clan_payload(connection, force_refresh=True)
+
+    if scope == "player":
+        username = str(payload.get("username") or "").strip()
+        if not username:
+            raise AppError("A Wise Old Man username is required to refresh player data.", 400)
+        deleted += invalidate_wom_cache(connection, f"players/{quote(username)}")
+        refreshed["player"] = {
+            "player": wom_request_json(f"/players/{quote(username)}", method="POST"),
+            "gains": wom_cached_json(connection, f"/players/{quote(username)}/gained", query={"period": DEFAULT_WOM_PERIOD}, force_refresh=True),
+            "achievements": wom_cached_json(connection, f"/players/{quote(username)}/achievements", force_refresh=True),
+        }
+
+    if scope == "competition":
+        competition_id = int(payload.get("competitionId") or 0)
+        if competition_id:
+            deleted += invalidate_wom_cache(connection, f"competitions/{competition_id}")
+            refreshed["competition"] = wom_competition_detail_payload(connection, competition_id, force_refresh=True)
+        else:
+            raise AppError("A competitionId is required to refresh competition data.", 400)
+
+    audit(
+        connection,
+        int(actor_row["id"]),
+        "refresh_wom_cache",
+        "wom_cache",
+        scope,
+        {"scope": scope, "deleted": deleted, "payload": payload},
+    )
+    connection.commit()
+    return {"deleted": deleted, **refreshed}
 
 
 def create_giveaway(
@@ -1720,6 +2462,10 @@ def admin_overview(
             for row in users
         ],
         "giveaways": list_giveaways(connection, role_directory=role_directory or {}),
+        "wom": {
+            "configured": wom_group_id() is not None,
+            "linkedUsers": count_linked_game_accounts(connection, "osrs"),
+        },
     }
 
 
@@ -1741,6 +2487,16 @@ class GhostedHandler(BaseHTTPRequestHandler):
         try:
             prune_expired_sessions(connection)
             self.route_request("POST", connection)
+        except AppError as exc:
+            self.respond_error(exc.status, exc.message)
+        finally:
+            connection.close()
+
+    def do_DELETE(self) -> None:
+        connection = connect_database()
+        try:
+            prune_expired_sessions(connection)
+            self.route_request("DELETE", connection)
         except AppError as exc:
             self.respond_error(exc.status, exc.message)
         finally:
@@ -1811,8 +2567,32 @@ class GhostedHandler(BaseHTTPRequestHandler):
         if method == "GET" and path == "/api/me":
             self.handle_api_me(connection)
             return
+        if method == "GET" and path == "/api/wom/clan":
+            self.handle_api_wom_clan(connection)
+            return
+        if method == "GET" and path == "/api/wom/hiscores":
+            self.handle_api_wom_hiscores(connection, parsed)
+            return
+        if method == "GET" and path == "/api/wom/gains":
+            self.handle_api_wom_gains(connection, parsed)
+            return
+        if method == "GET" and path == "/api/wom/me":
+            self.handle_api_wom_me(connection)
+            return
+        if method == "GET" and path == "/api/wom/competitions":
+            self.handle_api_wom_competitions(connection, parsed)
+            return
+        if method == "GET" and path.startswith("/api/wom/competitions/"):
+            self.handle_api_wom_competition_detail(connection, path)
+            return
         if method == "GET" and path == "/api/rewards":
             self.handle_api_rewards(connection)
+            return
+        if method == "POST" and path == "/api/profile/wom-link":
+            self.handle_api_wom_link(connection)
+            return
+        if method == "DELETE" and path == "/api/profile/wom-link":
+            self.handle_api_wom_unlink(connection)
             return
         if method == "GET" and path == "/api/casino/games":
             user = self.current_user(connection)
@@ -1871,6 +2651,11 @@ class GhostedHandler(BaseHTTPRequestHandler):
             result = draw_giveaway_winner(connection, actor, giveaway_id, build_auth_config(self.base_url()))
             self.respond_json({"ok": True, "result": result})
             return
+        if method == "POST" and path == "/api/admin/wom/refresh":
+            actor = self.require_admin(connection)
+            result = refresh_wom_data(connection, actor, self.read_json_body())
+            self.respond_json({"ok": True, "result": result})
+            return
         if method == "GET" and path == "/auth/discord/login":
             self.handle_discord_login(connection, parsed)
             return
@@ -1906,6 +2691,8 @@ class GhostedHandler(BaseHTTPRequestHandler):
                 "guildSyncConfigured": auth_config.guild_ready,
                 "devAuthEnabled": env_flag("ENABLE_DEV_AUTH", False),
                 "dailyWagerCap": DAILY_WAGER_CAP,
+                "womConfigured": wom_group_id() is not None,
+                "womGroupId": wom_group_id(),
             }
         )
 
@@ -1934,6 +2721,46 @@ class GhostedHandler(BaseHTTPRequestHandler):
                 **wager,
             }
         )
+
+    def handle_api_wom_clan(self, connection: sqlite3.Connection) -> None:
+        self.respond_json(wom_clan_payload(connection))
+
+    def handle_api_wom_hiscores(self, connection: sqlite3.Connection, parsed: Any) -> None:
+        params = parse_qs(parsed.query)
+        metric = params.get("metric", [DEFAULT_WOM_HISCORE_METRIC])[0]
+        limit = int(params.get("limit", ["10"])[0] or 10)
+        self.respond_json(wom_group_hiscores_payload(connection, metric=metric, limit=limit))
+
+    def handle_api_wom_gains(self, connection: sqlite3.Connection, parsed: Any) -> None:
+        params = parse_qs(parsed.query)
+        metric = params.get("metric", [DEFAULT_WOM_HISCORE_METRIC])[0]
+        period = params.get("period", [DEFAULT_WOM_PERIOD])[0]
+        limit = int(params.get("limit", ["10"])[0] or 10)
+        self.respond_json(wom_group_gains_payload(connection, metric=metric, period=period, limit=limit))
+
+    def handle_api_wom_me(self, connection: sqlite3.Connection) -> None:
+        row = self.require_user(connection)
+        self.respond_json(wom_me_payload(connection, row))
+
+    def handle_api_wom_competitions(self, connection: sqlite3.Connection, parsed: Any) -> None:
+        params = parse_qs(parsed.query)
+        limit = int(params.get("limit", ["12"])[0] or 12)
+        self.respond_json(wom_competitions_payload(connection, limit=limit))
+
+    def handle_api_wom_competition_detail(self, connection: sqlite3.Connection, path: str) -> None:
+        competition_id = int(path.split("/")[-1])
+        self.respond_json(wom_competition_detail_payload(connection, competition_id))
+
+    def handle_api_wom_link(self, connection: sqlite3.Connection) -> None:
+        row = self.require_user(connection)
+        payload = self.read_json_body()
+        result = link_wom_account(connection, row, str(payload.get("username") or ""))
+        self.respond_json({"ok": True, "result": result}, status=201)
+
+    def handle_api_wom_unlink(self, connection: sqlite3.Connection) -> None:
+        row = self.require_user(connection)
+        result = unlink_wom_account(connection, row)
+        self.respond_json({"ok": True, "result": result})
 
     def handle_api_spin(self, connection: sqlite3.Connection) -> None:
         row = self.require_user(connection)

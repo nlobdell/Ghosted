@@ -1,11 +1,191 @@
+import io
+import json
+import os
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import server
 
 
+PLAYER = {
+    "id": 555,
+    "username": "GhostedRSN",
+    "displayName": "Ghosted RSN",
+    "type": "regular",
+    "build": "main",
+    "status": "active",
+    "exp": 123456789,
+    "ehp": 432.1,
+    "ehb": 12.3,
+    "updatedAt": "2026-04-02T01:00:00Z",
+    "lastChangedAt": "2026-04-02T00:30:00Z",
+    "lastImportedAt": "2026-04-02T01:05:00Z",
+}
+
+PLAYER_GROUPS = [
+    {
+        "groupId": 123,
+        "group": {"id": 123, "name": "Ghosted"},
+    }
+]
+
+GROUP = {
+    "id": 123,
+    "name": "Ghosted",
+    "clanChat": "Ghosted",
+    "description": "Ghosted clan",
+    "homeworld": 421,
+    "memberCount": 77,
+    "score": 9001,
+    "verified": True,
+    "updatedAt": "2026-04-02T02:00:00Z",
+}
+
+GROUP_STATS = {
+    "maxedCombatCount": 4,
+    "maxedTotalCount": 2,
+    "maxed200msCount": 1,
+    "averageStats": {
+        "data": {
+            "skills": {
+                "overall": {
+                    "level": 1920,
+                    "experience": 87654321,
+                }
+            },
+            "computed": {
+                "ehp": {"value": 321.5},
+                "ehb": {"value": 45.7},
+            },
+        }
+    },
+}
+
+PLAYER_REF = {
+    "id": PLAYER["id"],
+    "username": PLAYER["username"],
+    "displayName": PLAYER["displayName"],
+}
+
+GROUP_ACHIEVEMENTS = [
+    {
+        "name": "99 Magic",
+        "metric": "magic",
+        "measure": "experience",
+        "threshold": 13034431,
+        "createdAt": "2026-04-02T00:00:00Z",
+        "player": PLAYER_REF,
+    }
+]
+
+GROUP_ACTIVITY = [
+    {
+        "type": "joined",
+        "createdAt": "2026-04-02T00:00:00Z",
+        "player": PLAYER_REF,
+    }
+]
+
+GROUP_HISCORES = [
+    {
+        "player": PLAYER_REF,
+        "data": {
+            "rank": 17,
+            "experience": 123456789,
+            "level": 2227,
+        },
+    }
+]
+
+GROUP_GAINS = [
+    {
+        "player": PLAYER_REF,
+        "gained": 987654,
+    }
+]
+
+COMPETITION = {
+    "id": 42,
+    "title": "Ghosted SOTW",
+    "metric": "agility",
+    "type": "classic",
+    "startsAt": "2026-04-01T00:00:00Z",
+    "endsAt": "2026-04-08T00:00:00Z",
+    "groupId": 123,
+    "score": 900,
+}
+
+COMPETITION_DETAIL = {
+    **COMPETITION,
+    "participants": [
+        {
+            "rank": 1,
+            "player": PLAYER_REF,
+            "progress": {
+                "start": 1000,
+                "end": 5000,
+                "gained": 4000,
+            },
+            "updatedAt": "2026-04-02T01:00:00Z",
+        }
+    ],
+}
+
+TOP_HISTORY = [
+    {
+        "player": PLAYER_REF,
+        "history": [{"value": 1000, "date": "2026-04-01T00:00:00Z"}],
+    }
+]
+
+
+class FakeHandler(server.GhostedHandler):
+    def __init__(self, path: str, *, body: dict | None = None, user=None):
+        self.path = path
+        raw = json.dumps(body).encode("utf-8") if body is not None else b""
+        self.headers = {"Content-Length": str(len(raw))} if body is not None else {}
+        self.rfile = io.BytesIO(raw)
+        self.payload = None
+        self.status = None
+        self.user = user
+
+    def respond_json(self, payload, status=200):
+        self.payload = payload
+        self.status = status
+
+    def base_url(self):
+        return "http://localhost:8000"
+
+    def current_user(self, connection):
+        return self.user
+
+    def require_user(self, connection):
+        if not self.user:
+            raise server.AppError("Please sign in with Discord first.", 401)
+        return self.user
+
+    def require_admin(self, connection):
+        row = self.require_user(connection)
+        if not row["is_admin"]:
+            raise server.AppError("You do not have access to admin tools.", 403)
+        return row
+
+    def read_json_body(self):
+        return server.GhostedHandler.read_json_body(self)
+
+
 class GhostedAppTests(unittest.TestCase):
     def setUp(self):
+        self.env_patch = patch.dict(
+            os.environ,
+            {
+                "WOM_GROUP_ID": "123",
+                "WOM_CACHE_TTL_SECONDS": "900",
+            },
+            clear=False,
+        )
+        self.env_patch.start()
         self.db_path = Path.cwd() / "data" / "test_app.db"
         if self.db_path.exists():
             self.db_path.unlink()
@@ -17,6 +197,7 @@ class GhostedAppTests(unittest.TestCase):
             [],
         )
         server.ensure_user_rewards(self.connection, self.user, server.build_auth_config("http://localhost:8000"))
+        self.connection.execute("UPDATE users SET is_admin = 1 WHERE id = ?", (self.user["id"],))
         self.connection.commit()
         self.user = server.get_user_by_discord_id(self.connection, "test-user")
 
@@ -24,12 +205,47 @@ class GhostedAppTests(unittest.TestCase):
         self.connection.close()
         if self.db_path.exists():
             self.db_path.unlink()
+        self.env_patch.stop()
+
+    def wom_cached_side_effect(self, connection, path, *, query=None, force_refresh=False, allow_stale=True):
+        if path == "/players/GhostedRSN/groups":
+            return PLAYER_GROUPS
+        if path == "/groups/123":
+            return GROUP
+        if path == "/groups/123/statistics":
+            return GROUP_STATS
+        if path == "/groups/123/achievements":
+            return GROUP_ACHIEVEMENTS
+        if path == "/groups/123/activity":
+            return GROUP_ACTIVITY
+        if path == "/groups/123/hiscores":
+            return GROUP_HISCORES
+        if path == "/groups/123/gained":
+            return GROUP_GAINS
+        if path == "/groups/123/competitions":
+            return [COMPETITION]
+        if path == "/players/id/555":
+            return PLAYER
+        if path == "/players/GhostedRSN/gained":
+            return {"skills": {"overall": {"gained": 987654}}}
+        if path == "/players/GhostedRSN/achievements":
+            return GROUP_ACHIEVEMENTS
+        if path == "/players/GhostedRSN/competitions/standings":
+            return [COMPETITION]
+        if path == "/competitions/42":
+            return COMPETITION_DETAIL
+        if path == "/competitions/42/top-history":
+            return TOP_HISTORY
+        raise AssertionError(f"Unhandled WOM path in test: {path} query={query}")
+
+    def make_handler(self, path: str, *, body: dict | None = None, user=None):
+        return FakeHandler(path, body=body, user=user)
 
     def test_welcome_bonus_is_seeded(self):
         self.assertEqual(server.get_balance(self.connection, self.user["id"]), server.STARTING_BALANCE)
 
     def test_spin_deducts_and_records(self):
-        result = server.spin_game(self.connection, self.user, "moon-spark", rng=server.random.Random(5))
+        result = server.spin_game(self.connection, self.user, "jigsaw-jackpot", rng=server.random.Random(5))
         self.assertIn("symbols", result)
         self.assertGreaterEqual(server.get_balance(self.connection, self.user["id"]), 0)
         spins = server.recent_spins(self.connection, self.user["id"])
@@ -40,6 +256,174 @@ class GhostedAppTests(unittest.TestCase):
         result = server.enter_giveaway(self.connection, self.user, int(giveaway["id"]))
         self.assertEqual(result["giveawayId"], giveaway["id"])
         self.assertLess(server.get_balance(self.connection, self.user["id"]), server.STARTING_BALANCE)
+
+    @patch("server.wom_cached_json")
+    @patch("server.wom_request_json")
+    def test_link_wom_account_success(self, wom_request_json, wom_cached_json):
+        wom_request_json.return_value = PLAYER
+        wom_cached_json.return_value = PLAYER_GROUPS
+
+        result = server.link_wom_account(self.connection, self.user, "GhostedRSN")
+
+        self.assertTrue(result["linked"])
+        self.assertEqual(result["playerId"], PLAYER["id"])
+        account = server.get_user_game_account(self.connection, self.user["id"])
+        self.assertIsNotNone(account)
+        self.assertEqual(account["username"], PLAYER["username"])
+
+    @patch("server.wom_cached_json")
+    @patch("server.wom_request_json")
+    def test_duplicate_relink_updates_existing_account(self, wom_request_json, wom_cached_json):
+        wom_request_json.return_value = PLAYER
+        wom_cached_json.return_value = PLAYER_GROUPS
+        server.link_wom_account(self.connection, self.user, "GhostedRSN")
+
+        updated_player = {**PLAYER, "displayName": "Ghosted RSN Updated"}
+        wom_request_json.return_value = updated_player
+        server.link_wom_account(self.connection, self.user, "GhostedRSN")
+
+        account = server.get_user_game_account(self.connection, self.user["id"])
+        count = self.connection.execute("SELECT COUNT(*) AS count FROM user_game_accounts").fetchone()["count"]
+        self.assertEqual(count, 1)
+        self.assertEqual(account["display_name"], "Ghosted RSN Updated")
+
+    def test_invalid_wom_username_is_rejected(self):
+        with self.assertRaises(server.AppError) as exc:
+            server.link_wom_account(self.connection, self.user, "")
+        self.assertEqual(exc.exception.status, 400)
+
+    @patch("server.wom_cached_json")
+    @patch("server.wom_request_json")
+    def test_player_not_in_group_is_rejected(self, wom_request_json, wom_cached_json):
+        wom_request_json.return_value = PLAYER
+        wom_cached_json.return_value = []
+
+        with self.assertRaises(server.AppError) as exc:
+            server.link_wom_account(self.connection, self.user, "GhostedRSN")
+
+        self.assertEqual(exc.exception.status, 400)
+
+    def test_wom_cache_freshness_prefers_cached_payload(self):
+        expected = {"hello": "world"}
+        server.set_wom_cache_entry(self.connection, "groups/123", expected)
+
+        with patch("server.wom_request_json", side_effect=AssertionError("network should not be called")):
+            payload = server.wom_cached_json(self.connection, "/groups/123")
+
+        self.assertEqual(payload, expected)
+
+    def test_wom_cache_stale_fallback_returns_stale_payload(self):
+        expected = {"stale": True}
+        server.set_wom_cache_entry(self.connection, "groups/123", expected)
+        self.connection.execute(
+            "UPDATE wom_cache SET expires_at = ? WHERE cache_key = ?",
+            ("2000-01-01T00:00:00+00:00", "groups/123"),
+        )
+        self.connection.commit()
+
+        with patch("server.wom_request_json", side_effect=server.AppError("upstream failed", 502)):
+            payload = server.wom_cached_json(self.connection, "/groups/123")
+
+        self.assertEqual(payload, expected)
+
+    def test_wom_upstream_failure_without_cache_raises(self):
+        with patch("server.wom_request_json", side_effect=server.AppError("upstream failed", 502)):
+            with self.assertRaises(server.AppError):
+                server.wom_cached_json(self.connection, "/groups/123")
+
+    @patch("server.wom_cached_json")
+    @patch("server.wom_request_json")
+    def test_profile_wom_link_endpoint(self, wom_request_json, wom_cached_json):
+        wom_request_json.return_value = PLAYER
+        wom_cached_json.return_value = PLAYER_GROUPS
+        handler = self.make_handler("/api/profile/wom-link", body={"username": "GhostedRSN"}, user=self.user)
+
+        server.GhostedHandler.route_request(handler, "POST", self.connection)
+
+        self.assertEqual(handler.status, 201)
+        self.assertTrue(handler.payload["result"]["linked"])
+
+    @patch("server.wom_cached_json")
+    def test_wom_clan_endpoint(self, wom_cached_json):
+        wom_cached_json.side_effect = self.wom_cached_side_effect
+        handler = self.make_handler("/api/wom/clan", user=self.user)
+
+        server.GhostedHandler.route_request(handler, "GET", self.connection)
+
+        self.assertEqual(handler.status, 200)
+        self.assertEqual(handler.payload["group"]["name"], "Ghosted")
+        self.assertEqual(handler.payload["featuredHiscores"]["entries"][0]["player"]["displayName"], PLAYER["displayName"])
+
+    @patch("server.wom_cached_json")
+    def test_wom_me_endpoint(self, wom_cached_json):
+        server.save_user_game_account(self.connection, self.user["id"], "osrs", PLAYER)
+        wom_cached_json.side_effect = self.wom_cached_side_effect
+        handler = self.make_handler("/api/wom/me", user=self.user)
+
+        server.GhostedHandler.route_request(handler, "GET", self.connection)
+
+        self.assertEqual(handler.status, 200)
+        self.assertEqual(handler.payload["player"]["id"], PLAYER["id"])
+        self.assertEqual(handler.payload["competitions"][0]["id"], COMPETITION["id"])
+
+    @patch("server.wom_cached_json")
+    def test_wom_hiscores_endpoint(self, wom_cached_json):
+        wom_cached_json.side_effect = self.wom_cached_side_effect
+        handler = self.make_handler("/api/wom/hiscores?metric=overall&limit=5", user=self.user)
+
+        server.GhostedHandler.route_request(handler, "GET", self.connection)
+
+        self.assertEqual(handler.status, 200)
+        self.assertEqual(handler.payload["metric"], "overall")
+        self.assertEqual(handler.payload["entries"][0]["rank"], 17)
+
+    @patch("server.wom_cached_json")
+    def test_wom_gains_endpoint(self, wom_cached_json):
+        wom_cached_json.side_effect = self.wom_cached_side_effect
+        handler = self.make_handler("/api/wom/gains?metric=overall&period=week&limit=5", user=self.user)
+
+        server.GhostedHandler.route_request(handler, "GET", self.connection)
+
+        self.assertEqual(handler.status, 200)
+        self.assertEqual(handler.payload["period"], "week")
+        self.assertEqual(handler.payload["entries"][0]["gained"], GROUP_GAINS[0]["gained"])
+
+    @patch("server.wom_cached_json")
+    def test_wom_competition_detail_endpoint(self, wom_cached_json):
+        wom_cached_json.side_effect = self.wom_cached_side_effect
+        handler = self.make_handler("/api/wom/competitions/42", user=self.user)
+
+        server.GhostedHandler.route_request(handler, "GET", self.connection)
+
+        self.assertEqual(handler.status, 200)
+        self.assertEqual(handler.payload["competition"]["id"], 42)
+        self.assertEqual(handler.payload["topHistory"][0]["player"]["displayName"], PLAYER["displayName"])
+
+    def test_competition_status_classification(self):
+        self.assertEqual(
+            server.competition_status(
+                "2026-04-05T00:00:00Z",
+                "2026-04-06T00:00:00Z",
+                now=server.parse_iso("2026-04-04T00:00:00Z"),
+            ),
+            "upcoming",
+        )
+        self.assertEqual(
+            server.competition_status(
+                "2026-04-01T00:00:00Z",
+                "2026-04-06T00:00:00Z",
+                now=server.parse_iso("2026-04-04T00:00:00Z"),
+            ),
+            "ongoing",
+        )
+        self.assertEqual(
+            server.competition_status(
+                "2026-04-01T00:00:00Z",
+                "2026-04-03T00:00:00Z",
+                now=server.parse_iso("2026-04-04T00:00:00Z"),
+            ),
+            "finished",
+        )
 
 
 if __name__ == "__main__":

@@ -4,6 +4,9 @@ const state = {
   admin: {
     roleOptions: [],
   },
+  ui: {
+    pendingExternalLink: null,
+  },
   casino: {
     selectedGameSlug: null,
     latestResult: null,
@@ -35,6 +38,8 @@ async function boot() {
   if (!page) return;
   const handlers = {
     dashboard: renderDashboard,
+    clan: renderClan,
+    competitions: renderCompetitions,
     casino: renderCasino,
     rewards: renderRewards,
     giveaways: renderGiveaways,
@@ -103,22 +108,29 @@ async function renderDashboard() {
   const contentRoot = document.querySelector('[data-content]');
   if (!state.me.authenticated) {
     summaryRoot.innerHTML = '';
-    renderSignInState(contentRoot, 'Sign in to see your balance, giveaways, and recent spins.');
+    renderSignInState(contentRoot, 'Sign in to see your balance, giveaways, Wise Old Man link, and recent spins.');
     return;
   }
 
-  const [rewards, giveaways] = await Promise.all([getJSON('/api/rewards'), getJSON('/api/giveaways')]);
+  const requests = [getJSON('/api/rewards'), getJSON('/api/giveaways')];
+  if (state.config.womConfigured) {
+    requests.push(getJSON('/api/wom/clan'), getJSON('/api/wom/competitions?limit=6'));
+  }
+  const [rewards, giveaways, clan = null, competitions = null] = await Promise.all(requests);
   const activeGiveaways = giveaways.giveaways.filter((item) => item.status === 'active').length;
   const recentSpins = rewards.spins.length;
   const perks = state.me.user.perks || [];
+  const womLink = state.me.user.womLink || { linked: false };
+  const liveCompetitions = (competitions?.competitions || []).filter((item) => item.status === 'ongoing').length;
   const perksMarkup = perks.length
     ? `<div class="app-tags">${perks.map((perk) => `<span class="app-tag">${escapeHtml(perk)}</span>`).join('')}</div>`
     : '<p class="app-panel-note">Perks show up here after roles sync.</p>';
   summaryRoot.innerHTML = renderStats([
     { label: 'Balance', value: formatPoints(rewards.balance), href: '/app/rewards/' },
     { label: 'Active giveaways', value: String(activeGiveaways), href: '/app/giveaways/' },
+    { label: 'Live competitions', value: String(liveCompetitions), href: '/app/competitions/' },
     { label: 'Recent spins', value: String(recentSpins), href: '/app/casino/' },
-    { label: 'Entries used', value: String(state.me.user.giveawayEntries || 0), href: '/app/profile/' },
+    { label: 'WOM link', value: womLink.linked ? 'Linked' : 'Not linked', href: '/app/profile/' },
   ]);
 
   contentRoot.innerHTML = `
@@ -132,6 +144,20 @@ async function renderDashboard() {
           <span class="app-chip">${state.me.user.isAdmin ? 'Admin access' : 'Member tools'}</span>
         </div>
         <div class="app-route-list">
+          <a class="app-route" href="/app/clan/">
+            <div>
+              <strong>Clan</strong>
+              <p>Track Ghosted group health and weekly gains.</p>
+            </div>
+            <span class="app-route__meta">${clan?.group?.memberCount || 0} members</span>
+          </a>
+          <a class="app-route" href="/app/competitions/">
+            <div>
+              <strong>Competitions</strong>
+              <p>Follow live Wise Old Man standings.</p>
+            </div>
+            <span class="app-route__meta">${liveCompetitions} live</span>
+          </a>
           <a class="app-route" href="/app/casino/">
             <div>
               <strong>Casino</strong>
@@ -173,9 +199,9 @@ async function renderDashboard() {
         <div class="app-panel__header">
           <div>
             <p class="app-kicker">Account</p>
-            <h3>Discord status</h3>
+            <h3>Discord and OSRS</h3>
           </div>
-          <span class="app-chip">Discord linked</span>
+          <span class="app-chip">${womLink.linked ? 'WOM linked' : 'Discord only'}</span>
         </div>
         <div class="app-panel-list">
           <div>
@@ -187,8 +213,8 @@ async function renderDashboard() {
             <strong>@${escapeHtml(state.me.user.username)}</strong>
           </div>
           <div>
-            <span>Entries used</span>
-            <strong>${state.me.user.giveawayEntries || 0}</strong>
+            <span>RuneScape</span>
+            <strong>${womLink.linked ? escapeHtml(womLink.displayName || womLink.username) : 'Link from profile'}</strong>
           </div>
           <div>
             <span>Access</span>
@@ -197,6 +223,22 @@ async function renderDashboard() {
         </div>
         ${perksMarkup}
       </a>
+    </section>
+    <section class="app-grid app-grid--two">
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Clan pulse</h3>
+          <span class="app-chip">${clan?.linkCoverage?.linkedUsers || 0} linked</span>
+        </div>
+        ${clan ? renderClanPulse(clan) : '<div class="app-empty">Configure WOM_GROUP_ID to load clan data.</div>'}
+      </article>
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Competition watch</h3>
+          <span class="app-chip">${liveCompetitions} ongoing</span>
+        </div>
+        ${competitions ? renderCompetitionList((competitions.competitions || []).slice(0, 4), { compact: true }) : '<div class="app-empty">Competition data appears here once WOM is configured.</div>'}
+      </article>
     </section>
     <section class="app-ledger-shell">
       <div class="app-section-heading">
@@ -550,24 +592,192 @@ async function renderGiveaways() {
   });
 }
 
+async function renderClan() {
+  const summaryRoot = document.querySelector('[data-summary]');
+  const contentRoot = document.querySelector('[data-content]');
+  if (!state.config.womConfigured) {
+    summaryRoot.innerHTML = renderStats([
+      { label: 'Wise Old Man', value: 'Offline' },
+      { label: 'Clan page', value: 'Unavailable' },
+    ]);
+    contentRoot.innerHTML = '<div class="app-empty">Set `WOM_GROUP_ID` to load the Ghosted clan overview.</div>';
+    return;
+  }
+
+  const [clan, hiscores, gains] = await Promise.all([
+    getJSON('/api/wom/clan'),
+    getJSON('/api/wom/hiscores?metric=overall&limit=8'),
+    getJSON('/api/wom/gains?metric=overall&period=week&limit=8'),
+  ]);
+
+  summaryRoot.innerHTML = renderStats([
+    { label: 'Group members', value: String(clan.group.memberCount || 0) },
+    { label: 'Ghosted links', value: String(clan.linkCoverage.linkedUsers || 0), href: '/app/profile/' },
+    { label: 'Maxed totals', value: String(clan.statistics.maxedTotalCount || 0) },
+    { label: 'Avg total level', value: formatMaybeNumber(clan.statistics.averageOverallLevel) },
+  ]);
+
+  contentRoot.innerHTML = `
+    <section class="app-grid app-grid--two">
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>${escapeHtml(clan.group.name || 'Ghosted')}</h3>
+          <span class="app-chip">${clan.group.verified ? 'Verified' : 'Tracked'}</span>
+        </div>
+        <p>${escapeHtml(clan.group.description || 'Wise Old Man group overview for Ghosted.')}</p>
+        <div class="app-metric-grid">
+          <div class="app-metric">
+            <span>Clan chat</span>
+            <strong>${escapeHtml(clan.group.clanChat || 'Not listed')}</strong>
+          </div>
+          <div class="app-metric">
+            <span>Home world</span>
+            <strong>${escapeHtml(clan.group.homeworld || 'Unknown')}</strong>
+          </div>
+          <div class="app-metric">
+            <span>Average EHP</span>
+            <strong>${formatMaybeNumber(clan.statistics.averageEhp)}</strong>
+          </div>
+          <div class="app-metric">
+            <span>Average EHB</span>
+            <strong>${formatMaybeNumber(clan.statistics.averageEhb)}</strong>
+          </div>
+        </div>
+      </article>
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Link coverage</h3>
+          <span class="app-chip">${clan.linkCoverage.unlinkedUsers || 0} unlinked</span>
+        </div>
+        <div class="app-metric-grid">
+          <div class="app-metric">
+            <span>Tracked Discord users</span>
+            <strong>${clan.linkCoverage.trackedUsers || 0}</strong>
+          </div>
+          <div class="app-metric">
+            <span>Linked RSNs</span>
+            <strong>${clan.linkCoverage.linkedUsers || 0}</strong>
+          </div>
+          <div class="app-metric">
+            <span>Unlinked users</span>
+            <strong>${clan.linkCoverage.unlinkedUsers || 0}</strong>
+          </div>
+          <div class="app-metric">
+            <span>WOM members</span>
+            <strong>${clan.linkCoverage.groupMemberCount || 0}</strong>
+          </div>
+        </div>
+        ${state.me.authenticated && !state.me.user.womLink?.linked ? '<p class="app-panel-note">Link your RSN from the profile page so Ghosted can match your Discord identity to WOM data.</p>' : ''}
+      </article>
+    </section>
+    <section class="app-grid app-grid--two">
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Overall hiscores</h3>
+          <span class="app-chip">Top ${hiscores.entries.length}</span>
+        </div>
+        ${renderLeaderboardTable(hiscores.entries, { valueLabel: 'Experience / rank', valueFormatter: formatHiscoreValue })}
+      </article>
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Weekly gains</h3>
+          <span class="app-chip">${escapeHtml((gains.period || 'week').toUpperCase())}</span>
+        </div>
+        ${renderLeaderboardTable(gains.entries, { valueLabel: 'Gained', valueFormatter: formatGainValue })}
+      </article>
+    </section>
+    <section class="app-grid app-grid--two">
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Recent achievements</h3>
+          <span class="app-chip">${clan.recentAchievements.length}</span>
+        </div>
+        ${renderAchievementFeed(clan.recentAchievements)}
+      </article>
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Recent activity</h3>
+          <span class="app-chip">${clan.recentActivity.length}</span>
+        </div>
+        ${renderActivityFeed(clan.recentActivity)}
+      </article>
+    </section>
+  `;
+}
+
+async function renderCompetitions() {
+  const summaryRoot = document.querySelector('[data-summary]');
+  const contentRoot = document.querySelector('[data-content]');
+  if (!state.config.womConfigured) {
+    summaryRoot.innerHTML = renderStats([
+      { label: 'Wise Old Man', value: 'Offline' },
+      { label: 'Competitions', value: 'Unavailable' },
+    ]);
+    contentRoot.innerHTML = '<div class="app-empty">Set `WOM_GROUP_ID` to load Ghosted competition standings.</div>';
+    return;
+  }
+
+  const listing = await getJSON('/api/wom/competitions?limit=12');
+  const competitions = listing.competitions || [];
+  const selected = competitions[0] ? await getJSON(`/api/wom/competitions/${competitions[0].id}`) : null;
+  const ongoing = competitions.filter((item) => item.status === 'ongoing').length;
+  const upcoming = competitions.filter((item) => item.status === 'upcoming').length;
+
+  summaryRoot.innerHTML = renderStats([
+    { label: 'Tracked comps', value: String(competitions.length) },
+    { label: 'Ongoing', value: String(ongoing) },
+    { label: 'Upcoming', value: String(upcoming) },
+    { label: 'Finished', value: String(competitions.filter((item) => item.status === 'finished').length) },
+  ]);
+
+  contentRoot.innerHTML = `
+    <section class="app-grid app-grid--two">
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Competition board</h3>
+          <span class="app-chip">${ongoing} live</span>
+        </div>
+        ${renderCompetitionList(competitions)}
+      </article>
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>${escapeHtml(selected?.competition?.title || 'No competition selected')}</h3>
+          <span class="app-chip">${escapeHtml(selected?.competition?.status || 'none')}</span>
+        </div>
+        ${selected ? renderCompetitionDetail(selected) : '<div class="app-empty">No group competitions are available yet.</div>'}
+      </article>
+    </section>
+  `;
+}
+
 async function renderProfile() {
   const summaryRoot = document.querySelector('[data-summary]');
   const contentRoot = document.querySelector('[data-content]');
   if (!state.me.authenticated) {
     summaryRoot.innerHTML = '';
-    renderSignInState(contentRoot, 'Sign in to see your Discord profile and synced roles.');
+    renderSignInState(contentRoot, 'Sign in to see your Discord profile, synced roles, and RuneScape link.');
     return;
   }
   const user = state.me.user;
   const roles = user.roles || [];
   const roleDetails = user.roleDetails || roles.map((roleId) => ({ id: roleId, label: roleId, source: 'id' }));
   const perks = user.perks || [];
+  const womLink = user.womLink || { linked: false };
+  let womProfile = null;
+  if (state.config.womConfigured && womLink.linked) {
+    try {
+      womProfile = await getJSON('/api/wom/me');
+    } catch (error) {
+      renderBanner(error.message, 'warning');
+    }
+  }
   const avatar = user.avatarUrl
     ? `<div class="app-avatar"><img src="${user.avatarUrl}" alt="${escapeHtml(user.displayName)}" /></div>`
     : `<div class="app-avatar">${escapeHtml(user.displayName.slice(0, 1).toUpperCase())}</div>`;
   summaryRoot.innerHTML = renderStats([
     { label: 'Balance', value: formatPoints(user.balance), href: '/app/rewards/' },
     { label: 'Discord ID', value: escapeHtml(user.discordId || 'Not synced') },
+    { label: 'WOM link', value: womLink.linked ? 'Linked' : 'Not linked' },
     { label: 'Entries used', value: String(user.giveawayEntries || 0), href: '/app/giveaways/' },
     { label: 'Access', value: user.isAdmin ? 'Admin' : 'Member', href: user.isAdmin ? '/admin/' : '/app/' },
   ]);
@@ -591,14 +801,15 @@ async function renderProfile() {
             <strong>${roleDetails.length}</strong>
           </div>
           <div class="app-metric">
-            <span>Entries used</span>
-            <strong>${user.giveawayEntries || 0}</strong>
+            <span>Wise Old Man</span>
+            <strong>${womLink.linked ? escapeHtml(womLink.displayName || womLink.username) : 'Not linked'}</strong>
           </div>
           <div class="app-metric">
             <span>Access</span>
             <strong>${user.isAdmin ? 'Admin' : 'Member'}</strong>
           </div>
         </div>
+        ${renderWomLinkPanel(womLink)}
       </article>
       <article class="app-card">
         <div class="app-card__row">
@@ -619,7 +830,10 @@ async function renderProfile() {
         </div>
       </article>
     </section>
+    ${renderProfileWomDetails(womProfile, womLink)}
   `;
+  bindWomLinkForm();
+  bindWomUnlink();
 }
 
 async function renderAdmin() {
@@ -636,6 +850,7 @@ async function renderAdmin() {
     summaryRoot.innerHTML = renderStats([
       ['Tracked users', String(payload.overview.users.length)],
       ['Live giveaways', String(activeGiveaways)],
+      ['WOM links', String(payload.overview.wom?.linkedUsers || 0)],
       ['Admin users', String(adminCount)],
       ['Actor', escapeHtml(payload.actor.displayName)],
     ]);
@@ -673,6 +888,47 @@ async function renderAdmin() {
           <textarea id="giveaway-description" name="description" autocomplete="off">Launch-ready clan giveaway.</textarea>
           <div class="app-actions"><button class="button" type="submit">Create giveaway</button></div>
         </form>
+      </section>
+      <section class="app-grid app-grid--two">
+        <form class="app-form" id="wom-refresh-form">
+          <h3>Refresh Wise Old Man cache</h3>
+          <p>Force Ghosted to drop cached WOM data and re-fetch the latest clan, player, or competition payloads.</p>
+          <div class="app-form-grid">
+            <div>
+              <label for="wom-refresh-scope">Scope</label>
+              <select id="wom-refresh-scope" name="scope">
+                <option value="all">All clan caches</option>
+                <option value="group">Clan only</option>
+                <option value="player">One player</option>
+                <option value="competition">One competition</option>
+              </select>
+            </div>
+            <div><label for="wom-refresh-username">Username</label><input id="wom-refresh-username" name="username" type="text" autocomplete="off" placeholder="Needed for player refresh" /></div>
+            <div><label for="wom-refresh-competition-id">Competition ID</label><input id="wom-refresh-competition-id" name="competitionId" type="number" inputmode="numeric" autocomplete="off" placeholder="Needed for competition refresh" /></div>
+            <div class="app-metric">
+              <span>Current status</span>
+              <strong>${payload.overview.wom?.configured ? 'Configured' : 'Not configured'}</strong>
+            </div>
+          </div>
+          <div class="app-actions"><button class="button" type="submit">Refresh WOM data</button></div>
+        </form>
+        <article class="app-card">
+          <div class="app-card__row">
+            <h3>Wise Old Man status</h3>
+            <span class="app-chip">${payload.overview.wom?.configured ? 'Live' : 'Offline'}</span>
+          </div>
+          <div class="app-metric-grid">
+            <div class="app-metric">
+              <span>Linked users</span>
+              <strong>${payload.overview.wom?.linkedUsers || 0}</strong>
+            </div>
+            <div class="app-metric">
+              <span>Group config</span>
+              <strong>${payload.overview.wom?.configured ? 'Ready' : 'Missing WOM_GROUP_ID'}</strong>
+            </div>
+          </div>
+          <p class="app-panel-note">V1 is intentionally read-only for the Ghosted WOM group. Use this refresh tool to clear cache drift without editing group membership or competitions from Ghosted.</p>
+        </article>
       </section>
       <section class="app-grid app-grid--two">
         <article class="app-card">
@@ -736,6 +992,24 @@ function bindAdminForms() {
       }
     });
   });
+
+  document.querySelector('#wom-refresh-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = Object.fromEntries(new FormData(event.currentTarget).entries());
+    if (!formData.username) delete formData.username;
+    if (!formData.competitionId) {
+      delete formData.competitionId;
+    } else {
+      formData.competitionId = Number(formData.competitionId);
+    }
+    try {
+      const result = await getJSON('/api/admin/wom/refresh', { method: 'POST', body: JSON.stringify(formData) });
+      renderBanner(`Refreshed WOM cache. Cleared ${result.result.deleted || 0} cached item(s).`, 'info', '#admin-result');
+      await renderAdmin();
+    } catch (error) {
+      renderBanner(error.message, 'error', '#admin-result');
+    }
+  });
 }
 
 function renderRoleOptions(roleOptions) {
@@ -761,6 +1035,292 @@ function renderRoleHelperText(rolePayload) {
     return 'No Discord role names were available. Check bot access or add DISCORD_ROLE_LABELS_JSON overrides.';
   }
   return 'Set DISCORD_GUILD_ID + DISCORD_BOT_TOKEN or DISCORD_ROLE_LABELS_JSON to enable role selection.';
+}
+
+function renderWomLinkPanel(womLink) {
+  if (!state.config.womConfigured) {
+    return '<div class="app-empty">Wise Old Man is not configured on this Ghosted instance yet.</div>';
+  }
+  if (womLink.linked) {
+    return `
+      <div class="app-card app-card--subtle">
+        <div class="app-card__row">
+          <h3>Wise Old Man link</h3>
+          <span class="app-chip">Linked</span>
+        </div>
+        <p>Ghosted is linked to <strong>${escapeHtml(womLink.displayName || womLink.username)}</strong> in the configured clan group.</p>
+        <div class="app-actions">
+          <button class="button button--secondary" type="button" data-wom-unlink>Remove local link</button>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <form class="app-form" id="wom-link-form">
+      <h3>Link RuneScape account</h3>
+      <p>Enter the RSN that belongs to you in the Ghosted Wise Old Man group. Ghosted will track/update it and link it to your Discord account.</p>
+      <div class="app-form-grid">
+        <div>
+          <label for="wom-username">RuneScape username</label>
+          <input id="wom-username" name="username" type="text" autocomplete="off" spellcheck="false" placeholder="Your RSN" />
+        </div>
+      </div>
+      <div class="app-actions">
+        <button class="button" type="submit">Link account</button>
+      </div>
+    </form>
+  `;
+}
+
+function renderProfileWomDetails(womProfile, womLink) {
+  if (!state.config.womConfigured) return '';
+  if (!womLink.linked || !womProfile) {
+    return `
+      <section class="app-grid app-grid--two">
+        <article class="app-card">
+          <div class="app-card__row">
+            <h3>OSRS sync</h3>
+            <span class="app-chip">${womLink.linked ? 'Loading' : 'Not linked'}</span>
+          </div>
+          <p>${womLink.linked ? 'Ghosted will show your weekly gains, achievements, and live competition entries here once the WOM profile loads.' : 'Link your account above to unlock Ghosted-to-WOM profile syncing.'}</p>
+        </article>
+      </section>
+    `;
+  }
+  return `
+    <section class="app-grid app-grid--two">
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Weekly gains</h3>
+          <span class="app-chip">${escapeHtml(womProfile.player.displayName || womProfile.player.username)}</span>
+        </div>
+        <div class="app-metric-grid">
+          <div class="app-metric">
+            <span>Total XP</span>
+            <strong>${formatMaybeNumber(womProfile.player.exp)}</strong>
+          </div>
+          <div class="app-metric">
+            <span>EHP</span>
+            <strong>${formatMaybeNumber(womProfile.player.ehp)}</strong>
+          </div>
+          <div class="app-metric">
+            <span>EHB</span>
+            <strong>${formatMaybeNumber(womProfile.player.ehb)}</strong>
+          </div>
+          <div class="app-metric">
+            <span>Last import</span>
+            <strong>${womProfile.player.lastImportedAt ? formatDate(womProfile.player.lastImportedAt) : 'Pending'}</strong>
+          </div>
+        </div>
+        <pre class="app-codeblock">${escapeHtml(JSON.stringify(womProfile.gains, null, 2))}</pre>
+      </article>
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Achievements and competitions</h3>
+          <span class="app-chip">${womProfile.competitions.length} ongoing</span>
+        </div>
+        ${renderAchievementFeed(womProfile.achievements.slice(0, 6))}
+        ${renderCompetitionList(womProfile.competitions.slice(0, 4), { compact: true })}
+      </article>
+    </section>
+  `;
+}
+
+function bindWomLinkForm() {
+  document.querySelector('#wom-link-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = Object.fromEntries(new FormData(event.currentTarget).entries());
+    try {
+      await getJSON('/api/profile/wom-link', { method: 'POST', body: JSON.stringify(formData) });
+      renderBanner('Wise Old Man account linked.', 'info');
+      state.me = await getJSON('/api/me');
+      renderAuth();
+      await renderProfile();
+    } catch (error) {
+      renderBanner(error.message, 'error');
+    }
+  });
+}
+
+function bindWomUnlink() {
+  document.querySelector('[data-wom-unlink]')?.addEventListener('click', async () => {
+    try {
+      await getJSON('/api/profile/wom-link', { method: 'DELETE' });
+      renderBanner('Removed the local Wise Old Man link.', 'info');
+      state.me = await getJSON('/api/me');
+      renderAuth();
+      await renderProfile();
+    } catch (error) {
+      renderBanner(error.message, 'error');
+    }
+  });
+}
+
+function renderClanPulse(clan) {
+  return `
+    <div class="app-metric-grid">
+      <div class="app-metric">
+        <span>Members</span>
+        <strong>${clan.group.memberCount || 0}</strong>
+      </div>
+      <div class="app-metric">
+        <span>Maxed total</span>
+        <strong>${clan.statistics.maxedTotalCount || 0}</strong>
+      </div>
+      <div class="app-metric">
+        <span>Average total</span>
+        <strong>${formatMaybeNumber(clan.statistics.averageOverallLevel)}</strong>
+      </div>
+      <div class="app-metric">
+        <span>Weekly leaders</span>
+        <strong>${clan.featuredGains.entries.length || 0}</strong>
+      </div>
+    </div>
+  `;
+}
+
+function renderLeaderboardTable(entries, { valueLabel = 'Value', valueFormatter = String } = {}) {
+  if (!entries.length) {
+    return '<div class="app-empty">No entries available yet.</div>';
+  }
+  return `
+    <section class="app-table">
+      <table>
+        <thead><tr><th>Rank</th><th>Player</th><th>${escapeHtml(valueLabel)}</th></tr></thead>
+        <tbody>
+          ${entries.map((entry) => `
+            <tr>
+              <td>${entry.rank || '-'}</td>
+              <td>${escapeHtml(entry.player?.displayName || entry.player?.username || 'Unknown')}</td>
+              <td>${escapeHtml(valueFormatter(entry))}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </section>
+  `;
+}
+
+function renderAchievementFeed(entries) {
+  if (!entries.length) {
+    return '<div class="app-empty">No recent achievements yet.</div>';
+  }
+  return `
+    <div class="app-feed">
+      ${entries.map((entry) => `
+        <article class="app-feed__item">
+          <strong>${escapeHtml(entry.name || 'Achievement')}</strong>
+          <div class="app-muted">${escapeHtml(entry.player?.displayName || entry.player?.username || 'Unknown')} • ${entry.createdAt ? formatDate(entry.createdAt) : 'Recently'}</div>
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderActivityFeed(entries) {
+  if (!entries.length) {
+    return '<div class="app-empty">No recent activity yet.</div>';
+  }
+  return `
+    <div class="app-feed">
+      ${entries.map((entry) => `
+        <article class="app-feed__item">
+          <strong>${escapeHtml(entry.player?.displayName || entry.player?.username || 'Unknown')}</strong>
+          <div class="app-muted">${escapeHtml(entry.type || 'activity')} • ${entry.createdAt ? formatDate(entry.createdAt) : 'Recently'}</div>
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderCompetitionList(entries, { compact = false } = {}) {
+  if (!entries.length) {
+    return '<div class="app-empty">No competitions are attached to the Ghosted WOM group yet.</div>';
+  }
+  return `
+    <div class="app-feed">
+      ${entries.map((entry) => `
+        <article class="app-feed__item ${compact ? 'is-compact' : ''}">
+          <div class="app-card__row">
+            <strong>${escapeHtml(entry.title || 'Competition')}</strong>
+            <span class="app-chip">${escapeHtml(entry.status || 'unknown')}</span>
+          </div>
+          <div class="app-muted">${escapeHtml(entry.metric || 'overall')} • ${formatCompetitionWindow(entry)}</div>
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderCompetitionDetail(payload) {
+  const competition = payload.competition;
+  return `
+    <div class="app-metric-grid">
+      <div class="app-metric">
+        <span>Metric</span>
+        <strong>${escapeHtml(competition.metric || 'overall')}</strong>
+      </div>
+      <div class="app-metric">
+        <span>Status</span>
+        <strong>${escapeHtml(competition.status || 'unknown')}</strong>
+      </div>
+      <div class="app-metric">
+        <span>Starts</span>
+        <strong>${competition.startsAt ? formatDate(competition.startsAt) : 'TBD'}</strong>
+      </div>
+      <div class="app-metric">
+        <span>Ends</span>
+        <strong>${competition.endsAt ? formatDate(competition.endsAt) : 'TBD'}</strong>
+      </div>
+    </div>
+    ${renderLeaderboardTable(competition.participants || [], { valueLabel: 'Progress', valueFormatter: formatCompetitionProgress })}
+    <div class="app-card__row">
+      <h3>Top history</h3>
+      <span class="app-chip">${payload.topHistory.length}</span>
+    </div>
+    <div class="app-feed">
+      ${payload.topHistory.map((entry) => `
+        <article class="app-feed__item">
+          <strong>${escapeHtml(entry.player?.displayName || entry.player?.username || 'Unknown')}</strong>
+          <div class="app-muted">${entry.history.length} datapoint${entry.history.length === 1 ? '' : 's'}</div>
+        </article>
+      `).join('') || '<div class="app-empty">No history has been recorded yet.</div>'}
+    </div>
+  `;
+}
+
+function formatMaybeNumber(value) {
+  if (value === null || value === undefined || value === '') return 'Unknown';
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) return String(value);
+  return numeric.toLocaleString(undefined, { maximumFractionDigits: numeric % 1 === 0 ? 0 : 2 });
+}
+
+function formatHiscoreValue(entry) {
+  const data = entry.raw || {};
+  const raw = data.experience ?? data.kills ?? data.score ?? data.value ?? entry.value ?? 0;
+  const rank = data.rank ? `Rank ${data.rank}` : 'Unranked';
+  return `${formatMaybeNumber(raw)} • ${rank}`;
+}
+
+function formatGainValue(entry) {
+  return `${formatMaybeNumber(entry.gained || 0)} gained`;
+}
+
+function formatCompetitionProgress(entry) {
+  const gained = entry.progress?.gained ?? entry.raw?.gained ?? 0;
+  const start = entry.progress?.start;
+  const end = entry.progress?.end;
+  if (start !== undefined && end !== undefined) {
+    return `${formatMaybeNumber(gained)} gained (${formatMaybeNumber(start)} → ${formatMaybeNumber(end)})`;
+  }
+  return `${formatMaybeNumber(gained)} gained`;
+}
+
+function formatCompetitionWindow(entry) {
+  const starts = entry.startsAt ? formatDate(entry.startsAt) : 'TBD';
+  const ends = entry.endsAt ? formatDate(entry.endsAt) : 'TBD';
+  return `${starts} → ${ends}`;
 }
 
 function renderStats(items) {
