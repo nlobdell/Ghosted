@@ -10,8 +10,8 @@
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=20260402h" />
-    <link rel="stylesheet" href="/app/app.css?v=20260402h" />
+    <link rel="stylesheet" href="/styles.css?v=20260402i" />
+    <link rel="stylesheet" href="/app/app.css?v=20260402i" />
   </head>
   <body class="app-page">
     <a class="site-skip-link" href="#main-content">Skip to main content</a>
@@ -43,11 +43,27 @@
       </div>
     </header>
     <main class="container app-shell" id="main-content" data-page="rewards">
-      <section class="app-context">
+      <section class="app-context app-context--mission">
         <div class="app-context__copy">
+          <nav class="app-breadcrumbs" aria-label="Breadcrumb">
+            <a href="/">Ghosted</a>
+            <span aria-hidden="true">/</span>
+            <a href="/app/">App Hub</a>
+            <span aria-hidden="true">/</span>
+            <span>Rewards</span>
+          </nav>
           <p class="app-kicker">Rewards</p>
           <h1 class="app-title">Balance and ledger</h1>
-          <p class="app-description">Review available points, daily limits, recent casino activity, and the full Ghosted ledger in one clean operational view.</p>
+          <p class="app-description">This surface is for account value: current balance, daily wagering room, and the full points timeline behind every Ghosted action.</p>
+          <div class="app-context__actions">
+            <a class="button" href="/app/casino/">Open Casino</a>
+            <a class="button button--secondary" href="/app/giveaways/">View Giveaways</a>
+          </div>
+          <div class="app-context__rail" aria-label="Rewards priorities">
+            <span class="app-context__pill">Balance health</span>
+            <span class="app-context__pill">Daily cap visibility</span>
+            <span class="app-context__pill">Full ledger</span>
+          </div>
         </div>
         <div class="app-context__aside">
           <div class="app-context__meta">
@@ -57,6 +73,10 @@
           <div class="app-context__meta">
             <span>View</span>
             <strong>Full timeline</strong>
+          </div>
+          <div class="app-context__meta">
+            <span>Best for</span>
+            <strong>Decision checks</strong>
           </div>
         </div>
       </section>

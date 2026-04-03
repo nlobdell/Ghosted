@@ -10,8 +10,8 @@
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=20260402h" />
-    <link rel="stylesheet" href="/app/app.css?v=20260402h" />
+    <link rel="stylesheet" href="/styles.css?v=20260402i" />
+    <link rel="stylesheet" href="/app/app.css?v=20260402i" />
   </head>
   <body class="app-page">
     <a class="site-skip-link" href="#main-content">Skip to main content</a>
@@ -43,11 +43,27 @@
       </div>
     </header>
     <main class="container app-shell" id="main-content" data-page="giveaways">
-      <section class="app-context">
+      <section class="app-context app-context--mission">
         <div class="app-context__copy">
+          <nav class="app-breadcrumbs" aria-label="Breadcrumb">
+            <a href="/">Ghosted</a>
+            <span aria-hidden="true">/</span>
+            <a href="/app/">App Hub</a>
+            <span aria-hidden="true">/</span>
+            <span>Giveaways</span>
+          </nav>
           <p class="app-kicker">Giveaways</p>
           <h1 class="app-title">Open drops and entries</h1>
-          <p class="app-description">See which giveaways are live, what they cost, and whether your account is ready to enter right now.</p>
+          <p class="app-description">This page is tuned for action. It brings live giveaways to the front so members can quickly see cost, eligibility, and whether they are ready to enter.</p>
+          <div class="app-context__actions">
+            <a class="button" href="/app/rewards/">Check Balance</a>
+            <a class="button button--secondary" href="/app/profile/">Review Roles</a>
+          </div>
+          <div class="app-context__rail" aria-label="Giveaway priorities">
+            <span class="app-context__pill">Live first</span>
+            <span class="app-context__pill">Entry readiness</span>
+            <span class="app-context__pill">Points + roles</span>
+          </div>
         </div>
         <div class="app-context__aside">
           <div class="app-context__meta">
@@ -57,6 +73,10 @@
           <div class="app-context__meta">
             <span>Need</span>
             <strong>Points + roles</strong>
+          </div>
+          <div class="app-context__meta">
+            <span>Best for</span>
+            <strong>Quick entry checks</strong>
           </div>
         </div>
       </section>

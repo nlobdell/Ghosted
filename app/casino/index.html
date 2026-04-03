@@ -10,8 +10,8 @@
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=20260402h" />
-    <link rel="stylesheet" href="/app/app.css?v=20260402h" />
+    <link rel="stylesheet" href="/styles.css?v=20260402i" />
+    <link rel="stylesheet" href="/app/app.css?v=20260402i" />
     <link rel="stylesheet" href="/app/casino/runtime/game.css?v=20260402e" />
   </head>
   <body class="app-page">
@@ -44,11 +44,27 @@
       </div>
     </header>
     <main class="container app-shell" id="main-content">
-      <section class="app-context">
+      <section class="app-context app-context--mission">
         <div class="app-context__copy">
+          <nav class="app-breadcrumbs" aria-label="Breadcrumb">
+            <a href="/">Ghosted</a>
+            <span aria-hidden="true">/</span>
+            <a href="/app/">App Hub</a>
+            <span aria-hidden="true">/</span>
+            <span>Casino</span>
+          </nav>
           <p class="app-kicker">Casino</p>
           <h1 class="app-title">Ghosted casino floor</h1>
-          <p class="app-description">Theatrical, but still part of the same product family. Pick a machine, track your balance, and play without leaving the shared member workspace.</p>
+          <p class="app-description">The casino keeps the dramatic tone, but the page now still behaves like part of the app: shared nav, shared account context, and a fast route back to rewards or live drops.</p>
+          <div class="app-context__actions">
+            <a class="button" href="/app/rewards/">Check Rewards</a>
+            <a class="button button--secondary" href="/app/giveaways/">View Giveaways</a>
+          </div>
+          <div class="app-context__rail" aria-label="Casino priorities">
+            <span class="app-context__pill">Play surface</span>
+            <span class="app-context__pill">Points only</span>
+            <span class="app-context__pill">Shared account context</span>
+          </div>
         </div>
         <div class="app-context__aside">
           <div class="app-context__meta">
@@ -58,6 +74,10 @@
           <div class="app-context__meta">
             <span>Stakes</span>
             <strong>Points only</strong>
+          </div>
+          <div class="app-context__meta">
+            <span>Best for</span>
+            <strong>Session play</strong>
           </div>
         </div>
       </section>
