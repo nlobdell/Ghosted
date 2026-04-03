@@ -374,7 +374,7 @@
   }
 
   .site-menu-toggle {
-    display: none;
+    display: none !important;
     min-width: 3rem;
     min-height: 3rem;
     padding: 0.72rem 0.9rem;
@@ -430,7 +430,7 @@
   }
 
   .site-nav-close {
-    display: none;
+    display: none !important;
   }
 
   .eyebrow,
@@ -916,7 +916,7 @@
 
     .site-menu-toggle,
     .site-nav-close {
-      display: inline-flex;
+      display: inline-flex !important;
     }
 
     .site-nav-drawer {
