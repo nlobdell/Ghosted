@@ -604,6 +604,83 @@ def player_in_group(group_id: int, memberships: list[dict[str, Any]]) -> bool:
     return False
 
 
+def humanize_identifier(value: Any) -> str:
+    text = str(value or "").strip().replace("_", " ").replace("-", " ")
+    if not text:
+        return ""
+    return " ".join(part.capitalize() for part in text.split())
+
+
+def normalize_wom_membership(group_id: int | None, memberships: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if group_id is None:
+        return None
+
+    target = str(group_id)
+    for membership in memberships:
+        group = membership.get("group") or {}
+        membership_group_id = membership.get("groupId", group.get("id"))
+        if str(membership_group_id) != target:
+            continue
+
+        role = membership.get("role")
+        role_name = ""
+        rank_order: int | None = None
+        if isinstance(role, dict):
+            role_name = (
+                str(role.get("name") or role.get("label") or role.get("title") or role.get("role") or "").strip()
+            )
+            raw_rank_order = role.get("order", role.get("rankOrder", role.get("rank", role.get("id"))))
+            try:
+                rank_order = int(raw_rank_order) if raw_rank_order not in (None, "") else None
+            except (TypeError, ValueError):
+                rank_order = None
+        elif role not in (None, ""):
+            role_name = str(role).strip()
+
+        raw_rank_label = (
+            membership.get("rankLabel")
+            or membership.get("roleName")
+            or membership.get("title")
+            or membership.get("rank")
+            or role_name
+        )
+        rank_label = humanize_identifier(raw_rank_label)
+        raw_membership_rank = membership.get("rankOrder", membership.get("rankId"))
+        if rank_order is None:
+            try:
+                rank_order = int(raw_membership_rank) if raw_membership_rank not in (None, "") else None
+            except (TypeError, ValueError):
+                rank_order = None
+
+        return {
+            "groupId": int(group.get("id") or membership_group_id),
+            "groupName": str(group.get("name") or group.get("groupName") or "Ghosted").strip() or "Ghosted",
+            "role": rank_label or humanize_identifier(role_name) or "Member",
+            "rankLabel": rank_label or humanize_identifier(role_name) or "Member",
+            "rankOrder": rank_order,
+            "raw": membership,
+        }
+    return None
+
+
+def wom_membership_payload(
+    connection: sqlite3.Connection,
+    account: sqlite3.Row,
+    *,
+    force_refresh: bool = False,
+) -> dict[str, Any] | None:
+    group_id = wom_group_id()
+    if group_id is None:
+        return None
+
+    memberships = wom_cached_json(
+        connection,
+        f"/players/{quote(str(account['username']))}/groups",
+        force_refresh=force_refresh,
+    )
+    return normalize_wom_membership(group_id, memberships if isinstance(memberships, list) else [])
+
+
 def wom_link_payload(connection: sqlite3.Connection, user_id: int) -> dict[str, Any]:
     account = get_user_game_account(connection, user_id, "osrs")
     if not account:
@@ -613,15 +690,25 @@ def wom_link_payload(connection: sqlite3.Connection, user_id: int) -> dict[str, 
             "username": None,
             "displayName": None,
             "inGroup": False,
+            "membership": None,
             "lastSyncedAt": None,
             "status": "unlinked",
         }
+
+    membership = None
+    if wom_group_id() is not None:
+        try:
+            membership = wom_membership_payload(connection, account)
+        except AppError:
+            membership = None
+
     return {
         "linked": True,
         "playerId": int(account["wom_player_id"]),
         "username": account["username"],
         "displayName": account["display_name"],
-        "inGroup": True,
+        "inGroup": bool(membership) if wom_group_id() is not None else True,
+        "membership": membership,
         "lastSyncedAt": account["updated_at"],
         "status": account["status"],
     }
@@ -2040,6 +2127,96 @@ def profile_payload(
     }
 
 
+def build_login_href(auth_config: AuthConfig, next_path: str) -> str | None:
+    normalized_next = str(next_path or "/").strip() or "/"
+    if not normalized_next.startswith("/"):
+        normalized_next = "/"
+    if auth_config.oauth_ready:
+        return f"/auth/discord/login?next={quote(normalized_next, safe='/?=&')}"
+    if env_flag("ENABLE_DEV_AUTH", False):
+        return f"/auth/dev-login?next={quote(normalized_next, safe='/?=&')}"
+    return None
+
+
+def site_navigation_items(*, is_admin: bool = False) -> list[dict[str, Any]]:
+    items = [
+        {"key": "home", "label": "Home", "href": "/"},
+        {"key": "about", "label": "About", "href": "/design/"},
+        {"key": "app", "label": "App Hub", "href": "/app/"},
+        {"key": "community", "label": "Community", "href": "/app/community/"},
+        {"key": "rewards", "label": "Rewards", "href": "/app/rewards/"},
+        {"key": "giveaways", "label": "Giveaways", "href": "/app/giveaways/"},
+        {"key": "casino", "label": "Casino", "href": "/app/casino/"},
+        {"key": "profile", "label": "Profile", "href": "/app/profile/"},
+    ]
+    if is_admin:
+        items.append({"key": "admin", "label": "Admin", "href": "/admin/"})
+    return items
+
+
+def site_shell_payload(
+    connection: sqlite3.Connection,
+    user_row: sqlite3.Row | None,
+    *,
+    base_url: str | None = None,
+    next_path: str = "/",
+) -> dict[str, Any]:
+    auth_config = build_auth_config(base_url)
+    login_href = build_login_href(auth_config, next_path)
+    if not user_row:
+        return {
+            "authenticated": False,
+            "auth": {
+                "configured": auth_config.oauth_ready,
+                "devAuthEnabled": env_flag("ENABLE_DEV_AUTH", False),
+                "canSignIn": bool(login_href),
+                "loginHref": login_href,
+            },
+            "user": None,
+            "profile": None,
+            "wom": {
+                "configured": wom_group_id() is not None,
+                "linked": False,
+                "username": None,
+                "displayName": None,
+                "inGroup": False,
+                "membership": None,
+                "lastSyncedAt": None,
+            },
+            "navigation": site_navigation_items(),
+        }
+
+    role_directory = build_role_directory(auth_config)
+    user = profile_payload(connection, user_row, auth_config=auth_config, role_directory=role_directory)
+    wom_link = user.get("womLink") or {}
+    return {
+        "authenticated": True,
+        "auth": {
+            "configured": auth_config.oauth_ready,
+            "devAuthEnabled": env_flag("ENABLE_DEV_AUTH", False),
+            "canSignIn": bool(login_href),
+            "loginHref": login_href,
+        },
+        "user": user,
+        "profile": {
+            "rolesCount": len(user.get("roleDetails") or []),
+            "perks": user.get("perks") or [],
+            "recentSpins": len(user.get("recentSpins") or []),
+            "giveawayEntries": int(user.get("giveawayEntries") or 0),
+        },
+        "wom": {
+            "configured": wom_group_id() is not None,
+            "linked": bool(wom_link.get("linked")),
+            "username": wom_link.get("username"),
+            "displayName": wom_link.get("displayName"),
+            "inGroup": bool(wom_link.get("inGroup")),
+            "membership": wom_link.get("membership"),
+            "lastSyncedAt": wom_link.get("lastSyncedAt"),
+        },
+        "navigation": site_navigation_items(is_admin=bool(user.get("isAdmin"))),
+    }
+
+
 def wom_clan_payload(connection: sqlite3.Connection, *, force_refresh: bool = False) -> dict[str, Any]:
     group_id = require_wom_group_id()
     group = wom_cached_json(connection, f"/groups/{group_id}", force_refresh=force_refresh)
@@ -2172,6 +2349,8 @@ def wom_me_payload(connection: sqlite3.Connection, user_row: sqlite3.Row, *, for
         query={"status": "ongoing"},
         force_refresh=force_refresh,
     )
+    account = get_user_game_account(connection, int(user_row["id"]), "osrs") or account
+    membership = wom_membership_payload(connection, account, force_refresh=force_refresh)
     return {
         "player": {
             "id": player.get("id"),
@@ -2187,6 +2366,7 @@ def wom_me_payload(connection: sqlite3.Connection, user_row: sqlite3.Row, *, for
             "lastChangedAt": player.get("lastChangedAt"),
             "lastImportedAt": player.get("lastImportedAt"),
         },
+        "membership": membership,
         "gains": gains,
         "achievements": normalize_achievements(achievements),
         "competitions": [normalize_competition_item(entry) for entry in standings],
@@ -2575,8 +2755,11 @@ class GhostedHandler(BaseHTTPRequestHandler):
         if method == "GET" and path == "/api/config":
             self.handle_api_config()
             return
+        if method == "GET" and path == "/api/site-shell":
+            self.handle_api_site_shell(connection, parsed)
+            return
         if method == "GET" and path == "/api/me":
-            self.handle_api_me(connection)
+            self.handle_api_me(connection, parsed)
             return
         if method == "GET" and path == "/api/wom/clan":
             self.handle_api_wom_clan(connection)
@@ -2707,19 +2890,17 @@ class GhostedHandler(BaseHTTPRequestHandler):
             }
         )
 
-    def handle_api_me(self, connection: sqlite3.Connection) -> None:
+    def handle_api_site_shell(self, connection: sqlite3.Connection, parsed: Any) -> None:
+        params = parse_qs(parsed.query)
+        next_path = params.get("next", ["/"])[0] or "/"
         row = self.current_user(connection)
-        if not row:
-            self.respond_json({"authenticated": False})
-            return
-        auth_config = build_auth_config(self.base_url())
-        role_directory = build_role_directory(auth_config)
-        self.respond_json(
-            {
-                "authenticated": True,
-                "user": profile_payload(connection, row, auth_config=auth_config, role_directory=role_directory),
-            }
-        )
+        self.respond_json(site_shell_payload(connection, row, base_url=self.base_url(), next_path=next_path))
+
+    def handle_api_me(self, connection: sqlite3.Connection, parsed: Any) -> None:
+        params = parse_qs(parsed.query)
+        next_path = params.get("next", ["/"])[0] or "/"
+        row = self.current_user(connection)
+        self.respond_json(site_shell_payload(connection, row, base_url=self.base_url(), next_path=next_path))
 
     def handle_api_rewards(self, connection: sqlite3.Connection) -> None:
         row = self.require_user(connection)

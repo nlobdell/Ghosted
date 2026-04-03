@@ -1,6 +1,7 @@
 const state = {
   config: null,
   me: null,
+  shell: null,
   admin: {
     roleOptions: [],
   },
@@ -26,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function boot() {
   state.config = await getJSON('/api/config');
-  state.me = await getJSON('/api/me');
+  await loadShell();
   renderAuth();
 
   const page = document.querySelector('[data-page]')?.dataset.page;
@@ -49,6 +50,19 @@ async function boot() {
   }
 }
 
+async function loadShell(forceRefresh = false) {
+  const next = encodeURIComponent(window.location.pathname);
+  const shell = forceRefresh
+    ? await window.GhostedSite?.refreshShell?.({ nextPath: window.location.pathname })
+    : await window.GhostedSite?.getShell?.({ nextPath: window.location.pathname }) ?? await getJSON(`/api/site-shell?next=${next}`);
+  state.shell = shell;
+  state.me = {
+    authenticated: !!shell?.authenticated,
+    user: shell?.user || null,
+  };
+  return shell;
+}
+
 async function getJSON(url, options = {}) {
   const response = await fetch(url, {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
@@ -62,36 +76,7 @@ async function getJSON(url, options = {}) {
 }
 
 function renderAuth() {
-  const authRoot = document.querySelector('[data-auth]');
-  if (!authRoot) return;
-
-  if (state.me.authenticated) {
-    const user = state.me.user;
-    authRoot.innerHTML = `
-      <div class="app-user">
-        ${renderUserAvatar(user, 'app-user__avatar')}
-        <div>
-          <div><strong>${escapeHtml(user.displayName)}</strong></div>
-          <div class="app-muted">${formatPoints(user.balance)}</div>
-        </div>
-      </div>
-      ${user.isAdmin ? '<a class="app-nav__link" href="/admin/">Admin</a>' : ''}
-      <button class="button button--secondary" data-logout>Log Out</button>
-    `;
-    authRoot.querySelector('[data-logout]')?.addEventListener('click', logout);
-    return;
-  }
-
-  const loginDisabled = !state.config.authConfigured && !state.config.devAuthEnabled;
-  const href = state.config.authConfigured
-    ? `/auth/discord/login?next=${encodeURIComponent(window.location.pathname)}`
-    : state.config.devAuthEnabled
-      ? `/auth/dev-login?next=${encodeURIComponent(window.location.pathname)}`
-      : '#';
-
-  authRoot.innerHTML = loginDisabled
-    ? '<div class="app-muted">Discord auth needs env vars before sign-in goes live.</div>'
-    : `<a class="button" href="${href}">Sign In With Discord</a>`;
+  return;
 }
 
 async function logout() {
@@ -417,7 +402,7 @@ async function renderGiveaways() {
           'info',
           '#giveaway-result'
         );
-        state.me = await getJSON('/api/me');
+        await loadShell(true);
         renderAuth();
         await renderGiveaways();
       } catch (error) {
@@ -589,9 +574,13 @@ async function renderProfile() {
     }
   }
 
+  const womMembership = womProfile?.membership || womLink.membership || null;
+  const womRank = formatWomRankLabel(womMembership, womLink);
+
   summaryRoot.innerHTML = renderStatStrip([
     { label: 'Balance', value: formatPoints(user.balance), href: '/app/rewards/' },
     { label: 'WOM link', value: womLink.linked ? 'Linked' : 'Not linked' },
+    { label: 'Clan rank', value: womRank },
     { label: 'Roles synced', value: String(roleDetails.length) },
     { label: 'Access', value: user.isAdmin ? 'Admin' : 'Member', href: user.isAdmin ? '/admin/' : '/app/' },
   ]);
@@ -614,6 +603,7 @@ async function renderProfile() {
             ['Discord ID', user.discordId || 'Not synced'],
             ['Roles synced', String(roleDetails.length)],
             ['Wise Old Man', womLink.linked ? womLink.displayName || womLink.username : 'Not linked'],
+            ['Clan rank', womRank],
             ['Access', user.isAdmin ? 'Admin' : 'Member'],
           ]) +
           renderWomLinkPanel(womLink),
@@ -938,10 +928,11 @@ function renderWomLinkPanel(womLink) {
   if (womLink.linked) {
     return renderPanel({
       title: 'Wise Old Man link',
-      chip: 'Linked',
+      chip: formatWomRankLabel(womLink.membership, womLink),
       subtle: true,
       body: `
         <p>Linked to <strong>${escapeHtml(womLink.displayName || womLink.username)}</strong>.</p>
+        <p class="app-panel-note">${escapeHtml(describeWomMembership(womLink.membership, womLink))}</p>
         <div class="app-actions">
           <button class="button button--secondary" type="button" data-wom-unlink>Remove local link</button>
         </div>
@@ -970,14 +961,17 @@ function renderWomLinkPanel(womLink) {
 function renderProfileWomDetails(womProfile, womLink) {
   if (!state.config.womConfigured) return '';
 
+  const membership = womProfile?.membership || womLink.membership || null;
+  const rankLabel = formatWomRankLabel(membership, womLink);
+
   if (!womLink.linked || !womProfile) {
     return `<section class="app-grid app-grid--two">
       ${renderPanel({
         eyebrow: 'OSRS sync',
         title: womLink.linked ? 'Waiting for profile data' : 'Link to unlock OSRS sync',
-        chip: womLink.linked ? 'Loading' : 'Not linked',
+        chip: womLink.linked ? rankLabel : 'Not linked',
         body: `<p>${womLink.linked
-          ? 'Weekly gains and competition activity will appear here once WOM loads.'
+          ? `${escapeHtml(describeWomMembership(membership, womLink))}. Weekly gains and competition activity will appear here once WOM loads.`
           : 'Link your account above to unlock OSRS sync.'}</p>`,
       })}
     </section>`;
@@ -987,7 +981,7 @@ function renderProfileWomDetails(womProfile, womLink) {
     ${renderPanel({
       eyebrow: 'Weekly gains',
       title: womProfile.player.displayName || womProfile.player.username,
-      chip: 'WOM profile',
+      chip: rankLabel,
       body:
         renderMetricGrid([
           ['Total XP', formatMaybeNumber(womProfile.player.exp)],
@@ -995,6 +989,8 @@ function renderProfileWomDetails(womProfile, womLink) {
           ['EHB', formatMaybeNumber(womProfile.player.ehb)],
           ['Account type', formatWomPlayerType(womProfile.player.type)],
           ['Build', formatWomPlayerBuild(womProfile.player.build)],
+          ['Group', membership?.groupName || (womLink.linked ? 'Ghosted membership not found' : 'Not linked')],
+          ['Clan rank', rankLabel],
           ['Last import', womProfile.player.lastImportedAt ? formatDate(womProfile.player.lastImportedAt) : 'Not imported yet'],
         ]) +
         renderWomGainSummary(womProfile.gains),
@@ -1004,6 +1000,7 @@ function renderProfileWomDetails(womProfile, womLink) {
       title: 'Recent OSRS movement',
       chip: `${womProfile.competitions.length} ongoing`,
       body:
+        `<p class="app-panel-note">${escapeHtml(describeWomMembership(membership, womLink))}</p>` +
         renderAchievementFeed(womProfile.achievements.slice(0, 6)) +
         renderCompetitionList(womProfile.competitions.slice(0, 4), { compact: true }),
     })}
@@ -1017,7 +1014,7 @@ function bindWomLinkForm() {
     try {
       await getJSON('/api/profile/wom-link', { method: 'POST', body: JSON.stringify(formData) });
       renderBanner('Wise Old Man account linked.', 'info');
-      state.me = await getJSON('/api/me');
+      await loadShell(true);
       renderAuth();
       await renderProfile();
     } catch (error) {
@@ -1031,7 +1028,7 @@ function bindWomUnlink() {
     try {
       await getJSON('/api/profile/wom-link', { method: 'DELETE' });
       renderBanner('Removed the local Wise Old Man link.', 'info');
-      state.me = await getJSON('/api/me');
+      await loadShell(true);
       renderAuth();
       await renderProfile();
     } catch (error) {
@@ -1449,6 +1446,23 @@ function formatWomPlayerType(value) {
 function formatWomPlayerBuild(value) {
   if (!value) return 'Not listed';
   return formatMetricLabel(value);
+}
+
+function formatWomRankLabel(membership, womLink = { linked: false }) {
+  if (membership?.rankLabel) return membership.rankLabel;
+  if (membership?.role) return membership.role;
+  if (womLink?.linked) return 'Linked, not in Ghosted group';
+  return 'Not linked';
+}
+
+function describeWomMembership(membership, womLink = { linked: false }) {
+  if (membership?.groupName) {
+    return `${formatWomRankLabel(membership, womLink)} in ${membership.groupName}`;
+  }
+  if (womLink?.linked) {
+    return 'Linked, not in Ghosted group';
+  }
+  return 'Wise Old Man account not linked';
 }
 
 function renderLedgerTable(entries) {
