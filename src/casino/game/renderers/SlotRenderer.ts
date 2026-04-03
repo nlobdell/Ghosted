@@ -32,7 +32,7 @@ type MotionProfile = {
 };
 
 const STAGE_WIDTH = 1600;
-const STAGE_HEIGHT = 1200;
+const STAGE_HEIGHT = 960;
 const REEL_COUNT = 5;
 const VISIBLE_ROWS = 3;
 const REEL_WIDTH = 228;
@@ -72,8 +72,9 @@ export class SlotRenderer {
   private backdropLayer: Container | null = null;
   private cabinetLayer: Container | null = null;
   private headerLayer: Container | null = null;
-  private reelFrameLayer: Container | null = null;
+  private reelBackdropLayer: Container | null = null;
   private reelContentLayer: Container | null = null;
+  private reelChromeLayer: Container | null = null;
   private fxLayer: Container | null = null;
   private overlayLayer: Container | null = null;
   private reels: ReelView[] = [];
@@ -115,8 +116,9 @@ export class SlotRenderer {
     this.backdropLayer = null;
     this.cabinetLayer = null;
     this.headerLayer = null;
-    this.reelFrameLayer = null;
+    this.reelBackdropLayer = null;
     this.reelContentLayer = null;
+    this.reelChromeLayer = null;
     this.root = null;
     this.fxLayer = null;
     this.overlayLayer = null;
@@ -182,7 +184,7 @@ export class SlotRenderer {
     if (!this.root) return;
     this.clearEffects();
     this.resetSceneLayers();
-    if (!this.backdropLayer || !this.cabinetLayer || !this.headerLayer || !this.reelFrameLayer || !this.reelContentLayer || !this.fxLayer) {
+    if (!this.backdropLayer || !this.cabinetLayer || !this.headerLayer || !this.reelBackdropLayer || !this.reelContentLayer || !this.reelChromeLayer || !this.fxLayer) {
       return;
     }
     this.paintBackdrop();
@@ -225,9 +227,10 @@ export class SlotRenderer {
       const mask = new Graphics();
       mask.rect(x, y, REEL_WIDTH, REEL_HEIGHT).fill(0xffffff);
       strip.mask = mask;
-      this.fxLayer.addChild(glow);
-      this.reelFrameLayer.addChild(symbolBack, frame, mask);
+      this.reelBackdropLayer.addChild(symbolBack, mask);
       this.reelContentLayer.addChild(strip);
+      this.reelChromeLayer.addChild(frame);
+      this.fxLayer.addChild(glow);
       this.reels.push({ frame, glow, mask, strip, x, y });
     }
   }
@@ -453,16 +456,18 @@ export class SlotRenderer {
     this.backdropLayer = new Container();
     this.cabinetLayer = new Container();
     this.headerLayer = new Container();
-    this.reelFrameLayer = new Container();
+    this.reelBackdropLayer = new Container();
     this.reelContentLayer = new Container();
+    this.reelChromeLayer = new Container();
     this.fxLayer = new Container();
     this.overlayLayer = new Container();
     this.root.addChild(
       this.backdropLayer,
       this.cabinetLayer,
       this.headerLayer,
-      this.reelFrameLayer,
+      this.reelBackdropLayer,
       this.reelContentLayer,
+      this.reelChromeLayer,
       this.fxLayer,
       this.overlayLayer,
     );
