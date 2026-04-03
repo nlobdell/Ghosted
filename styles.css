@@ -347,7 +347,7 @@
         margin-left: 1rem;
         flex: 0 0 auto;
         justify-content: flex-end;
-        max-width: min(24rem, 32vw);
+        max-width: min(20rem, 28vw);
     }
 
     .site-shell-auth--mobile {
@@ -364,25 +364,26 @@
     }
 
     .site-profile-widget {
-        gap: 0.65rem;
-        flex-wrap: wrap;
+        gap: 0.5rem;
+        flex-wrap: nowrap;
     }
 
     .site-profile-widget__card {
-        gap: 0.7rem;
-        min-height: 3rem;
-        padding: 0.4rem 0.55rem;
+        gap: 0.55rem;
+        min-height: 2.6rem;
+        padding: 0.32rem 0.45rem;
         border: 1px solid rgba(255, 255, 255, 0.07);
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.04);
+        border-radius: 1.05rem;
+        background: rgba(255, 255, 255, 0.035);
         text-decoration: none;
-        min-width: min(19rem, 100%);
+        min-width: 0;
+        flex: 1 1 auto;
     }
 
     .site-profile-widget__avatar {
-        width: 2.35rem;
-        height: 2.35rem;
-        border-radius: 0.9rem;
+        width: 3.8rem;
+        height: 3.8rem;
+        border-radius: 0.85rem;
         border: 1px solid rgba(255, 255, 255, 0.08);
         background: rgba(255, 255, 255, 0.04);
         display: grid;
@@ -393,8 +394,7 @@
         flex: 0 0 auto;
     }
 
-    .site-profile-widget__avatar img,
-    img.site-profile-widget__avatar {
+    .site-profile-widget__avatar img {
         width: 100%;
         height: 100%;
         object-fit: cover;
@@ -402,8 +402,9 @@
 
     .site-profile-widget__copy {
         display: grid;
-        gap: 0.15rem;
+        gap: 0.08rem;
         min-width: 0;
+        flex: 1 1 auto;
     }
 
     .site-profile-widget__copy strong,
@@ -413,14 +414,22 @@
 
     .site-profile-widget__copy span,
     .site-profile-widget__meta {
-        font-size: 0.78rem;
-        line-height: 1.4;
+        font-size: 0.72rem;
+        line-height: 1.3;
         color: var(--text-muted);
     }
 
+    .site-profile-widget__copy strong {
+        font-size: 0.92rem;
+        line-height: 1.1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     .site-profile-widget__actions {
-        gap: 0.5rem;
-        flex-wrap: wrap;
+        gap: 0.35rem;
+        flex-wrap: nowrap;
     }
 
     .site-profile-widget--public .site-profile-widget__card {
@@ -434,6 +443,26 @@
 
     .site-shell-nav > .site-shell-auth--desktop {
         align-self: stretch;
+    }
+
+    .site-shell-nav > .site-shell-auth--desktop .site-profile-widget {
+        align-items: center;
+    }
+
+    .site-shell-nav > .site-shell-auth--desktop .site-profile-widget__actions .button {
+        min-height: 2.3rem;
+        padding: 0.45rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+    }
+
+    .site-shell-nav > .site-shell-auth--desktop .site-profile-widget--signed-out {
+        padding: 0.35rem 0.45rem;
+        border-radius: 1rem;
+    }
+
+    .site-shell-nav > .site-shell-auth--desktop .site-profile-widget--signed-out .site-profile-widget__copy {
+        max-width: 10rem;
     }
 
     .site-profile-widget--signed-out {
