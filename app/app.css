@@ -533,6 +533,28 @@
   color: var(--text-strong);
 }
 
+.app-feed__meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.app-feed__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.7rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .app-stage__art {
   position: relative;
   min-height: 8rem;
@@ -601,6 +623,30 @@
 
 .app-table tbody tr:hover {
   background: rgba(255, 255, 255, 0.03);
+}
+
+.app-table__rank,
+.app-table__player,
+.app-table__value {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.app-table__rank {
+  color: var(--text-strong);
+  font-weight: 800;
+}
+
+.app-table__player strong,
+.app-table__value strong {
+  color: var(--text-strong);
+}
+
+.app-table__player span,
+.app-table__value span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 .app-form label {

@@ -303,6 +303,18 @@ async function renderCommunity() {
         }),
       })}
     </section>`,
+    `<section class="app-grid app-grid--two">
+      ${renderPanel({
+        title: 'Recent achievements',
+        chip: String(clan.recentAchievements.length),
+        body: renderAchievementFeed(clan.recentAchievements),
+      })}
+      ${renderPanel({
+        title: 'Recent activity',
+        chip: String(clan.recentActivity.length),
+        body: renderActivityFeed(clan.recentActivity),
+      })}
+    </section>`,
   ].join('');
 }
 
@@ -452,6 +464,8 @@ async function renderClan() {
         body: renderMetricGrid([
           ['Clan chat', clan.group.clanChat || 'Not listed'],
           ['Home world', clan.group.homeworld || 'Unknown'],
+          ['Group score', formatMaybeNumber(clan.group.score)],
+          ['Last update', clan.group.updatedAt ? formatDate(clan.group.updatedAt) : 'Unknown'],
           ['Average EHP', formatMaybeNumber(clan.statistics.averageEhp)],
           ['Average EHB', formatMaybeNumber(clan.statistics.averageEhb)],
         ]),
@@ -466,6 +480,8 @@ async function renderClan() {
             ['Linked RSNs', String(clan.linkCoverage.linkedUsers || 0)],
             ['Unlinked users', String(clan.linkCoverage.unlinkedUsers || 0)],
             ['WOM members', String(clan.linkCoverage.groupMemberCount || 0)],
+            ['Maxed combat', String(clan.statistics.maxedCombatCount || 0)],
+            ['Maxed 200m', String(clan.statistics.maxed200msCount || 0)],
           ]) +
           (!state.me.authenticated || state.me.user.womLink?.linked
             ? ''
@@ -977,6 +993,8 @@ function renderProfileWomDetails(womProfile, womLink) {
           ['Total XP', formatMaybeNumber(womProfile.player.exp)],
           ['EHP', formatMaybeNumber(womProfile.player.ehp)],
           ['EHB', formatMaybeNumber(womProfile.player.ehb)],
+          ['Account type', womProfile.player.type || 'Unknown'],
+          ['Build', womProfile.player.build || 'Standard'],
           ['Last import', womProfile.player.lastImportedAt ? formatDate(womProfile.player.lastImportedAt) : 'Pending'],
         ]) +
         renderWomGainSummary(womProfile.gains),
@@ -1025,9 +1043,13 @@ function bindWomUnlink() {
 function renderClanPulse(clan) {
   return renderMetricGrid([
     ['Members', String(clan.group.memberCount || 0)],
+    ['Linked RSNs', String(clan.linkCoverage.linkedUsers || 0)],
     ['Maxed total', String(clan.statistics.maxedTotalCount || 0)],
+    ['Maxed combat', String(clan.statistics.maxedCombatCount || 0)],
     ['Average total', formatMaybeNumber(clan.statistics.averageOverallLevel)],
+    ['Average XP', formatMaybeNumber(clan.statistics.averageOverallExperience)],
     ['Weekly leaders', String(clan.featuredGains.entries.length || 0)],
+    ['Achievements', String(clan.recentAchievements.length || 0)],
   ]);
 }
 
@@ -1035,9 +1057,9 @@ function renderLeaderboardTable(entries, { valueLabel = 'Value', valueFormatter 
   return renderDenseTable(
     ['Rank', 'Player', valueLabel],
     entries.map((entry) => [
-      escapeHtml(String(entry.rank || '-')),
-      escapeHtml(entry.player?.displayName || entry.player?.username || 'Unknown'),
-      escapeHtml(valueFormatter(entry)),
+      `<span class="app-table__rank">${escapeHtml(String(entry.rank || '-'))}</span>`,
+      renderPlayerCell(entry.player),
+      renderValueCell(valueFormatter(entry), describeLeaderboardEntry(entry)),
     ]),
     'No entries available yet.'
   );
@@ -1053,7 +1075,11 @@ function renderAchievementFeed(entries) {
       ${entries.map((entry) => `
         <article class="app-feed__item">
           <strong>${escapeHtml(entry.name || 'Achievement')}</strong>
-          <div class="app-muted">${escapeHtml(entry.player?.displayName || entry.player?.username || 'Unknown')} / ${entry.createdAt ? formatDate(entry.createdAt) : 'Recently'}</div>
+          <div class="app-feed__meta-row">
+            <span class="app-feed__eyebrow">${escapeHtml(entry.player?.displayName || entry.player?.username || 'Unknown')}</span>
+            <span class="app-feed__eyebrow">${escapeHtml(formatAchievementMeasure(entry))}</span>
+          </div>
+          <div class="app-muted">${escapeHtml(formatAchievementDetail(entry))}</div>
         </article>
       `).join('')}
     </div>
@@ -1070,7 +1096,11 @@ function renderActivityFeed(entries) {
       ${entries.map((entry) => `
         <article class="app-feed__item">
           <strong>${escapeHtml(entry.player?.displayName || entry.player?.username || 'Unknown')}</strong>
-          <div class="app-muted">${escapeHtml(entry.type || 'activity')} / ${entry.createdAt ? formatDate(entry.createdAt) : 'Recently'}</div>
+          <div class="app-feed__meta-row">
+            <span class="app-feed__eyebrow">${escapeHtml(formatActivityType(entry.type))}</span>
+            ${entry.role ? `<span class="app-feed__eyebrow">${escapeHtml(entry.role)}</span>` : ''}
+          </div>
+          <div class="app-muted">${entry.createdAt ? escapeHtml(formatDate(entry.createdAt)) : 'Recently'}</div>
         </article>
       `).join('')}
     </div>
@@ -1090,7 +1120,10 @@ function renderCompetitionList(entries, { compact = false } = {}) {
             <strong>${escapeHtml(entry.title || 'Competition')}</strong>
             <span class="app-chip">${escapeHtml(entry.status || 'unknown')}</span>
           </div>
-          <div class="app-muted">${escapeHtml(entry.metric || 'overall')}</div>
+          <div class="app-feed__meta-row">
+            <span class="app-feed__eyebrow">${escapeHtml(formatMetricLabel(entry.metric || 'overall'))}</span>
+            <span class="app-feed__eyebrow">${escapeHtml(entry.type || 'competition')}</span>
+          </div>
           <div class="app-feed__meta">${formatCompetitionWindow(entry)}</div>
         </article>
       `).join('')}
@@ -1324,6 +1357,89 @@ function renderDenseTable(columns, rows, emptyMessage) {
   `;
 }
 
+function renderPlayerCell(player) {
+  const display = player?.displayName || player?.username || 'Unknown';
+  const username = player?.username && player.username !== display ? `@${player.username}` : '';
+
+  return `
+    <div class="app-table__player">
+      <strong>${escapeHtml(display)}</strong>
+      ${username ? `<span>${escapeHtml(username)}</span>` : ''}
+    </div>
+  `;
+}
+
+function renderValueCell(primary, secondary = '') {
+  return `
+    <div class="app-table__value">
+      <strong>${escapeHtml(primary)}</strong>
+      ${secondary ? `<span>${escapeHtml(secondary)}</span>` : ''}
+    </div>
+  `;
+}
+
+function describeLeaderboardEntry(entry) {
+  const raw = entry.raw || {};
+  if (raw.level !== undefined || raw.experience !== undefined) {
+    const parts = [];
+    if (raw.level !== undefined) parts.push(`Lvl ${formatMaybeNumber(raw.level)}`);
+    if (raw.experience !== undefined) parts.push(`${formatMaybeNumber(raw.experience)} xp`);
+    return parts.join(' · ');
+  }
+  if (raw.kills !== undefined) {
+    return `${formatMaybeNumber(raw.kills)} kills`;
+  }
+  if (raw.score !== undefined) {
+    return `${formatMaybeNumber(raw.score)} score`;
+  }
+  if (entry.gained !== undefined) {
+    return formatGainSubcopy(entry);
+  }
+  return '';
+}
+
+function formatGainSubcopy(entry) {
+  const raw = entry.raw || {};
+  const startsAt = raw.startsAt || raw.startDate;
+  const endsAt = raw.endsAt || raw.endDate;
+  if (startsAt || endsAt) {
+    const start = startsAt ? formatDate(startsAt) : 'Start';
+    const end = endsAt ? formatDate(endsAt) : 'Now';
+    return `${start} to ${end}`;
+  }
+  return formatMetricLabel(raw.metric || 'overall');
+}
+
+function formatAchievementMeasure(entry) {
+  const bits = [];
+  if (entry.metric) bits.push(formatMetricLabel(entry.metric));
+  if (entry.measure !== undefined && entry.measure !== null && entry.measure !== '') {
+    bits.push(formatMaybeNumber(entry.measure));
+  }
+  return bits.join(' · ') || 'Achievement';
+}
+
+function formatAchievementDetail(entry) {
+  const parts = [];
+  if (entry.threshold !== undefined && entry.threshold !== null && entry.threshold !== '') {
+    parts.push(`Threshold ${formatMaybeNumber(entry.threshold)}`);
+  }
+  parts.push(entry.createdAt ? formatDate(entry.createdAt) : 'Recently');
+  return parts.join(' / ');
+}
+
+function formatActivityType(value) {
+  return String(value || 'activity')
+    .replaceAll('_', ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function formatMetricLabel(value) {
+  return String(value || '')
+    .replaceAll('_', ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
 function renderLedgerTable(entries) {
   return renderDenseTable(
     ['When', 'Type', 'Description', 'Amount'],
@@ -1416,8 +1532,11 @@ function formatMaybeNumber(value) {
 function formatHiscoreValue(entry) {
   const data = entry.raw || {};
   const raw = data.experience ?? data.kills ?? data.score ?? data.value ?? entry.value ?? 0;
-  const rank = data.rank ? `Rank ${data.rank}` : 'Unranked';
-  return `${formatMaybeNumber(raw)} / ${rank}`;
+  return data.experience !== undefined
+    ? `${formatMaybeNumber(raw)} xp`
+    : data.kills !== undefined
+      ? `${formatMaybeNumber(raw)} kills`
+      : `${formatMaybeNumber(raw)}`;
 }
 
 function formatGainValue(entry) {
