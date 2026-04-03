@@ -1,12 +1,11 @@
 .casino-shell,
 .casino-shell__bottom {
   display: grid;
-  gap: 1rem;
+  gap: 1.1rem;
 }
 
 .casino-shell {
   grid-template-columns: minmax(0, 1fr);
-  margin-bottom: 1rem;
 }
 
 .casino-stage-shell,
@@ -15,22 +14,33 @@
   gap: 1rem;
 }
 
+.casino-stage-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.casino-stage-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top right, rgba(231, 193, 122, 0.16), transparent 24%),
+    radial-gradient(circle at 14% 18%, rgba(143, 208, 201, 0.09), transparent 18%);
+}
+
 .casino-stage-shell__top {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  align-items: flex-start;
 }
 
 .casino-stage-shell__chips {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.55rem;
   flex-wrap: wrap;
-}
-
-.casino-shell__copy {
-  max-width: 54ch;
-  color: var(--app-muted);
 }
 
 .casino-stage-shell__playfield {
@@ -40,26 +50,36 @@
 }
 
 .casino-stage-shell__info {
-  grid-template-columns: minmax(320px, 0.95fr) minmax(280px, 0.9fr) minmax(320px, 1.15fr);
+  grid-template-columns: minmax(300px, 0.94fr) minmax(250px, 0.84fr) minmax(300px, 1.08fr);
   align-items: start;
 }
 
-.casino-stage-shell__canvas,
-.casino-stage-shell__panel {
-  border-radius: 1.4rem;
-  border: 1px solid rgba(255, 214, 102, 0.18);
-  background:
-    radial-gradient(circle at top center, rgba(255, 214, 102, 0.1), transparent 45%),
-    linear-gradient(180deg, rgba(16, 12, 24, 0.96), rgba(7, 6, 12, 0.99));
-}
-
 .casino-stage-shell__canvas {
+  position: relative;
   aspect-ratio: 5 / 3;
   min-height: 680px;
-  padding: 0.55rem;
+  padding: 0.65rem;
   overflow: hidden;
   display: flex;
   align-items: stretch;
+  border-radius: 1.6rem;
+  border: 1px solid rgba(231, 193, 122, 0.18);
+  background:
+    radial-gradient(circle at top center, rgba(231, 193, 122, 0.18), transparent 42%),
+    radial-gradient(circle at 50% 120%, rgba(217, 123, 82, 0.18), transparent 30%),
+    linear-gradient(180deg, rgba(20, 15, 23, 0.98), rgba(7, 6, 10, 1));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 24px 56px rgba(0, 0, 0, 0.24);
+}
+
+.casino-stage-shell__canvas::before {
+  content: '';
+  position: absolute;
+  inset: 0.6rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  pointer-events: none;
 }
 
 .casino-stage-shell__canvas canvas {
@@ -68,12 +88,32 @@
   height: 100%;
 }
 
+.casino-stage-shell__panel,
+.casino-stage-shell__card {
+  position: relative;
+  overflow: hidden;
+}
+
+.casino-stage-shell__panel::before,
+.casino-stage-shell__card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 26%);
+}
+
 .casino-stage-shell__panel {
   padding: 1rem;
   display: grid;
   gap: 1rem;
   align-content: start;
   grid-template-columns: minmax(0, 1fr);
+  border-radius: 1.2rem;
+  border: 1px solid rgba(231, 193, 122, 0.12);
+  background:
+    linear-gradient(180deg, rgba(27, 22, 25, 0.94), rgba(13, 11, 14, 0.98)),
+    rgba(255, 255, 255, 0.02);
 }
 
 .casino-stage-shell__card {
@@ -81,46 +121,47 @@
 }
 
 .casino-console {
-  border-radius: 1rem;
-  padding: 1.1rem 1.15rem;
-  border: 1px solid rgba(255, 214, 102, 0.16);
+  padding: 1.15rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(231, 193, 122, 0.16);
   background:
-    linear-gradient(135deg, rgba(255, 214, 102, 0.12), rgba(255, 93, 143, 0.08)),
+    linear-gradient(135deg, rgba(231, 193, 122, 0.14), rgba(143, 208, 201, 0.08)),
     rgba(255, 255, 255, 0.02);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
 .casino-console__eyebrow {
-  color: #ffd166;
-  font-size: 0.8rem;
+  color: var(--accent-gold);
+  font-size: 0.76rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .casino-console__headline {
   margin-top: 0.45rem;
-  font-family: 'Cinzel', serif;
-  font-size: clamp(1.3rem, 2vw, 1.7rem);
-  line-height: 1.08;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+  line-height: 1.04;
 }
 
 .casino-console__copy {
   margin: 0.65rem 0 0;
-  color: var(--app-muted);
-  line-height: 1.55;
+  color: var(--text-muted);
+  line-height: 1.58;
   max-width: 34ch;
 }
 
 .casino-controls {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.6rem;
   align-content: start;
 }
 
 .casino-controls__spin {
   width: auto;
   justify-self: start;
-  min-width: 13.5rem;
+  min-width: 14rem;
   min-height: 3.2rem;
 }
 
@@ -159,6 +200,7 @@
   margin-top: 0.38rem;
   font-size: 1.2rem;
   line-height: 1.15;
+  color: var(--text-strong);
 }
 
 .casino-machine-list,
@@ -172,21 +214,28 @@
   width: 100%;
   text-align: left;
   border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   background:
-    linear-gradient(180deg, rgba(157, 124, 242, 0.08), rgba(0, 0, 0, 0)),
-    rgba(18, 14, 28, 0.94);
-  color: var(--app-text);
+    linear-gradient(180deg, rgba(231, 193, 122, 0.08), rgba(0, 0, 0, 0)),
+    rgba(18, 15, 21, 0.96);
+  color: var(--text-strong);
   cursor: pointer;
   padding: 1rem;
-  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  transition:
+    transform var(--ease-standard),
+    border-color var(--ease-standard),
+    box-shadow var(--ease-standard),
+    background-color var(--ease-standard);
 }
 
 .casino-machine-button:hover,
 .casino-machine-button.is-active {
   transform: translateY(-1px);
-  border-color: rgba(255, 214, 102, 0.28);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24);
+  border-color: rgba(231, 193, 122, 0.24);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.22);
+  background:
+    linear-gradient(180deg, rgba(231, 193, 122, 0.12), rgba(0, 0, 0, 0)),
+    rgba(24, 19, 26, 0.98);
 }
 
 .casino-machine-button__top,
@@ -204,7 +253,7 @@
 }
 
 .casino-machine-button__meta {
-  color: var(--app-muted);
+  color: var(--text-muted);
   font-size: 0.84rem;
   margin-top: 0.35rem;
 }
@@ -238,7 +287,7 @@
 .casino-meter__fill {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #7bdff6, #ffd166, #ff5d8f);
+  background: linear-gradient(90deg, var(--accent-ash), var(--accent-gold), var(--accent-ember));
 }
 
 .casino-shell__bottom {
@@ -262,22 +311,23 @@
 .casino-paytable__value,
 .casino-history__value {
   font-weight: 800;
+  color: var(--text-strong);
 }
 
 .casino-history__value.is-win {
-  color: #ffd166;
+  color: var(--accent-gold);
 }
 
 .slot-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.1rem;
-  min-height: 2.1rem;
+  min-width: 2.15rem;
+  min-height: 2.15rem;
   padding: 0.2rem 0.45rem;
   border-radius: 0.75rem;
-  background: rgba(255, 214, 102, 0.08);
-  border: 1px solid rgba(255, 214, 102, 0.14);
+  background: rgba(231, 193, 122, 0.08);
+  border: 1px solid rgba(231, 193, 122, 0.14);
   font-size: 1.1rem;
 }
 
@@ -303,10 +353,7 @@
   }
 
   .casino-panel-grid,
-  .casino-player-grid {
-    grid-template-columns: 1fr;
-  }
-
+  .casino-player-grid,
   .casino-paytable__row,
   .casino-history__row {
     grid-template-columns: 1fr;

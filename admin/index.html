@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Ghosted Apps | Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -42,17 +42,27 @@
         </div>
       </div>
     </header>
-    <main class="container app-main" id="main-content" data-page="admin">
-      <section class="app-masthead">
-        <div class="app-masthead__copy">
+    <main class="container app-shell" id="main-content" data-page="admin">
+      <section class="app-context">
+        <div class="app-context__copy">
           <p class="app-kicker">Admin Surface</p>
           <h1 class="app-title">Operate Ghosted</h1>
-          <p class="app-description">Handle quick actions, system state, rewards, giveaways, and community operations from one admin workspace.</p>
+          <p class="app-description">Run rewards, giveaways, community cache refreshes, and operator workflows from a denser console designed for action.</p>
+        </div>
+        <div class="app-context__aside">
+          <div class="app-context__meta">
+            <span>Mode</span>
+            <strong>Operator console</strong>
+          </div>
+          <div class="app-context__meta">
+            <span>Priority</span>
+            <strong>Low friction</strong>
+          </div>
         </div>
       </section>
       <div class="app-banner-slot" data-banner></div>
       <section class="app-summary-grid" data-summary></section>
-      <section data-content></section>
+      <section class="app-workspace" data-content></section>
     </main>
     <script src="/site.js"></script>
     <script src="/app/app.js"></script>

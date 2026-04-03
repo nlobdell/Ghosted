@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Ghosted Apps | Competitions</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -41,17 +41,27 @@
         </div>
       </div>
     </header>
-    <main class="container app-main" id="main-content" data-page="competitions">
-      <section class="app-masthead">
-        <div class="app-masthead__copy">
+    <main class="container app-shell" id="main-content" data-page="competitions">
+      <section class="app-context">
+        <div class="app-context__copy">
           <p class="app-kicker">Community Detail</p>
           <h1 class="app-title">Competition board</h1>
-          <p class="app-description">Dive into live and upcoming Wise Old Man competitions for the Ghosted community.</p>
+          <p class="app-description">Follow live and upcoming Wise Old Man competitions with clearer status, timing, and participant detail.</p>
+        </div>
+        <div class="app-context__aside">
+          <div class="app-context__meta">
+            <span>Focus</span>
+            <strong>Standings</strong>
+          </div>
+          <div class="app-context__meta">
+            <span>Rhythm</span>
+            <strong>Live &amp; upcoming</strong>
+          </div>
         </div>
       </section>
       <div class="app-banner-slot" data-banner></div>
       <section class="app-summary-grid" data-summary></section>
-      <section data-content></section>
+      <section class="app-workspace" data-content></section>
     </main>
     <script src="/site.js"></script>
     <script src="/app/app.js"></script>

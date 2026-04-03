@@ -2,11 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Ghosted Clan | OSRS Community and vghosted Stream Hub</title>
     <meta
       name="description"
-      content="Ghosted is an Old School RuneScape community hub built around Discord, the vghosted Twitch channel, and lightweight tools for rewards, giveaways, and side activities."
+      content="Ghosted is an Old School RuneScape community hub built around Discord, the vghosted Twitch channel, and lightweight member tools for rewards, giveaways, profiles, and casino play."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,10 +16,10 @@
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
+  <body class="landing-page">
     <a class="site-skip-link" href="#main-content">Skip to main content</a>
-    <header class="hero">
-      <nav class="nav container site-shell-nav" aria-label="Primary" data-site-shell>
+    <header class="hero-poster hero-poster--home">
+      <nav class="site-nav container site-shell-nav" aria-label="Primary" data-site-shell>
         <a class="brand" href="/">Ghosted</a>
         <button class="button button--secondary button--small site-menu-toggle" type="button" data-site-menu-toggle aria-label="Open navigation">
           <span class="site-menu-toggle__bars" aria-hidden="true"></span>
@@ -37,12 +37,12 @@
         </div>
       </nav>
 
-      <div class="hero__content container">
-        <div class="hero__copy">
+      <div class="hero-poster__inner container">
+        <div class="hero-poster__copy">
           <p class="eyebrow">Ghosted Community Platform</p>
-          <h1>One hub for stream energy, clan coordination, and member tools.</h1>
-          <p class="hero__subtitle">Ghosted turns the vghosted live channel, Discord community, and member app into one clear flow: watch, join, then use rewards, giveaways, community tracking, and casino tools in the App Hub.</p>
-          <div class="hero__actions">
+          <h1>Ghosted turns stream hype into a clan home.</h1>
+          <p class="hero-lede">Watch vghosted, join the Discord, then use one polished member workspace for rewards, drops, clan data, and points-only casino play. The whole experience now reads like one community instead of disconnected pages.</p>
+          <div class="hero-actions">
             <a class="button" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">
               Watch Twitch
             </a>
@@ -50,121 +50,206 @@
               Join Discord
             </a>
           </div>
+          <ul class="signal-list" aria-label="Ghosted highlights">
+            <li class="signal-list__item">
+              <strong>Live nights stay the front door.</strong>
+              <span>vghosted gives the community its energy, urgency, and regular rhythm.</span>
+            </li>
+            <li class="signal-list__item">
+              <strong>Discord holds the day-to-day layer.</strong>
+              <span>Roles, belonging, event coordination, and social continuity all stay in one place.</span>
+            </li>
+            <li class="signal-list__item">
+              <strong>The App Hub turns interest into action.</strong>
+              <span>Members can actually do something useful: claim rewards, enter drops, track progress, and play.</span>
+            </li>
+          </ul>
         </div>
 
-        <aside class="hero__aside">
-          <div class="hero__sigil" aria-hidden="true"><span>G</span></div>
-          <div>
-            <p class="hero__panel-label">What You Get</p>
-            <ul class="hero__list">
-              <li>Live content anchored on vghosted</li>
-              <li>Discord-first community coordination</li>
-              <li>Member app for rewards, giveaways, casino, and profile</li>
-              <li>Community tracking powered by Wise Old Man data</li>
-            </ul>
-          </div>
-        </aside>
-      </div>
-
-      <div class="hero__rail container">
-        <div class="hero__rail-item">
-          <strong>Start with Twitch</strong>
-          <span>Use the live channel as the top of the Ghosted funnel.</span>
-        </div>
-        <div class="hero__rail-item">
-          <strong>Stay in Discord</strong>
-          <span>Roles, coordination, and day-to-day membership stay in one place.</span>
-        </div>
-        <div class="hero__rail-item">
-          <strong>Use the App Hub</strong>
-          <span>Open tools that actually support member activity.</span>
+        <div class="hero-poster__media">
+          <figure class="media-slot" aria-label="Ghosted hero preview">
+            <span class="media-slot__label">Asset-ready hero plane</span>
+            <div class="media-slot__frame">
+              <div class="screen-stack">
+                <article class="screen-card screen-card--primary">
+                  <div class="screen-card__bar">
+                    <strong>Ghosted App Hub</strong>
+                    <span>Live member workspace</span>
+                  </div>
+                  <div class="chip-cluster">
+                    <span>Community</span>
+                    <span>Rewards</span>
+                    <span>Giveaways</span>
+                    <span>Casino</span>
+                  </div>
+                  <div class="preview-grid">
+                    <div class="preview-tile">
+                      <span>Balance</span>
+                      <strong>12,450 pts</strong>
+                    </div>
+                    <div class="preview-tile">
+                      <span>Active drops</span>
+                      <strong>3 open</strong>
+                    </div>
+                    <div class="preview-tile">
+                      <span>Clan pulse</span>
+                      <strong>148 members</strong>
+                    </div>
+                    <div class="preview-tile">
+                      <span>Free spins</span>
+                      <strong>2 banked</strong>
+                    </div>
+                  </div>
+                  <div class="data-stack">
+                    <div class="data-row">
+                      <span>Ghosted Weekly Drop</span>
+                      <strong>Entry ready</strong>
+                    </div>
+                    <div class="data-row">
+                      <span>Community gains board</span>
+                      <strong>Top 8 tracked</strong>
+                    </div>
+                    <div class="data-row">
+                      <span>Profile sync</span>
+                      <strong>Discord + WOM</strong>
+                    </div>
+                  </div>
+                </article>
+                <article class="screen-card">
+                  <div class="screen-card__bar">
+                    <strong>Signal</strong>
+                    <span>Ghosted flow</span>
+                  </div>
+                  <div class="stacked-bars">
+                    <div class="stacked-bars__item" style="--bar-opacity: 0.95;">
+                      <span>Twitch as the spark</span>
+                      <i></i>
+                    </div>
+                    <div class="stacked-bars__item" style="--bar-opacity: 0.82;">
+                      <span>Discord as the home</span>
+                      <i></i>
+                    </div>
+                    <div class="stacked-bars__item" style="--bar-opacity: 0.7;">
+                      <span>App as the action layer</span>
+                      <i></i>
+                    </div>
+                  </div>
+                  <p class="app-preview__copy">This area is built to accept real hero art or product screenshots later, but the composition works immediately without waiting on assets.</p>
+                </article>
+              </div>
+            </div>
+          </figure>
         </div>
       </div>
     </header>
 
     <main id="main-content">
-      <section class="section container">
-        <div class="section-heading">
-          <p class="section-label">Platform Layout</p>
-          <h2>One clear flow.</h2>
-        </div>
-        <div class="lane-grid">
-          <article class="lane">
-            <p class="lane__eyebrow">01. Clan Hall</p>
-            <h3>Twitch</h3>
-            <p>Discover the community through the live channel.</p>
-          </article>
-          <article class="lane">
-            <p class="lane__eyebrow">02. Community</p>
-            <h3>Discord</h3>
-            <p>Join the server and become part of Ghosted.</p>
-          </article>
-          <article class="lane">
-            <p class="lane__eyebrow">03. Tools</p>
-            <h3>App Hub</h3>
-            <p>Open member tools that support rewards, drops, and community tracking.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section container">
-        <div class="board">
-          <article class="board__copy">
-            <p class="section-label">What The App Helps With</p>
-            <h2>Open the right tool fast.</h2>
-            <div class="board__stack">
-              <span>Community</span>
-              <span>Rewards</span>
-              <span>Giveaways</span>
-              <span>Casino</span>
-            </div>
-          </article>
-
-          <div class="board__routes">
-            <article class="route">
-              <div>
-                <p class="route__eyebrow">Member Home</p>
-                <h3>Open the App Hub</h3>
-              </div>
-              <a class="button button--secondary button--small" href="app/">Open</a>
+      <section class="section section--framed">
+        <div class="container">
+          <div class="section-heading">
+            <p class="section-label">Acquisition Model</p>
+            <h2>One funnel. One identity. One member workspace.</h2>
+            <p class="section-intro">The old UI repeated the same boxed treatment across every page. The new system makes the flow legible: content brings people in, community keeps them around, and the app gives them repeatable reasons to return.</p>
+          </div>
+          <div class="proof-rail">
+            <article class="proof-step">
+              <span class="proof-step__index">01 / Twitch</span>
+              <h3>Lead with live energy</h3>
+              <p>Ghosted starts where attention already exists: the vghosted channel. The homepage now behaves more like a poster and less like a dashboard.</p>
             </article>
-            <article class="route">
-              <div>
-                <p class="route__eyebrow">Community Data</p>
-                <h3>Track the community</h3>
-              </div>
-              <a class="button button--secondary button--small" href="app/community/">View</a>
+            <article class="proof-step">
+              <span class="proof-step__index">02 / Discord</span>
+              <h3>Convert into belonging</h3>
+              <p>Discord becomes the durable membership layer for roles, coordination, and everyday social continuity.</p>
             </article>
-            <article class="route">
-              <div>
-                <p class="route__eyebrow">Drops and Points</p>
-                <h3>Check rewards and giveaways</h3>
-              </div>
-              <a class="button button--secondary button--small" href="app/giveaways/">Browse</a>
+            <article class="proof-step">
+              <span class="proof-step__index">03 / App Hub</span>
+              <h3>Make the product useful</h3>
+              <p>The member workspace handles rewards, drops, profile sync, community data, and the casino floor without breaking brand continuity.</p>
             </article>
           </div>
         </div>
       </section>
 
-      <section class="section section--cta">
-        <div class="container cta">
-          <p class="cta__eyebrow">Next Step</p>
-          <h2>Join Ghosted, then use the App Hub as your member home base.</h2>
-          <div class="cta__actions">
-            <a class="button" href="app/">
-              Open App Hub
-            </a>
-            <a class="button button--secondary" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-              Join Discord
-            </a>
+      <section class="section">
+        <div class="container feature-stage">
+          <div class="feature-stage__copy">
+            <p class="section-label">Member Experience</p>
+            <h2>The app now looks like a workspace, not a stack of theme cards.</h2>
+            <p class="feature-copy">The redesign makes data denser, calmer, and more navigable. Summary strips, operational panels, and deeper data regions replace repetitive chrome so members can scan, decide, and move.</p>
+            <ul class="signal-list">
+              <li class="signal-list__item">
+                <strong>Shared design tokens.</strong>
+                <span>Public pages, app surfaces, admin, and casino all inherit the same visual grammar.</span>
+              </li>
+              <li class="signal-list__item">
+                <strong>Action-first navigation.</strong>
+                <span>Community, rewards, giveaways, profile, and play surfaces read like one connected product family.</span>
+              </li>
+              <li class="signal-list__item">
+                <strong>Asset slots with fallbacks.</strong>
+                <span>Real screenshots and branded art can land later without forcing another layout rewrite.</span>
+              </li>
+            </ul>
+          </div>
+          <div class="feature-stage__media">
+            <figure class="media-slot" aria-label="App preview fallback">
+              <span class="media-slot__label">Future screenshot slot</span>
+              <div class="media-slot__frame app-preview">
+                <div class="app-preview__shot">
+                  <div class="screen-card__bar">
+                    <strong>Operator view</strong>
+                    <span>Action-first</span>
+                  </div>
+                  <div class="preview-grid">
+                    <div class="preview-tile">
+                      <span>Tracked users</span>
+                      <strong>248</strong>
+                    </div>
+                    <div class="preview-tile">
+                      <span>Live drops</span>
+                      <strong>3</strong>
+                    </div>
+                    <div class="preview-tile">
+                      <span>WOM links</span>
+                      <strong>104</strong>
+                    </div>
+                    <div class="preview-tile">
+                      <span>Admin alerts</span>
+                      <strong>2</strong>
+                    </div>
+                  </div>
+                </div>
+                <p class="app-preview__copy">This slot is ready for a real product screenshot, but the fallback still communicates density, rhythm, and hierarchy today.</p>
+              </div>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--tight">
+        <div class="container">
+          <div class="cta-banner">
+            <p class="cta-eyebrow">Next Step</p>
+            <h2>Join Ghosted, then move straight into the App Hub.</h2>
+            <p class="section-intro">The new UI keeps the path simple: live stream, Discord invite, then a member workspace that feels intentional from the first click.</p>
+            <div class="cta-banner__actions">
+              <a class="button" href="app/">
+                Open App Hub
+              </a>
+              <a class="button button--secondary" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
+                Join Discord
+              </a>
+            </div>
           </div>
         </div>
       </section>
     </main>
 
     <footer class="footer">
-      <div class="container">
-        <p>&copy; <span id="year"></span> Ghosted Clan. See you in Gielinor.</p>
+      <div class="container footer__inner">
+        <p>&copy; <span id="year"></span> Ghosted Clan. Built for the live layer, the Discord layer, and the member layer.</p>
+        <a class="nav__link" href="design/">Read the Ghosted story</a>
       </div>
     </footer>
     <script src="/site.js"></script>

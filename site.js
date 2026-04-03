@@ -86,6 +86,7 @@
     state.pendingHref = link.href;
     state.trigger = link;
     state.restoreFocus = true;
+    document.body.classList.add('has-site-dialog-open');
     if (dialog.hasAttribute('open')) {
       dialog.querySelector('[data-site-twitch-confirm-open]')?.focus();
       return;
@@ -147,9 +148,10 @@
   }
 
   function openNav() {
-    const root = document.querySelector('[data-site-shell]');
+    const root = state.navRoot || document.querySelector('[data-site-shell]');
     if (!root) return;
     root.setAttribute('data-nav-open', 'true');
+    root.querySelector('[data-site-menu-toggle]')?.setAttribute('aria-expanded', 'true');
     document.body.classList.add('has-site-nav-open');
     state.navRoot = root;
     window.requestAnimationFrame(() => {
@@ -161,6 +163,7 @@
     const root = state.navRoot || document.querySelector('[data-site-shell]');
     if (!root) return;
     root.removeAttribute('data-nav-open');
+    root.querySelector('[data-site-menu-toggle]')?.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('has-site-nav-open');
     const toggle = root.querySelector('[data-site-menu-toggle]');
     state.navRoot = null;
@@ -175,6 +178,7 @@
     const toggle = root.querySelector('[data-site-menu-toggle]');
     const close = root.querySelector('[data-site-nav-close]');
     const links = root.querySelectorAll('[data-site-nav] a[href]');
+    toggle?.setAttribute('aria-expanded', 'false');
 
     toggle?.addEventListener('click', () => {
       if (root.getAttribute('data-nav-open') === 'true') {
