@@ -120,10 +120,7 @@ function summarySignature(state: CasinoState) {
 function contentSignature(state: CasinoState) {
   return JSON.stringify({
     authenticated: state.me?.authenticated,
-    games: (state.games?.games || []).map((game) => ({
-      freeSpinsRemaining: game.freeSpinsRemaining,
-      slug: game.slug,
-    })),
+    games: (state.games?.games || []).map((game) => game.slug),
     selectedGameSlug: state.selectedGameSlug,
   });
 }
@@ -139,6 +136,7 @@ function syncCasinoPanels() {
   const spin = document.querySelector<HTMLButtonElement>('[data-spin]');
   const playerBoard = document.querySelector<HTMLElement>('[data-player-board]');
   const history = document.querySelector<HTMLElement>('[data-history]');
+  const machineButtons = document.querySelectorAll<HTMLButtonElement>('[data-machine-pick]');
 
   if (headline) {
     headline.textContent = state.latestResult?.outcome.label || game.name;
@@ -210,6 +208,25 @@ function syncCasinoPanels() {
       `;
     }
   }
+
+  machineButtons.forEach((button) => {
+    const slug = button.dataset.machinePick;
+    if (!slug) return;
+    const machine = state.games?.games.find((entry) => entry.slug === slug);
+    if (!machine) return;
+
+    button.classList.toggle('is-active', slug === game.slug);
+
+    const meta = button.querySelectorAll<HTMLElement>('.casino-machine-button__meta span');
+    if (meta[0]) {
+      meta[0].textContent = `${machine.volatility} volatility`;
+    }
+    if (meta[1]) {
+      meta[1].textContent = machine.freeSpinsRemaining
+        ? `${machine.freeSpinsRemaining} free spins`
+        : `${machine.paylinesCount} lines`;
+    }
+  });
 }
 
 boot().catch((error: unknown) => {

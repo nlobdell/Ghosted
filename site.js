@@ -147,8 +147,7 @@
     openDialog(link);
   }
 
-  function openNav() {
-    const root = state.navRoot || document.querySelector('[data-site-shell]');
+  function openNav(root = state.navRoot || document.querySelector('[data-site-shell]')) {
     if (!root) return;
     root.setAttribute('data-nav-open', 'true');
     root.querySelector('[data-site-menu-toggle]')?.setAttribute('aria-expanded', 'true');
@@ -159,38 +158,50 @@
     });
   }
 
-  function closeNav({ restoreFocus = true } = {}) {
-    const root = state.navRoot || document.querySelector('[data-site-shell]');
+  function closeNav({ restoreFocus = true, root = state.navRoot || document.querySelector('[data-site-shell]') } = {}) {
     if (!root) return;
     root.removeAttribute('data-nav-open');
     root.querySelector('[data-site-menu-toggle]')?.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('has-site-nav-open');
     const toggle = root.querySelector('[data-site-menu-toggle]');
-    state.navRoot = null;
+    if (state.navRoot === root) {
+      state.navRoot = null;
+    }
     if (restoreFocus) {
       window.requestAnimationFrame(() => toggle?.focus());
     }
   }
 
   function bindNav() {
-    const root = document.querySelector('[data-site-shell]');
-    if (!root) return;
-    const toggle = root.querySelector('[data-site-menu-toggle]');
-    const close = root.querySelector('[data-site-nav-close]');
-    const links = root.querySelectorAll('[data-site-nav] a[href]');
-    toggle?.setAttribute('aria-expanded', 'false');
+    const roots = document.querySelectorAll('[data-site-shell]');
+    if (!roots.length) return;
 
-    toggle?.addEventListener('click', () => {
-      if (root.getAttribute('data-nav-open') === 'true') {
-        closeNav();
-        return;
-      }
-      openNav();
+    roots.forEach((root) => {
+      const toggle = root.querySelector('[data-site-menu-toggle]');
+      const close = root.querySelector('[data-site-nav-close]');
+      const drawer = root.querySelector('.site-nav-drawer');
+      const links = root.querySelectorAll('[data-site-nav] a[href]');
+      toggle?.setAttribute('aria-expanded', 'false');
+
+      toggle?.addEventListener('click', () => {
+        if (root.getAttribute('data-nav-open') === 'true') {
+          closeNav({ root });
+          return;
+        }
+        openNav(root);
+      });
+
+      close?.addEventListener('click', () => closeNav({ root }));
+      drawer?.addEventListener('click', (event) => {
+        if (event.target === drawer) {
+          closeNav({ root, restoreFocus: false });
+        }
+      });
+      links.forEach((link) => link.addEventListener('click', () => closeNav({ root, restoreFocus: false })));
     });
-    close?.addEventListener('click', () => closeNav());
-    links.forEach((link) => link.addEventListener('click', () => closeNav({ restoreFocus: false })));
+
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && root.getAttribute('data-nav-open') === 'true') {
+      if (event.key === 'Escape' && state.navRoot?.getAttribute('data-nav-open') === 'true') {
         closeNav();
       }
     });

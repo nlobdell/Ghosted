@@ -32168,46 +32168,51 @@ function DA(r) {
 function xA(r) {
   return JSON.stringify({
     authenticated: r.me?.authenticated,
-    games: (r.games?.games || []).map((e) => ({
-      freeSpinsRemaining: e.freeSpinsRemaining,
-      slug: e.slug
-    })),
+    games: (r.games?.games || []).map((e) => e.slug),
     selectedGameSlug: r.selectedGameSlug
   });
 }
 function $l() {
   const r = ye.state, e = ye.selectedGame();
   if (!r.me?.authenticated || !r.rewards || !e) return;
-  const t = document.querySelector("[data-console-headline]"), s = document.querySelector("[data-console-detail]"), n = document.querySelector("[data-status]"), i = document.querySelector("[data-spin]"), o = document.querySelector("[data-player-board]"), a = document.querySelector("[data-history]");
+  const t = document.querySelector("[data-console-headline]"), s = document.querySelector("[data-console-detail]"), n = document.querySelector("[data-status]"), i = document.querySelector("[data-spin]"), o = document.querySelector("[data-player-board]"), a = document.querySelector("[data-history]"), A = document.querySelectorAll("[data-machine-pick]");
   if (t && (t.textContent = r.latestResult?.outcome.label || e.name), s && (s.textContent = r.latestResult?.outcome.detail || e.flavor || `${e.paylinesCount} paylines with a ${Math.round(e.returnRate * 100)}% return profile.`), n && (r.spinning ? n.textContent = "Spinning..." : r.latestResult?.freeSpinsAwarded ? n.textContent = `${r.latestResult.freeSpinsAwarded} free spins awarded` : r.latestResult?.usedFreeSpin ? n.textContent = `${r.latestResult.freeSpinsRemaining} free spins left` : r.latestResult?.payout ? n.textContent = `${r.latestResult.payout.toLocaleString()} pts paid` : r.latestResult ? n.textContent = "No win" : n.textContent = `${e.cost.toLocaleString()} pts stake`), i && (i.disabled = r.spinning, i.textContent = r.spinning ? "Spinning..." : e.freeSpinsRemaining ? `Play Free Spin (${e.freeSpinsRemaining})` : `Spin ${e.name}`), o) {
-    const A = r.rewards.spins.find((l) => l.payout > 0), c = r.rewards.dailyCap === null || r.rewards.dailyCap <= 0 ? 100 : Math.min(100, r.rewards.dailyWagered / r.rewards.dailyCap * 100), h = r.rewards.dailyCap === null ? `${r.rewards.dailyWagered.toLocaleString()} pts wagered today. No cap is active.` : `${(r.rewards.dailyRemaining || 0).toLocaleString()} pts left before the daily cap.`;
+    const c = r.rewards.spins.find((f) => f.payout > 0), h = r.rewards.dailyCap === null || r.rewards.dailyCap <= 0 ? 100 : Math.min(100, r.rewards.dailyWagered / r.rewards.dailyCap * 100), l = r.rewards.dailyCap === null ? `${r.rewards.dailyWagered.toLocaleString()} pts wagered today. No cap is active.` : `${(r.rewards.dailyRemaining || 0).toLocaleString()} pts left before the daily cap.`;
     o.innerHTML = `
       <div class="casino-player-grid">
         <div class="casino-player-stat"><span class="app-muted">Balance</span><strong>${r.rewards.balance.toLocaleString()} pts</strong></div>
         <div class="casino-player-stat"><span class="app-muted">Machine</span><strong>${e.name}</strong></div>
         <div class="casino-player-stat"><span class="app-muted">Wagered today</span><strong>${r.rewards.dailyWagered.toLocaleString()} pts</strong></div>
-        <div class="casino-player-stat"><span class="app-muted">Last win</span><strong>${A ? `${A.payout.toLocaleString()} pts` : "Waiting"}</strong></div>
+        <div class="casino-player-stat"><span class="app-muted">Last win</span><strong>${c ? `${c.payout.toLocaleString()} pts` : "Waiting"}</strong></div>
       </div>
       <div class="casino-meter">
-        <div class="casino-meter__track"><span class="casino-meter__fill" style="width:${c}%"></span></div>
-        <div class="app-muted">${h}</div>
+        <div class="casino-meter__track"><span class="casino-meter__fill" style="width:${h}%"></span></div>
+        <div class="app-muted">${l}</div>
       </div>
     `;
   }
   a && (r.rewards.spins.length ? a.innerHTML = `
         <div class="casino-history">
-          ${r.rewards.spins.slice(0, 8).map((A) => `
+          ${r.rewards.spins.slice(0, 8).map((c) => `
             <div class="casino-history__row">
               <div>
-                <strong>${A.game}</strong>
-                <div class="app-muted">${A.symbols.join(" ")} ${A.outcome.label}</div>
+                <strong>${c.game}</strong>
+                <div class="app-muted">${c.symbols.join(" ")} ${c.outcome.label}</div>
               </div>
-              <div class="app-muted">${A.usedFreeSpin ? "Free spin" : `${A.wager.toLocaleString()} pts`}</div>
-              <div class="casino-history__value ${A.payout > 0 ? "is-win" : ""}">${A.net >= 0 ? "+" : ""}${A.net.toLocaleString()} pts</div>
+              <div class="app-muted">${c.usedFreeSpin ? "Free spin" : `${c.wager.toLocaleString()} pts`}</div>
+              <div class="casino-history__value ${c.payout > 0 ? "is-win" : ""}">${c.net >= 0 ? "+" : ""}${c.net.toLocaleString()} pts</div>
             </div>
           `).join("")}
         </div>
-      ` : a.innerHTML = '<div class="app-empty">No spins yet.</div>');
+      ` : a.innerHTML = '<div class="app-empty">No spins yet.</div>'), A.forEach((c) => {
+    const h = c.dataset.machinePick;
+    if (!h) return;
+    const l = r.games?.games.find((u) => u.slug === h);
+    if (!l) return;
+    c.classList.toggle("is-active", h === e.slug);
+    const f = c.querySelectorAll(".casino-machine-button__meta span");
+    f[0] && (f[0].textContent = `${l.volatility} volatility`), f[1] && (f[1].textContent = l.freeSpinsRemaining ? `${l.freeSpinsRemaining} free spins` : `${l.paylinesCount} lines`);
+  });
 }
 qP().catch((r) => {
   const e = document.querySelector("[data-banner]");
