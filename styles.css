@@ -836,6 +836,16 @@
         gap: 0.8rem;
     }
 
+    .symbol-grid,
+    .sigil-band {
+        display: grid;
+        gap: 0.8rem;
+    }
+
+    .symbol-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .preview-tile {
         display: grid;
         gap: 0.35rem;
@@ -856,6 +866,58 @@
             color: var(--text-strong);
             font-size: 1.02rem;
         }
+
+    .symbol-tile,
+    .sigil-band__item {
+        border-radius: var(--radius-sm);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.04);
+    }
+
+    .symbol-tile {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.9rem;
+    }
+
+    .symbol-tile img,
+    .sigil-band__item img {
+        width: 2.4rem;
+        height: 2.4rem;
+        object-fit: contain;
+        filter: drop-shadow(0 0 12px rgba(231, 193, 122, 0.18));
+    }
+
+    .symbol-tile span,
+    .sigil-band__item span {
+        color: var(--text-muted);
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .symbol-tile strong {
+        display: block;
+        margin-top: 0.2rem;
+        color: var(--text-strong);
+        font-size: 0.95rem;
+        line-height: 1.4;
+    }
+
+    .sigil-band {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .sigil-band__item {
+        display: grid;
+        justify-items: center;
+        gap: 0.55rem;
+        padding: 0.85rem 0.65rem;
+        text-align: center;
+    }
 
     .hero-poster__meta,
     .route-band,
@@ -1089,6 +1151,10 @@
 
         .media-slot {
             min-height: 22rem;
+        }
+
+        .sigil-band {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
 
