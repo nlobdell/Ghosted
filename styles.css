@@ -334,11 +334,20 @@
 
     .nav__actions--desktop {
         margin-left: auto;
+        flex: 1 1 auto;
+        min-width: 0;
     }
 
     .site-shell-auth {
         display: flex;
         align-items: center;
+    }
+
+    .site-shell-auth--desktop {
+        margin-left: 1rem;
+        flex: 0 0 auto;
+        justify-content: flex-end;
+        max-width: min(24rem, 32vw);
     }
 
     .site-shell-auth--mobile {
@@ -415,7 +424,16 @@
     }
 
     .site-profile-widget--public .site-profile-widget__card {
-        min-width: min(15rem, 100%);
+        min-width: 0;
+    }
+
+    .site-shell-nav > .nav__actions--desktop,
+    .site-shell-nav > .design-nav__actions.nav__actions--desktop {
+        justify-content: center;
+    }
+
+    .site-shell-nav > .site-shell-auth--desktop {
+        align-self: stretch;
     }
 
     .site-profile-widget--signed-out {
@@ -1396,6 +1414,10 @@
 
         .site-shell-auth--mobile {
             display: flex;
+        }
+
+        .site-shell-auth--desktop {
+            display: none;
         }
 
         .site-nav,
