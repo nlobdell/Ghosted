@@ -19,23 +19,29 @@
   <body>
     <a class="site-skip-link" href="#main-content">Skip to main content</a>
     <header class="hero">
-      <nav class="nav container" aria-label="Primary">
+      <nav class="nav container site-shell-nav" aria-label="Primary" data-site-shell>
         <a class="brand" href="/">Ghosted</a>
-        <div class="nav__actions">
-          <a class="nav__link" href="design/">About</a>
-          <a class="nav__link" href="app/">App Hub</a>
-          <a class="nav__link" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
-          <a class="button button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-            Discord
-          </a>
+        <button class="button button--secondary button--small site-menu-toggle" type="button" data-site-menu-toggle aria-label="Open navigation">
+          <span class="site-menu-toggle__bars" aria-hidden="true"></span>
+        </button>
+        <div class="site-nav-drawer">
+          <div class="nav__actions" data-site-nav>
+            <button class="button button--secondary button--small site-nav-close" type="button" data-site-nav-close>Close</button>
+            <a class="nav__link" href="design/">About</a>
+            <a class="nav__link" href="app/">App Hub</a>
+            <a class="nav__link" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
+            <a class="button button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
+              Discord
+            </a>
+          </div>
         </div>
       </nav>
 
       <div class="hero__content container">
         <div class="hero__copy">
-          <p class="eyebrow">Old School RuneScape Community</p>
-          <h1>Ghosted keeps the clan and stream in sync.</h1>
-          <p class="hero__subtitle">Start on Twitch, meet the clan in Discord, then use the App Hub for rewards, giveaways, and member tools.</p>
+          <p class="eyebrow">Ghosted Community Platform</p>
+          <h1>One hub for stream energy, clan coordination, and member tools.</h1>
+          <p class="hero__subtitle">Ghosted turns the vghosted live channel, Discord community, and member app into one clear flow: watch, join, then use rewards, giveaways, community tracking, and casino tools in the App Hub.</p>
           <div class="hero__actions">
             <a class="button" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">
               Watch Twitch
@@ -49,12 +55,12 @@
         <aside class="hero__aside">
           <div class="hero__sigil" aria-hidden="true"><span>G</span></div>
           <div>
-            <p class="hero__panel-label">Overview</p>
+            <p class="hero__panel-label">What You Get</p>
             <ul class="hero__list">
-              <li>OSRS clan</li>
-              <li>Live on twitch.tv/vghosted</li>
-              <li>Discord for daily coordination</li>
-              <li>App Hub for rewards, giveaways, casino, and profile</li>
+              <li>Live content anchored on vghosted</li>
+              <li>Discord-first community coordination</li>
+              <li>Member app for rewards, giveaways, casino, and profile</li>
+              <li>Community tracking powered by Wise Old Man data</li>
             </ul>
           </div>
         </aside>
@@ -62,16 +68,16 @@
 
       <div class="hero__rail container">
         <div class="hero__rail-item">
-          <strong>Live on Twitch</strong>
-          <span>Catch vghosted for the stream-facing side of the community.</span>
+          <strong>Start with Twitch</strong>
+          <span>Use the live channel as the top of the Ghosted funnel.</span>
         </div>
         <div class="hero__rail-item">
-          <strong>Discord-centered</strong>
-          <span>Identity and activity stay in the server.</span>
+          <strong>Stay in Discord</strong>
+          <span>Roles, coordination, and day-to-day membership stay in one place.</span>
         </div>
         <div class="hero__rail-item">
-          <strong>Useful only</strong>
-          <span>Rewards, giveaways, profile, casino.</span>
+          <strong>Use the App Hub</strong>
+          <span>Open tools that actually support member activity.</span>
         </div>
       </div>
     </header>
@@ -80,23 +86,23 @@
       <section class="section container">
         <div class="section-heading">
           <p class="section-label">Platform Layout</p>
-          <h2>Three stops.</h2>
+          <h2>One clear flow.</h2>
         </div>
         <div class="lane-grid">
           <article class="lane">
             <p class="lane__eyebrow">01. Clan Hall</p>
             <h3>Twitch</h3>
-            <p>Catch vghosted live.</p>
+            <p>Discover the community through the live channel.</p>
           </article>
           <article class="lane">
             <p class="lane__eyebrow">02. Community</p>
             <h3>Discord</h3>
-            <p>Join the server and stay in sync.</p>
+            <p>Join the server and become part of Ghosted.</p>
           </article>
           <article class="lane">
             <p class="lane__eyebrow">03. Tools</p>
             <h3>App Hub</h3>
-            <p>Use rewards, giveaways, casino, and profile tools.</p>
+            <p>Open member tools that support rewards, drops, and community tracking.</p>
           </article>
         </div>
       </section>
@@ -104,36 +110,37 @@
       <section class="section container">
         <div class="board">
           <article class="board__copy">
-            <p class="section-label">Tonight's Routes</p>
-            <h2>Follow the flow.</h2>
+            <p class="section-label">What The App Helps With</p>
+            <h2>Open the right tool fast.</h2>
             <div class="board__stack">
-              <span>Twitch</span>
-              <span>Discord</span>
-              <span>App Hub</span>
+              <span>Community</span>
+              <span>Rewards</span>
+              <span>Giveaways</span>
+              <span>Casino</span>
             </div>
           </article>
 
           <div class="board__routes">
             <article class="route">
               <div>
-                <p class="route__eyebrow">Live Channel</p>
-                <h3>Start with Twitch</h3>
-              </div>
-              <a class="button button--secondary button--small" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Watch</a>
-            </article>
-            <article class="route">
-              <div>
-                <p class="route__eyebrow">Community</p>
-                <h3>Join Discord</h3>
-              </div>
-              <a class="button button--secondary button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">Join</a>
-            </article>
-            <article class="route">
-              <div>
-                <p class="route__eyebrow">Tools</p>
+                <p class="route__eyebrow">Member Home</p>
                 <h3>Open the App Hub</h3>
               </div>
               <a class="button button--secondary button--small" href="app/">Open</a>
+            </article>
+            <article class="route">
+              <div>
+                <p class="route__eyebrow">Community Data</p>
+                <h3>Track the community</h3>
+              </div>
+              <a class="button button--secondary button--small" href="app/community/">View</a>
+            </article>
+            <article class="route">
+              <div>
+                <p class="route__eyebrow">Drops and Points</p>
+                <h3>Check rewards and giveaways</h3>
+              </div>
+              <a class="button button--secondary button--small" href="app/giveaways/">Browse</a>
             </article>
           </div>
         </div>
@@ -142,7 +149,7 @@
       <section class="section section--cta">
         <div class="container cta">
           <p class="cta__eyebrow">Next Step</p>
-          <h2>Use the App Hub once you are in the Discord community.</h2>
+          <h2>Join Ghosted, then use the App Hub as your member home base.</h2>
           <div class="cta__actions">
             <a class="button" href="app/">
               Open App Hub

@@ -42,6 +42,17 @@
   padding: 0.8rem 0;
 }
 
+.app-header__shell,
+.app-header__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.app-header__shell {
+  margin-left: auto;
+}
+
 .app-nav {
   gap: 0.4rem;
   flex-wrap: wrap;
@@ -70,6 +81,10 @@
   justify-content: flex-end;
 }
 
+.app-header__utility {
+  white-space: nowrap;
+}
+
 .app-user {
   display: flex;
   align-items: center;
@@ -90,22 +105,27 @@
 
 .app-main {
   display: grid;
-  gap: 1rem;
+  gap: 1.2rem;
   align-content: start;
   padding: 1.9rem 0 4rem;
 }
 
 .app-masthead {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.45rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(circle at top right, rgba(176, 140, 255, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(23, 19, 33, 0.9), rgba(10, 9, 16, 0.96));
+  box-shadow: var(--app-shadow);
 }
 
 .app-masthead__copy {
   display: grid;
   gap: 0.55rem;
-  max-width: 42rem;
+  max-width: 52rem;
 }
 
 .app-banner-slot:empty {
@@ -192,7 +212,7 @@
 }
 
 .app-summary-grid {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
 .app-grid--two,
@@ -309,6 +329,18 @@
   color: var(--app-text);
 }
 
+.app-route--featured {
+  align-items: stretch;
+  padding: 1.1rem;
+  background:
+    linear-gradient(135deg, rgba(176, 140, 255, 0.12), rgba(255, 214, 102, 0.07)),
+    rgba(255, 255, 255, 0.03);
+}
+
+.app-route--featured .app-route__meta {
+  align-self: flex-start;
+}
+
 .app-route p {
   margin: 0;
 }
@@ -335,6 +367,38 @@
 
 .app-panel-note {
   font-size: 0.92rem;
+}
+
+.app-split-callout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.app-highlight {
+  border-radius: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(211, 192, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(176, 140, 255, 0.1), rgba(255, 214, 102, 0.06)),
+    rgba(255, 255, 255, 0.03);
+}
+
+.app-highlight h3,
+.app-highlight p {
+  margin: 0;
+}
+
+.app-highlight p + p,
+.app-highlight h3 + p {
+  margin-top: 0.55rem;
+}
+
+.app-inline-actions {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
 }
 
 .app-ledger-shell {
@@ -983,6 +1047,7 @@
 
 @media (max-width: 960px) {
   .casino-layout,
+  .app-split-callout,
   .app-panel-list,
   .app-metric-grid,
   .app-masthead,
@@ -996,10 +1061,40 @@
 }
 
 @media (max-width: 760px) {
+  .site-nav-drawer > .app-nav {
+    width: min(22rem, calc(100vw - 1rem));
+    min-height: 100vh;
+    padding: 1rem;
+    border-left: 1px solid var(--app-border-strong);
+    background: rgba(10, 8, 15, 0.96);
+    box-shadow: -18px 0 50px rgba(0, 0, 0, 0.3);
+    display: grid;
+    align-content: start;
+    justify-items: stretch;
+    gap: 0.7rem;
+  }
+
   .app-header__inner {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
     padding: 0.95rem 0;
+  }
+
+  .app-header__shell {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .app-nav {
+    flex-wrap: nowrap;
+  }
+
+  .app-header__tools {
+    margin-left: auto;
+  }
+
+  .app-header__utility,
+  .app-auth {
+    display: none;
   }
 
   .app-main {

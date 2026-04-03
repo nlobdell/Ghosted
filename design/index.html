@@ -21,23 +21,29 @@
     <a class="site-skip-link" href="#main-content">Skip to main content</a>
     <div class="design-shell">
       <header class="design-hero">
-        <nav class="design-nav container" aria-label="Primary">
+        <nav class="design-nav container site-shell-nav" aria-label="Primary" data-site-shell>
           <a class="design-brand" href="../">Ghosted</a>
-          <div class="design-nav__actions">
-            <a class="design-nav__link" href="./" aria-current="page">About</a>
-            <a class="design-nav__link" href="../app/">App Hub</a>
-            <a class="design-nav__link" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
-            <a class="button button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-              Discord
-            </a>
+          <button class="button button--secondary button--small site-menu-toggle" type="button" data-site-menu-toggle aria-label="Open navigation">
+            <span class="site-menu-toggle__bars" aria-hidden="true"></span>
+          </button>
+          <div class="site-nav-drawer">
+            <div class="design-nav__actions" data-site-nav>
+              <button class="button button--secondary button--small site-nav-close" type="button" data-site-nav-close>Close</button>
+              <a class="design-nav__link" href="./" aria-current="page">About</a>
+              <a class="design-nav__link" href="../app/">App Hub</a>
+              <a class="design-nav__link" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
+              <a class="button button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
+                Discord
+              </a>
+            </div>
           </div>
         </nav>
 
         <section class="design-hero__content container">
           <div class="design-hero__copy">
-            <p class="design-kicker">Clan Map</p>
-            <h1>Ghosted runs on stream, Discord, and site tools.</h1>
-            <p class="hero__subtitle">Start on <a href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">twitch.tv/vghosted</a>, keep the community in Discord, and use the App Hub for points, giveaways, and member tracking.</p>
+            <p class="design-kicker">About Ghosted</p>
+            <h1>Ghosted is the member layer around the vghosted live channel.</h1>
+            <p class="hero__subtitle">The community starts on Twitch, stays organized in Discord, and uses the App Hub for member rewards, giveaways, profile tracking, community data, and the points casino.</p>
             <div class="design-hero__actions">
               <a class="button" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">
                 Watch Twitch
@@ -49,12 +55,12 @@
           </div>
 
           <aside class="signal-panel">
-            <p class="signal-panel__eyebrow">Overview</p>
+            <p class="signal-panel__eyebrow">Platform Model</p>
             <ul class="signal-panel__list">
-              <li>OSRS-first clan</li>
-              <li>Live on twitch.tv/vghosted</li>
-              <li>Discord-centered coordination</li>
-              <li>App Hub for rewards, giveaways, casino, and profile</li>
+              <li>Ghosted is the main product and community identity</li>
+              <li>vghosted is the live content channel inside that ecosystem</li>
+              <li>Discord holds roles, membership, and coordination</li>
+              <li>The App Hub supports real member actions and tracking</li>
             </ul>
             <div class="signal-tags">
               <span>PvM</span>
@@ -76,17 +82,17 @@
             <article class="path-card">
               <span class="path-card__index">01</span>
               <h3>Twitch</h3>
-              <p>Watch vghosted live.</p>
+              <p>Discover the community through the live channel.</p>
             </article>
             <article class="path-card">
               <span class="path-card__index">02</span>
               <h3>Discord</h3>
-              <p>Main community hub.</p>
+              <p>Join the server, roles, and day-to-day coordination layer.</p>
             </article>
             <article class="path-card">
               <span class="path-card__index">03</span>
               <h3>App Hub</h3>
-              <p>Open rewards, giveaways, casino, and profile tools.</p>
+              <p>Open the member tools that support rewards, drops, profile, and community tracking.</p>
             </article>
           </div>
         </section>
@@ -130,12 +136,12 @@
                   <span class="cluster-chip">Live Layer</span>
                   <span class="cluster-note">Flexible</span>
                 </div>
-                <h3>Twitch, Hangouts, and Side Games</h3>
+                <h3>Twitch, Hangouts, and Member Tools</h3>
                 <ul>
                   <li>Stream nights with vghosted</li>
                   <li>Voice chat</li>
-                  <li>Other games</li>
-                  <li>General social time</li>
+                  <li>App Hub rewards and giveaways</li>
+                  <li>Points casino and profile tools</li>
                 </ul>
               </article>
             </div>

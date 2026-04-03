@@ -2,6 +2,7 @@
   const state = {
     initialized: false,
     pendingHref: '',
+    navRoot: null,
     trigger: null,
     restoreFocus: true,
   };
@@ -145,11 +146,58 @@
     openDialog(link);
   }
 
+  function openNav() {
+    const root = document.querySelector('[data-site-shell]');
+    if (!root) return;
+    root.setAttribute('data-nav-open', 'true');
+    document.body.classList.add('has-site-nav-open');
+    state.navRoot = root;
+    window.requestAnimationFrame(() => {
+      root.querySelector('[data-site-nav] a, [data-site-nav] button')?.focus();
+    });
+  }
+
+  function closeNav({ restoreFocus = true } = {}) {
+    const root = state.navRoot || document.querySelector('[data-site-shell]');
+    if (!root) return;
+    root.removeAttribute('data-nav-open');
+    document.body.classList.remove('has-site-nav-open');
+    const toggle = root.querySelector('[data-site-menu-toggle]');
+    state.navRoot = null;
+    if (restoreFocus) {
+      window.requestAnimationFrame(() => toggle?.focus());
+    }
+  }
+
+  function bindNav() {
+    const root = document.querySelector('[data-site-shell]');
+    if (!root) return;
+    const toggle = root.querySelector('[data-site-menu-toggle]');
+    const close = root.querySelector('[data-site-nav-close]');
+    const links = root.querySelectorAll('[data-site-nav] a[href]');
+
+    toggle?.addEventListener('click', () => {
+      if (root.getAttribute('data-nav-open') === 'true') {
+        closeNav();
+        return;
+      }
+      openNav();
+    });
+    close?.addEventListener('click', () => closeNav());
+    links.forEach((link) => link.addEventListener('click', () => closeNav({ restoreFocus: false })));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && root.getAttribute('data-nav-open') === 'true') {
+        closeNav();
+      }
+    });
+  }
+
   function init() {
     if (state.initialized) return;
     state.initialized = true;
     ensureLiveRegion();
     ensureDialog();
+    bindNav();
     document.addEventListener('click', handleDocumentClick);
     window.GhostedSite = {
       announce,

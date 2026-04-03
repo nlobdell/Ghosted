@@ -38,6 +38,7 @@ async function boot() {
   if (!page) return;
   const handlers = {
     dashboard: renderDashboard,
+    community: renderCommunity,
     clan: renderClan,
     competitions: renderCompetitions,
     casino: renderCasino,
@@ -122,14 +123,10 @@ async function renderDashboard() {
   const perks = state.me.user.perks || [];
   const womLink = state.me.user.womLink || { linked: false };
   const liveCompetitions = (competitions?.competitions || []).filter((item) => item.status === 'ongoing').length;
-  const perksMarkup = perks.length
-    ? `<div class="app-tags">${perks.map((perk) => `<span class="app-tag">${escapeHtml(perk)}</span>`).join('')}</div>`
-    : '<p class="app-panel-note">Perks show up here after roles sync.</p>';
   summaryRoot.innerHTML = renderStats([
     { label: 'Balance', value: formatPoints(rewards.balance), href: '/app/rewards/' },
     { label: 'Active giveaways', value: String(activeGiveaways), href: '/app/giveaways/' },
-    { label: 'Live competitions', value: String(liveCompetitions), href: '/app/competitions/' },
-    { label: 'Recent spins', value: String(recentSpins), href: '/app/casino/' },
+    { label: 'Community live', value: String(clan?.group?.memberCount || 0), href: '/app/community/' },
     { label: 'WOM link', value: womLink.linked ? 'Linked' : 'Not linked', href: '/app/profile/' },
   ]);
 
@@ -138,68 +135,54 @@ async function renderDashboard() {
       <article class="app-panel">
         <div class="app-panel__header">
           <div>
-            <p class="app-kicker">Quick Start</p>
-            <h3>Open a tool</h3>
+            <p class="app-kicker">Next Actions</p>
+            <h3>Start where you need to act</h3>
           </div>
-          <span class="app-chip">${state.me.user.isAdmin ? 'Admin access' : 'Member tools'}</span>
+          <span class="app-chip">${state.me.user.isAdmin ? 'Admin enabled' : 'Member tools'}</span>
         </div>
         <div class="app-route-list">
-          <a class="app-route" href="/app/clan/">
+          <a class="app-route app-route--featured" href="/app/community/">
             <div>
-              <strong>Clan</strong>
-              <p>Track Ghosted group health and weekly gains.</p>
+              <strong>Community</strong>
+              <p>See clan health, live competitions, and recent momentum in one place.</p>
             </div>
             <span class="app-route__meta">${clan?.group?.memberCount || 0} members</span>
-          </a>
-          <a class="app-route" href="/app/competitions/">
-            <div>
-              <strong>Competitions</strong>
-              <p>Follow live Wise Old Man standings.</p>
-            </div>
-            <span class="app-route__meta">${liveCompetitions} live</span>
-          </a>
-          <a class="app-route" href="/app/casino/">
-            <div>
-              <strong>Casino</strong>
-              <p>Spin with points.</p>
-            </div>
-            <span class="app-route__meta">${recentSpins} logged</span>
-          </a>
-          <a class="app-route" href="/app/giveaways/">
-            <div>
-              <strong>Giveaways</strong>
-              <p>Browse active draws.</p>
-            </div>
-            <span class="app-route__meta">${activeGiveaways} active</span>
           </a>
           <a class="app-route" href="/app/rewards/">
             <div>
               <strong>Rewards</strong>
-              <p>Check point history.</p>
+              <p>Check balance, daily limits, and your full points ledger.</p>
             </div>
-            <span class="app-route__meta">${rewards.entries.length} entries</span>
+            <span class="app-route__meta">${formatPoints(rewards.balance)}</span>
+          </a>
+          <a class="app-route" href="/app/giveaways/">
+            <div>
+              <strong>Giveaways</strong>
+              <p>See what is live and whether you can enter right now.</p>
+            </div>
+            <span class="app-route__meta">${activeGiveaways} active</span>
+          </a>
+          <a class="app-route" href="/app/casino/">
+            <div>
+              <strong>Casino</strong>
+              <p>Use the points floor without leaving the member app.</p>
+            </div>
+            <span class="app-route__meta">${recentSpins} logged</span>
           </a>
           <a class="app-route" href="/app/profile/">
             <div>
               <strong>Profile</strong>
-              <p>Review synced roles.</p>
+              <p>Manage your Discord identity, roles, and RSN/WOM link.</p>
             </div>
-            <span class="app-route__meta">${state.me.user.isAdmin ? 'Admin' : 'Member'}</span>
-          </a>
-          <a class="app-route" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">
-            <div>
-              <strong>Twitch</strong>
-              <p>Watch vghosted live.</p>
-            </div>
-            <span class="app-route__meta">Live channel</span>
+            <span class="app-route__meta">${womLink.linked ? 'Linked' : 'Needs setup'}</span>
           </a>
         </div>
       </article>
       <a class="app-panel app-panel--link" href="/app/profile/">
         <div class="app-panel__header">
           <div>
-            <p class="app-kicker">Account</p>
-            <h3>Discord and OSRS</h3>
+            <p class="app-kicker">Account Snapshot</p>
+            <h3>Identity and access</h3>
           </div>
           <span class="app-chip">${womLink.linked ? 'WOM linked' : 'Discord only'}</span>
         </div>
@@ -221,21 +204,26 @@ async function renderDashboard() {
             <strong>${state.me.user.isAdmin ? 'Admin' : 'Member'}</strong>
           </div>
         </div>
-        ${perksMarkup}
+        <div>
+          <p class="app-muted">Perks</p>
+          ${perks.length
+            ? `<div class="app-tags">${perks.map((perk) => `<span class="app-tag">${escapeHtml(perk)}</span>`).join('')}</div>`
+            : '<p class="app-panel-note">Perks show up here after roles sync.</p>'}
+        </div>
       </a>
     </section>
     <section class="app-grid app-grid--two">
       <article class="app-card">
         <div class="app-card__row">
-          <h3>Clan pulse</h3>
+          <h3>Community pulse</h3>
           <span class="app-chip">${clan?.linkCoverage?.linkedUsers || 0} linked</span>
         </div>
-        ${clan ? renderClanPulse(clan) : '<div class="app-empty">Configure WOM_GROUP_ID to load clan data.</div>'}
+        ${clan ? renderClanPulse(clan) : '<div class="app-empty">Configure WOM_GROUP_ID to unlock the Ghosted community view.</div>'}
       </article>
       <article class="app-card">
         <div class="app-card__row">
           <h3>Competition watch</h3>
-          <span class="app-chip">${liveCompetitions} ongoing</span>
+          <span class="app-chip">${liveCompetitions} live</span>
         </div>
         ${competitions ? renderCompetitionList((competitions.competitions || []).slice(0, 4), { compact: true }) : '<div class="app-empty">Competition data appears here once WOM is configured.</div>'}
       </article>
@@ -249,6 +237,89 @@ async function renderDashboard() {
         <a class="button button--secondary button--small" href="/app/rewards/">Open full ledger</a>
       </div>
       ${renderLedgerTable(rewards.entries.slice(0, 6))}
+    </section>
+  `;
+}
+
+async function renderCommunity() {
+  const summaryRoot = document.querySelector('[data-summary]');
+  const contentRoot = document.querySelector('[data-content]');
+  if (!state.config.womConfigured) {
+    summaryRoot.innerHTML = renderStats([
+      { label: 'Wise Old Man', value: 'Offline' },
+      { label: 'Community page', value: 'Unavailable' },
+      { label: 'Clan detail', value: 'Disabled' },
+      { label: 'Competitions', value: 'Disabled' },
+    ]);
+    contentRoot.innerHTML = `
+      <div class="app-empty">
+        <p>Set \`WOM_GROUP_ID\` to unlock the Ghosted community overview.</p>
+        <a class="button button--secondary" href="/app/profile/">Open Profile</a>
+      </div>
+    `;
+    return;
+  }
+
+  const [clan, competitionsListing, hiscores, gains] = await Promise.all([
+    getJSON('/api/wom/clan'),
+    getJSON('/api/wom/competitions?limit=6'),
+    getJSON('/api/wom/hiscores?metric=overall&limit=6'),
+    getJSON('/api/wom/gains?metric=overall&period=week&limit=6'),
+  ]);
+  const competitions = competitionsListing.competitions || [];
+  const liveCompetitions = competitions.filter((item) => item.status === 'ongoing').length;
+  const upcomingCompetitions = competitions.filter((item) => item.status === 'upcoming').length;
+
+  summaryRoot.innerHTML = renderStats([
+    { label: 'Group members', value: String(clan.group.memberCount || 0), href: '/app/clan/' },
+    { label: 'Linked users', value: String(clan.linkCoverage.linkedUsers || 0), href: '/app/profile/' },
+    { label: 'Live competitions', value: String(liveCompetitions), href: '/app/competitions/' },
+    { label: 'Upcoming', value: String(upcomingCompetitions), href: '/app/competitions/' },
+  ]);
+
+  contentRoot.innerHTML = `
+    <section class="app-split-callout">
+      <article class="app-highlight">
+        <p class="app-kicker">Community overview</p>
+        <h3>${escapeHtml(clan.group.name || 'Ghosted')}</h3>
+        <p>${escapeHtml(clan.group.description || 'Track the current state of the Ghosted Wise Old Man group and jump deeper when you need full detail.')}</p>
+      </article>
+      <div class="app-inline-actions">
+        <a class="button" href="/app/clan/">Open clan detail</a>
+        <a class="button button--secondary" href="/app/competitions/">Open competitions</a>
+      </div>
+    </section>
+    <section class="app-grid app-grid--two">
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Clan pulse</h3>
+          <span class="app-chip">${clan.linkCoverage.unlinkedUsers || 0} unlinked</span>
+        </div>
+        ${renderClanPulse(clan)}
+      </article>
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Competition watch</h3>
+          <span class="app-chip">${liveCompetitions} live</span>
+        </div>
+        ${renderCompetitionList(competitions.slice(0, 4), { compact: true })}
+      </article>
+    </section>
+    <section class="app-grid app-grid--two">
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Overall leaders</h3>
+          <span class="app-chip">Top ${hiscores.entries.length}</span>
+        </div>
+        ${renderLeaderboardTable(hiscores.entries, { valueLabel: 'Experience / rank', valueFormatter: formatHiscoreValue })}
+      </article>
+      <article class="app-card">
+        <div class="app-card__row">
+          <h3>Weekly gains</h3>
+          <span class="app-chip">${escapeHtml((gains.period || 'week').toUpperCase())}</span>
+        </div>
+        ${renderLeaderboardTable(gains.entries, { valueLabel: 'Gained', valueFormatter: formatGainValue })}
+      </article>
     </section>
   `;
 }
@@ -328,16 +399,27 @@ async function renderRewards() {
   const rewards = await getJSON('/api/rewards');
   summaryRoot.innerHTML = renderStats([
     { label: 'Balance', value: formatPoints(rewards.balance), href: '/app/rewards/' },
-    { label: 'Ledger entries', value: String(rewards.entries.length), href: '/app/rewards/' },
+    { label: 'Daily remaining', value: formatPoints(rewards.dailyRemaining), href: '/app/rewards/' },
     { label: 'Recent spins', value: String(rewards.spins.length), href: '/app/casino/' },
-    { label: 'Auth', value: 'Discord-linked', href: '/app/profile/' },
+    { label: 'Ledger entries', value: String(rewards.entries.length), href: '/app/rewards/' },
   ]);
   contentRoot.innerHTML = `
+    <section class="app-split-callout">
+      <article class="app-highlight">
+        <p class="app-kicker">Rewards status</p>
+        <h3>${formatPointsFull(rewards.balance)} available</h3>
+        <p>${rewards.dailyCap === null ? 'No daily wager cap is active.' : `${formatPointsFull(rewards.dailyRemaining)} left before the daily wager cap resets.`}</p>
+      </article>
+      <div class="app-inline-actions">
+        <a class="button button--secondary" href="/app/casino/">Open casino</a>
+        <a class="button button--secondary" href="/app/giveaways/">Open giveaways</a>
+      </div>
+    </section>
     <section class="app-ledger-shell">
       <div class="app-section-heading">
         <div>
-          <h3>All activity</h3>
-          <p class="app-description">Casino, giveaways, grants, and deductions.</p>
+          <h3>Full ledger</h3>
+          <p class="app-description">Casino, giveaways, grants, and deductions in one timeline.</p>
         </div>
       </div>
       ${renderLedgerTable(rewards.entries)}
@@ -528,17 +610,33 @@ async function renderGiveaways() {
   const contentRoot = document.querySelector('[data-content]');
   const payload = await getJSON('/api/giveaways');
   const activeCount = payload.giveaways.filter((item) => item.status === 'active').length;
+  const sortedGiveaways = [...payload.giveaways].sort((left, right) => {
+    const leftRank = left.status === 'active' ? 0 : left.status === 'scheduled' ? 1 : 2;
+    const rightRank = right.status === 'active' ? 0 : right.status === 'scheduled' ? 1 : 2;
+    return leftRank - rightRank || String(left.endAt || '').localeCompare(String(right.endAt || ''));
+  });
   summaryRoot.innerHTML = renderStats([
-    { label: 'Total giveaways', value: String(payload.giveaways.length), href: '/app/giveaways/' },
     { label: 'Active now', value: String(activeCount), href: '/app/giveaways/' },
+    { label: 'Total giveaways', value: String(payload.giveaways.length), href: '/app/giveaways/' },
     { label: 'Entry type', value: 'Points + roles' },
-    { label: 'Sign-in', value: state.me.authenticated ? 'Ready' : 'Optional to browse', href: '/app/profile/' },
+    { label: 'Sign-in', value: state.me.authenticated ? 'Ready' : 'Browse only', href: '/app/profile/' },
   ]);
 
   contentRoot.innerHTML = `
     <div id="giveaway-result"></div>
+    <section class="app-split-callout">
+      <article class="app-highlight">
+        <p class="app-kicker">Giveaway flow</p>
+        <h3>Act on live drops first</h3>
+        <p>Ghosted sorts active giveaways to the top so you can see what is open, what it costs, and whether your roles allow entry.</p>
+      </article>
+      <div class="app-inline-actions">
+        <a class="button button--secondary" href="/app/rewards/">Check balance</a>
+        <a class="button button--secondary" href="/app/profile/">Review roles</a>
+      </div>
+    </section>
     <section class="app-grid app-grid--two">
-      ${payload.giveaways.map((item) => `
+      ${sortedGiveaways.map((item) => `
         <article class="app-card">
           <div class="app-card__row">
             <h3>${escapeHtml(item.title)}</h3>
@@ -776,9 +874,8 @@ async function renderProfile() {
     : `<div class="app-avatar">${escapeHtml(user.displayName.slice(0, 1).toUpperCase())}</div>`;
   summaryRoot.innerHTML = renderStats([
     { label: 'Balance', value: formatPoints(user.balance), href: '/app/rewards/' },
-    { label: 'Discord ID', value: escapeHtml(user.discordId || 'Not synced') },
     { label: 'WOM link', value: womLink.linked ? 'Linked' : 'Not linked' },
-    { label: 'Entries used', value: String(user.giveawayEntries || 0), href: '/app/giveaways/' },
+    { label: 'Roles synced', value: String(roleDetails.length) },
     { label: 'Access', value: user.isAdmin ? 'Admin' : 'Member', href: user.isAdmin ? '/admin/' : '/app/' },
   ]);
   contentRoot.innerHTML = `
@@ -852,10 +949,20 @@ async function renderAdmin() {
       ['Live giveaways', String(activeGiveaways)],
       ['WOM links', String(payload.overview.wom?.linkedUsers || 0)],
       ['Admin users', String(adminCount)],
-      ['Actor', escapeHtml(payload.actor.displayName)],
     ]);
     contentRoot.innerHTML = `
       <div id="admin-result"></div>
+      <section class="app-split-callout">
+        <article class="app-highlight">
+          <p class="app-kicker">Operator view</p>
+          <h3>Quick actions first</h3>
+          <p>Use the top actions to grant rewards, launch giveaways, and refresh community data before you drop into tables and audits.</p>
+        </article>
+        <div class="app-inline-actions">
+          <span class="app-chip">Actor: ${escapeHtml(payload.actor.displayName)}</span>
+          <span class="app-chip">${payload.overview.wom?.configured ? 'WOM live' : 'WOM offline'}</span>
+        </div>
+      </section>
       <section class="app-grid app-grid--two">
         <form class="app-form" id="grant-form">
           <h3>Grant or deduct points</h3>
