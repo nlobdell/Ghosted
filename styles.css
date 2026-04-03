@@ -812,6 +812,122 @@
     font-size: 1.02rem;
   }
 
+  .hero-poster__meta,
+  .route-band,
+  .surface-map__list,
+  .journey-grid {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .hero-poster__meta {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  }
+
+  .hero-metric,
+  .journey-card,
+  .surface-map,
+  .route-band__item {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-md);
+    background:
+      linear-gradient(180deg, rgba(26, 22, 25, 0.82), rgba(12, 10, 13, 0.94)),
+      rgba(255, 255, 255, 0.02);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .hero-metric,
+  .journey-card,
+  .surface-map {
+    padding: 1rem;
+  }
+
+  .hero-metric {
+    display: grid;
+    gap: 0.3rem;
+  }
+
+  .hero-metric span,
+  .surface-map__list span {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .hero-metric strong,
+  .surface-map__list strong,
+  .surface-map__header strong,
+  .route-band__item strong {
+    color: var(--text-strong);
+  }
+
+  .journey-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .journey-card {
+    display: grid;
+    gap: 0.75rem;
+    align-content: start;
+  }
+
+  .journey-card p {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.65;
+  }
+
+  .route-band {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .route-band__item {
+    display: grid;
+    gap: 0.2rem;
+    padding: 1rem;
+    text-decoration: none;
+    transition:
+      transform var(--ease-standard),
+      border-color var(--ease-standard),
+      background-color var(--ease-standard);
+  }
+
+  .route-band__item:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 226, 182, 0.18);
+    background-color: rgba(255, 255, 255, 0.04);
+  }
+
+  .route-band__item span {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+  }
+
+  .surface-map {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .surface-map__header {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .surface-map__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .surface-map__list > div {
+    display: grid;
+    gap: 0.3rem;
+    padding: 0.9rem;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
   .timeline {
     display: grid;
     gap: 1rem;
@@ -904,7 +1020,10 @@
     .story-grid,
     .screen-stack,
     .proof-rail,
-    .pillar-grid {
+    .pillar-grid,
+    .route-band,
+    .surface-map__list,
+    .journey-grid {
       grid-template-columns: 1fr;
     }
   }
