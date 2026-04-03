@@ -89,7 +89,9 @@ export function renderCasinoApp(state: CasinoState) {
         <div class="casino-stage-shell__info">
           <aside class="casino-stage-shell__panel">
             <div class="casino-console" data-console>
+              <div class="casino-console__eyebrow">Latest spin</div>
               <div class="casino-console__headline" data-console-headline>${escapeHtml(resultHeadline(state.latestResult, game))}</div>
+              <p class="casino-console__copy" data-console-detail>${escapeHtml(resultDetail(state.latestResult, game))}</p>
             </div>
             <div class="casino-controls">
               <button class="button casino-controls__spin" data-spin>${spinLabel(game, state.spinning)}</button>
@@ -227,7 +229,14 @@ function renderHistory(spins: SpinResult[]) {
 }
 
 function resultHeadline(result: SpinResult | null, game: SlotGame) {
-  return result?.outcome.headline || game.name;
+  return result?.outcome.label || game.name;
+}
+
+function resultDetail(result: SpinResult | null, game: SlotGame) {
+  if (!result) {
+    return game.flavor || `${game.paylinesCount} paylines with a ${formatPercent(game.returnRate)} return profile.`;
+  }
+  return result.outcome.detail;
 }
 
 function statusCopy(result: SpinResult | null, game: SlotGame, spinning: boolean) {

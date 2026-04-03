@@ -40,7 +40,7 @@
 }
 
 .casino-stage-shell__info {
-  grid-template-columns: minmax(0, 1.1fr) repeat(2, minmax(260px, 1fr));
+  grid-template-columns: minmax(320px, 0.95fr) minmax(280px, 0.9fr) minmax(320px, 1.15fr);
   align-items: start;
 }
 
@@ -71,9 +71,9 @@
 .casino-stage-shell__panel {
   padding: 1rem;
   display: grid;
-  gap: 0.85rem;
+  gap: 1rem;
   align-content: start;
-  grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.85fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .casino-stage-shell__card {
@@ -82,7 +82,7 @@
 
 .casino-console {
   border-radius: 1rem;
-  padding: 1rem;
+  padding: 1.1rem 1.15rem;
   border: 1px solid rgba(255, 214, 102, 0.16);
   background:
     linear-gradient(135deg, rgba(255, 214, 102, 0.12), rgba(255, 93, 143, 0.08)),
@@ -98,38 +98,42 @@
 }
 
 .casino-console__headline {
-  margin-top: 0.35rem;
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 1.3rem;
+  margin-top: 0.45rem;
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.3rem, 2vw, 1.7rem);
+  line-height: 1.08;
 }
 
 .casino-console__copy {
-  margin: 0.5rem 0 0;
+  margin: 0.65rem 0 0;
   color: var(--app-muted);
-  line-height: 1.6;
+  line-height: 1.55;
+  max-width: 34ch;
 }
 
 .casino-controls {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.55rem;
+  align-content: start;
 }
 
 .casino-controls__spin {
-  width: 100%;
+  width: auto;
+  justify-self: start;
+  min-width: 13.5rem;
   min-height: 3.2rem;
 }
 
 .casino-controls__status {
-  min-height: 2.5rem;
+  min-height: 0;
+  line-height: 1.45;
+  max-width: 30ch;
 }
 
 .casino-panel-grid,
 .casino-player-grid {
   display: grid;
   gap: 0.75rem;
-}
-
-.casino-panel-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -141,10 +145,20 @@
   padding: 0.9rem;
 }
 
+.casino-panel-stat .app-muted,
+.casino-player-stat .app-muted {
+  display: block;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .casino-panel-stat strong,
 .casino-player-stat strong {
   display: block;
-  margin-top: 0.28rem;
+  margin-top: 0.38rem;
+  font-size: 1.2rem;
+  line-height: 1.15;
 }
 
 .casino-machine-list,
@@ -193,6 +207,12 @@
   color: var(--app-muted);
   font-size: 0.84rem;
   margin-top: 0.35rem;
+}
+
+.casino-machine-button__top strong,
+.casino-machine-button__top span,
+.casino-machine-button__meta span {
+  line-height: 1.35;
 }
 
 .casino-machine-button__symbols,
@@ -280,10 +300,6 @@
 @media (max-width: 720px) {
   .casino-stage-shell__canvas {
     min-height: 420px;
-  }
-
-  .casino-stage-shell__panel {
-    grid-template-columns: 1fr;
   }
 
   .casino-panel-grid,

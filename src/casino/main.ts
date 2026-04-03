@@ -134,13 +134,17 @@ function syncCasinoPanels() {
   if (!state.me?.authenticated || !state.rewards || !game) return;
 
   const headline = document.querySelector<HTMLElement>('[data-console-headline]');
+  const detail = document.querySelector<HTMLElement>('[data-console-detail]');
   const status = document.querySelector<HTMLElement>('[data-status]');
   const spin = document.querySelector<HTMLButtonElement>('[data-spin]');
   const playerBoard = document.querySelector<HTMLElement>('[data-player-board]');
   const history = document.querySelector<HTMLElement>('[data-history]');
 
   if (headline) {
-    headline.textContent = state.latestResult?.outcome.headline || game.name;
+    headline.textContent = state.latestResult?.outcome.label || game.name;
+  }
+  if (detail) {
+    detail.textContent = state.latestResult?.outcome.detail || game.flavor || `${game.paylinesCount} paylines with a ${Math.round(game.returnRate * 100)}% return profile.`;
   }
   if (status) {
     if (state.spinning) {
