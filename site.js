@@ -167,10 +167,14 @@
         ).filter((el) => !el.hasAttribute('hidden') && el.offsetParent !== null);
     }
 
+    function getNavDrawer(root) {
+        return root?.querySelector('[data-site-nav-drawer]') || root?.querySelector('.site-nav-drawer') || null;
+    }
+
     function openNav(root) {
         if (!root) return;
 
-        const drawer = root.querySelector('[data-site-nav-drawer]');
+        const drawer = getNavDrawer(root);
         const toggle = root.querySelector('[data-site-menu-toggle]');
         const focusable = getFocusableElements(drawer);
 
@@ -189,7 +193,7 @@
     function closeNav({ root = state.navRoot, restoreFocus = true } = {}) {
         if (!root) return;
 
-        const drawer = root.querySelector('[data-site-nav-drawer]');
+        const drawer = getNavDrawer(root);
         const toggle = root.querySelector('[data-site-menu-toggle]');
 
         root.removeAttribute('data-nav-open');
@@ -218,7 +222,7 @@
 
         if (event.key !== 'Tab') return;
 
-        const drawer = root.querySelector('[data-site-nav-drawer]');
+        const drawer = getNavDrawer(root);
         const focusable = getFocusableElements(drawer);
         if (!focusable.length) return;
 
@@ -242,7 +246,7 @@
         roots.forEach((root) => {
             const toggle = root.querySelector('[data-site-menu-toggle]');
             const closeButtons = root.querySelectorAll('[data-site-nav-close]');
-            const drawer = root.querySelector('[data-site-nav-drawer]');
+            const drawer = getNavDrawer(root);
             const links = root.querySelectorAll('[data-site-nav] a[href]');
 
             toggle?.setAttribute('aria-expanded', 'false');
