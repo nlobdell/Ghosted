@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Ghosted Apps | Giveaways</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -41,17 +41,27 @@
         </div>
       </div>
     </header>
-    <main class="container app-main" id="main-content" data-page="giveaways">
-      <section class="app-masthead">
-        <div class="app-masthead__copy">
+    <main class="container app-shell" id="main-content" data-page="giveaways">
+      <section class="app-context">
+        <div class="app-context__copy">
           <p class="app-kicker">Giveaways</p>
-          <h1 class="app-title">Open giveaways and drops</h1>
-          <p class="app-description">See what is live, what you can enter, and which giveaways are worth acting on right now.</p>
+          <h1 class="app-title">Open drops and entries</h1>
+          <p class="app-description">See which giveaways are live, what they cost, and whether your account is ready to enter right now.</p>
+        </div>
+        <div class="app-context__aside">
+          <div class="app-context__meta">
+            <span>Focus</span>
+            <strong>Live first</strong>
+          </div>
+          <div class="app-context__meta">
+            <span>Need</span>
+            <strong>Points + roles</strong>
+          </div>
         </div>
       </section>
       <div class="app-banner-slot" data-banner></div>
       <section class="app-summary-grid" data-summary></section>
-      <section data-content></section>
+      <section class="app-workspace" data-content></section>
     </main>
     <script src="/site.js"></script>
     <script src="/app/app.js"></script>
