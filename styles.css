@@ -958,6 +958,13 @@
       transform: translateX(0);
     }
 
+    [data-site-shell][data-nav-open='true'] .nav__actions,
+    [data-site-shell][data-nav-open='true'] .design-nav__actions {
+      display: flex !important;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
     .nav__actions,
     .design-nav__actions {
       justify-content: flex-start;

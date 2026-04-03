@@ -575,6 +575,10 @@
 }
 
 @media (max-width: 980px) {
+  [data-site-shell][data-nav-open='true'] .site-nav-drawer > .app-nav {
+    display: grid !important;
+  }
+
   .site-nav-drawer > .app-nav {
     width: min(24rem, calc(100vw - 1rem));
     min-height: 100vh;
