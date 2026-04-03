@@ -69,7 +69,13 @@ export class SlotRenderer {
   private app: Application | null = null;
   private host: HTMLElement | null = null;
   private root: Container | null = null;
+  private backdropLayer: Container | null = null;
+  private cabinetLayer: Container | null = null;
+  private headerLayer: Container | null = null;
+  private reelFrameLayer: Container | null = null;
+  private reelContentLayer: Container | null = null;
   private fxLayer: Container | null = null;
+  private overlayLayer: Container | null = null;
   private reels: ReelView[] = [];
   private activeGame: SlotGame | null = null;
   private readonly audio = new SlotAudio();
@@ -98,16 +104,22 @@ export class SlotRenderer {
 
     await preloadAssets();
     this.root = new Container();
-    this.fxLayer = new Container();
     this.app.stage.addChild(this.root);
+    this.resetSceneLayers();
     this.paintBackdrop();
   }
 
   destroy() {
     this.effects.splice(0).forEach((item) => item.destroy());
     this.reels = [];
+    this.backdropLayer = null;
+    this.cabinetLayer = null;
+    this.headerLayer = null;
+    this.reelFrameLayer = null;
+    this.reelContentLayer = null;
     this.root = null;
     this.fxLayer = null;
+    this.overlayLayer = null;
     if (this.app) {
       this.app.destroy(true, { children: true });
       this.app = null;
@@ -123,7 +135,7 @@ export class SlotRenderer {
   }
 
   async showMachine(game: SlotGame, result: SpinResult | null) {
-    if (!this.root || !this.fxLayer) return;
+    if (!this.root) return;
     this.activeGame = game;
     this.buildMachine(game);
     this.setIdleState(result?.grid?.length ? result.grid : idleGrid(game));
@@ -160,18 +172,20 @@ export class SlotRenderer {
   }
 
   private paintBackdrop() {
-    if (!this.root) return;
+    if (!this.backdropLayer) return;
     const background = new Graphics();
     background.rect(0, 0, STAGE_WIDTH, STAGE_HEIGHT).fill({ color: 0x12071f });
-    this.root.addChild(background);
+    this.backdropLayer.addChild(background);
   }
 
   private buildMachine(game: SlotGame) {
-    if (!this.root || !this.fxLayer) return;
-    this.root.removeChildren().forEach((child) => child.destroy());
-    this.root.addChild(new Graphics().rect(0, 0, STAGE_WIDTH, STAGE_HEIGHT).fill({ color: 0x12071f }));
-    this.fxLayer.removeChildren().forEach((child) => child.destroy());
-    this.effects.splice(0).forEach((item) => item.destroy());
+    if (!this.root) return;
+    this.clearEffects();
+    this.resetSceneLayers();
+    if (!this.backdropLayer || !this.cabinetLayer || !this.headerLayer || !this.reelFrameLayer || !this.reelContentLayer || !this.fxLayer) {
+      return;
+    }
+    this.paintBackdrop();
 
     const accent = parseColor(game.accent, 0xb989ff);
     const reelWindowX = INNER_X + 42;
@@ -184,7 +198,7 @@ export class SlotRenderer {
     const reelShelfWidth = REEL_COUNT * REEL_WIDTH + (REEL_COUNT - 1) * REEL_GAP + 36;
     const reelShelfHeight = REEL_HEIGHT + 36;
 
-    this.root.addChild(
+    this.cabinetLayer.addChild(
       roundedRect(CABINET_X, CABINET_Y, CABINET_WIDTH, CABINET_HEIGHT, 36, 0x160d24, 0.98, accent, 0.42, 6),
       roundedRect(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT, 20, 0x0a0711, 0.98, 0x74d8ff, 0.72, 6),
       roundedRect(INNER_X, INNER_Y, INNER_WIDTH, INNER_HEIGHT, 14, 0x140d21, 0.95, 0xffffff, 0.08, 2),
@@ -192,10 +206,9 @@ export class SlotRenderer {
       roundedRect(reelShelfX, reelShelfY, reelShelfWidth, reelShelfHeight, 22, 0x0b0913, 0.92, accent, 0.16, 2),
       new Graphics().rect(reelsStartX - 10, paylineY - 3, REEL_COUNT * REEL_WIDTH + (REEL_COUNT - 1) * REEL_GAP + 20, 6).fill({ color: 0xff5d8f, alpha: 0.94 }),
     );
-    this.root.addChild(
+    this.headerLayer.addChild(
       makeText(game.name.toUpperCase(), INNER_X + 38, INNER_Y + HEADER_HEIGHT * 0.5 + 2, '#fff4dc', 58, 0),
       makeText(`${game.paylinesCount} LINES`, INNER_X + INNER_WIDTH - 36, INNER_Y + HEADER_HEIGHT * 0.5 + 4, '#ffd68a', 28, 1),
-      this.fxLayer,
     );
 
     this.reels = [];
@@ -212,7 +225,9 @@ export class SlotRenderer {
       const mask = new Graphics();
       mask.rect(x, y, REEL_WIDTH, REEL_HEIGHT).fill(0xffffff);
       strip.mask = mask;
-      this.root.addChild(glow, symbolBack, frame, strip, mask);
+      this.fxLayer.addChild(glow);
+      this.reelFrameLayer.addChild(symbolBack, frame, mask);
+      this.reelContentLayer.addChild(strip);
       this.reels.push({ frame, glow, mask, strip, x, y });
     }
   }
@@ -376,12 +391,12 @@ export class SlotRenderer {
   }
 
   private async playFeatureTransition(label: string) {
-    if (!this.fxLayer) return;
+    if (!this.overlayLayer) return;
     const overlay = new Graphics();
     overlay.rect(0, 0, STAGE_WIDTH, STAGE_HEIGHT).fill({ color: 0x8cffc1, alpha: 0 });
     const banner = makeText(label, STAGE_WIDTH * 0.5, STAGE_HEIGHT * 0.5, '#f5fff9', 52, 0.5);
     banner.scale.set(0.82);
-    this.fxLayer.addChild(overlay, banner);
+    this.overlayLayer.addChild(overlay, banner);
     this.effects.push(overlay, banner);
     await animate(320, (progress) => {
       overlay.alpha = 0.2 * Math.sin(progress * Math.PI);
@@ -430,6 +445,27 @@ export class SlotRenderer {
     const index = this.effects.indexOf(item);
     if (index >= 0) this.effects.splice(index, 1);
     item.destroy();
+  }
+
+  private resetSceneLayers() {
+    if (!this.root) return;
+    this.root.removeChildren().forEach((child) => child.destroy());
+    this.backdropLayer = new Container();
+    this.cabinetLayer = new Container();
+    this.headerLayer = new Container();
+    this.reelFrameLayer = new Container();
+    this.reelContentLayer = new Container();
+    this.fxLayer = new Container();
+    this.overlayLayer = new Container();
+    this.root.addChild(
+      this.backdropLayer,
+      this.cabinetLayer,
+      this.headerLayer,
+      this.reelFrameLayer,
+      this.reelContentLayer,
+      this.fxLayer,
+      this.overlayLayer,
+    );
   }
 }
 
