@@ -3,3 +3,6 @@ __pycache__/
 data/ghosted.db
 node_modules/
 .claude/
+.vshistory/
+.idea/
+.DS_Store
