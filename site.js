@@ -159,19 +159,21 @@
             const headerTools = root.querySelector('.app-header__tools');
             const desktopNav = root.querySelector('.nav__actions--desktop, .design-nav__actions.nav__actions--desktop');
             const drawerHeader = root.querySelector('.site-nav-panel__header');
-
-            const existingDesktop = Array.from(root.querySelectorAll('[data-auth]')).find(
-                (node) => node.dataset.siteAuthVariant !== 'mobile'
-            );
+            const existingDesktop = root.querySelector('[data-auth]:not([data-site-auth-variant="mobile"])');
 
             if (!existingDesktop && desktopNav) {
                 const desktopMount = document.createElement('div');
                 desktopMount.className = 'site-shell-auth site-shell-auth--desktop';
                 desktopMount.setAttribute('data-auth', '');
                 desktopMount.setAttribute('data-site-auth-variant', 'public');
-                desktopNav.appendChild(desktopMount);
+                desktopNav.insertAdjacentElement('afterend', desktopMount);
             } else if (existingDesktop && headerTools && existingDesktop.classList.contains('app-auth')) {
                 existingDesktop.setAttribute('data-site-auth-variant', 'app');
+            } else if (existingDesktop && desktopNav && !existingDesktop.classList.contains('app-auth')) {
+                existingDesktop.setAttribute('data-site-auth-variant', 'public');
+                if (existingDesktop.parentElement === desktopNav) {
+                    desktopNav.insertAdjacentElement('afterend', existingDesktop);
+                }
             }
 
             if (drawerHeader && !root.querySelector('[data-auth][data-site-auth-variant="mobile"]')) {
