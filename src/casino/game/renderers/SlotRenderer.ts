@@ -32,7 +32,7 @@ type MotionProfile = {
 };
 
 const STAGE_WIDTH = 1600;
-const STAGE_HEIGHT = 960;
+const STAGE_HEIGHT = 1200;
 const REEL_COUNT = 5;
 const VISIBLE_ROWS = 3;
 const REEL_WIDTH = 228;
