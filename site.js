@@ -11,6 +11,33 @@
     };
 
     const numberFormatter = new Intl.NumberFormat();
+    const SHELL_DEFAULTS = {
+        brand: {
+            label: 'Ghosted',
+            href: '/',
+        },
+        links: {
+            twitch: {
+                key: 'twitch',
+                label: 'Twitch',
+                href: 'https://www.twitch.tv/vghosted',
+                rel: 'noopener noreferrer',
+                presentation: 'link',
+            },
+            discord: {
+                key: 'discord',
+                label: 'Discord',
+                href: 'https://discord.gg/ghosted',
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                presentation: 'button',
+            },
+        },
+        utilityGroups: {
+            public: ['twitch', 'discord'],
+            app: ['twitch'],
+        },
+    };
 
     function ensureLiveRegion() {
         let region = document.querySelector('[data-site-live-region]');
@@ -56,37 +83,6 @@
         return value.startsWith('/') ? value : '/';
     }
 
-    function activeRouteKey(pathname = window.location.pathname) {
-        const path = normalizePath(pathname);
-        if (path === '/') return 'home';
-        if (path.startsWith('/design')) return 'about';
-        if (path === '/app/' || path === '/app') return 'app';
-        if (path.startsWith('/app/community') || path.startsWith('/app/clan') || path.startsWith('/app/competitions')) {
-            return 'community';
-        }
-        if (path.startsWith('/app/rewards')) return 'rewards';
-        if (path.startsWith('/app/giveaways')) return 'giveaways';
-        if (path.startsWith('/app/casino')) return 'casino';
-        if (path.startsWith('/app/profile')) return 'profile';
-        if (path.startsWith('/admin')) return 'admin';
-        return '';
-    }
-
-    function navKeyForHref(href) {
-        if (!href) return '';
-        const normalized = normalizePath(href);
-        if (normalized === '/') return 'home';
-        if (normalized.startsWith('/design')) return 'about';
-        if (normalized === '/app/' || normalized === '/app') return 'app';
-        if (normalized.startsWith('/app/community')) return 'community';
-        if (normalized.startsWith('/app/rewards')) return 'rewards';
-        if (normalized.startsWith('/app/giveaways')) return 'giveaways';
-        if (normalized.startsWith('/app/casino')) return 'casino';
-        if (normalized.startsWith('/app/profile')) return 'profile';
-        if (normalized.startsWith('/admin')) return 'admin';
-        return '';
-    }
-
     function formatPoints(value) {
         return `${numberFormatter.format(Number(value || 0))} pts`;
     }
@@ -112,8 +108,8 @@
         const compact = variant === 'public';
         const mobile = variant === 'mobile';
         const subtitle = compact
-            ? `${formatPoints(user.balance)} • ${womRankLabel(shell)}`
-            : `${womStatusLine(shell)} • ${formatPoints(user.balance)}`;
+            ? `${formatPoints(user.balance)} | ${womRankLabel(shell)}`
+            : `${womStatusLine(shell)} | ${formatPoints(user.balance)}`;
 
         return `
       <div class="site-profile-widget site-profile-widget--signed-in site-profile-widget--${variant}">
@@ -153,90 +149,107 @@
         return root.dataset.siteAuthVariant || 'public';
     }
 
-    function ensureAuthMounts() {
-        const shellRoots = document.querySelectorAll('[data-site-shell]');
-        shellRoots.forEach((root) => {
-            const headerTools = root.querySelector('.app-header__tools');
-            const desktopNav = root.querySelector('.nav__actions--desktop, .design-nav__actions.nav__actions--desktop');
-            const drawerHeader = root.querySelector('.site-nav-panel__header');
-            const existingDesktop = root.querySelector('[data-auth]:not([data-site-auth-variant="mobile"])');
-
-            if (!existingDesktop && desktopNav) {
-                const desktopMount = document.createElement('div');
-                desktopMount.className = 'site-shell-auth site-shell-auth--desktop';
-                desktopMount.setAttribute('data-auth', '');
-                desktopMount.setAttribute('data-site-auth-variant', 'public');
-                desktopNav.insertAdjacentElement('afterend', desktopMount);
-            } else if (existingDesktop && headerTools && existingDesktop.classList.contains('app-auth')) {
-                existingDesktop.setAttribute('data-site-auth-variant', 'app');
-            } else if (existingDesktop && desktopNav && !existingDesktop.classList.contains('app-auth')) {
-                existingDesktop.setAttribute('data-site-auth-variant', 'public');
-                if (existingDesktop.parentElement === desktopNav) {
-                    desktopNav.insertAdjacentElement('afterend', existingDesktop);
-                }
-            }
-
-            if (drawerHeader && !root.querySelector('[data-auth][data-site-auth-variant="mobile"]')) {
-                const mobileMount = document.createElement('div');
-                mobileMount.className = 'site-shell-auth site-shell-auth--mobile';
-                mobileMount.setAttribute('data-auth', '');
-                mobileMount.setAttribute('data-site-auth-variant', 'mobile');
-                drawerHeader.insertAdjacentElement('afterend', mobileMount);
-            }
-        });
+    function shellBrand(shell) {
+        return shell?.brand || SHELL_DEFAULTS.brand;
     }
 
-    function syncNavigation(shell) {
-        const activeKey = activeRouteKey();
-        const containers = document.querySelectorAll('[data-site-nav], [data-site-nav-desktop]');
-        const adminItem = (shell?.navigation || []).find((item) => item.key === 'admin');
+    function shellLinks(shell) {
+        return shell?.links || SHELL_DEFAULTS.links;
+    }
 
-        containers.forEach((container) => {
-            const anchors = Array.from(container.querySelectorAll('a[href]'));
-            const firstLink = anchors.find((item) => item.getAttribute('href')?.startsWith('/'));
-            const linkClassName = firstLink?.className || 'nav__link';
-            container.querySelectorAll('[data-site-dynamic="true"]').forEach((node) => node.remove());
+    function shellUtilityGroups(shell) {
+        return shell?.utilityGroups || SHELL_DEFAULTS.utilityGroups;
+    }
 
-            if (adminItem && !container.querySelector('a[href="/admin/"]')) {
-                const adminLink = document.createElement('a');
-                adminLink.href = adminItem.href;
-                adminLink.className = linkClassName;
-                adminLink.dataset.siteDynamic = 'true';
-                adminLink.dataset.siteNavKey = 'admin';
-                adminLink.textContent = adminItem.label;
-                const twitchLink = anchors.find((item) => {
-                    try {
-                        return new URL(item.href, window.location.origin).hostname.replace(/^www\./, '') === 'twitch.tv';
-                    } catch {
-                        return false;
-                    }
+    function shellNavigation(shell) {
+        return Array.isArray(shell?.navigation) ? shell.navigation : [];
+    }
+
+    function activeRouteKey(shell) {
+        return shell?.activeRouteKey || '';
+    }
+
+    function renderAnchor(link, className, options = {}) {
+        const attrs = [
+            `class="${escapeHtml(className)}"`,
+            `href="${escapeHtml(link.href)}"`,
+        ];
+        if (link.target) {
+            attrs.push(`target="${escapeHtml(link.target)}"`);
+        }
+        if (link.rel) {
+            attrs.push(`rel="${escapeHtml(link.rel)}"`);
+        }
+        if (options.key) {
+            attrs.push(`data-site-nav-key="${escapeHtml(options.key)}"`);
+        }
+        if (options.active) {
+            attrs.push('aria-current="page"');
+        }
+        return `<a ${attrs.join(' ')}>${escapeHtml(link.label)}</a>`;
+    }
+
+    function utilityLinksForGroup(shell, groupKey) {
+        const groups = shellUtilityGroups(shell);
+        const links = shellLinks(shell);
+        return (groups[groupKey] || [])
+            .map((key) => links[key])
+            .filter(Boolean);
+    }
+
+    function renderUtilityLink(link, mount) {
+        const linkClass = mount.dataset.siteLinkClass || '';
+        const buttonClass = mount.dataset.siteButtonClass || linkClass || 'button button--small';
+        const useButtonStyle = link.presentation === 'button' && !!buttonClass;
+        const className = useButtonStyle ? buttonClass : (linkClass || buttonClass);
+        return renderAnchor(link, className);
+    }
+
+    function renderUtilityGroup(shell, mount) {
+        const groupKey = mount.dataset.siteUtilityGroup || '';
+        return utilityLinksForGroup(shell, groupKey)
+            .map((link) => renderUtilityLink(link, mount))
+            .join('');
+    }
+
+    function renderNavigationMount(shell, mount) {
+        const navLinkClass = mount.dataset.siteNavLinkClass || 'nav__link';
+        const currentKey = activeRouteKey(shell);
+        let html = shellNavigation(shell)
+            .map((item) => {
+                const isActive = item.key === currentKey;
+                return renderAnchor(item, `${navLinkClass}${isActive ? ' is-active' : ''}`, {
+                    key: item.key,
+                    active: isActive,
                 });
-                if (twitchLink) {
-                    twitchLink.insertAdjacentElement('beforebegin', adminLink);
-                } else {
-                    container.appendChild(adminLink);
-                }
-            }
+            })
+            .join('');
 
-            Array.from(container.querySelectorAll('a[href]')).forEach((link) => {
-                const key = link.dataset.siteNavKey || navKeyForHref(link.getAttribute('href'));
-                if (key) {
-                    link.dataset.siteNavKey = key;
-                }
-                const isActive = key && key === activeKey;
-                link.classList.toggle('is-active', !!isActive);
-                if (isActive) {
-                    link.setAttribute('aria-current', 'page');
-                } else if (link.getAttribute('aria-current') === 'page') {
-                    link.removeAttribute('aria-current');
-                }
-            });
+        if (mount.dataset.siteUtilityGroup) {
+            html += renderUtilityGroup(shell, mount);
+        }
+
+        mount.innerHTML = html;
+    }
+
+    function renderBrandMounts(shell) {
+        const brand = shellBrand(shell);
+        document.querySelectorAll('[data-site-brand]').forEach((anchor) => {
+            anchor.textContent = brand.label;
+            anchor.setAttribute('href', brand.href);
         });
     }
 
     function renderSiteShell(shell) {
-        ensureAuthMounts();
-        syncNavigation(shell);
+        renderBrandMounts(shell);
+
+        document.querySelectorAll('[data-site-nav], [data-site-nav-desktop]').forEach((mount) => {
+            renderNavigationMount(shell, mount);
+        });
+
+        document.querySelectorAll('[data-site-utility-links]').forEach((mount) => {
+            mount.innerHTML = renderUtilityGroup(shell, mount);
+        });
 
         document.querySelectorAll('[data-auth]').forEach((root) => {
             const variant = root.dataset.siteAuthVariant || inferDesktopVariant(root);
@@ -421,7 +434,16 @@
         }
 
         const link = event.target.closest('a[href]');
-        if (!link || !shouldConfirmTwitchLink(link)) return;
+        if (!link) return;
+
+        if (state.navRoot) {
+            const panel = state.navRoot.querySelector('.site-nav-panel');
+            if (panel && panel.contains(link)) {
+                closeNav({ root: state.navRoot, restoreFocus: false });
+            }
+        }
+
+        if (!shouldConfirmTwitchLink(link)) return;
 
         event.preventDefault();
         openDialog(link);
@@ -517,7 +539,6 @@
             const toggle = root.querySelector('[data-site-menu-toggle]');
             const closeButtons = root.querySelectorAll('[data-site-nav-close]');
             const drawer = getNavDrawer(root);
-            const links = root.querySelectorAll('[data-site-nav] a[href]');
 
             toggle?.setAttribute('aria-expanded', 'false');
             drawer?.setAttribute('hidden', '');
@@ -532,10 +553,6 @@
 
             closeButtons.forEach((button) => {
                 button.addEventListener('click', () => closeNav({ root, restoreFocus: false }));
-            });
-
-            links.forEach((link) => {
-                link.addEventListener('click', () => closeNav({ root, restoreFocus: false }));
             });
         });
 
@@ -554,7 +571,6 @@
 
         ensureLiveRegion();
         ensureDialog();
-        ensureAuthMounts();
         bindNav();
         document.addEventListener('click', handleDocumentClick);
 

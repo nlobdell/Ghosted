@@ -2128,9 +2128,7 @@ def profile_payload(
 
 
 def build_login_href(auth_config: AuthConfig, next_path: str) -> str | None:
-    normalized_next = str(next_path or "/").strip() or "/"
-    if not normalized_next.startswith("/"):
-        normalized_next = "/"
+    normalized_next = normalize_local_path(next_path)
     if auth_config.oauth_ready:
         return f"/auth/discord/login?next={quote(normalized_next, safe='/?=&')}"
     if env_flag("ENABLE_DEV_AUTH", False):
@@ -2138,20 +2136,95 @@ def build_login_href(auth_config: AuthConfig, next_path: str) -> str | None:
     return None
 
 
+def normalize_local_path(path: str | None) -> str:
+    normalized = str(path or "/").strip() or "/"
+    if not normalized.startswith("/"):
+        return "/"
+    return normalized
+
+
+SITE_BRAND = {
+    "label": "Ghosted",
+    "href": "/",
+}
+
+SITE_LINKS = {
+    "twitch": {
+        "key": "twitch",
+        "label": "Twitch",
+        "href": "https://www.twitch.tv/vghosted",
+        "rel": "noopener noreferrer",
+        "presentation": "link",
+    },
+    "discord": {
+        "key": "discord",
+        "label": "Discord",
+        "href": "https://discord.gg/ghosted",
+        "target": "_blank",
+        "rel": "noopener noreferrer",
+        "presentation": "button",
+    },
+}
+
+SITE_UTILITY_GROUPS = {
+    "public": ["twitch", "discord"],
+    "app": ["twitch"],
+}
+
+SITE_NAV_ITEMS = [
+    {"key": "home", "label": "Home", "href": "/"},
+    {"key": "about", "label": "About", "href": "/design/"},
+    {"key": "app", "label": "App Hub", "href": "/app/"},
+    {"key": "community", "label": "Community", "href": "/app/community/"},
+    {"key": "rewards", "label": "Rewards", "href": "/app/rewards/"},
+    {"key": "giveaways", "label": "Giveaways", "href": "/app/giveaways/"},
+    {"key": "casino", "label": "Casino", "href": "/app/casino/"},
+    {"key": "profile", "label": "Profile", "href": "/app/profile/"},
+]
+
+
+def active_route_key(path: str | None) -> str:
+    normalized = normalize_local_path(path)
+    if normalized == "/":
+        return "home"
+    if normalized.startswith("/design"):
+        return "about"
+    if normalized in {"/app", "/app/"}:
+        return "app"
+    if normalized.startswith("/app/community") or normalized.startswith("/app/clan") or normalized.startswith("/app/competitions"):
+        return "community"
+    if normalized.startswith("/app/rewards"):
+        return "rewards"
+    if normalized.startswith("/app/giveaways"):
+        return "giveaways"
+    if normalized.startswith("/app/casino"):
+        return "casino"
+    if normalized.startswith("/app/profile"):
+        return "profile"
+    if normalized.startswith("/admin"):
+        return "admin"
+    return ""
+
+
 def site_navigation_items(*, is_admin: bool = False) -> list[dict[str, Any]]:
-    items = [
-        {"key": "home", "label": "Home", "href": "/"},
-        {"key": "about", "label": "About", "href": "/design/"},
-        {"key": "app", "label": "App Hub", "href": "/app/"},
-        {"key": "community", "label": "Community", "href": "/app/community/"},
-        {"key": "rewards", "label": "Rewards", "href": "/app/rewards/"},
-        {"key": "giveaways", "label": "Giveaways", "href": "/app/giveaways/"},
-        {"key": "casino", "label": "Casino", "href": "/app/casino/"},
-        {"key": "profile", "label": "Profile", "href": "/app/profile/"},
-    ]
+    items = [dict(item) for item in SITE_NAV_ITEMS]
     if is_admin:
         items.append({"key": "admin", "label": "Admin", "href": "/admin/"})
     return items
+
+
+def site_links_payload() -> dict[str, dict[str, Any]]:
+    return {
+        key: dict(link)
+        for key, link in SITE_LINKS.items()
+    }
+
+
+def site_utility_groups_payload() -> dict[str, list[str]]:
+    return {
+        key: list(values)
+        for key, values in SITE_UTILITY_GROUPS.items()
+    }
 
 
 def site_shell_payload(
@@ -2163,8 +2236,13 @@ def site_shell_payload(
 ) -> dict[str, Any]:
     auth_config = build_auth_config(base_url)
     login_href = build_login_href(auth_config, next_path)
+    current_route_key = active_route_key(next_path)
     if not user_row:
         return {
+            "brand": dict(SITE_BRAND),
+            "links": site_links_payload(),
+            "utilityGroups": site_utility_groups_payload(),
+            "activeRouteKey": current_route_key,
             "authenticated": False,
             "auth": {
                 "configured": auth_config.oauth_ready,
@@ -2190,6 +2268,10 @@ def site_shell_payload(
     user = profile_payload(connection, user_row, auth_config=auth_config, role_directory=role_directory)
     wom_link = user.get("womLink") or {}
     return {
+        "brand": dict(SITE_BRAND),
+        "links": site_links_payload(),
+        "utilityGroups": site_utility_groups_payload(),
+        "activeRouteKey": current_route_key,
         "authenticated": True,
         "auth": {
             "configured": auth_config.oauth_ready,

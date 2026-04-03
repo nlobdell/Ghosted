@@ -21,8 +21,8 @@
     <a class="site-skip-link" href="#main-content">Skip to main content</a>
     <div class="design-shell">
       <header class="story-hero">
-        <nav class="design-nav container site-shell-nav" aria-label="Primary" data-site-shell>
-          <a class="design-brand" href="../">Ghosted</a>
+        <nav class="design-nav container site-shell-nav" aria-label="Primary" data-site-shell data-site-shell-variant="design">
+          <a class="design-brand" href="/" data-site-brand>Ghosted</a>
           <button class="button button--secondary button--small site-menu-toggle" type="button" data-site-menu-toggle aria-expanded="false" aria-controls="design-nav-panel" aria-label="Open navigation menu">
             <span class="site-menu-toggle__bars" aria-hidden="true"></span>
             <span class="site-menu-toggle__label">Menu</span>
@@ -31,39 +31,15 @@
             <div class="site-nav-backdrop" data-site-nav-close tabindex="-1" aria-hidden="true"></div>
             <div class="site-nav-panel" role="dialog" aria-modal="true" aria-label="Primary navigation">
               <div class="site-nav-panel__header">
-                <a class="design-brand" href="../">Ghosted</a>
+                <a class="design-brand" href="/" data-site-brand>Ghosted</a>
                 <button class="button button--secondary button--small site-nav-close" type="button" data-site-nav-close aria-label="Close navigation menu">Close</button>
               </div>
-              <div class="design-nav__actions" data-site-nav>
-                <a class="design-nav__link" href="../">Home</a>
-                <a class="design-nav__link" href="./" aria-current="page">About</a>
-                <a class="design-nav__link" href="../app/">App Hub</a>
-                <a class="design-nav__link" href="../app/community/">Community</a>
-                <a class="design-nav__link" href="../app/rewards/">Rewards</a>
-                <a class="design-nav__link" href="../app/giveaways/">Giveaways</a>
-                <a class="design-nav__link" href="../app/casino/">Casino</a>
-                <a class="design-nav__link" href="../app/profile/">Profile</a>
-                <a class="design-nav__link" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
-                <a class="button button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-                  Discord
-                </a>
-              </div>
+              <div class="site-shell-auth site-shell-auth--mobile" data-auth data-site-auth-variant="mobile"></div>
+              <div class="design-nav__actions" data-site-nav data-site-nav-link-class="design-nav__link" data-site-utility-group="public" data-site-link-class="design-nav__link" data-site-button-class="button button--small"></div>
             </div>
           </div>
-          <div class="design-nav__actions nav__actions--desktop" data-site-nav-desktop>
-            <a class="design-nav__link" href="../">Home</a>
-            <a class="design-nav__link" href="./" aria-current="page">About</a>
-            <a class="design-nav__link" href="../app/">App Hub</a>
-            <a class="design-nav__link" href="../app/community/">Community</a>
-            <a class="design-nav__link" href="../app/rewards/">Rewards</a>
-            <a class="design-nav__link" href="../app/giveaways/">Giveaways</a>
-            <a class="design-nav__link" href="../app/casino/">Casino</a>
-            <a class="design-nav__link" href="../app/profile/">Profile</a>
-            <a class="design-nav__link" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
-            <a class="button button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-              Discord
-            </a>
-          </div>
+          <div class="design-nav__actions nav__actions--desktop" data-site-nav-desktop data-site-nav-link-class="design-nav__link" data-site-utility-group="public" data-site-link-class="design-nav__link" data-site-button-class="button button--small"></div>
+          <div class="site-shell-auth site-shell-auth--desktop" data-auth data-site-auth-variant="public"></div>
         </nav>
 
         <section class="story-hero__inner container">
@@ -247,5 +223,4 @@
     <script src="/site.js?v=20260403a"></script>
   </body>
 </html>
-
 

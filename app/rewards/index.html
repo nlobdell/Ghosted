@@ -17,40 +17,23 @@
     <a class="site-skip-link" href="#main-content">Skip to main content</a>
     <header class="app-header">
       <div class="container app-header__inner">
-        <a class="brand" href="/">Ghosted</a>
-        <div class="app-header__shell" data-site-shell>
+        <a class="brand" href="/" data-site-brand>Ghosted</a>
+        <div class="app-header__shell" data-site-shell data-site-shell-variant="app">
           <div class="site-nav-drawer" data-site-nav-drawer hidden>
             <div class="site-nav-backdrop" data-site-nav-close tabindex="-1" aria-hidden="true"></div>
             <div class="site-nav-panel" role="dialog" aria-modal="true" aria-label="Primary navigation">
               <div class="site-nav-panel__header">
-                <a class="brand" href="/">Ghosted</a>
+                <a class="brand" href="/" data-site-brand>Ghosted</a>
                 <button class="button button--secondary button--small site-nav-close" type="button" data-site-nav-close aria-label="Close navigation menu">Close</button>
               </div>
-              <nav class="app-nav app-nav--mobile" aria-label="Mobile" data-site-nav>
-                <a class="app-nav__link" href="/">Home</a>
-                <a class="app-nav__link" href="/design/">About</a>
-                <a class="app-nav__link" href="/app/">App Hub</a>
-                <a class="app-nav__link" href="/app/community/">Community</a>
-                <a class="app-nav__link is-active" href="/app/rewards/" aria-current="page">Rewards</a>
-                <a class="app-nav__link" href="/app/giveaways/">Giveaways</a>
-                <a class="app-nav__link" href="/app/casino/">Casino</a>
-                <a class="app-nav__link" href="/app/profile/">Profile</a>
-              </nav>
+              <div class="site-shell-auth site-shell-auth--mobile" data-auth data-site-auth-variant="mobile"></div>
+              <nav class="app-nav app-nav--mobile" aria-label="Mobile" data-site-nav data-site-nav-link-class="app-nav__link"></nav>
             </div>
           </div>
-          <nav class="app-nav app-nav--desktop" aria-label="Primary" data-site-nav-desktop>
-            <a class="app-nav__link" href="/">Home</a>
-            <a class="app-nav__link" href="/design/">About</a>
-            <a class="app-nav__link" href="/app/">App Hub</a>
-            <a class="app-nav__link" href="/app/community/">Community</a>
-            <a class="app-nav__link is-active" href="/app/rewards/" aria-current="page">Rewards</a>
-            <a class="app-nav__link" href="/app/giveaways/">Giveaways</a>
-            <a class="app-nav__link" href="/app/casino/">Casino</a>
-            <a class="app-nav__link" href="/app/profile/">Profile</a>
-          </nav>
+          <nav class="app-nav app-nav--desktop" aria-label="Primary" data-site-nav-desktop data-site-nav-link-class="app-nav__link"></nav>
           <div class="app-header__tools">
-            <a class="button button--secondary button--small app-header__utility" href="https://www.twitch.tv/vghosted" rel="noopener noreferrer">Twitch</a>
-            <div class="app-auth" data-auth></div>
+            <div class="site-shell-utility-links site-shell-utility-links--app" data-site-utility-links data-site-utility-group="app" data-site-link-class="button button--secondary button--small app-header__utility"></div>
+            <div class="app-auth" data-auth data-site-auth-variant="app"></div>
             <button class="button button--secondary button--small site-menu-toggle" type="button" data-site-menu-toggle aria-label="Open navigation">
               <span class="site-menu-toggle__bars" aria-hidden="true"></span>
             </button>
@@ -83,6 +66,5 @@
     <script src="/app/app.js?v=20260403b"></script>
   </body>
 </html>
-
 
 

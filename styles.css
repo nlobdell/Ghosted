@@ -343,6 +343,13 @@
         align-items: center;
     }
 
+    .site-shell-utility-links {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        flex-wrap: wrap;
+    }
+
     .site-shell-auth--desktop {
         margin-left: 1rem;
         flex: 0 0 auto;
