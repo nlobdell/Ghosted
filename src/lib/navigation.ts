@@ -36,12 +36,10 @@ export const NAV_GROUP_LABELS: Record<NavGroup, string> = {
 };
 
 export const PRIMARY_NAV_LINKS: NavLink[] = [
-  { key: 'home', label: 'Home', href: '/', visibility: 'always' },
   { key: 'hub', label: 'Hall', href: '/app/', visibility: 'authenticated' },
-  { key: 'community', label: 'Community', href: '/app/community/', visibility: 'authenticated', group: 'clan' },
+  { key: 'clan', label: 'Clan', href: '/app/clan/', visibility: 'authenticated', group: 'clan' },
   { key: 'competitions', label: 'Competitions', href: '/app/competitions/', visibility: 'authenticated', group: 'clan' },
   { key: 'rewards', label: 'Rewards', href: '/app/rewards/', visibility: 'authenticated', group: 'economy' },
-  { key: 'giveaways', label: 'Giveaways', href: '/app/giveaways/', visibility: 'authenticated', group: 'economy' },
   { key: 'casino', label: 'Casino', href: '/app/casino/', visibility: 'authenticated', group: 'economy' },
   { key: 'profile', label: 'Profile', href: '/app/profile/', visibility: 'authenticated', group: 'you' },
   { key: 'admin', label: 'Admin', href: '/admin/', visibility: 'admin' },
@@ -88,12 +86,11 @@ export function getVisibleGroupedLinks(viewer: NavViewer): NavLinkGroup[] {
 
 export function getActiveNavKey(path: string) {
   const normalized = normalizePath(path);
-  if (normalized === '/') return 'home';
+  if (normalized === '/') return '';
   if (normalized === '/app') return 'hub';
-  if (normalized.startsWith('/app/community') || normalized.startsWith('/app/clan')) return 'community';
+  if (normalized.startsWith('/app/community') || normalized.startsWith('/app/clan')) return 'clan';
   if (normalized.startsWith('/app/competitions')) return 'competitions';
-  if (normalized.startsWith('/app/rewards')) return 'rewards';
-  if (normalized.startsWith('/app/giveaways')) return 'giveaways';
+  if (normalized.startsWith('/app/rewards') || normalized.startsWith('/app/giveaways')) return 'rewards';
   if (normalized.startsWith('/app/profile')) return 'profile';
   if (normalized.startsWith('/app/casino')) return 'casino';
   if (normalized.startsWith('/admin')) return 'admin';

@@ -125,7 +125,7 @@ export default function AdminPage() {
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
-          { label: 'App Hub', href: '/app/' },
+          { label: 'Hall', href: '/app/' },
           { label: 'Admin' },
         ]}
         title="Operator console"
@@ -135,6 +135,7 @@ export default function AdminPage() {
       {message ? <Banner message={message.text} variant={message.variant} /> : null}
 
       <StatStrip
+        leadIndex={0}
         stats={[
           { label: 'Tracked users', value: String(data?.overview.users.length ?? 0) },
           { label: 'Live giveaways', value: String(activeGiveaways) },
@@ -147,8 +148,12 @@ export default function AdminPage() {
         eyebrow="Admin"
         title="Operate Ghosted"
         copy="Keep the clan economy healthy, launch community drops, and refresh WOM-backed clan visibility for the broader Ghosted Discord community."
-        chips={[`Actor: ${data?.actor.displayName ?? ''}`, data?.overview.wom?.configured ? 'WOM live (Group 6371)' : 'WOM offline']}
-        theme="admin"
+        stage={{
+          label: 'Operator signal',
+          primary: `Actor: ${data?.actor.displayName ?? 'Unknown'}`,
+          secondary: data?.overview.wom?.configured ? 'WOM live (Group 6371)' : 'WOM offline',
+          chips: [`${activeGiveaways} live giveaways`, `${adminCount} admin users`],
+        }}
       />
 
       <ArchitectureMap
@@ -178,6 +183,7 @@ export default function AdminPage() {
 
       <AppGrid>
         <Panel
+          tier="primary"
           eyebrow="Points"
           title="Grant points"
           body={
@@ -197,6 +203,7 @@ export default function AdminPage() {
         />
 
         <Panel
+          tier="primary"
           eyebrow="Giveaways"
           title="Create giveaway"
           body={
@@ -232,6 +239,7 @@ export default function AdminPage() {
 
       <AppGrid>
         <Panel
+          tier="meta"
           eyebrow="Wise Old Man"
           title="Data refresh"
           chip={data?.overview.wom?.configured ? 'Live' : 'Offline'}
@@ -259,6 +267,7 @@ export default function AdminPage() {
         />
 
         <Panel
+          tier="meta"
           eyebrow="Status"
           title="System overview"
           body={
@@ -276,6 +285,7 @@ export default function AdminPage() {
 
       <AppGrid>
         <Panel
+          tier="meta"
           title="Users"
           body={(
             <DenseTable
@@ -287,6 +297,7 @@ export default function AdminPage() {
         />
 
         <Panel
+          tier="meta"
           title="Giveaway draws"
           body={
             data?.overview.giveaways.length ? (

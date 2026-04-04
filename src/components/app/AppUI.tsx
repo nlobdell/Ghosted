@@ -37,27 +37,45 @@ export function AppContext({
   );
 }
 
-export function StatStrip({ stats }: { stats: StatItem[] }) {
+function renderStat(stat: StatItem, className: string) {
+  const resolvedClassName = `${className}${stat.href ? ' app-stat--link' : ''}`;
+  const content = (
+    <>
+      <div className="app-stat__value">{stat.value}</div>
+      <div className="app-stat__label">{stat.label}</div>
+    </>
+  );
+
+  return stat.href ? (
+    <Link key={stat.label} href={stat.href} className={resolvedClassName}>
+      {content}
+    </Link>
+  ) : (
+    <article key={stat.label} className={resolvedClassName}>
+      {content}
+    </article>
+  );
+}
+
+export function StatStrip({
+  stats,
+  leadIndex = 0,
+}: {
+  stats: StatItem[];
+  leadIndex?: number;
+}) {
+  const safeLeadIndex = Math.max(0, Math.min(leadIndex, Math.max(0, stats.length - 1)));
+  const leadStat = stats[safeLeadIndex] ?? null;
+  const secondaryStats = stats.filter((_, index) => index !== safeLeadIndex);
+
   return (
     <section className="app-summary-grid" aria-label="Summary statistics">
-      {stats.map((stat) => {
-        const content = (
-          <>
-            <div className="app-stat__value">{stat.value}</div>
-            <div className="app-stat__label">{stat.label}</div>
-          </>
-        );
-
-        return stat.href ? (
-          <Link key={stat.label} href={stat.href} className="app-stat app-stat--link">
-            {content}
-          </Link>
-        ) : (
-          <article key={stat.label} className="app-stat">
-            {content}
-          </article>
-        );
-      })}
+      {leadStat ? renderStat(leadStat, 'app-stat app-stat--lead') : null}
+      {secondaryStats.length ? (
+        <div className="app-summary-grid__secondary">
+          {secondaryStats.map((stat) => renderStat(stat, 'app-stat app-stat--secondary'))}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -69,6 +87,7 @@ export function Panel({
   body,
   href,
   subtle,
+  tier = 'primary',
 }: {
   eyebrow?: string;
   title: string;
@@ -76,8 +95,14 @@ export function Panel({
   body: ReactNode;
   href?: string;
   subtle?: boolean;
+  tier?: 'primary' | 'meta';
 }) {
-  const className = ['app-panel', href ? 'app-panel--link' : '', subtle ? 'app-card--subtle' : '']
+  const className = [
+    'app-panel',
+    `app-panel--${tier}`,
+    href ? 'app-panel--link' : '',
+    subtle ? 'app-card--subtle' : '',
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -178,55 +203,47 @@ export function Highlight({
   title,
   copy,
   actions,
-  chips,
-  theme = 'dashboard',
+  stage,
 }: {
   eyebrow?: string;
   title: string;
   copy?: string;
   actions?: ReactNode;
-  chips?: string[];
-  theme?: string;
-}) {
-  const themes: Record<string, { label: string; title: string; art: string[] }> = {
-    admin: { label: 'Operator tools', title: 'Clan operations', art: ['/symbols/crown.svg', '/symbols/rune.svg'] },
-    community: { label: 'Community board', title: 'Roster and events', art: ['/symbols/rune.svg', '/symbols/ghost.svg'] },
-    giveaways: { label: 'Drop board', title: 'Entries and access', art: ['/symbols/scatter.svg', '/symbols/crown.svg'] },
-    rewards: { label: 'Points ledger', title: 'Balance and history', art: ['/symbols/coin.svg', '/symbols/rune.svg'] },
-    casino: { label: 'Casino floor', title: 'Machines and results', art: ['/symbols/wild.svg', '/symbols/coin.svg'] },
-    dashboard: { label: 'Member hub', title: 'Daily essentials', art: ['/symbols/ghost.svg', '/symbols/lantern.svg'] },
+  stage?: {
+    label: string;
+    primary: string;
+    secondary?: string;
+    chips?: string[];
   };
-
-  const selected = themes[theme] ?? themes.dashboard;
-
+}) {
   return (
-    <section className="highlight-shell">
+    <section className={`highlight-shell${stage ? '' : ' highlight-shell--single'}`}>
       <div className="highlight-copy">
         {eyebrow ? <p className="kicker">{eyebrow}</p> : null}
         <h2 className="highlight-copy__title">{title}</h2>
         {copy ? <p>{copy}</p> : null}
         {actions ? <div className="app-inline-actions">{actions}</div> : null}
       </div>
-      <aside className="highlight-stage" aria-label={selected.label}>
-        <div className="highlight-stage__header">
-          <span>{selected.label}</span>
-          <strong>{selected.title}</strong>
-        </div>
-        <div className="highlight-stage__art">
-          {selected.art.map((src, index) => (
-            <img key={src} src={src} alt="" className={`highlight-stage__icon highlight-stage__icon--${index + 1}`} />
-          ))}
-        </div>
-        {chips?.length ? (
-          <div className="highlight-stage__chips">
-            {chips.map((chip) => (
-              <span key={chip} className="app-chip">
-                {chip}
-              </span>
-            ))}
+      {stage ? (
+        <aside className="highlight-stage" aria-label={stage.label}>
+          <div className="highlight-stage__header">
+            <span>{stage.label}</span>
           </div>
-        ) : null}
-      </aside>
+          <div className="highlight-stage__metric">
+            <strong>{stage.primary}</strong>
+            {stage.secondary ? <p>{stage.secondary}</p> : null}
+          </div>
+          {stage.chips?.length ? (
+            <div className="highlight-stage__chips">
+              {stage.chips.map((chip) => (
+                <span key={chip} className="app-chip">
+                  {chip}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </aside>
+      ) : null}
     </section>
   );
 }

@@ -16,6 +16,7 @@ export function GhostedNav({ sticky = false }: { sticky?: boolean }) {
   const activeKey = getActiveNavKey(pathname);
   const [open, setOpen] = useState(false);
   const [shell, setShell] = useState<ShellData | null>(null);
+  const [revealed, setRevealed] = useState(sticky);
 
   useEffect(() => {
     fetch(`/api/site-shell?next=${encodeURIComponent(window.location.pathname)}`, {
@@ -26,13 +27,28 @@ export function GhostedNav({ sticky = false }: { sticky?: boolean }) {
       .catch(() => null);
   }, []);
 
+  useEffect(() => {
+    if (sticky) {
+      setRevealed(true);
+      return;
+    }
+    const onScroll = () => {
+      if (window.scrollY > 28) {
+        setRevealed(true);
+      }
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [sticky]);
+
   const viewer = {
     authenticated: Boolean(shell?.authenticated),
     isAdmin: Boolean(shell?.user?.isAdmin),
   };
   const groupedLinks = getVisibleGroupedLinks(viewer);
   const drawerId = 'ghosted-nav-drawer';
-  const wrapperClassName = sticky ? 'app-header' : 'site-nav';
+  const wrapperClassName = sticky ? 'app-header' : `site-nav${revealed ? ' site-nav--revealed' : ''}`;
 
   const navShell = (
     <div className="nav-shell">
@@ -174,9 +190,15 @@ export function GhostedNav({ sticky = false }: { sticky?: boolean }) {
     );
   }
 
+  if (!revealed) {
+    return null;
+  }
+
   return (
     <nav className={wrapperClassName} aria-label="Primary navigation">
-      {navShell}
+      <div className="container">
+        {navShell}
+      </div>
       {drawer}
     </nav>
   );
