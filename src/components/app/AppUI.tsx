@@ -188,11 +188,11 @@ export function Highlight({
   theme?: string;
 }) {
   const themes: Record<string, { label: string; title: string; art: string[] }> = {
-    admin: { label: 'Control room', title: 'Operator lane', art: ['/src/casino/assets/symbols/crown.svg', '/src/casino/assets/symbols/rune.svg'] },
-    community: { label: 'Clan watch', title: 'Roster and comps', art: ['/src/casino/assets/symbols/rune.svg', '/src/casino/assets/symbols/ghost.svg'] },
-    giveaways: { label: 'Drop board', title: 'Live entries', art: ['/src/casino/assets/symbols/scatter.svg', '/src/casino/assets/symbols/crown.svg'] },
-    rewards: { label: 'Ledger', title: 'Balance rail', art: ['/src/casino/assets/symbols/coin.svg', '/src/casino/assets/symbols/rune.svg'] },
-    dashboard: { label: 'Command center', title: 'Ghosted flow', art: ['/src/casino/assets/symbols/ghost.svg', '/src/casino/assets/symbols/rune.svg'] },
+    admin: { label: 'Control room', title: 'Operator lane', art: ['/symbols/crown.svg', '/symbols/rune.svg'] },
+    community: { label: 'Clan watch', title: 'Roster and comps', art: ['/symbols/rune.svg', '/symbols/ghost.svg'] },
+    giveaways: { label: 'Drop board', title: 'Live entries', art: ['/symbols/scatter.svg', '/symbols/crown.svg'] },
+    rewards: { label: 'Ledger', title: 'Balance rail', art: ['/symbols/coin.svg', '/symbols/rune.svg'] },
+    dashboard: { label: 'Command center', title: 'Ghosted flow', art: ['/symbols/ghost.svg', '/symbols/rune.svg'] },
   };
   const t = themes[theme] ?? themes.dashboard;
   return (
