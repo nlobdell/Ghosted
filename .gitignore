@@ -6,3 +6,5 @@ node_modules/
 .vshistory/
 .idea/
 .DS_Store
+.next/
+tsconfig.tsbuildinfo
