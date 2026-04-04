@@ -1,20 +1,19 @@
 # Ghosted Ubuntu VPS Deployment
 
-This guide assumes:
+This guide reflects the current split architecture:
 
-- Ubuntu 24.04 LTS
-- A domain pointed at your server
-- You want the app running continuously with `systemd`
-- You want HTTPS handled by Caddy
+- Next.js web app (port `3000`)
+- Python API service (port `8000`)
+- Caddy as HTTPS reverse proxy
 
 ## 1. Install system packages
 
 ```bash
 sudo apt update
-sudo apt install -y python3 caddy
+sudo apt install -y python3 python3-venv nodejs npm caddy
 ```
 
-## 2. Create a service account and directories
+## 2. Create service account and directories
 
 ```bash
 sudo useradd --system --create-home --shell /usr/sbin/nologin ghosted
@@ -25,99 +24,88 @@ sudo chown -R ghosted:ghosted /opt/ghosted
 sudo chown -R ghosted:ghosted /var/lib/ghosted
 ```
 
-## 3. Copy the app to the server
+## 3. Copy code and install dependencies
 
 ```bash
 sudo rsync -av --delete ./ /opt/ghosted/
-sudo chown -R ghosted:ghosted /opt/ghosted
+cd /opt/ghosted
+sudo npm install
 ```
 
-## 4. Create the production env file
+## 4. Configure env file
 
-Start from `deploy/ghosted.env.example` and place the real version at:
+Use `/etc/ghosted/ghosted.env` for backend settings and secrets.
 
-```text
-/etc/ghosted/ghosted.env
-```
-
-Recommended production values:
+At minimum:
 
 - `HOST=127.0.0.1`
 - `PORT=8000`
-- `DATABASE_PATH=/var/lib/ghosted/ghosted.db`
 - `PUBLIC_BASE_URL=https://your-domain.com`
+- `DATABASE_PATH=/var/lib/ghosted/ghosted.db`
 - `SESSION_COOKIE_SECURE=true`
 - `DISCORD_REDIRECT_URI=https://your-domain.com/auth/discord/callback`
 
-## 5. Register the Discord callback URL
+## 5. Run services
 
-In the Discord Developer Portal, add the exact redirect URI:
+### Next.js web service
 
-```text
-https://your-domain.com/auth/discord/callback
+Run `next start` on `127.0.0.1:3000` from `/opt/ghosted`.
+
+### Python API service
+
+Run `python3 /opt/ghosted/server.py` with environment from `/etc/ghosted/ghosted.env`.
+
+Your host can use names like `ghosted-web.service` and `ghosted-api.service` (or legacy `ghosted.service`) as long as:
+
+- web is reachable on `3000`
+- API is reachable on `8000`
+
+## 6. Configure Caddy
+
+Example:
+
+```caddyfile
+ghosted.example.com {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:3000
+}
 ```
 
-This must match the production env value exactly.
+Next.js handles `/api/*` and `/auth/*` rewrites to the Python API using `PYTHON_API_URL` (default `http://localhost:8000`).
 
-## 6. Install the systemd service
+## 7. Deploy updates
 
 ```bash
-sudo cp /opt/ghosted/deploy/ghosted.service /etc/systemd/system/ghosted.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now ghosted
-sudo systemctl status ghosted
+cd /opt/ghosted
+git pull --ff-only origin main
+npm install
+npm run build
+sudo systemctl restart ghosted-web
 ```
 
-Useful commands:
+If backend logic changed:
 
 ```bash
-sudo journalctl -u ghosted -f
-sudo systemctl restart ghosted
+sudo systemctl restart ghosted-api
 ```
 
-## 7. Configure Caddy
+(or restart your legacy Python service name if different)
 
-Copy `deploy/Caddyfile.example` into `/etc/caddy/Caddyfile` and replace the domain.
+## 8. Validate
 
 ```bash
-sudo cp /opt/ghosted/deploy/Caddyfile.example /etc/caddy/Caddyfile
-sudo nano /etc/caddy/Caddyfile
-sudo systemctl reload caddy
+sudo systemctl status ghosted-web --no-pager
+sudo systemctl status ghosted-api --no-pager
+curl -I https://your-domain.com
+curl -I https://your-domain.com/api/config
 ```
 
-Caddy will automatically provision HTTPS once DNS is pointed correctly.
+## 9. Backups
 
-## 8. Back up the database
-
-The production database lives at:
+Database path:
 
 ```text
 /var/lib/ghosted/ghosted.db
 ```
 
-At minimum, add a nightly backup job, for example:
-
-```bash
-sudo mkdir -p /var/backups/ghosted
-sudo crontab -e
-```
-
-Example cron entry:
-
-```cron
-0 3 * * * cp /var/lib/ghosted/ghosted.db /var/backups/ghosted/ghosted-$(date +\%F).db
-```
-
-## 9. Deploy updates
-
-```bash
-git pull --ff-only origin main
-npm run build:casino
-sudo systemctl restart ghosted
-```
-
-## Notes
-
-- This app currently uses SQLite, so run a single app instance.
-- Keep the database on persistent local disk.
-- If traffic grows substantially, the next step is moving to Postgres before scaling horizontally.
+Add a nightly copy job and keep rotation in `/var/backups/ghosted`.

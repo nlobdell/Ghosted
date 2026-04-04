@@ -3,28 +3,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { AuthWidget } from '@/components/AuthWidget';
-
-const APP_NAV = [
-  { key: 'community',   label: 'Community',   href: '/app/community/' },
-  { key: 'competitions',label: 'Competitions', href: '/app/competitions/' },
-  { key: 'rewards',     label: 'Rewards',      href: '/app/rewards/' },
-  { key: 'giveaways',   label: 'Giveaways',    href: '/app/giveaways/' },
-  { key: 'profile',     label: 'Profile',      href: '/app/profile/' },
-  { key: 'casino',      label: 'Casino',       href: '/app/casino/' },
-];
-
-function getActiveKey(path: string) {
-  if (path.startsWith('/app/community') || path.startsWith('/app/clan')) return 'community';
-  if (path.startsWith('/app/competitions')) return 'competitions';
-  if (path.startsWith('/app/rewards'))      return 'rewards';
-  if (path.startsWith('/app/giveaways'))    return 'giveaways';
-  if (path.startsWith('/app/profile'))      return 'profile';
-  if (path.startsWith('/app/casino'))       return 'casino';
-  return '';
-}
+import { APP_NAV_LINKS, getAppActiveKey } from '@/lib/navigation';
 
 export function AppHeader() {
-  const active = getActiveKey(usePathname());
+  const active = getAppActiveKey(usePathname());
   const [open, setOpen] = useState(false);
 
   return (
@@ -41,7 +23,7 @@ export function AppHeader() {
 
           <nav aria-label="App navigation" className="nav-links">
             <div className="nav-link-group">
-              {APP_NAV.map((link) => (
+              {APP_NAV_LINKS.map((link) => (
                 <Link
                   key={link.key}
                   href={link.href}
@@ -112,7 +94,7 @@ export function AppHeader() {
             <AuthWidget variant="mobile" />
 
             <nav aria-label="App navigation" className="nav-drawer-links">
-              {APP_NAV.map((link) => (
+              {APP_NAV_LINKS.map((link) => (
                 <Link
                   key={link.key}
                   href={link.href}

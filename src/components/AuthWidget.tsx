@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { ShellData } from '@/lib/types';
-import { formatPoints } from '@/lib/api';
 
 const numberFormatter = new Intl.NumberFormat();
 
@@ -20,7 +19,7 @@ export function AuthWidget({ variant }: Props) {
     fetch(`/api/site-shell?next=${encodeURIComponent(window.location.pathname)}`, {
       headers: { Accept: 'application/json' },
     })
-      .then((r) => r.json())
+      .then((response) => response.json())
       .then(setShell)
       .catch(() => null);
   }, []);
@@ -28,37 +27,30 @@ export function AuthWidget({ variant }: Props) {
   if (!shell) return null;
 
   if (shell.authenticated && shell.user) {
-    const u = shell.user;
-    const subtitle =
-      variant === 'public'
-        ? `${formatPts(u.balance)} | ${u.womLink?.membership?.rankLabel ?? u.womLink?.membership?.role ?? (u.womLink?.linked ? 'Member' : 'Discord only')}`
-        : `${u.womLink?.linked ? (u.womLink.membership?.rankLabel ?? u.womLink.membership?.role ?? 'Member') : 'Link your RSN from Profile'} | ${formatPts(u.balance)}`;
+    const user = shell.user;
+    const subtitle = variant === 'public'
+      ? `${formatPts(user.balance)} | ${user.womLink?.membership?.rankLabel ?? user.womLink?.membership?.role ?? (user.womLink?.linked ? 'Member' : 'Discord only')}`
+      : `${user.womLink?.linked ? (user.womLink.membership?.rankLabel ?? user.womLink.membership?.role ?? 'Member') : 'Link your RSN from Profile'} | ${formatPts(user.balance)}`;
 
     return (
-      <div className={`site-profile-widget site-profile-widget--signed-in site-profile-widget--${variant}`}
-        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'nowrap' }}>
-        <a className="site-profile-widget__card" href="/app/profile/"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minHeight: '2.6rem', padding: '0.32rem 0.45rem', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '1.05rem', background: 'rgba(255,255,255,0.035)', textDecoration: 'none', minWidth: 0, flex: '1 1 auto' }}>
-          {u.avatarUrl ? (
-            <img className="site-profile-widget__avatar" src={u.avatarUrl} alt={u.displayName}
-              style={{ width: '3.8rem', height: '3.8rem', borderRadius: '0.85rem', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', display: 'grid', placeItems: 'center', fontWeight: 800, color: '#f3f1f9', overflow: 'hidden', flex: '0 0 auto' }} />
+      <div className={`site-profile-widget site-profile-widget--signed-in site-profile-widget--${variant}`}>
+        <a className="site-profile-widget__card" href="/app/profile/">
+          {user.avatarUrl ? (
+            <img className="site-profile-widget__avatar" src={user.avatarUrl} alt={user.displayName} />
           ) : (
-            <div className="site-profile-widget__avatar"
-              style={{ width: '3.8rem', height: '3.8rem', borderRadius: '0.85rem', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', display: 'grid', placeItems: 'center', fontWeight: 800, color: '#f3f1f9', overflow: 'hidden', flex: '0 0 auto' }}>
-              {(u.displayName || u.username || 'G').slice(0, 1).toUpperCase()}
+            <div className="site-profile-widget__avatar">
+              {(user.displayName || user.username || 'G').slice(0, 1).toUpperCase()}
             </div>
           )}
-          <span className="site-profile-widget__copy" style={{ display: 'grid', gap: '0.08rem', minWidth: 0, flex: '1 1 auto' }}>
-            <strong style={{ color: '#f3f1f9', fontSize: '0.92rem', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {u.displayName || u.username || 'Ghosted member'}
-            </strong>
-            <span style={{ fontSize: '0.72rem', lineHeight: 1.3, color: '#9d96ad' }}>{subtitle}</span>
+          <span className="site-profile-widget__copy">
+            <strong>{user.displayName || user.username || 'Ghosted member'}</strong>
+            <span>{subtitle}</span>
           </span>
         </a>
-        <div className="site-profile-widget__actions" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'nowrap' }}>
-          {u.isAdmin && (
+        <div className="site-profile-widget__actions">
+          {user.isAdmin ? (
             <a className="button button--secondary button--small" href="/admin/">Admin</a>
-          )}
+          ) : null}
           <button
             className="button button--secondary button--small"
             type="button"
@@ -75,17 +67,14 @@ export function AuthWidget({ variant }: Props) {
     );
   }
 
-  const canSignIn = !!shell.auth?.canSignIn && !!shell.auth?.loginHref;
+  const canSignIn = Boolean(shell.auth?.canSignIn && shell.auth?.loginHref);
   const compact = variant === 'public';
 
   return (
-    <div className={`site-profile-widget site-profile-widget--signed-out site-profile-widget--${variant}`}
-      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.55rem', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '1rem', background: 'rgba(255,255,255,0.03)' }}>
-      <div className="site-profile-widget__copy" style={{ display: 'grid', gap: '0.08rem' }}>
-        <strong style={{ color: '#f3f1f9', fontSize: '0.92rem' }}>
-          {compact ? 'Member access' : 'Sign in to Ghosted'}
-        </strong>
-        <span style={{ fontSize: '0.72rem', color: '#9d96ad' }}>
+    <div className={`site-profile-widget site-profile-widget--signed-out site-profile-widget--${variant}`}>
+      <div className="site-profile-widget__copy">
+        <strong>{compact ? 'Member access' : 'Sign in to Ghosted'}</strong>
+        <span>
           {shell.wom?.configured
             ? 'Sync Discord, profile, and WOM status.'
             : 'Discord auth is available once configured.'}
@@ -94,7 +83,7 @@ export function AuthWidget({ variant }: Props) {
       {canSignIn ? (
         <a className="button button--small" href={shell.auth.loginHref}>Sign In</a>
       ) : (
-        <span style={{ fontSize: '0.72rem', color: '#9d96ad' }}>Sign-in unavailable</span>
+        <span className="site-profile-widget__hint">Sign-in unavailable</span>
       )}
     </div>
   );

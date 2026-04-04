@@ -53,7 +53,7 @@ export default function RewardsPage() {
       ) : !authed ? (
         <EmptyState
           message="Sign in to view your balance and rewards history."
-          action={<Link href="/api/auth/discord" className="button button--secondary button--small">Sign in with Discord</Link>}
+          action={<Link href="/auth/discord/login" className="button button--secondary button--small">Sign in with Discord</Link>}
         />
       ) : rewards ? (
         <>

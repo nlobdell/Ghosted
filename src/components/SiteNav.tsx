@@ -3,33 +3,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { AuthWidget } from './AuthWidget';
-
-const NAV_LINKS = [
-  { key: 'home', label: 'Home', href: '/' },
-  { key: 'community', label: 'Community', href: '/app/community/' },
-  { key: 'rewards', label: 'Rewards', href: '/app/rewards/' },
-  { key: 'giveaways', label: 'Giveaways', href: '/app/giveaways/' },
-  { key: 'casino', label: 'Casino', href: '/app/casino/' },
-  { key: 'app', label: 'App Hub', href: '/app/' },
-];
-
-const EXTERNAL_LINKS = [
-  { label: 'Twitch',  href: 'https://www.twitch.tv/vghosted' },
-  { label: 'Discord', href: 'https://discord.gg/ghosted' },
-];
-
-function getActiveKey(path: string) {
-  if (path === '/') return 'home';
-  if (path.startsWith('/app/community') || path.startsWith('/app/clan')) return 'community';
-  if (path.startsWith('/app/rewards')) return 'rewards';
-  if (path.startsWith('/app/giveaways')) return 'giveaways';
-  if (path.startsWith('/app/casino')) return 'casino';
-  if (path.startsWith('/app')) return 'app';
-  return '';
-}
+import {
+  EXTERNAL_NAV_LINKS,
+  PUBLIC_NAV_LINKS,
+  getPublicActiveKey,
+} from '@/lib/navigation';
 
 export function SiteNav() {
-  const active = getActiveKey(usePathname());
+  const active = getPublicActiveKey(usePathname());
   const [open, setOpen] = useState(false);
 
   return (
@@ -45,7 +26,7 @@ export function SiteNav() {
 
         <div className="nav-links">
           <div className="nav-link-group">
-            {NAV_LINKS.map((link) => (
+            {PUBLIC_NAV_LINKS.map((link) => (
               <Link
                 key={link.key}
                 href={link.href}
@@ -57,7 +38,7 @@ export function SiteNav() {
             ))}
           </div>
           <div className="nav-utility-links">
-            {EXTERNAL_LINKS.map((link) => (
+            {EXTERNAL_NAV_LINKS.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
@@ -121,7 +102,7 @@ export function SiteNav() {
             <AuthWidget variant="mobile" />
 
             <div className="nav-drawer-links">
-              {NAV_LINKS.map((link) => (
+              {PUBLIC_NAV_LINKS.map((link) => (
                 <Link
                   key={link.key}
                   href={link.href}
@@ -132,7 +113,7 @@ export function SiteNav() {
                   {link.label}
                 </Link>
               ))}
-              {EXTERNAL_LINKS.map((link) => (
+              {EXTERNAL_NAV_LINKS.map((link) => (
                 <a
                   key={link.label}
                   href={link.href}

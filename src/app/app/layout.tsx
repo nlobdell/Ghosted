@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="app-page" style={{ minHeight: '100vh' }}>
+    <div className="app-page app-shell">
       <AppHeader />
       {children}
     </div>

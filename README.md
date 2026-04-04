@@ -1,187 +1,75 @@
 # Ghosted
 
-Ghosted is a lightweight Python web app for the Ghosted Old School RuneScape community.
+Ghosted is a community platform for the Ghosted Old School RuneScape clan, built as:
 
-It combines:
+- a **Next.js frontend** (`src/app`)
+- a **Python API/backend** (`server.py`)
+- a **SQLite data layer** for rewards, giveaways, and casino history
 
-- public marketing pages
-- a Discord-authenticated member app
-- Wise Old Man clan and competition data
-- a points-based rewards and giveaway system
-- an in-app casino backed by server-side state
-- an admin console for operators
+The canonical architecture reference is [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
-## Current Project Shape
+## Tech Stack
 
-The repo is organized around a single Python server and a mostly static frontend shell:
-
-- `server.py` serves pages, APIs, auth flows, and SQLite-backed app data
-- `index.html`, `styles.css`, and `site.js` power the public landing page and shared shell behavior
-- `design/` contains the public About page
-- `app/` contains the authenticated member experience
-- `admin/` contains the operator console
-- `src/casino/` contains the TypeScript/Pixi source for the casino runtime
-- `app/casino/runtime/` contains the built browser assets used by the live casino page
-- `data/ghosted.db` is the default local SQLite database
-
-## Main Routes
-
-Public pages:
-
-- `/` landing page
-- `/design/` about / system overview
-
-Member app pages:
-
-- `/app/` app hub
-- `/app/community/` community overview
-- `/app/clan/` clan detail
-- `/app/competitions/` competition listing and drill-down
-- `/app/rewards/` balance and ledger
-- `/app/giveaways/` active giveaways
-- `/app/profile/` Discord and Wise Old Man identity setup
-- `/app/casino/` points-only casino experience
-
-Admin page:
-
-- `/admin/` operator console for rewards, giveaways, and data refresh actions
-
-## API Surface
-
-The Python server also exposes JSON endpoints used by the frontend shell:
-
-- `/api/config`
-- `/api/site-shell`
-- `/api/me`
-- `/api/wom/*`
-- `/api/rewards`
-- `/api/profile/wom-link`
-- `/api/casino/games`
-- `/api/casino/spin`
-- `/api/giveaways`
-- `/api/admin/*`
-
-The app shell in `app/app.js` renders page-specific views on top of these endpoints.
+- Next.js 16, React 19, TypeScript
+- Python 3 (`http.server` + SQLite)
+- Pixi.js for the casino renderer
+- Caddy + systemd for VPS hosting
 
 ## Local Development
 
-Start the app with:
+1. Install frontend deps:
+
+```powershell
+npm install
+```
+
+2. Start the Python API (default `http://localhost:8000`):
 
 ```powershell
 python server.py
 ```
 
-By default the app runs at:
+3. Start Next.js:
+
+```powershell
+npm run dev
+```
+
+4. Open:
 
 ```text
-http://localhost:8000
+http://localhost:3000
 ```
 
-## Authentication
+## Scripts
 
-Ghosted supports two auth modes.
+- `npm run dev` - start Next.js in development mode
+- `npm run build` - production build
+- `npm run start` - run built Next.js app
+- `npm run lint` - run lint checks
+- `npm run git:update` - local workflow helper script
 
-Discord OAuth for real usage:
+## Production Notes
 
-- `DISCORD_CLIENT_ID`
-- `DISCORD_CLIENT_SECRET`
-- `DISCORD_REDIRECT_URI`
+Current VPS pattern:
 
-Optional Discord integration settings:
+- Caddy -> Next.js (`ghosted-web.service`) on `127.0.0.1:3000`
+- Next rewrites `/api/*` and `/auth/*` to Python API (`PYTHON_API_URL`, usually `127.0.0.1:8000`)
+- Env file at `/etc/ghosted/ghosted.env`
 
-- `DISCORD_GUILD_ID`
-- `DISCORD_BOT_TOKEN`
-- `DISCORD_MEMBER_ROLE_ID`
-- `DISCORD_VIP_ROLE_ID`
-- `DISCORD_GIVEAWAY_ROLE_ID`
-- `DISCORD_ROLE_LABELS_JSON`
-- `DISCORD_WEBHOOK_URL`
-- `DISCORD_USER_AGENT`
-- `ADMIN_DISCORD_IDS`
+Typical deploy command sequence:
 
-Local development auth without Discord:
-
-```powershell
-$env:ENABLE_DEV_AUTH='1'
-python server.py
+```bash
+git pull
+npm install
+npm run build
+sudo systemctl restart ghosted-web
 ```
 
-Then open:
+If backend logic changed, restart the Python API service too.
 
-```text
-http://localhost:8000/auth/dev-login?next=/app/
-```
+## Additional Docs
 
-## Wise Old Man Integration
-
-Wise Old Man powers the clan, player-linking, hiscores, gains, and competition views.
-
-Relevant settings:
-
-- `WOM_GROUP_ID`
-- `WOM_API_BASE`
-- `WOM_CACHE_TTL_SECONDS`
-
-If `WOM_GROUP_ID` is not set, the app still runs, but clan and competition views fall back to disabled or empty states.
-
-## Data and Runtime Settings
-
-Important environment variables:
-
-- `DATABASE_PATH`
-- `PUBLIC_BASE_URL`
-- `SESSION_COOKIE_SECURE`
-- `ENABLE_DEV_AUTH`
-
-Defaults:
-
-- SQLite path defaults to `data/ghosted.db`
-- Wise Old Man cache TTL defaults to 900 seconds
-- session lifetime is 14 days
-
-## Casino Development
-
-The live casino page uses built assets from `app/casino/runtime/`, while the editable source lives in `src/casino/`.
-
-Available scripts:
-
-```powershell
-npm run dev:casino
-npm run build:casino
-```
-
-Use `build:casino` when you want to rebuild the runtime bundle from the TypeScript source.
-
-## Tests
-
-The repo includes backend tests in `tests/test_app.py`.
-
-Run them with:
-
-```powershell
-python -m unittest
-```
-
-## Deployment
-
-Deployment assets for the VPS setup live in `deploy/`:
-
-- `deploy/ghosted.env.example`
-- `deploy/ghosted.service`
-- `deploy/Caddyfile.example`
-- `deploy/ubuntu-vps.md`
-
-The intended production stack is:
-
-- Ubuntu VPS
-- `systemd`
-- Caddy
-- SQLite on persistent disk
-
-## Visual Editing
-
-For the current browser-first editing workflow and a practical guide to learning HTML/CSS while changing the site, see [`VISUAL_EDITING_GUIDE.md`](./VISUAL_EDITING_GUIDE.md).
-
-## Contributing
-
-The repo uses a small-PR, rebase-first workflow. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the preferred branch and rebase routine.
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md)
+- [`deploy/ubuntu-vps.md`](./deploy/ubuntu-vps.md)
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md)

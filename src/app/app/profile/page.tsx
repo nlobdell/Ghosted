@@ -2,9 +2,15 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  AppContext, StatStrip, Panel, AppGrid,
-  MetricGrid, TagBlock, EmptyState, Banner, FormField,
-
+  AppContext,
+  StatStrip,
+  Panel,
+  AppGrid,
+  MetricGrid,
+  TagBlock,
+  EmptyState,
+  Banner,
+  FormField,
 } from '@/components/app/AppUI';
 import { formatPoints, getJSON } from '@/lib/api';
 import type { ShellData, WomMeData } from '@/lib/types';
@@ -22,51 +28,54 @@ export default function ProfilePage() {
   useEffect(() => {
     async function load() {
       try {
-        const shellData = await getJSON<ShellData>('/api/site-shell').catch((err: Error) => {
-          if (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized')) {
+        const shellData = await getJSON<ShellData>('/api/site-shell').catch((nextError: Error) => {
+          if (nextError.message.includes('401') || nextError.message.toLowerCase().includes('unauthorized')) {
             setAuthed(false);
             return null;
           }
-          throw err;
+          throw nextError;
         });
         if (!shellData) return;
         setShell(shellData);
-        if (!shellData.authenticated) { setAuthed(false); return; }
+        if (!shellData.authenticated) {
+          setAuthed(false);
+          return;
+        }
         const womData = await getJSON<WomMeData>('/api/wom/me').catch(() => null);
         setWomMe(womData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load profile.');
+      } catch (nextError) {
+        setError(nextError instanceof Error ? nextError.message : 'Failed to load profile.');
       } finally {
         setLoading(false);
       }
     }
-    load();
+    void load();
   }, []);
 
-  async function handleWomLink(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleWomLink(event: React.FormEvent) {
+    event.preventDefault();
     if (!rsn.trim()) return;
     setLinking(true);
     setLinkResult(null);
     try {
-      const res = await fetch('/api/profile/wom-link', {
+      const response = await fetch('/api/profile/wom-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: rsn.trim() }),
       });
-      const data = await res.json().catch(() => ({})) as { error?: string; message?: string };
-      if (!res.ok) {
-        setLinkResult({ ok: false, message: data.error ?? 'Failed to link account.' });
+      const payload = await response.json().catch(() => ({})) as { error?: string; message?: string };
+      if (!response.ok) {
+        setLinkResult({ ok: false, message: payload.error ?? 'Failed to link account.' });
       } else {
-        setLinkResult({ ok: true, message: data.message ?? 'WOM account linked!' });
+        setLinkResult({ ok: true, message: payload.message ?? 'WOM account linked.' });
         setRsn('');
         const womData = await getJSON<WomMeData>('/api/wom/me').catch(() => null);
         setWomMe(womData);
         const shellData = await getJSON<ShellData>('/api/site-shell').catch(() => null);
         if (shellData) setShell(shellData);
       }
-    } catch (err) {
-      setLinkResult({ ok: false, message: err instanceof Error ? err.message : 'Failed to link account.' });
+    } catch (nextError) {
+      setLinkResult({ ok: false, message: nextError instanceof Error ? nextError.message : 'Failed to link account.' });
     } finally {
       setLinking(false);
     }
@@ -76,21 +85,21 @@ export default function ProfilePage() {
     setLinking(true);
     setLinkResult(null);
     try {
-      const res = await fetch('/api/profile/wom-unlink', {
-        method: 'POST',
+      const response = await fetch('/api/profile/wom-link', {
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       });
-      const data = await res.json().catch(() => ({})) as { error?: string; message?: string };
-      if (!res.ok) {
-        setLinkResult({ ok: false, message: data.error ?? 'Failed to unlink account.' });
+      const payload = await response.json().catch(() => ({})) as { error?: string; message?: string };
+      if (!response.ok) {
+        setLinkResult({ ok: false, message: payload.error ?? 'Failed to unlink account.' });
       } else {
-        setLinkResult({ ok: true, message: data.message ?? 'WOM account unlinked.' });
+        setLinkResult({ ok: true, message: payload.message ?? 'WOM account unlinked.' });
         setWomMe(null);
         const shellData = await getJSON<ShellData>('/api/site-shell').catch(() => null);
         if (shellData) setShell(shellData);
       }
-    } catch (err) {
-      setLinkResult({ ok: false, message: err instanceof Error ? err.message : 'Failed to unlink account.' });
+    } catch (nextError) {
+      setLinkResult({ ok: false, message: nextError instanceof Error ? nextError.message : 'Failed to unlink account.' });
     } finally {
       setLinking(false);
     }
@@ -110,23 +119,23 @@ export default function ProfilePage() {
         title="Identity setup"
       />
 
-      {error && <Banner message={error} variant="error" />}
+      {error ? <Banner message={error} variant="error" /> : null}
 
       {loading ? (
-        <Banner message="Loading profile…" variant="info" />
+        <Banner message="Loading profile..." variant="info" />
       ) : !authed || !shell?.authenticated ? (
         <EmptyState
           message="Sign in to view and manage your profile."
-          action={<Link href="/api/auth/discord" className="button button--secondary button--small">Sign in with Discord</Link>}
+          action={<Link href="/auth/discord/login" className="button button--secondary button--small">Sign in with Discord</Link>}
         />
       ) : (
         <>
           <StatStrip
             stats={[
-              { label: 'Balance', value: user ? formatPoints(user.balance) : '—', href: '/app/rewards/' },
+              { label: 'Balance', value: user ? formatPoints(user.balance) : '-', href: '/app/rewards/' },
               { label: 'WOM link', value: wom?.linked ? 'Linked' : 'Not linked' },
-              { label: 'Clan rank', value: wom?.membership?.rankLabel ?? '—' },
-              { label: 'Roles synced', value: user ? String(user.roles.length) : '—' },
+              { label: 'Clan rank', value: wom?.membership?.rankLabel ?? '-' },
+              { label: 'Roles synced', value: user ? String(user.roles.length) : '-' },
               { label: 'Access', value: user?.isAdmin ? 'Admin' : 'Member' },
             ]}
           />
@@ -135,83 +144,84 @@ export default function ProfilePage() {
             <Panel
               title="Identity"
               eyebrow="Your account"
-              body={
-                <div style={{ display: 'grid', gap: '1rem' }}>
-                  {user?.avatarUrl && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              body={(
+                <div className="app-stack">
+                  <div className="profile-identity">
+                    {user?.avatarUrl ? (
                       <img
                         src={user.avatarUrl}
                         alt={user.displayName}
-                        style={{ width: '3.5rem', height: '3.5rem', borderRadius: '999px', border: '2px solid rgba(155, 107, 255, 0.3)' }}
+                        className="profile-identity__avatar"
                       />
-                      <div>
-                        <strong style={{ display: 'block', color: '#f3f1f9' }}>{user.displayName}</strong>
-                        <span style={{ color: '#9d96ad', fontSize: '0.84rem' }}>@{user.username}</span>
+                    ) : (
+                      <div className="profile-identity__avatar profile-identity__avatar--fallback">
+                        {(user?.displayName || user?.username || 'G').slice(0, 1).toUpperCase()}
                       </div>
+                    )}
+                    <div className="profile-identity__copy">
+                      <strong className="profile-identity__name">{user?.displayName || 'Ghosted member'}</strong>
+                      <span className="profile-identity__handle">{user?.username ? `@${user.username}` : ''}</span>
                     </div>
-                  )}
+                  </div>
+
                   <MetricGrid
                     items={[
-                      ['Balance', user ? formatPoints(user.balance) : '—'],
+                      ['Balance', user ? formatPoints(user.balance) : '-'],
                       ['Admin', user?.isAdmin ? 'Yes' : 'No'],
-                      ['WOM status', wom?.linked ? `Linked` : 'Not linked'],
-                      ['Clan', wom?.membership?.groupName ?? '—'],
+                      ['WOM status', wom?.linked ? 'Linked' : 'Not linked'],
+                      ['Clan', wom?.membership?.groupName ?? '-'],
                     ]}
                   />
 
-                  {linkResult && (
-                    <Banner message={linkResult.message} variant={linkResult.ok ? 'info' : 'error'} />
-                  )}
+                  {linkResult ? <Banner message={linkResult.message} variant={linkResult.ok ? 'info' : 'error'} /> : null}
 
                   {wom?.linked ? (
-                    <div style={{ display: 'grid', gap: '0.6rem' }}>
-                      <p style={{ margin: 0, color: '#9d96ad' }}>
+                    <div className="app-stack app-stack--compact">
+                      <p className="app-panel-note">
                         Linked as{' '}
-                        <strong style={{ color: '#f3f1f9' }}>
+                        <strong className="profile-identity__inline-strong">
                           {womMe?.displayName ?? womMe?.username ?? wom?.membership?.rankLabel ?? 'Member'}
                         </strong>
                       </p>
                       <button
-                        className="button button--secondary button--small"
+                        className="button button--secondary button--small app-button-start"
                         type="button"
                         disabled={linking}
                         onClick={handleWomUnlink}
-                        style={{ justifySelf: 'start' }}
                       >
-                        {linking ? 'Unlinking…' : 'Unlink WOM account'}
+                        {linking ? 'Unlinking...' : 'Unlink WOM account'}
                       </button>
                     </div>
                   ) : (
-                    <form onSubmit={handleWomLink} style={{ display: 'grid', gap: '0.8rem' }}>
+                    <form onSubmit={handleWomLink} className="app-form">
                       <FormField label="RuneScape username" note="Link your Wise Old Man profile to unlock clan features.">
                         <input
                           type="text"
-                          placeholder="Enter RSN…"
+                          placeholder="Enter RSN..."
                           value={rsn}
-                          onChange={(e) => setRsn(e.target.value)}
+                          onChange={(event) => setRsn(event.target.value)}
                           className="input-base"
                           required
                         />
                       </FormField>
                       <button
-                        className="button button--secondary button--small"
+                        className="button button--secondary button--small app-button-start"
                         type="submit"
                         disabled={linking || !rsn.trim()}
-                        style={{ justifySelf: 'start' }}
                       >
-                        {linking ? 'Linking…' : 'Link WOM account'}
+                        {linking ? 'Linking...' : 'Link WOM account'}
                       </button>
                     </form>
                   )}
                 </div>
-              }
+              )}
             />
 
             <Panel
-              title="Roles & perks"
+              title="Roles and perks"
               eyebrow="Discord sync"
-              body={
-                <div style={{ display: 'grid', gap: '1rem' }}>
+              body={(
+                <div className="app-stack">
                   <TagBlock
                     label="Your roles"
                     values={user?.roles ?? []}
@@ -222,22 +232,19 @@ export default function ProfilePage() {
                     values={user?.perks ?? []}
                     emptyMessage="No perks active"
                   />
-                  {user?.roleDetails && user.roleDetails.length > 0 && (
-                    <div style={{ display: 'grid', gap: '0.4rem' }}>
-                      <p style={{ margin: 0, color: '#9d96ad', fontSize: '0.84rem' }}>Role details</p>
-                      {user.roleDetails.map((r) => (
-                        <div
-                          key={r.id}
-                          style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
-                        >
-                          <span style={{ color: '#d6d1df' }}>{r.label}</span>
-                          <span style={{ color: '#9d96ad', fontSize: '0.82rem' }}>{r.source}</span>
+                  {user?.roleDetails && user.roleDetails.length > 0 ? (
+                    <div className="profile-role-list">
+                      <p className="profile-role-list__label">Role details</p>
+                      {user.roleDetails.map((role) => (
+                        <div key={role.id} className="profile-role-row">
+                          <span>{role.label}</span>
+                          <span>{role.source}</span>
                         </div>
                       ))}
                     </div>
-                  )}
+                  ) : null}
                 </div>
-              }
+              )}
             />
           </AppGrid>
         </>
