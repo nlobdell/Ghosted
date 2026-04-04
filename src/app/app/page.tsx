@@ -144,7 +144,7 @@ export default function DashboardPage() {
                 ) : (
                   <EmptyState
                     message="Sign in to see your profile summary."
-                    action={<Link href="/api/auth/discord" className="button button--secondary button--small">Sign in</Link>}
+                    action={<Link href="/auth/discord/login" className="button button--secondary button--small">Sign in</Link>}
                   />
                 )
               }

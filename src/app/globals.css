@@ -432,6 +432,91 @@ textarea:focus-visible,
   gap: 0.45rem;
 }
 
+.site-profile-widget {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.site-profile-widget__card {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.6rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 0.32rem 0.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 1.05rem;
+  background: rgba(255, 255, 255, 0.035);
+  text-decoration: none;
+}
+
+.site-profile-widget__avatar {
+  width: 3.8rem;
+  height: 3.8rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: var(--color-text-strong);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.site-profile-widget__copy {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.site-profile-widget__copy strong {
+  color: var(--color-text-strong);
+  font-size: 0.92rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.site-profile-widget__copy span,
+.site-profile-widget__hint {
+  color: var(--color-text-soft);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.site-profile-widget__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+}
+
+.site-profile-widget--signed-out {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.site-profile-widget--mobile {
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.site-profile-widget--mobile .site-profile-widget__card {
+  width: 100%;
+}
+
+.site-profile-widget--mobile .site-profile-widget__actions {
+  width: 100%;
+  justify-content: flex-start;
+}
+
 .landing-page {
   display: grid;
 }
@@ -766,6 +851,12 @@ textarea:focus-visible,
     linear-gradient(180deg, #061015 0%, #0c171d 40%, #132129 100%);
 }
 
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  align-content: start;
+}
+
 .app-context {
   display: grid;
   gap: 1rem;
@@ -857,6 +948,10 @@ textarea:focus-visible,
 .app-workspace,
 .app-stack {
   gap: 1rem;
+}
+
+.app-stack--compact {
+  gap: 0.6rem;
 }
 
 .highlight-shell {
@@ -1125,6 +1220,15 @@ textarea:focus-visible,
   font-weight: 700;
 }
 
+.app-form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.app-button-start {
+  justify-self: start;
+}
+
 .input-base {
   width: 100%;
   padding: 0.88rem 0.95rem;
@@ -1153,6 +1257,75 @@ textarea:focus-visible,
 .data-row {
   padding: 0.7rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-identity__avatar {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 999px;
+  border: 2px solid rgba(224, 177, 93, 0.3);
+  object-fit: cover;
+}
+
+.profile-identity__avatar--fallback {
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-strong);
+  font-weight: 800;
+}
+
+.profile-identity__copy {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.profile-identity__name {
+  display: block;
+  color: var(--color-text-strong);
+}
+
+.profile-identity__handle {
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+}
+
+.profile-identity__inline-strong {
+  color: var(--color-text-strong);
+}
+
+.profile-role-list {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.profile-role-list__label {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+}
+
+.profile-role-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.profile-role-row span:first-child {
+  color: var(--color-text-default);
+}
+
+.profile-role-row span:last-child {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
 }
 
 #casino-root {
