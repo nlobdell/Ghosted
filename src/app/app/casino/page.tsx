@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
-  AppContext, Banner, CONTAINER, APP_SHELL,
+  AppContext, Banner,
 } from '@/components/app/AppUI';
 
 const CasinoGame = dynamic(() => import('@/components/app/CasinoGame'), { ssr: false });
@@ -16,7 +16,7 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <main id="main-content" style={{ ...CONTAINER, ...APP_SHELL }}>
+    <main id="main-content" className="page-shell">
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },

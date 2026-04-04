@@ -379,6 +379,71 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
 }
 
 /* ─────────────────────────────────────────────
+   APP SHELL
+   Standard page wrapper used by all /app and /admin pages.
+───────────────────────────────────────────── */
+.page-shell {
+  width: min(var(--spacing-container), calc(100vw - 2rem - var(--safe-left) - var(--safe-right)));
+  margin-inline: auto;
+  display: grid;
+  gap: 1.2rem;
+  align-content: start;
+  padding: 1.35rem 0 calc(4rem + var(--safe-bottom));
+}
+
+/* ─────────────────────────────────────────────
+   FORM ELEMENTS
+───────────────────────────────────────────── */
+.input-base {
+  width: 100%;
+  padding: 0.88rem 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f3f1f9;
+  font: inherit;
+  transition: border-color var(--ease-standard);
+}
+.input-base::placeholder { color: #746d82; }
+.input-base:focus { outline: none; border-color: rgba(155, 107, 255, 0.4); }
+
+/* Two-column form grid (collapses on mobile) */
+.form-grid-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+@media (max-width: 600px) {
+  .form-grid-two { grid-template-columns: 1fr; }
+}
+
+/* ─────────────────────────────────────────────
+   DATA ROWS
+   Key/value row with a dividing bottom border.
+   Usage: <div class="data-row"><span class="label">Key</span><strong>Value</strong></div>
+───────────────────────────────────────────── */
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.data-row:last-child { border-bottom: none; }
+.data-row .label { color: #9d96ad; }
+
+/* ─────────────────────────────────────────────
+   CASINO
+───────────────────────────────────────────── */
+#casino-root {
+  min-height: 60vh;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(13, 11, 15, 0.78);
+  overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────
    PAGE BACKGROUNDS
 ───────────────────────────────────────────── */
 

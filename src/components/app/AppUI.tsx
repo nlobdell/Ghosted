@@ -6,19 +6,11 @@ import Link from 'next/link';
 import type { StatItem, LedgerEntry, LeaderboardEntry } from '@/lib/types';
 import { formatDate, formatMaybeNumber, formatMetricLabel, formatCompetitionWindow, escapeHtml } from '@/lib/api';
 
-/* ── Layout ── */
-
-export const CONTAINER: React.CSSProperties = {
-  width: 'min(1180px, calc(100vw - 2rem))',
-  marginInline: 'auto',
-};
-
-export const APP_SHELL: React.CSSProperties = {
-  display: 'grid',
-  gap: '1.2rem',
-  alignContent: 'start',
-  padding: '1.35rem 0 calc(4rem + var(--safe-bottom))',
-};
+/* ── Layout ──
+   Pages use className="page-shell" (defined in globals.css) instead of
+   these style objects. These are kept for any legacy callsites but
+   should not be used in new code.
+── */
 
 /* ── Context header ── */
 
@@ -477,14 +469,4 @@ export function FormField({ label, children, note }: { label: string; children: 
   );
 }
 
-/* ── Input shared style ── */
-
-export const INPUT_STYLE: React.CSSProperties = {
-  width: '100%',
-  padding: '0.88rem 0.95rem',
-  border: '1px solid rgba(255,255,255,0.08)',
-  borderRadius: '0.85rem',
-  background: 'rgba(255,255,255,0.04)',
-  color: '#f3f1f9',
-  font: 'inherit',
-};
+/* INPUT_STYLE removed — use className="input-base" (defined in globals.css) */

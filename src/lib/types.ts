@@ -59,12 +59,18 @@ export interface LedgerEntry {
   amount: number;
 }
 
+export interface SpinRecord {
+  createdAt: string;
+  result: string;
+  payout: number;
+}
+
 export interface RewardsData {
   balance: number;
   dailyRemaining: number;
   dailyCap: number | null;
   entries: LedgerEntry[];
-  spins: unknown[];
+  spins: SpinRecord[];
 }
 
 export interface GiveawayItem {
@@ -124,8 +130,28 @@ export interface ClanData {
     averageEhp?: number;
     averageEhb?: number;
   };
-  recentAchievements: unknown[];
-  recentActivity: unknown[];
+  recentAchievements: AchievementItem[];
+  recentActivity: ActivityItem[];
+}
+
+export interface AchievementItem {
+  title?: string;
+  type?: string;
+  metric?: string;
+  createdAt?: string;
+}
+
+export interface ActivityItem {
+  title?: string;
+  type?: string;
+  createdAt?: string;
+}
+
+export interface WomMeData {
+  linked: boolean;
+  username?: string;
+  displayName?: string;
+  membership?: { role?: string; rankLabel?: string; groupName?: string };
 }
 
 export interface Competition {

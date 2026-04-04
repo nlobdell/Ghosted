@@ -4,17 +4,10 @@ import Link from 'next/link';
 import {
   AppContext, StatStrip, Panel, AppGrid,
   MetricGrid, TagBlock, EmptyState, Banner, FormField,
-  CONTAINER, APP_SHELL, INPUT_STYLE,
+
 } from '@/components/app/AppUI';
 import { formatPoints, getJSON } from '@/lib/api';
-import type { ShellData } from '@/lib/types';
-
-interface WomMeData {
-  linked: boolean;
-  username?: string;
-  displayName?: string;
-  membership?: { role?: string; rankLabel?: string; groupName?: string };
-}
+import type { ShellData, WomMeData } from '@/lib/types';
 
 export default function DashboardPage() {
   const [shell, setShell] = useState<ShellData | null>(null);
@@ -107,7 +100,7 @@ export default function DashboardPage() {
   const wom = shell?.wom;
 
   return (
-    <main id="main-content" style={{ ...CONTAINER, ...APP_SHELL }}>
+    <main id="main-content" className="page-shell">
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
@@ -196,7 +189,7 @@ export default function DashboardPage() {
                           placeholder="Enter RSN…"
                           value={rsn}
                           onChange={(e) => setRsn(e.target.value)}
-                          style={INPUT_STYLE}
+                          className="input-base"
                           required
                         />
                       </FormField>

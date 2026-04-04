@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   AppContext, StatStrip, Panel, AppGrid, Highlight, RouteList,
-  LedgerTable, EmptyState, Banner, CONTAINER, APP_SHELL,
+  LedgerTable, EmptyState, Banner,
 } from '@/components/app/AppUI';
 import { formatPoints, getJSON } from '@/lib/api';
 import type { RewardsData, GiveawayItem } from '@/lib/types';
@@ -51,7 +51,7 @@ export default function DashboardPage() {
   const activeGiveaways = giveaways.filter((g) => g.status === 'active');
 
   return (
-    <main id="main-content" style={{ ...CONTAINER, ...APP_SHELL }}>
+    <main id="main-content" className="page-shell">
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
@@ -121,19 +121,10 @@ export default function DashboardPage() {
               body={
                 authed && rewards ? (
                   <>
-                    <div style={{ display: 'grid', gap: '0.4rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <span style={{ color: '#9d96ad' }}>Balance</span>
-                        <strong>{formatPoints(rewards.balance)}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <span style={{ color: '#9d96ad' }}>Daily remaining</span>
-                        <strong>{rewards.dailyCap !== null ? formatPoints(rewards.dailyRemaining) : 'No cap'}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0' }}>
-                        <span style={{ color: '#9d96ad' }}>Ledger entries</span>
-                        <strong>{rewards.entries.length}</strong>
-                      </div>
+                    <div>
+                      <div className="data-row"><span className="label">Balance</span><strong>{formatPoints(rewards.balance)}</strong></div>
+                      <div className="data-row"><span className="label">Daily remaining</span><strong>{rewards.dailyCap !== null ? formatPoints(rewards.dailyRemaining) : 'No cap'}</strong></div>
+                      <div className="data-row"><span className="label">Ledger entries</span><strong>{rewards.entries.length}</strong></div>
                     </div>
                     <Link href="/app/profile/" className="button button--secondary button--small">View profile</Link>
                   </>

@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
   AppContext, StatStrip, Panel, AppGrid, Highlight,
-  MetricGrid, EmptyState, Banner, CONTAINER, APP_SHELL,
+  MetricGrid, EmptyState, Banner,
 } from '@/components/app/AppUI';
 import { formatPoints, formatDate, getJSON } from '@/lib/api';
 import type { GiveawayItem, ShellData } from '@/lib/types';
@@ -62,7 +62,7 @@ export default function GiveawaysPage() {
   ];
 
   return (
-    <main id="main-content" style={{ ...CONTAINER, ...APP_SHELL }}>
+    <main id="main-content" className="page-shell">
       <AppContext
         breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'App Hub', href: '/app/' }, { label: 'Giveaways' }]}
         title="Live drops"
@@ -90,7 +90,7 @@ export default function GiveawaysPage() {
             theme="giveaways"
           />
 
-          <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem' }}>
+          <AppGrid>
             {giveaways.length === 0 ? (
               <Panel title="No giveaways yet" body={<EmptyState message="Ghosted has not published any giveaways yet." />} />
             ) : (
@@ -122,7 +122,7 @@ export default function GiveawaysPage() {
                 />
               ))
             )}
-          </section>
+          </AppGrid>
         </>
       )}
     </main>

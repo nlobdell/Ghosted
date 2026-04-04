@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   AppContext, StatStrip, Panel, Highlight,
-  LedgerTable, EmptyState, Banner, CONTAINER, APP_SHELL,
+  LedgerTable, EmptyState, Banner,
 } from '@/components/app/AppUI';
 import { formatPoints, formatPointsFull, getJSON } from '@/lib/api';
 import type { RewardsData } from '@/lib/types';
@@ -34,7 +34,7 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <main id="main-content" style={{ ...CONTAINER, ...APP_SHELL }}>
+    <main id="main-content" className="page-shell">
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
