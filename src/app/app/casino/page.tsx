@@ -1,20 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import {
-  AppContext, Banner,
-} from '@/components/app/AppUI';
+import { AppContext } from '@/components/app/AppUI';
 
 const CasinoGame = dynamic(() => import('@/components/app/CasinoGame'), { ssr: false });
 
-export default function DashboardPage() {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    setReady(true);
-  }, []);
-
+export default function CasinoPage() {
   return (
     <main id="main-content" className="page-shell">
       <AppContext
@@ -31,10 +22,7 @@ export default function DashboardPage() {
           </>
         }
       />
-
-      <Banner message="The casino loads below. Sign in with Discord to play." variant="info" />
-
-      {ready && <CasinoGame />}
+      <CasinoGame />
     </main>
   );
 }

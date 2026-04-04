@@ -7,12 +7,20 @@ export default function CasinoGame() {
   useEffect(() => {
     if (mounted.current) return;
     mounted.current = true;
-    // Dynamically import the Pixi.js casino (client-only, mounts onto #casino-root)
+    // Dynamically import the Pixi.js casino.
+    // main.ts populates [data-banner], [data-summary], and [data-content]
+    // after booting — those elements must exist in the DOM first.
     import('@/casino/main').catch((err) => {
       console.error('Casino game failed to load:', err);
     });
   }, []);
 
-  // Styled via #casino-root in globals.css
-  return <div id="casino-root" />;
+  return (
+    <div id="casino-root">
+      {/* Skeleton targets that casino/main.ts populates via document.querySelector */}
+      <div className="app-banner-slot" data-banner />
+      <section className="app-summary-grid" data-summary />
+      <section className="app-workspace" data-content />
+    </div>
+  );
 }

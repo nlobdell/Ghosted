@@ -8,7 +8,7 @@ import {
 import { formatPoints, formatPointsFull, getJSON } from '@/lib/api';
 import type { RewardsData } from '@/lib/types';
 
-export default function DashboardPage() {
+export default function RewardsPage() {
   const [rewards, setRewards] = useState<RewardsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
