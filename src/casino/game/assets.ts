@@ -9,6 +9,14 @@ import runeUrl from '../assets/symbols/rune.svg';
 import scatterUrl from '../assets/symbols/scatter.svg';
 import wildUrl from '../assets/symbols/wild.svg';
 
+type StaticAssetImport = string | { src: string };
+
+function toAssetUrl(asset: StaticAssetImport): string {
+  if (typeof asset === 'string') return asset;
+  if (asset && typeof asset === 'object' && typeof asset.src === 'string') return asset.src;
+  throw new Error('Unsupported asset import format.');
+}
+
 // Audio served from /public/audio/ to avoid bundler issues with binary assets
 const reelStopUrl = '/audio/reel-stop.wav';
 const spinStartUrl = '/audio/spin-start.wav';
@@ -17,16 +25,16 @@ const missUrl = '/audio/miss.wav';
 const winUrl = '/audio/win.wav';
 
 export const SYMBOL_TEXTURES = {
-  coin: { key: 'symbol-coin', url: coinUrl },
-  crown: { key: 'symbol-crown', url: crownUrl },
-  gem: { key: 'symbol-gem', url: gemUrl },
-  ghost: { key: 'symbol-ghost', url: ghostUrl },
-  lantern: { key: 'symbol-lantern', url: lanternUrl },
-  mask: { key: 'symbol-mask', url: maskUrl },
-  moon: { key: 'symbol-moon', url: moonUrl },
-  rune: { key: 'symbol-rune', url: runeUrl },
-  scatter: { key: 'symbol-scatter', url: scatterUrl },
-  wild: { key: 'symbol-wild', url: wildUrl },
+  coin: { key: 'symbol-coin', url: toAssetUrl(coinUrl) },
+  crown: { key: 'symbol-crown', url: toAssetUrl(crownUrl) },
+  gem: { key: 'symbol-gem', url: toAssetUrl(gemUrl) },
+  ghost: { key: 'symbol-ghost', url: toAssetUrl(ghostUrl) },
+  lantern: { key: 'symbol-lantern', url: toAssetUrl(lanternUrl) },
+  mask: { key: 'symbol-mask', url: toAssetUrl(maskUrl) },
+  moon: { key: 'symbol-moon', url: toAssetUrl(moonUrl) },
+  rune: { key: 'symbol-rune', url: toAssetUrl(runeUrl) },
+  scatter: { key: 'symbol-scatter', url: toAssetUrl(scatterUrl) },
+  wild: { key: 'symbol-wild', url: toAssetUrl(wildUrl) },
 } as const;
 
 export const AUDIO_ASSETS = {
