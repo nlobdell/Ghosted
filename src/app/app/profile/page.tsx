@@ -6,6 +6,7 @@ import {
   StatStrip,
   Panel,
   AppGrid,
+  Highlight,
   MetricGrid,
   TagBlock,
   EmptyState,
@@ -137,6 +138,17 @@ export default function ProfilePage() {
               { label: 'Clan rank', value: wom?.membership?.rankLabel ?? '-' },
               { label: 'Roles synced', value: user ? String(user.roles.length) : '-' },
               { label: 'Access', value: user?.isAdmin ? 'Admin' : 'Member' },
+            ]}
+          />
+
+          <Highlight
+            theme="dashboard"
+            eyebrow="Member identity"
+            title="Keep your account, roles, and WOM link in sync."
+            copy="Profile settings drive access and visibility across rewards, giveaways, and community views."
+            chips={[
+              wom?.linked ? 'WOM linked' : 'WOM not linked',
+              user?.isAdmin ? 'Admin account' : 'Member account',
             ]}
           />
 

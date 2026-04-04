@@ -129,6 +129,7 @@ export function Highlight({
     community: { label: 'Clan watch', title: 'Roster and comps', art: ['/symbols/rune.svg', '/symbols/ghost.svg'] },
     giveaways: { label: 'Drop board', title: 'Live entries', art: ['/symbols/scatter.svg', '/symbols/crown.svg'] },
     rewards: { label: 'Ledger rail', title: 'Balance and burn', art: ['/symbols/coin.svg', '/symbols/rune.svg'] },
+    casino: { label: 'Casino floor', title: 'Slots and streaks', art: ['/symbols/wild.svg', '/symbols/coin.svg'] },
     dashboard: { label: 'Command deck', title: 'Member flow', art: ['/symbols/ghost.svg', '/symbols/lantern.svg'] },
   };
 
