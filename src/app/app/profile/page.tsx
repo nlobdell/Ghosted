@@ -9,7 +9,7 @@ import {
 import { formatPoints, getJSON } from '@/lib/api';
 import type { ShellData, WomMeData } from '@/lib/types';
 
-export default function DashboardPage() {
+export default function ProfilePage() {
   const [shell, setShell] = useState<ShellData | null>(null);
   const [womMe, setWomMe] = useState<WomMeData | null>(null);
   const [loading, setLoading] = useState(true);

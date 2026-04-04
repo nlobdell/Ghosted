@@ -8,7 +8,7 @@ import {
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
 import type { ClanData, LeaderboardEntry, AchievementItem, ActivityItem } from '@/lib/types';
 
-export default function DashboardPage() {
+export default function ClanPage() {
   const [clan, setClan] = useState<ClanData | null>(null);
   const [hiscores, setHiscores] = useState<LeaderboardEntry[]>([]);
   const [gains, setGains] = useState<LeaderboardEntry[]>([]);

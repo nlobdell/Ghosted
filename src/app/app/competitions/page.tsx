@@ -8,7 +8,7 @@ import {
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
 import type { Competition, LeaderboardEntry } from '@/lib/types';
 
-export default function DashboardPage() {
+export default function CompetitionsPage() {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [featured, setFeatured] = useState<Competition | null>(null);
   const [loading, setLoading] = useState(true);

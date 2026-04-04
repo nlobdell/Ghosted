@@ -74,7 +74,7 @@ export default function GiveawaysPage() {
         }
       />
 
-      {loading ? <p style={{ color: '#9d96ad' }}>Loading…</p> : null}
+      {loading && <Banner message="Loading giveaways…" variant="info" />}
       {error ? <Banner message={error} variant="error" /> : null}
       {resultMsg ? <Banner message={resultMsg.text} variant={resultMsg.variant} /> : null}
 
