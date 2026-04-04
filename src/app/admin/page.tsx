@@ -14,6 +14,7 @@ import {
   FormField,
 } from '@/components/app/AppUI';
 import { formatPoints, getJSON } from '@/lib/api';
+import styles from './page.module.css';
 
 interface AdminOverview {
   actor: { displayName: string };
@@ -111,7 +112,7 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <main className="page-shell">
+      <main className={`page-shell ${styles.page}`}>
         <Banner message="Loading admin data..." variant="info" />
       </main>
     );
@@ -121,7 +122,7 @@ export default function AdminPage() {
   const adminCount = data?.overview.users.filter((user) => user.isAdmin).length ?? 0;
 
   return (
-    <main id="main-content" className="page-shell">
+    <main id="main-content" className={`page-shell ${styles.page}`}>
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
@@ -134,57 +135,10 @@ export default function AdminPage() {
       {error ? <Banner message={error} variant="error" /> : null}
       {message ? <Banner message={message.text} variant={message.variant} /> : null}
 
-      <StatStrip
-        leadIndex={0}
-        stats={[
-          { label: 'Tracked users', value: String(data?.overview.users.length ?? 0) },
-          { label: 'Live giveaways', value: String(activeGiveaways) },
-          { label: 'WOM links', value: String(data?.overview.wom?.linkedUsers ?? 0) },
-          { label: 'Admin users', value: String(adminCount) },
-        ]}
-      />
-
-      <Highlight
-        eyebrow="Admin"
-        title="Operate Ghosted"
-        copy="Keep the clan economy healthy, launch community drops, and refresh WOM-backed clan visibility for the broader Ghosted Discord community."
-        stage={{
-          label: 'Operator signal',
-          primary: `Actor: ${data?.actor.displayName ?? 'Unknown'}`,
-          secondary: data?.overview.wom?.configured ? 'WOM live (Group 6371)' : 'WOM offline',
-          chips: [`${activeGiveaways} live giveaways`, `${adminCount} admin users`],
-        }}
-      />
-
-      <ArchitectureMap
-        title="Operator playbook"
-        copy="Daily Ghosted operations focus on economy integrity, drop management, and synced clan data."
-        nodes={[
-          {
-            label: 'Economy',
-            title: 'Economy controls',
-            copy: 'Grant or correct points and verify balances that drive member casino play and giveaway participation.',
-            chips: ['Rewards ledger', 'Balance corrections'],
-          },
-          {
-            label: 'Drops',
-            title: 'Giveaway lifecycle',
-            copy: 'Create Ghosted campaigns with role gates, entry costs, and draw states mapped to member routes.',
-            chips: ['Role-gated entries', 'Campaign state'],
-          },
-          {
-            label: 'Sync',
-            title: 'External sync',
-            copy: 'Refresh WOM-backed data and validate runtime health across auth, users, and community integrations.',
-            chips: [data?.overview.wom?.configured ? 'WOM configured' : 'WOM missing', 'System status'],
-          },
-        ]}
-      />
-
       <AppGrid>
         <Panel
           tier="primary"
-          eyebrow="Points"
+          eyebrow="Workflow"
           title="Grant points"
           body={
             <form onSubmit={handleGrant} className="app-form">
@@ -204,7 +158,7 @@ export default function AdminPage() {
 
         <Panel
           tier="primary"
-          eyebrow="Giveaways"
+          eyebrow="Workflow"
           title="Create giveaway"
           body={
             <form onSubmit={handleCreateGiveaway} className="app-form">
@@ -237,13 +191,35 @@ export default function AdminPage() {
         />
       </AppGrid>
 
+      <StatStrip
+        leadIndex={0}
+        stats={[
+          { label: 'Tracked users', value: String(data?.overview.users.length ?? 0) },
+          { label: 'Live giveaways', value: String(activeGiveaways) },
+          { label: 'WOM links', value: String(data?.overview.wom?.linkedUsers ?? 0) },
+          { label: 'Admin users', value: String(adminCount) },
+        ]}
+      />
+
+      <Highlight
+        eyebrow="Operator state"
+        title="System snapshot"
+        copy="Manage the economy first, then verify sync and records."
+        stage={{
+          label: 'Operator signal',
+          primary: `Actor: ${data?.actor.displayName ?? 'Unknown'}`,
+          secondary: data?.overview.wom?.configured ? 'WOM live (Group 6371)' : 'WOM offline',
+          chips: [`${activeGiveaways} live giveaways`, `${adminCount} admin users`],
+        }}
+      />
+
       <AppGrid>
         <Panel
           tier="meta"
-          eyebrow="Wise Old Man"
-          title="Data refresh"
+          eyebrow="Sync"
+          title="Wise Old Man refresh"
           chip={data?.overview.wom?.configured ? 'Live' : 'Offline'}
-          body={
+          body={(
             <div className="app-stack">
               <MetricGrid
                 items={[
@@ -263,14 +239,14 @@ export default function AdminPage() {
                 Refresh WOM
               </button>
             </div>
-          }
+          )}
         />
 
         <Panel
           tier="meta"
           eyebrow="Status"
-          title="System overview"
-          body={
+          title="System health"
+          body={(
             <MetricGrid
               items={[
                 ['Auth', data ? 'Configured' : 'Unknown'],
@@ -279,9 +255,34 @@ export default function AdminPage() {
                 ['Giveaways', String(data?.overview.giveaways.length ?? 0)],
               ]}
             />
-          }
+          )}
         />
       </AppGrid>
+
+      <ArchitectureMap
+        title="Operations playbook"
+        copy="Workflow first, verification second, records last."
+        nodes={[
+          {
+            label: 'Economy',
+            title: 'Points and ledger controls',
+            copy: 'Grant or correct points and verify balances that drive member casino play and giveaway participation.',
+            chips: ['Rewards ledger', 'Balance corrections'],
+          },
+          {
+            label: 'Drops',
+            title: 'Campaign lifecycle',
+            copy: 'Create campaigns with role gates, entry costs, and status progression mapped to member routes.',
+            chips: ['Role-gated entries', 'Campaign state'],
+          },
+          {
+            label: 'Sync',
+            title: 'External data health',
+            copy: 'Refresh WOM-backed data and validate runtime health across auth, users, and integrations.',
+            chips: [data?.overview.wom?.configured ? 'WOM configured' : 'WOM missing', 'System status'],
+          },
+        ]}
+      />
 
       <AppGrid>
         <Panel

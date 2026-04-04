@@ -1,11 +1,12 @@
 'use client';
 import Link from 'next/link';
-import { AppContext, Highlight } from '@/components/app/AppUI';
+import { AppContext, Panel } from '@/components/app/AppUI';
 import CasinoGame from '@/components/app/CasinoGame';
+import styles from './page.module.css';
 
 export default function CasinoPage() {
   return (
-    <main id="main-content" className="page-shell">
+    <main id="main-content" className={`page-shell ${styles.page}`}>
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
@@ -17,17 +18,21 @@ export default function CasinoPage() {
           <Link href="/app/rewards/" className="button button--secondary button--small">Balance</Link>
         }
       />
-      <Highlight
-        eyebrow="Casino floor"
-        title="Points-only slots."
-        copy="Same balance as giveaways and rewards. Sign in to play."
-        stage={{
-          label: 'Casino signal',
-          primary: 'Shared rewards balance',
-          secondary: 'Points only. No cash value.',
-        }}
-      />
       <CasinoGame />
+      <Panel
+        tier="meta"
+        eyebrow="Rules"
+        title="Points-only machine"
+        body={(
+          <div className="app-stack">
+            <p className="app-panel-note">Casino uses the same points balance as rewards and giveaways.</p>
+            <div className="app-inline-actions">
+              <span className="app-chip">No cash value</span>
+              <Link href="/app/rewards/" className="button button--secondary button--small">Open rewards</Link>
+            </div>
+          </div>
+        )}
+      />
     </main>
   );
 }

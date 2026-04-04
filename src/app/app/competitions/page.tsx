@@ -2,11 +2,19 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  AppContext, StatStrip, Panel, AppGrid, Highlight,
-  CompetitionList, MetricGrid, LeaderboardTable, EmptyState, Banner,
+  AppContext,
+  StatStrip,
+  Panel,
+  AppGrid,
+  MetricGrid,
+  LeaderboardTable,
+  EmptyState,
+  Banner,
+  CompetitionList,
 } from '@/components/app/AppUI';
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
 import type { Competition, LeaderboardEntry } from '@/lib/types';
+import styles from './page.module.css';
 
 export default function CompetitionsPage() {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -17,7 +25,8 @@ export default function CompetitionsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const compsData = await getJSON<{ competitions?: Competition[] }>('/api/wom/competitions?limit=12').then((data) => data.competitions ?? []);
+        const compsData = await getJSON<{ competitions?: Competition[] }>('/api/wom/competitions?limit=12')
+          .then((data) => data.competitions ?? []);
         setCompetitions(compsData);
 
         if (compsData.length > 0) {
@@ -32,15 +41,16 @@ export default function CompetitionsPage() {
       }
     }
 
-    load();
+    void load();
   }, []);
 
   const ongoing = competitions.filter((item) => item.status === 'ongoing');
   const upcoming = competitions.filter((item) => item.status === 'upcoming');
   const finished = competitions.filter((item) => item.status === 'finished');
+  const featuredParticipants = featured?.participants?.slice(0, 8) as LeaderboardEntry[] | undefined;
 
   return (
-    <main id="main-content" className="page-shell">
+    <main id="main-content" className={`page-shell ${styles.page}`}>
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
@@ -67,42 +77,28 @@ export default function CompetitionsPage() {
             ]}
           />
 
-          <Highlight
-            eyebrow="Competitions"
-            title="Skill events and races."
-            copy="Skill-of-the-week events and group races. Check timing, format, and where you rank."
-            stage={{
-              label: 'Competition signal',
-              primary: `${ongoing.length} ongoing`,
-              secondary: featured?.startsAt ? `Featured starts ${formatDate(featured.startsAt)}` : 'No featured window yet',
-              chips: [
-                `${upcoming.length} upcoming`,
-                `${finished.length} finished`,
-              ],
-            }}
-          />
-
           {competitions.length === 0 ? (
             <EmptyState
               message="No competitions found. Make sure WOM is configured and your group has competitions."
-              action={<Link href="/app/clan/" className="button button--secondary button--small">Back to Community</Link>}
+              action={<Link href="/app/clan/" className="button button--secondary button--small">Back to clan</Link>}
             />
           ) : (
-            <AppGrid>
+            <>
               <Panel
                 tier="primary"
-                title="Competition board"
-                eyebrow="All competitions"
-                chip={`${competitions.length} total`}
+                eyebrow="Timeline"
+                title="Live and upcoming events"
+                chip={`${ongoing.length} live`}
                 body={<CompetitionList entries={competitions} />}
               />
-              <Panel
-                tier="primary"
-                title={featured?.title ?? 'Featured competition'}
-                eyebrow="Competition detail"
-                body={
-                  featured ? (
-                    <div className="app-stack">
+
+              <AppGrid>
+                <Panel
+                  tier="primary"
+                  eyebrow="Featured"
+                  title={featured?.title ?? 'Featured competition'}
+                  body={
+                    featured ? (
                       <MetricGrid
                         items={[
                           ['Status', featured.status],
@@ -113,20 +109,29 @@ export default function CompetitionsPage() {
                           ['Participants', featured.participants ? String(featured.participants.length) : '-'],
                         ]}
                       />
-                      {featured.participants && featured.participants.length > 0 ? (
-                        <LeaderboardTable
-                          entries={featured.participants.slice(0, 8) as LeaderboardEntry[]}
-                          valueFormatter={(entry) => formatMaybeNumber(entry.progress?.gained ?? entry.gained ?? entry.value)}
-                          valueLabel="Progress"
-                        />
-                      ) : null}
-                    </div>
-                  ) : (
-                    <EmptyState message="Select a competition to see details." />
-                  )
-                }
-              />
-            </AppGrid>
+                    ) : (
+                      <EmptyState message="No featured competition selected." />
+                    )
+                  }
+                />
+                <Panel
+                  tier="primary"
+                  eyebrow="Leaders"
+                  title="Featured leaderboard"
+                  body={
+                    featuredParticipants && featuredParticipants.length > 0 ? (
+                      <LeaderboardTable
+                        entries={featuredParticipants}
+                        valueFormatter={(entry) => formatMaybeNumber(entry.progress?.gained ?? entry.gained ?? entry.value)}
+                        valueLabel="Progress"
+                      />
+                    ) : (
+                      <EmptyState message="Leaderboard data will appear after participants are recorded." />
+                    )
+                  }
+                />
+              </AppGrid>
+            </>
           )}
         </>
       )}

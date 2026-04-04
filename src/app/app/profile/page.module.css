@@ -1,0 +1,82 @@
+.page {
+  --page-accent: rgba(155, 126, 236, 0.3);
+  --page-surface: rgba(11, 9, 18, 0.84);
+  --page-gap: 1rem;
+  --panel-density: 1.02rem;
+  gap: var(--page-gap);
+}
+
+.page :global(.app-context) {
+  padding: 1.06rem 1.15rem;
+  border-left: 4px solid var(--page-accent);
+  background: var(--page-surface);
+}
+
+.page :global(.app-summary-grid),
+.page :global(.app-summary-grid__secondary) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.68rem;
+}
+
+.page :global(.app-stat) {
+  border-color: rgba(166, 131, 255, 0.18);
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.page :global(.app-grid-two) {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 0.9rem;
+}
+
+.page :global(.app-panel) {
+  padding: var(--panel-density);
+  border-color: rgba(166, 131, 255, 0.18);
+}
+
+.page :global(.app-panel--primary) {
+  background: rgba(255, 255, 255, 0.014);
+}
+
+.page :global(.app-panel--meta) {
+  background: rgba(255, 255, 255, 0.008);
+}
+
+.page :global(.profile-identity) {
+  padding-bottom: 0.72rem;
+  border-bottom: 1px solid rgba(166, 131, 255, 0.14);
+}
+
+.page :global(.app-metric) {
+  border-color: rgba(166, 131, 255, 0.14);
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.page :global(.input-base) {
+  border-color: rgba(166, 131, 255, 0.24);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.page :global(.input-base:focus) {
+  border-color: rgba(166, 131, 255, 0.58);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+@media (max-width: 1080px) {
+  .page :global(.app-grid-two) {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .page :global(.app-summary-grid),
+  .page :global(.app-summary-grid__secondary) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 660px) {
+  .page :global(.app-summary-grid),
+  .page :global(.app-summary-grid__secondary) {
+    grid-template-columns: 1fr;
+  }
+}

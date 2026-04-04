@@ -6,7 +6,6 @@ import {
   StatStrip,
   Panel,
   AppGrid,
-  Highlight,
   LeaderboardTable,
   LedgerTable,
   EmptyState,
@@ -15,6 +14,7 @@ import {
 import { formatPoints, formatMaybeNumber, getJSON } from '@/lib/api';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 import type { RewardsData, GiveawayItem, LeaderboardEntry } from '@/lib/types';
+import styles from './page.module.css';
 
 export default function DashboardPage() {
   const [rewards, setRewards] = useState<RewardsData | null>(null);
@@ -78,10 +78,10 @@ export default function DashboardPage() {
   const featuredComp = ongoingComps[0] ?? upcomingComps[0] ?? null;
 
   return (
-    <main id="main-content" className="page-shell">
+    <main id="main-content" className={`page-shell ${styles.page}`}>
       <AppContext
         breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall' }]}
-        title="The Ghosted Hall"
+        title="Today in Ghosted"
         actions={(
           <>
             <a href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer" className="button button--secondary button--small">Discord</a>
@@ -107,73 +107,43 @@ export default function DashboardPage() {
             ]}
           />
 
-          <Highlight
-            eyebrow="Clan hall"
-            title="The clan is here."
-            copy="Competitions, drops, casino, and your clan rankings - all in one place."
-            stage={{
-              label: 'Hall pulse',
-              primary: featuredComp ? featuredComp.title : `${ongoingComps.length} live competitions`,
-              secondary: hiscores[0]?.player?.displayName
-                ? `Top hiscore: ${hiscores[0].player.displayName}`
-                : `Balance: ${rewards ? formatPoints(rewards.balance) : '-'}`,
-              chips: [
-                womClan?.group?.name ?? GHOSTED_CONTENT.wom.clanChat,
-                `${womClan?.group?.memberCount ?? GHOSTED_CONTENT.wom.memberCount} members`,
-                activeDrops.length > 0
-                  ? `${activeDrops.length} drop${activeDrops.length !== 1 ? 's' : ''} live`
-                  : 'No active drops',
-              ],
-            }}
-            actions={(
-              <>
-                <Link href="/app/clan/" className="button button--secondary button--small">Clan</Link>
-                <Link href="/app/rewards/" className="button button--secondary button--small">Rewards</Link>
-              </>
+          <Panel
+            tier="primary"
+            eyebrow="Live focal"
+            title={featuredComp ? featuredComp.title : 'Clan pulse'}
+            chip={featuredComp ? (ongoingComps.length > 0 ? 'Live' : 'Upcoming') : undefined}
+            body={(
+              <div className="app-stack">
+                <p className="app-panel-note">
+                  {featuredComp
+                    ? 'Current event context and the top leaderboard snapshot for quick decisions.'
+                    : 'No live event right now. Use the clan and competition boards for latest updates.'}
+                </p>
+                {hiscores.length > 0 ? (
+                  <LeaderboardTable
+                    entries={hiscores}
+                    valueFormatter={(entry) => formatMaybeNumber(entry.value)}
+                    valueLabel="Level"
+                  />
+                ) : (
+                  <div className="data-row">
+                    <span className="label">Clan members</span>
+                    <strong>{womClan?.group?.memberCount ?? '-'}</strong>
+                  </div>
+                )}
+                <div className="app-inline-actions">
+                  <Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>
+                  <Link href="/app/clan/" className="button button--secondary button--small">Clan board</Link>
+                </div>
+              </div>
             )}
           />
 
           <AppGrid>
             <Panel
               tier="primary"
-              eyebrow="Clan"
-              title={featuredComp ? featuredComp.title : 'Clan records'}
-              body={(
-                <div className="app-stack">
-                  {featuredComp ? (
-                    <div className="data-row">
-                      <span className="label">{ongoingComps.length > 0 ? 'Live now' : 'Coming up'}</span>
-                      <strong>{ongoingComps.length > 0 ? `${ongoingComps.length} active` : `${upcomingComps.length} upcoming`}</strong>
-                    </div>
-                  ) : null}
-                  {hiscores.length > 0 ? (
-                    <LeaderboardTable
-                      entries={hiscores}
-                      valueFormatter={(entry) => formatMaybeNumber(entry.value)}
-                      valueLabel="Level"
-                    />
-                  ) : (
-                    <div className="data-row">
-                      <span className="label">Members</span>
-                      <strong>{womClan?.group?.memberCount ?? '-'}</strong>
-                    </div>
-                  )}
-                  <div className="app-inline-actions">
-                    <Link href="/app/clan/" className="button button--secondary button--small">Full clan</Link>
-                    <Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>
-                  </div>
-                </div>
-              )}
-            />
-
-            <Panel
-              tier="primary"
-              eyebrow="Economy"
-              title={
-                activeDrops.length > 0
-                  ? `${activeDrops.length} active drop${activeDrops.length !== 1 ? 's' : ''}`
-                  : 'Rewards and drops'
-              }
+              eyebrow="You"
+              title="Personal actions"
               body={
                 authed && rewards ? (
                   <div className="app-stack">
@@ -185,44 +155,15 @@ export default function DashboardPage() {
                       <span className="label">Daily remaining</span>
                       <strong>{rewards.dailyCap !== null ? formatPoints(rewards.dailyRemaining) : 'No cap'}</strong>
                     </div>
-                    {activeDrops[0] ? (
-                      <div className="data-row">
-                        <span className="label">{activeDrops[0].title}</span>
-                        <span>{activeDrops[0].pointCost > 0 ? `${activeDrops[0].pointCost.toLocaleString()} pts` : 'Free'}</span>
-                      </div>
-                    ) : null}
                     <div className="app-inline-actions">
                       <Link href="/app/rewards/" className="button button--secondary button--small">Rewards</Link>
+                      <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
                       <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
                     </div>
                   </div>
                 ) : (
                   <EmptyState
-                    message="Sign in to see your balance and enter drops."
-                    action={<Link href="/auth/discord/login" className="button button--secondary button--small">Sign in</Link>}
-                  />
-                )
-              }
-            />
-          </AppGrid>
-
-          <AppGrid>
-            <Panel
-              tier="meta"
-              eyebrow="Your account"
-              title="Status"
-              body={
-                authed && rewards ? (
-                  <div className="app-stack">
-                    <div>
-                      <div className="data-row"><span className="label">Balance</span><strong>{formatPoints(rewards.balance)}</strong></div>
-                      <div className="data-row"><span className="label">Ledger entries</span><strong>{rewards.entries.length}</strong></div>
-                    </div>
-                    <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
-                  </div>
-                ) : (
-                  <EmptyState
-                    message="Sign in with Discord to load your profile."
+                    message="Sign in to access personal rewards and account actions."
                     action={<Link href="/auth/discord/login" className="button button--secondary button--small">Sign in</Link>}
                   />
                 )
@@ -232,7 +173,7 @@ export default function DashboardPage() {
             <Panel
               tier="meta"
               eyebrow="Navigate"
-              title="Sections"
+              title="Hall sections"
               body={(
                 <div className="app-route-list">
                   {[

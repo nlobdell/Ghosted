@@ -6,7 +6,6 @@ import {
   StatStrip,
   Panel,
   AppGrid,
-  Highlight,
   MetricGrid,
   TagBlock,
   EmptyState,
@@ -15,6 +14,7 @@ import {
 } from '@/components/app/AppUI';
 import { formatPoints, getJSON } from '@/lib/api';
 import type { ShellData, WomMeData } from '@/lib/types';
+import styles from './page.module.css';
 
 export default function ProfilePage() {
   const [shell, setShell] = useState<ShellData | null>(null);
@@ -110,7 +110,7 @@ export default function ProfilePage() {
   const wom = shell?.wom;
 
   return (
-    <main id="main-content" className="page-shell">
+    <main id="main-content" className={`page-shell ${styles.page}`}>
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
@@ -131,30 +131,6 @@ export default function ProfilePage() {
         />
       ) : (
         <>
-          <StatStrip
-            leadIndex={0}
-            stats={[
-              { label: 'Balance', value: user ? formatPoints(user.balance) : '-', href: '/app/rewards/' },
-              { label: 'WOM link', value: wom?.linked ? 'Linked' : 'Not linked' },
-              { label: 'Clan rank', value: wom?.membership?.rankLabel ?? '-' },
-              { label: 'Roles', value: user ? String(user.roles.length) : '-' },
-            ]}
-          />
-
-          <Highlight
-            eyebrow="Profile"
-            title="Your Ghosted identity."
-            stage={wom?.linked ? {
-              label: 'Profile signal',
-              primary: womMe?.displayName ?? womMe?.username ?? 'WOM linked',
-              secondary: wom?.membership?.groupName ?? 'Ghosted membership synced',
-              chips: [
-                user?.isAdmin ? 'Admin' : 'Member',
-                `${user?.roles.length ?? 0} roles`,
-              ],
-            } : undefined}
-          />
-
           <AppGrid>
             <Panel
               tier="primary"
@@ -264,6 +240,16 @@ export default function ProfilePage() {
               )}
             />
           </AppGrid>
+
+          <StatStrip
+            leadIndex={0}
+            stats={[
+              { label: 'Balance', value: user ? formatPoints(user.balance) : '-', href: '/app/rewards/' },
+              { label: 'WOM link', value: wom?.linked ? 'Linked' : 'Not linked' },
+              { label: 'Clan rank', value: wom?.membership?.rankLabel ?? '-' },
+              { label: 'Roles', value: user ? String(user.roles.length) : '-' },
+            ]}
+          />
         </>
       )}
     </main>
