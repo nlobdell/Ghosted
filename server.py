@@ -2173,7 +2173,6 @@ SITE_UTILITY_GROUPS = {
 
 SITE_NAV_ITEMS = [
     {"key": "home", "label": "Home", "href": "/"},
-    {"key": "about", "label": "About", "href": "/design/"},
     {"key": "app", "label": "App Hub", "href": "/app/"},
     {"key": "community", "label": "Community", "href": "/app/community/"},
     {"key": "rewards", "label": "Rewards", "href": "/app/rewards/"},
@@ -2187,8 +2186,6 @@ def active_route_key(path: str | None) -> str:
     normalized = normalize_local_path(path)
     if normalized == "/":
         return "home"
-    if normalized.startswith("/design"):
-        return "about"
     if normalized in {"/app", "/app/"}:
         return "app"
     if normalized.startswith("/app/community") or normalized.startswith("/app/clan") or normalized.startswith("/app/competitions"):
@@ -3127,10 +3124,6 @@ class GhostedHandler(BaseHTTPRequestHandler):
             return BASE_DIR / "styles.css"
         if path == "/site.js":
             return BASE_DIR / "site.js"
-        if path in {"/design", "/design/"}:
-            return BASE_DIR / "design" / "index.html"
-        if path.startswith("/design/"):
-            return (BASE_DIR / path.lstrip("/")).resolve()
         if path.startswith("/src/"):
             return (BASE_DIR / path.lstrip("/")).resolve()
         if path in {"/app", "/app/"}:
