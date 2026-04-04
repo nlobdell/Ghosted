@@ -1,9 +1,7 @@
 'use client';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { AppContext } from '@/components/app/AppUI';
-
-const CasinoGame = dynamic(() => import('@/components/app/CasinoGame'), { ssr: false });
+import CasinoGame from '@/components/app/CasinoGame';
 
 export default function CasinoPage() {
   return (
