@@ -7,19 +7,21 @@ import {
   Panel,
   AppGrid,
   Highlight,
+  LeaderboardTable,
   LedgerTable,
   EmptyState,
   Banner,
 } from '@/components/app/AppUI';
-import { formatPoints, getJSON } from '@/lib/api';
+import { formatPoints, formatMaybeNumber, getJSON } from '@/lib/api';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
-import type { RewardsData, GiveawayItem } from '@/lib/types';
+import type { RewardsData, GiveawayItem, LeaderboardEntry } from '@/lib/types';
 
 export default function DashboardPage() {
   const [rewards, setRewards] = useState<RewardsData | null>(null);
   const [giveaways, setGiveaways] = useState<GiveawayItem[]>([]);
   const [womClan, setWomClan] = useState<{ group?: { name?: string; memberCount?: number } } | null>(null);
   const [competitions, setCompetitions] = useState<{ id: number; title: string; status: string }[]>([]);
+  const [hiscores, setHiscores] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authed, setAuthed] = useState(true);
@@ -30,9 +32,9 @@ export default function DashboardPage() {
         const [nextRewards, nextGiveaways] = await Promise.all([
           getJSON<RewardsData>('/api/rewards').catch((nextError: Error) => {
             if (
-              nextError.message.includes('401') ||
-              nextError.message.toLowerCase().includes('unauthorized') ||
-              nextError.message.toLowerCase().includes('not authenticated')
+              nextError.message.includes('401')
+              || nextError.message.toLowerCase().includes('unauthorized')
+              || nextError.message.toLowerCase().includes('not authenticated')
             ) {
               setAuthed(false);
               return null;
@@ -47,15 +49,19 @@ export default function DashboardPage() {
         if (nextRewards) setRewards(nextRewards);
         setGiveaways(nextGiveaways);
 
-        const [clan, comps] = await Promise.all([
+        const [clan, comps, hiscoresData] = await Promise.all([
           getJSON<{ group?: { name?: string; memberCount?: number } }>('/api/wom/clan').catch(() => null),
           getJSON<{ competitions?: { id: number; title: string; status: string }[] }>('/api/wom/competitions?limit=6')
             .then((data) => data.competitions ?? [])
-            .catch(() => [] as { id: number; title: string; status: string }[]),
+            .catch(() => []),
+          getJSON<{ hiscores?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=3')
+            .then((data) => data.hiscores ?? [])
+            .catch(() => [] as LeaderboardEntry[]),
         ]);
 
         setWomClan(clan);
         setCompetitions(comps);
+        setHiscores(hiscoresData);
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : 'Failed to load the hall.');
       } finally {
@@ -66,25 +72,22 @@ export default function DashboardPage() {
     void load();
   }, []);
 
-  const activeGiveaways = giveaways.filter((item) => item.status === 'active');
-  const ongoingComps = competitions.filter((item) => item.status === 'ongoing');
-  const upcomingComps = competitions.filter((item) => item.status === 'upcoming');
+  const activeDrops = giveaways.filter((g) => g.status === 'active');
+  const ongoingComps = competitions.filter((c) => c.status === 'ongoing');
+  const upcomingComps = competitions.filter((c) => c.status === 'upcoming');
   const featuredComp = ongoingComps[0] ?? upcomingComps[0] ?? null;
 
   return (
     <main id="main-content" className="page-shell">
       <AppContext
-        breadcrumbs={[
-          { label: 'Ghosted', href: '/' },
-          { label: 'The Hall', href: '/app/' },
-        ]}
+        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall' }]}
         title="The Ghosted Hall"
-        actions={
+        actions={(
           <>
             <a href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer" className="button button--secondary button--small">Discord</a>
-            <Link href="/app/community/" className="button button--secondary button--small">Community</Link>
+            <Link href="/app/clan/" className="button button--secondary button--small">Clan</Link>
           </>
-        }
+        )}
       />
 
       {error ? <Banner message={error} variant="error" /> : null}
@@ -95,109 +98,101 @@ export default function DashboardPage() {
       ) : (
         <>
           <StatStrip
+            leadIndex={0}
             stats={[
               { label: 'Balance', value: rewards ? formatPoints(rewards.balance) : '-', href: '/app/rewards/' },
-              { label: 'Active giveaways', value: String(activeGiveaways.length), href: '/app/giveaways/' },
+              { label: 'Active drops', value: String(activeDrops.length), href: '/app/rewards/' },
               { label: 'Live competitions', value: String(ongoingComps.length), href: '/app/competitions/' },
-              { label: 'Clan members', value: String(womClan?.group?.memberCount ?? '-'), href: '/app/community/' },
+              { label: 'Clan members', value: String(womClan?.group?.memberCount ?? '-'), href: '/app/clan/' },
             ]}
           />
 
           <Highlight
-            theme="dashboard"
             eyebrow="Clan hall"
             title="The clan is here."
-            copy="Competitions, drops, casino, and your clan rankings — all in one place."
-            chips={[
-              womClan?.group?.name ?? GHOSTED_CONTENT.wom.clanChat,
-              `${womClan?.group?.memberCount ?? GHOSTED_CONTENT.wom.memberCount} members`,
-              activeGiveaways.length > 0
-                ? `${activeGiveaways.length} giveaway${activeGiveaways.length !== 1 ? 's' : ''} live`
-                : 'No active giveaways',
-            ]}
-            actions={
+            copy="Competitions, drops, casino, and your clan rankings - all in one place."
+            stage={{
+              label: 'Hall pulse',
+              primary: featuredComp ? featuredComp.title : `${ongoingComps.length} live competitions`,
+              secondary: hiscores[0]?.player?.displayName
+                ? `Top hiscore: ${hiscores[0].player.displayName}`
+                : `Balance: ${rewards ? formatPoints(rewards.balance) : '-'}`,
+              chips: [
+                womClan?.group?.name ?? GHOSTED_CONTENT.wom.clanChat,
+                `${womClan?.group?.memberCount ?? GHOSTED_CONTENT.wom.memberCount} members`,
+                activeDrops.length > 0
+                  ? `${activeDrops.length} drop${activeDrops.length !== 1 ? 's' : ''} live`
+                  : 'No active drops',
+              ],
+            }}
+            actions={(
               <>
-                <Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>
-                <Link href="/app/giveaways/" className="button button--secondary button--small">Giveaways</Link>
+                <Link href="/app/clan/" className="button button--secondary button--small">Clan</Link>
+                <Link href="/app/rewards/" className="button button--secondary button--small">Rewards</Link>
               </>
-            }
+            )}
           />
 
-          {/* Community pulse — what's happening right now */}
-          <section className="app-pulse-grid">
-            {/* Featured active or upcoming event */}
+          <AppGrid>
             <Panel
-              eyebrow={ongoingComps.length > 0 ? 'Live now' : upcomingComps.length > 0 ? 'Coming up' : 'Clan'}
-              title={
-                featuredComp
-                  ? featuredComp.title
-                  : ongoingComps.length === 0
-                  ? 'No competitions running'
-                  : 'Clan activity'
-              }
-              body={
+              tier="primary"
+              eyebrow="Clan"
+              title={featuredComp ? featuredComp.title : 'Clan records'}
+              body={(
                 <div className="app-stack">
-                  {ongoingComps.length > 0 ? (
-                    <>
-                      <div className="data-row">
-                        <span className="label">Active races</span>
-                        <strong>{ongoingComps.length}</strong>
-                      </div>
-                      {upcomingComps.length > 0 && (
-                        <div className="data-row">
-                          <span className="label">Upcoming</span>
-                          <strong>{upcomingComps.length}</strong>
-                        </div>
-                      )}
-                    </>
+                  {featuredComp ? (
+                    <div className="data-row">
+                      <span className="label">{ongoingComps.length > 0 ? 'Live now' : 'Coming up'}</span>
+                      <strong>{ongoingComps.length > 0 ? `${ongoingComps.length} active` : `${upcomingComps.length} upcoming`}</strong>
+                    </div>
+                  ) : null}
+                  {hiscores.length > 0 ? (
+                    <LeaderboardTable
+                      entries={hiscores}
+                      valueFormatter={(entry) => formatMaybeNumber(entry.value)}
+                      valueLabel="Level"
+                    />
                   ) : (
-                    <p className="app-panel-note">
-                      Check back soon — competitions run weekly.
-                    </p>
+                    <div className="data-row">
+                      <span className="label">Members</span>
+                      <strong>{womClan?.group?.memberCount ?? '-'}</strong>
+                    </div>
                   )}
-                  <div className="data-row">
-                    <span className="label">Clan members</span>
-                    <strong>{womClan?.group?.memberCount ?? '-'}</strong>
-                  </div>
                   <div className="app-inline-actions">
-                    <Link href="/app/competitions/" className="button button--secondary button--small">
-                      {ongoingComps.length > 0 ? 'View live races' : 'View competitions'}
-                    </Link>
-                    <Link href="/app/community/" className="button button--secondary button--small">Community</Link>
+                    <Link href="/app/clan/" className="button button--secondary button--small">Full clan</Link>
+                    <Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>
                   </div>
                 </div>
-              }
+              )}
             />
 
-            {/* Economy: balance and active drops */}
             <Panel
+              tier="primary"
               eyebrow="Economy"
               title={
-                activeGiveaways.length > 0
-                  ? `${activeGiveaways.length} active drop${activeGiveaways.length !== 1 ? 's' : ''}`
+                activeDrops.length > 0
+                  ? `${activeDrops.length} active drop${activeDrops.length !== 1 ? 's' : ''}`
                   : 'Rewards and drops'
               }
               body={
                 authed && rewards ? (
                   <div className="app-stack">
                     <div className="data-row">
-                      <span className="label">Your balance</span>
+                      <span className="label">Balance</span>
                       <strong>{formatPoints(rewards.balance)}</strong>
                     </div>
                     <div className="data-row">
                       <span className="label">Daily remaining</span>
-                      <strong>
-                        {rewards.dailyCap !== null ? formatPoints(rewards.dailyRemaining) : 'No cap'}
-                      </strong>
+                      <strong>{rewards.dailyCap !== null ? formatPoints(rewards.dailyRemaining) : 'No cap'}</strong>
                     </div>
-                    {activeGiveaways.length > 0 ? (
+                    {activeDrops[0] ? (
                       <div className="data-row">
-                        <span className="label">{activeGiveaways[0].title}</span>
-                        <span>{activeGiveaways[0].pointCost > 0 ? `${activeGiveaways[0].pointCost.toLocaleString()} pts` : 'Free'}</span>
+                        <span className="label">{activeDrops[0].title}</span>
+                        <span>{activeDrops[0].pointCost > 0 ? `${activeDrops[0].pointCost.toLocaleString()} pts` : 'Free'}</span>
                       </div>
                     ) : null}
                     <div className="app-inline-actions">
-                      <Link href="/app/giveaways/" className="button button--secondary button--small">Giveaways</Link>
+                      <Link href="/app/rewards/" className="button button--secondary button--small">Rewards</Link>
                       <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
                     </div>
                   </div>
@@ -209,19 +204,41 @@ export default function DashboardPage() {
                 )
               }
             />
-          </section>
+          </AppGrid>
 
           <AppGrid>
             <Panel
-              title="Sections"
-              eyebrow="Where to go"
+              tier="meta"
+              eyebrow="Your account"
+              title="Status"
               body={
+                authed && rewards ? (
+                  <div className="app-stack">
+                    <div>
+                      <div className="data-row"><span className="label">Balance</span><strong>{formatPoints(rewards.balance)}</strong></div>
+                      <div className="data-row"><span className="label">Ledger entries</span><strong>{rewards.entries.length}</strong></div>
+                    </div>
+                    <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
+                  </div>
+                ) : (
+                  <EmptyState
+                    message="Sign in with Discord to load your profile."
+                    action={<Link href="/auth/discord/login" className="button button--secondary button--small">Sign in</Link>}
+                  />
+                )
+              }
+            />
+
+            <Panel
+              tier="meta"
+              eyebrow="Navigate"
+              title="Sections"
+              body={(
                 <div className="app-route-list">
                   {[
-                    { href: '/app/community/', label: 'Community', meta: `${womClan?.group?.memberCount ?? '-'} members` },
-                    { href: '/app/competitions/', label: 'Competitions', meta: `${ongoingComps.length} active` },
-                    { href: '/app/rewards/', label: 'Rewards', meta: rewards ? formatPoints(rewards.balance) : '-' },
-                    { href: '/app/giveaways/', label: 'Giveaways', meta: `${activeGiveaways.length} live` },
+                    { href: '/app/clan/', label: 'Clan', meta: `${womClan?.group?.memberCount ?? '-'} members` },
+                    { href: '/app/competitions/', label: 'Competitions', meta: `${ongoingComps.length} live` },
+                    { href: '/app/rewards/', label: 'Rewards', meta: rewards ? formatPoints(rewards.balance) : 'Sign in' },
                     { href: '/app/casino/', label: 'Casino', meta: 'Points-only slots' },
                     { href: '/app/profile/', label: 'Profile', meta: 'Discord + WOM' },
                   ].map((route) => (
@@ -231,36 +248,15 @@ export default function DashboardPage() {
                     </Link>
                   ))}
                 </div>
-              }
-            />
-
-            <Panel
-              title="Your status"
-              eyebrow="Account"
-              body={
-                authed && rewards ? (
-                  <div className="app-stack">
-                    <div>
-                      <div className="data-row"><span className="label">Balance</span><strong>{formatPoints(rewards.balance)}</strong></div>
-                      <div className="data-row"><span className="label">Daily remaining</span><strong>{rewards.dailyCap !== null ? formatPoints(rewards.dailyRemaining) : 'No cap'}</strong></div>
-                      <div className="data-row"><span className="label">Ledger entries</span><strong>{rewards.entries.length}</strong></div>
-                    </div>
-                    <Link href="/app/profile/" className="button button--secondary button--small">View profile</Link>
-                  </div>
-                ) : (
-                  <EmptyState
-                    message="Sign in with Discord to load your member profile."
-                    action={<Link href="/auth/discord/login" className="button button--secondary button--small">Sign in</Link>}
-                  />
-                )
-              }
+              )}
             />
           </AppGrid>
 
           {rewards && rewards.entries.length > 0 ? (
             <Panel
-              title="Recent activity"
+              tier="meta"
               eyebrow="Ledger"
+              title="Recent activity"
               chip={`${rewards.entries.length} entries`}
               body={<LedgerTable entries={rewards.entries.slice(0, 6)} />}
             />

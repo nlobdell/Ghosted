@@ -2,11 +2,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  AppContext, StatStrip, Panel, AppGrid, Highlight, ArchitectureMap,
+  AppContext, StatStrip, Panel, AppGrid, Highlight,
   CompetitionList, MetricGrid, LeaderboardTable, EmptyState, Banner,
 } from '@/components/app/AppUI';
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
-import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 import type { Competition, LeaderboardEntry } from '@/lib/types';
 
 export default function CompetitionsPage() {
@@ -45,12 +44,11 @@ export default function CompetitionsPage() {
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
-          { label: 'App Hub', href: '/app/' },
-          { label: 'Community', href: '/app/community/' },
+          { label: 'Hall', href: '/app/' },
           { label: 'Competitions' },
         ]}
         title="Competition board"
-        actions={<Link href="/app/community/" className="button button--secondary button--small">Community</Link>}
+        actions={<Link href="/app/clan/" className="button button--secondary button--small">Clan</Link>}
       />
 
       {error ? <Banner message={error} variant="error" /> : null}
@@ -60,6 +58,7 @@ export default function CompetitionsPage() {
       ) : (
         <>
           <StatStrip
+            leadIndex={1}
             stats={[
               { label: 'Tracked comps', value: String(competitions.length) },
               { label: 'Ongoing', value: String(ongoing.length) },
@@ -69,60 +68,36 @@ export default function CompetitionsPage() {
           />
 
           <Highlight
-            theme="community"
-            eyebrow="Competition board"
-            title="Track Ghosted events and races."
-            copy="Ghosted commonly runs skill-of-the-week competitions. Use this board to monitor timing, participation, and results."
-            chips={[
-              `${ongoing.length} ongoing`,
-              `${upcoming.length} upcoming`,
-            ]}
-          />
-
-          <ArchitectureMap
-            title="Competition guide"
-            copy="This page helps members understand what is running now and what usually runs next."
-            nodes={[
-              {
-                label: 'Now',
-                title: 'Current and upcoming events',
-                copy: 'Track all competitions in one place with clear status for ongoing, upcoming, and finished events.',
-                chips: [`${ongoing.length} ongoing`, `${finished.length} finished`],
-              },
-              {
-                label: 'Format',
-                title: 'Event details',
-                copy: 'Each event shows metric, format, duration, and participant data so members know exactly what is being measured.',
-                chips: [
-                  featured?.metric ?? 'No metric',
-                  featured?.participants ? `${featured.participants.length} participants` : 'No participants',
-                ],
-              },
-              {
-                label: 'Examples',
-                title: 'Typical Ghosted events',
-                copy: 'Recent examples include recurring skill-of-the-week competitions coordinated through Discord.',
-                href: '/app/community/',
-                cta: 'Open community',
-                chips: GHOSTED_CONTENT.wom.competitionExamples.slice(0, 2),
-              },
-            ]}
+            eyebrow="Competitions"
+            title="Skill events and races."
+            copy="Skill-of-the-week events and group races. Check timing, format, and where you rank."
+            stage={{
+              label: 'Competition signal',
+              primary: `${ongoing.length} ongoing`,
+              secondary: featured?.startsAt ? `Featured starts ${formatDate(featured.startsAt)}` : 'No featured window yet',
+              chips: [
+                `${upcoming.length} upcoming`,
+                `${finished.length} finished`,
+              ],
+            }}
           />
 
           {competitions.length === 0 ? (
             <EmptyState
               message="No competitions found. Make sure WOM is configured and your group has competitions."
-              action={<Link href="/app/community/" className="button button--secondary button--small">Back to Community</Link>}
+              action={<Link href="/app/clan/" className="button button--secondary button--small">Back to Community</Link>}
             />
           ) : (
             <AppGrid>
               <Panel
+                tier="primary"
                 title="Competition board"
                 eyebrow="All competitions"
                 chip={`${competitions.length} total`}
                 body={<CompetitionList entries={competitions} />}
               />
               <Panel
+                tier="primary"
                 title={featured?.title ?? 'Featured competition'}
                 eyebrow="Competition detail"
                 body={
