@@ -22,49 +22,54 @@ export default function GiveawaysPage() {
         getJSON<{ giveaways: GiveawayItem[] }>('/api/giveaways'),
         getJSON<ShellData>(`/api/site-shell?next=${encodeURIComponent(window.location.pathname)}`),
       ]);
-      const sorted = [...(payload.giveaways ?? [])].sort((a, b) => {
-        const rank = (s: string) => s === 'active' ? 0 : s === 'scheduled' ? 1 : 2;
-        return rank(a.status) - rank(b.status) || String(a.endAt || '').localeCompare(String(b.endAt || ''));
+
+      const sorted = [...(payload.giveaways ?? [])].sort((left, right) => {
+        const rank = (status: string) => (status === 'active' ? 0 : status === 'scheduled' ? 1 : 2);
+        return rank(left.status) - rank(right.status) || String(left.endAt || '').localeCompare(String(right.endAt || ''));
       });
+
       setGiveaways(sorted);
       setShell(sh);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load giveaways.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load giveaways.');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleEnter = async (id: number) => {
     setEntering(id);
     setResultMsg(null);
+
     try {
       const result = await getJSON<{ result: { balance: number; entriesRemaining: number } }>(`/api/giveaways/${id}/enter`, { method: 'POST' });
-      setResultMsg({ text: `Entry added. ${formatPoints(result.result.balance)} left with ${result.result.entriesRemaining} entries remaining.`, variant: 'info' });
+      setResultMsg({
+        text: `Entry added. ${formatPoints(result.result.balance)} left with ${result.result.entriesRemaining} entries remaining.`,
+        variant: 'info',
+      });
       await load();
-    } catch (e) {
-      setResultMsg({ text: e instanceof Error ? e.message : 'Unable to enter giveaway.', variant: 'error' });
+    } catch (err) {
+      setResultMsg({ text: err instanceof Error ? err.message : 'Unable to enter giveaway.', variant: 'error' });
     } finally {
       setEntering(null);
     }
   };
 
-  const activeCount = giveaways.filter((g) => g.status === 'active').length;
+  const activeCount = giveaways.filter((item) => item.status === 'active').length;
   const authed = !!shell?.authenticated;
-
-  const stats = [
-    { label: 'Active now', value: String(activeCount), href: '/app/giveaways/' },
-    { label: 'Total giveaways', value: String(giveaways.length), href: '/app/giveaways/' },
-    { label: 'Entry type', value: 'Points + roles' },
-    { label: 'Sign-in', value: authed ? 'Ready' : 'Browse only', href: '/app/profile/' },
-  ];
 
   return (
     <main id="main-content" className="page-shell">
       <AppContext
-        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'App Hub', href: '/app/' }, { label: 'Giveaways' }]}
+        breadcrumbs={[
+          { label: 'Ghosted', href: '/' },
+          { label: 'App Hub', href: '/app/' },
+          { label: 'Giveaways' },
+        ]}
         title="Live drops"
         actions={
           <>
@@ -74,13 +79,20 @@ export default function GiveawaysPage() {
         }
       />
 
-      {loading && <Banner message="Loading giveaways…" variant="info" />}
+      {loading ? <Banner message="Loading giveaways..." variant="info" /> : null}
       {error ? <Banner message={error} variant="error" /> : null}
       {resultMsg ? <Banner message={resultMsg.text} variant={resultMsg.variant} /> : null}
 
-      {!loading && !error && (
+      {!loading && !error ? (
         <>
-          <StatStrip stats={stats} />
+          <StatStrip
+            stats={[
+              { label: 'Active now', value: String(activeCount), href: '/app/giveaways/' },
+              { label: 'Total giveaways', value: String(giveaways.length), href: '/app/giveaways/' },
+              { label: 'Entry type', value: 'Points + roles' },
+              { label: 'Sign-in', value: authed ? 'Ready' : 'Browse only', href: '/app/profile/' },
+            ]}
+          />
 
           <Highlight
             eyebrow="Giveaways"
@@ -100,21 +112,23 @@ export default function GiveawaysPage() {
                   title={item.title}
                   chip={item.status}
                   body={
-                    <div style={{ display: 'grid', gap: '0.8rem' }}>
-                      {item.description && <p style={{ margin: 0, color: '#9d96ad' }}>{item.description}</p>}
-                      <MetricGrid items={[
-                        ['Cost', formatPoints(item.pointCost)],
-                        ['Entries', `${item.userEntries} / ${item.maxEntries}`],
-                        ['Closes', formatDate(item.endAt)],
-                        ['Access', item.requiredRole ? item.requiredRole.label : 'Linked members'],
-                      ]} />
-                      <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <div className="app-stack">
+                      {item.description ? <p className="app-panel-note">{item.description}</p> : null}
+                      <MetricGrid
+                        items={[
+                          ['Cost', formatPoints(item.pointCost)],
+                          ['Entries', `${item.userEntries} / ${item.maxEntries}`],
+                          ['Closes', formatDate(item.endAt)],
+                          ['Access', item.requiredRole ? item.requiredRole.label : 'Linked members'],
+                        ]}
+                      />
+                      <div className="app-inline-actions">
                         <button
                           className="button"
                           disabled={!item.canEnter || entering === item.id}
                           onClick={() => handleEnter(item.id)}
                         >
-                          {entering === item.id ? 'Entering…' : 'Enter'}
+                          {entering === item.id ? 'Entering...' : 'Enter'}
                         </button>
                       </div>
                     </div>
@@ -124,7 +138,7 @@ export default function GiveawaysPage() {
             )}
           </AppGrid>
         </>
-      )}
+      ) : null}
     </main>
   );
 }

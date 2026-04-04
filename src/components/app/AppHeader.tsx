@@ -30,42 +30,42 @@ export function AppHeader() {
   return (
     <header className="app-header">
       <div className="container">
-        <div className="nav-inner">
-
-          {/* Logo */}
+        <div className="nav-shell nav-shell--app">
           <Link href="/" className="nav-brand">
             <span className="nav-brand-dot" aria-hidden="true" />
-            Ghosted
+            <span className="nav-brand__copy">
+              <strong>Ghosted</strong>
+              <span>Member tools</span>
+            </span>
           </Link>
 
-          {/* Desktop nav (hidden on mobile via CSS) */}
           <nav aria-label="App navigation" className="nav-links">
-            {APP_NAV.map((l) => (
-              <Link
-                key={l.key}
-                href={l.href}
-                className="nav-link nav-link--sm"
-                aria-current={active === l.key ? 'page' : undefined}
-              >
-                {l.label}
-              </Link>
-            ))}
+            <div className="nav-link-group">
+              {APP_NAV.map((link) => (
+                <Link
+                  key={link.key}
+                  href={link.href}
+                  className="nav-link nav-link--small"
+                  aria-current={active === link.key ? 'page' : undefined}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
           </nav>
 
-          {/* Desktop tools (hidden on mobile via CSS) */}
           <div className="nav-auth">
             <a
               href="https://www.twitch.tv/vghosted"
               target="_blank"
               rel="noopener noreferrer"
-              className="button button--secondary button--small"
+              className="nav-link nav-link--small"
             >
               Twitch
             </a>
             <AuthWidget variant="app" />
           </div>
 
-          {/* Mobile toggle (hidden on desktop via CSS) */}
           <button
             type="button"
             className="nav-toggle button button--secondary button--small"
@@ -75,11 +75,9 @@ export function AppHeader() {
           >
             Menu
           </button>
-
         </div>
       </div>
 
-      {/* Mobile drawer */}
       {open && (
         <div className="nav-drawer">
           <div
@@ -96,7 +94,10 @@ export function AppHeader() {
             <div className="nav-drawer-header">
               <Link href="/" className="nav-brand">
                 <span className="nav-brand-dot" aria-hidden="true" />
-                Ghosted
+                <span className="nav-brand__copy">
+                  <strong>Ghosted</strong>
+                  <span>Member tools</span>
+                </span>
               </Link>
               <button
                 type="button"
@@ -111,15 +112,15 @@ export function AppHeader() {
             <AuthWidget variant="mobile" />
 
             <nav aria-label="App navigation" className="nav-drawer-links">
-              {APP_NAV.map((l) => (
+              {APP_NAV.map((link) => (
                 <Link
-                  key={l.key}
-                  href={l.href}
+                  key={link.key}
+                  href={link.href}
                   className="nav-link"
-                  aria-current={active === l.key ? 'page' : undefined}
+                  aria-current={active === link.key ? 'page' : undefined}
                   onClick={() => setOpen(false)}
                 >
-                  {l.label}
+                  {link.label}
                 </Link>
               ))}
             </nav>

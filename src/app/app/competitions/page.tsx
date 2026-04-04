@@ -17,7 +17,7 @@ export default function CompetitionsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const compsData = await getJSON<{ competitions?: Competition[] }>('/api/wom/competitions?limit=12').then((d) => d.competitions ?? []);
+        const compsData = await getJSON<{ competitions?: Competition[] }>('/api/wom/competitions?limit=12').then((data) => data.competitions ?? []);
         setCompetitions(compsData);
 
         if (compsData.length > 0) {
@@ -31,12 +31,13 @@ export default function CompetitionsPage() {
         setLoading(false);
       }
     }
+
     load();
   }, []);
 
-  const ongoing = competitions.filter((c) => c.status === 'ongoing');
-  const upcoming = competitions.filter((c) => c.status === 'upcoming');
-  const finished = competitions.filter((c) => c.status === 'finished');
+  const ongoing = competitions.filter((item) => item.status === 'ongoing');
+  const upcoming = competitions.filter((item) => item.status === 'upcoming');
+  const finished = competitions.filter((item) => item.status === 'finished');
 
   return (
     <main id="main-content" className="page-shell">
@@ -48,15 +49,13 @@ export default function CompetitionsPage() {
           { label: 'Competitions' },
         ]}
         title="Competition board"
-        actions={
-          <Link href="/app/community/" className="button button--secondary button--small">Community</Link>
-        }
+        actions={<Link href="/app/community/" className="button button--secondary button--small">Community</Link>}
       />
 
-      {error && <Banner message={error} variant="error" />}
+      {error ? <Banner message={error} variant="error" /> : null}
 
       {loading ? (
-        <Banner message="Loading competitions…" variant="info" />
+        <Banner message="Loading competitions..." variant="info" />
       ) : (
         <>
           <StatStrip
@@ -86,25 +85,25 @@ export default function CompetitionsPage() {
                 eyebrow="Competition detail"
                 body={
                   featured ? (
-                    <>
+                    <div className="app-stack">
                       <MetricGrid
                         items={[
                           ['Status', featured.status],
-                          ['Metric', featured.metric ?? '—'],
-                          ['Type', featured.type ?? '—'],
+                          ['Metric', featured.metric ?? '-'],
+                          ['Type', featured.type ?? '-'],
                           ['Starts', formatDate(featured.startsAt ?? null)],
                           ['Ends', formatDate(featured.endsAt ?? null)],
-                          ['Participants', featured.participants ? String(featured.participants.length) : '—'],
+                          ['Participants', featured.participants ? String(featured.participants.length) : '-'],
                         ]}
                       />
-                      {featured.participants && featured.participants.length > 0 && (
+                      {featured.participants && featured.participants.length > 0 ? (
                         <LeaderboardTable
                           entries={featured.participants.slice(0, 8) as LeaderboardEntry[]}
-                          valueFormatter={(e) => formatMaybeNumber(e.progress?.gained ?? e.gained ?? e.value)}
+                          valueFormatter={(entry) => formatMaybeNumber(entry.progress?.gained ?? entry.gained ?? entry.value)}
                           valueLabel="Progress"
                         />
-                      )}
-                    </>
+                      ) : null}
+                    </div>
                   ) : (
                     <EmptyState message="Select a competition to see details." />
                   )

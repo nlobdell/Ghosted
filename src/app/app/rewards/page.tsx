@@ -20,16 +20,17 @@ export default function RewardsPage() {
         const data = await getJSON<RewardsData>('/api/rewards');
         setRewards(data);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Failed to load rewards.';
-        if (msg.includes('401') || msg.toLowerCase().includes('unauthorized') || msg.toLowerCase().includes('not authenticated')) {
+        const message = err instanceof Error ? err.message : 'Failed to load rewards.';
+        if (message.includes('401') || message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('not authenticated')) {
           setAuthed(false);
         } else {
-          setError(msg);
+          setError(message);
         }
       } finally {
         setLoading(false);
       }
     }
+
     load();
   }, []);
 
@@ -41,16 +42,14 @@ export default function RewardsPage() {
           { label: 'App Hub', href: '/app/' },
           { label: 'Rewards' },
         ]}
-        title="Balance & ledger"
-        actions={
-          <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
-        }
+        title="Balance and ledger"
+        actions={<Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>}
       />
 
-      {error && <Banner message={error} variant="error" />}
+      {error ? <Banner message={error} variant="error" /> : null}
 
       {loading ? (
-        <Banner message="Loading rewards…" variant="info" />
+        <Banner message="Loading rewards..." variant="info" />
       ) : !authed ? (
         <EmptyState
           message="Sign in to view your balance and rewards history."

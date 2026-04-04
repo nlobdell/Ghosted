@@ -28,10 +28,11 @@ export default function CommunityPage() {
             }
             throw err;
           }),
-          getJSON<{ competitions?: Competition[] }>('/api/wom/competitions?limit=6').then((d) => d.competitions ?? []).catch(() => [] as Competition[]),
-          getJSON<{ hiscores?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=6').then((d) => d.hiscores ?? []).catch(() => [] as LeaderboardEntry[]),
-          getJSON<{ gains?: LeaderboardEntry[] }>('/api/wom/gains?metric=overall&period=week&limit=6').then((d) => d.gains ?? []).catch(() => [] as LeaderboardEntry[]),
+          getJSON<{ competitions?: Competition[] }>('/api/wom/competitions?limit=6').then((data) => data.competitions ?? []).catch(() => [] as Competition[]),
+          getJSON<{ hiscores?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=6').then((data) => data.hiscores ?? []).catch(() => [] as LeaderboardEntry[]),
+          getJSON<{ gains?: LeaderboardEntry[] }>('/api/wom/gains?metric=overall&period=week&limit=6').then((data) => data.gains ?? []).catch(() => [] as LeaderboardEntry[]),
         ]);
+
         if (clanData) setClan(clanData);
         setCompetitions(compsData);
         setHiscores(hiscoresData);
@@ -42,6 +43,7 @@ export default function CommunityPage() {
         setLoading(false);
       }
     }
+
     load();
   }, []);
 
@@ -64,8 +66,8 @@ export default function CommunityPage() {
     );
   }
 
-  const ongoing = competitions.filter((c) => c.status === 'ongoing');
-  const upcoming = competitions.filter((c) => c.status === 'upcoming');
+  const ongoing = competitions.filter((item) => item.status === 'ongoing');
+  const upcoming = competitions.filter((item) => item.status === 'upcoming');
 
   return (
     <main id="main-content" className="page-shell">
@@ -84,16 +86,16 @@ export default function CommunityPage() {
         }
       />
 
-      {error && <Banner message={error} variant="error" />}
+      {error ? <Banner message={error} variant="error" /> : null}
 
       {loading ? (
-        <Banner message="Loading community data…" variant="info" />
+        <Banner message="Loading community data..." variant="info" />
       ) : (
         <>
           <StatStrip
             stats={[
-              { label: 'Group members', value: clan ? String(clan.group.memberCount) : '—', href: '/app/clan/' },
-              { label: 'Linked users', value: clan ? String(clan.linkCoverage.linkedUsers) : '—' },
+              { label: 'Group members', value: clan ? String(clan.group.memberCount) : '-', href: '/app/clan/' },
+              { label: 'Linked users', value: clan ? String(clan.linkCoverage.linkedUsers) : '-' },
               { label: 'Live competitions', value: String(ongoing.length), href: '/app/competitions/' },
               { label: 'Upcoming', value: String(upcoming.length), href: '/app/competitions/' },
             ]}
@@ -147,24 +149,12 @@ export default function CommunityPage() {
             <Panel
               title="Overall leaders"
               eyebrow="Hiscores"
-              body={
-                <LeaderboardTable
-                  entries={hiscores}
-                  valueFormatter={(e) => formatMaybeNumber(e.value)}
-                  valueLabel="Level"
-                />
-              }
+              body={<LeaderboardTable entries={hiscores} valueFormatter={(entry) => formatMaybeNumber(entry.value)} valueLabel="Level" />}
             />
             <Panel
               title="Weekly gains"
               eyebrow="This week"
-              body={
-                <LeaderboardTable
-                  entries={gains}
-                  valueFormatter={(e) => `+${formatMaybeNumber(e.gained ?? e.progress?.gained)}`}
-                  valueLabel="XP gained"
-                />
-              }
+              body={<LeaderboardTable entries={gains} valueFormatter={(entry) => `+${formatMaybeNumber(entry.gained ?? entry.progress?.gained)}`} valueLabel="XP gained" />}
             />
           </AppGrid>
         </>
