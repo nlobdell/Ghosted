@@ -3,10 +3,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   AppContext, StatStrip, Panel, AppGrid, Highlight,
-  MetricGrid, LeaderboardTable, Feed, EmptyState, Banner, CONTAINER, APP_SHELL,
+  MetricGrid, LeaderboardTable, Feed, EmptyState, Banner,
 } from '@/components/app/AppUI';
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
-import type { ClanData, LeaderboardEntry } from '@/lib/types';
+import type { ClanData, LeaderboardEntry, AchievementItem, ActivityItem } from '@/lib/types';
 
 export default function DashboardPage() {
   const [clan, setClan] = useState<ClanData | null>(null);
@@ -36,7 +36,7 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <main id="main-content" style={{ ...CONTAINER, ...APP_SHELL }}>
+    <main id="main-content" className="page-shell">
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
@@ -132,16 +132,11 @@ export default function DashboardPage() {
               body={
                 <Feed
                   items={
-                    Array.isArray(clan.recentAchievements) && clan.recentAchievements.length > 0
-                      ? clan.recentAchievements.slice(0, 8).map((a: unknown) => {
-                          const item = a as Record<string, unknown>;
-                          return {
-                            title: String(item.title ?? item.type ?? 'Achievement'),
-                            meta: item.createdAt ? formatDate(String(item.createdAt)) : undefined,
-                            eyebrow: item.metric ? String(item.metric) : undefined,
-                          };
-                        })
-                      : []
+                    clan.recentAchievements.slice(0, 8).map((a: AchievementItem) => ({
+                      title: a.title ?? a.type ?? 'Achievement',
+                      meta: a.createdAt ? formatDate(a.createdAt) : undefined,
+                      eyebrow: a.metric,
+                    }))
                   }
                 />
               }
@@ -152,16 +147,11 @@ export default function DashboardPage() {
               body={
                 <Feed
                   items={
-                    Array.isArray(clan.recentActivity) && clan.recentActivity.length > 0
-                      ? clan.recentActivity.slice(0, 8).map((a: unknown) => {
-                          const item = a as Record<string, unknown>;
-                          return {
-                            title: String(item.title ?? item.type ?? 'Activity'),
-                            meta: item.createdAt ? formatDate(String(item.createdAt)) : undefined,
-                            eyebrow: item.type ? String(item.type) : undefined,
-                          };
-                        })
-                      : []
+                    clan.recentActivity.slice(0, 8).map((a: ActivityItem) => ({
+                      title: a.title ?? a.type ?? 'Activity',
+                      meta: a.createdAt ? formatDate(a.createdAt) : undefined,
+                      eyebrow: a.type,
+                    }))
                   }
                 />
               }

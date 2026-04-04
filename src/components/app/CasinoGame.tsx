@@ -7,22 +7,12 @@ export default function CasinoGame() {
   useEffect(() => {
     if (mounted.current) return;
     mounted.current = true;
-    // Dynamically import the casino game module (Pixi.js — client-only)
+    // Dynamically import the Pixi.js casino (client-only, mounts onto #casino-root)
     import('@/casino/main').catch((err) => {
       console.error('Casino game failed to load:', err);
     });
   }, []);
 
-  return (
-    <div
-      id="casino-root"
-      style={{
-        minHeight: '60vh',
-        borderRadius: '1.35rem',
-        border: '1px solid rgba(255,255,255,0.06)',
-        background: 'rgba(13,11,15,0.78)',
-        overflow: 'hidden',
-      }}
-    />
-  );
+  // Styled via #casino-root in globals.css
+  return <div id="casino-root" />;
 }

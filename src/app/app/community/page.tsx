@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   AppContext, StatStrip, Panel, AppGrid, Highlight,
-  LeaderboardTable, EmptyState, Banner, CompetitionList, CONTAINER, APP_SHELL,
+  LeaderboardTable, EmptyState, Banner, CompetitionList,
 } from '@/components/app/AppUI';
 import { formatMaybeNumber, getJSON } from '@/lib/api';
 import type { ClanData, Competition, LeaderboardEntry } from '@/lib/types';
@@ -47,7 +47,7 @@ export default function DashboardPage() {
 
   if (!womConfigured) {
     return (
-      <main id="main-content" style={{ ...CONTAINER, ...APP_SHELL }}>
+      <main id="main-content" className="page-shell">
         <AppContext
           breadcrumbs={[
             { label: 'Ghosted', href: '/' },
@@ -68,7 +68,7 @@ export default function DashboardPage() {
   const upcoming = competitions.filter((c) => c.status === 'upcoming');
 
   return (
-    <main id="main-content" style={{ ...CONTAINER, ...APP_SHELL }}>
+    <main id="main-content" className="page-shell">
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
@@ -118,15 +118,15 @@ export default function DashboardPage() {
               eyebrow="Group overview"
               body={
                 clan ? (
-                  <div style={{ display: 'grid', gap: '0.4rem' }}>
+                  <div>
                     {[
                       ['Members', String(clan.group.memberCount)],
                       ['Verified', clan.group.verified ? 'Yes' : 'No'],
                       ['Linked users', String(clan.linkCoverage.linkedUsers)],
                       ['Maxed total', String(clan.statistics.maxedTotalCount)],
                     ].map(([label, value]) => (
-                      <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <span style={{ color: '#9d96ad' }}>{label}</span>
+                      <div key={label} className="data-row">
+                        <span className="label">{label}</span>
                         <strong>{value}</strong>
                       </div>
                     ))}

@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   AppContext, StatStrip, Panel, AppGrid, Highlight, MetricGrid, DenseTable,
-  EmptyState, Banner, FormField, INPUT_STYLE, SectionHeading, CONTAINER, APP_SHELL,
+  EmptyState, Banner, FormField,
 } from '@/components/app/AppUI';
-import { formatPoints, getJSON, formatDate } from '@/lib/api';
+import { formatPoints, getJSON } from '@/lib/api';
 
 interface AdminOverview {
   actor: { displayName: string };
@@ -72,7 +72,7 @@ export default function AdminPage() {
     } finally { setSubmitting(false); }
   };
 
-  if (loading) return <main style={{ ...CONTAINER, padding: '2rem 0' }}><p style={{ color: '#9d96ad' }}>Loading…</p></main>;
+  if (loading) return <main className="page-shell"><Banner message="Loading admin data…" variant="info" /></main>;
 
   const activeGiveaways = data?.overview.giveaways.filter((g) => g.status === 'active').length ?? 0;
   const adminCount = data?.overview.users.filter((u) => u.isAdmin).length ?? 0;
@@ -85,7 +85,7 @@ export default function AdminPage() {
   ];
 
   return (
-    <main id="main-content" style={{ ...CONTAINER, ...APP_SHELL }}>
+    <main id="main-content" className="page-shell">
       <AppContext
         breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'App Hub', href: '/app/' }, { label: 'Admin' }]}
         title="Operator console"
@@ -112,13 +112,13 @@ export default function AdminPage() {
           body={
             <form onSubmit={handleGrant} style={{ display: 'grid', gap: '0.8rem' }}>
               <FormField label="User ID or Discord ID">
-                <input name="userId" type="text" placeholder="User ID" style={INPUT_STYLE} required />
+                <input name="userId" type="text" placeholder="User ID" className="input-base" required />
               </FormField>
               <FormField label="Amount">
-                <input name="amount" type="number" placeholder="100" style={INPUT_STYLE} required />
+                <input name="amount" type="number" placeholder="100" className="input-base" required />
               </FormField>
               <FormField label="Description">
-                <input name="description" type="text" placeholder="Reason" style={INPUT_STYLE} />
+                <input name="description" type="text" placeholder="Reason" className="input-base" />
               </FormField>
               <button className="button" type="submit" disabled={submitting}>Grant</button>
             </form>
@@ -132,24 +132,24 @@ export default function AdminPage() {
           body={
             <form onSubmit={handleCreateGiveaway} style={{ display: 'grid', gap: '0.8rem' }}>
               <FormField label="Title">
-                <input name="title" type="text" placeholder="Prize name" style={INPUT_STYLE} required />
+                <input name="title" type="text" placeholder="Prize name" className="input-base" required />
               </FormField>
               <FormField label="Description">
-                <input name="description" type="text" placeholder="Optional" style={INPUT_STYLE} />
+                <input name="description" type="text" placeholder="Optional" className="input-base" />
               </FormField>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+              <div className="form-grid-two">
                 <FormField label="Point cost">
-                  <input name="pointCost" type="number" placeholder="50" style={INPUT_STYLE} required />
+                  <input name="pointCost" type="number" placeholder="50" className="input-base" required />
                 </FormField>
                 <FormField label="Max entries">
-                  <input name="maxEntries" type="number" placeholder="10" style={INPUT_STYLE} required />
+                  <input name="maxEntries" type="number" placeholder="10" className="input-base" required />
                 </FormField>
               </div>
               <FormField label="End date">
-                <input name="endAt" type="datetime-local" style={INPUT_STYLE} required />
+                <input name="endAt" type="datetime-local" className="input-base" required />
               </FormField>
               <FormField label="Required role (optional)">
-                <select name="requiredRoleId" style={INPUT_STYLE}>
+                <select name="requiredRoleId" className="input-base">
                   <option value="">None</option>
                   {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   AppContext, StatStrip, Panel, AppGrid,
-  CompetitionList, MetricGrid, LeaderboardTable, EmptyState, Banner, CONTAINER, APP_SHELL,
+  CompetitionList, MetricGrid, LeaderboardTable, EmptyState, Banner,
 } from '@/components/app/AppUI';
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
 import type { Competition, LeaderboardEntry } from '@/lib/types';
@@ -39,7 +39,7 @@ export default function DashboardPage() {
   const finished = competitions.filter((c) => c.status === 'finished');
 
   return (
-    <main id="main-content" style={{ ...CONTAINER, ...APP_SHELL }}>
+    <main id="main-content" className="page-shell">
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
