@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     default: 'Ghosted Clan | Welcome to the Hall',
   },
   description:
-    'Ghosted is an Old School RuneScape clan built around Discord, the vghosted Twitch channel, clan events, rewards, giveaways, and a member hub.',
+    'Ghosted is an Old School RuneScape clan community led by vghosted on Twitch, with a Discord-first event flow, rewards, giveaways, and a unified member hub.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

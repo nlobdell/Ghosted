@@ -6,6 +6,7 @@ import {
   StatStrip,
   Panel,
   AppGrid,
+  ArchitectureMap,
   Highlight,
   MetricGrid,
   LeaderboardTable,
@@ -14,6 +15,7 @@ import {
   Banner,
 } from '@/components/app/AppUI';
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
+import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 import type { ClanData, LeaderboardEntry, AchievementItem, ActivityItem } from '@/lib/types';
 
 export default function ClanPage() {
@@ -57,7 +59,7 @@ export default function ClanPage() {
           { label: 'Community', href: '/app/community/' },
           { label: 'Clan' },
         ]}
-        title="Clan detail"
+        title="Ghosted clan detail"
         actions={<Link href="/app/community/" className="button button--secondary button--small">Community</Link>}
       />
 
@@ -85,7 +87,7 @@ export default function ClanPage() {
             theme="community"
             eyebrow="Clan detail"
             title={clan.group.name}
-            copy="Detailed clan metrics, hiscores, gains, and recent activity in one consistent member surface."
+            copy={`A full Ghosted snapshot with member metrics, top performers, and recent activity from WOM Group ${GHOSTED_CONTENT.wom.groupId}.`}
             actions={
               <Link href="/app/competitions/" className="button button--secondary button--small">
                 Competitions
@@ -94,6 +96,36 @@ export default function ClanPage() {
             chips={[
               `${clan.group.memberCount} members`,
               `${clan.linkCoverage.linkedUsers} linked`,
+            ]}
+          />
+
+          <ArchitectureMap
+            title="What this page tells members"
+            copy="Use this page to understand clan health, top performers, and current momentum."
+            nodes={[
+              {
+                label: 'Health',
+                title: 'Roster and core stats',
+                copy: 'Member count, verification status, and link coverage show how healthy and connected the clan is.',
+                chips: [`${clan.group.memberCount} members`, `World ${clan.group.homeworld ?? GHOSTED_CONTENT.wom.homeworld}`],
+              },
+              {
+                label: 'Performance',
+                title: 'Hiscores and gains',
+                copy: 'Hiscores and weekly gains highlight who is currently pushing progression in skill and bossing cycles.',
+                href: '/app/competitions/',
+                cta: 'Open competitions',
+                chips: [`${hiscores.length} hiscore entries`, `${gains.length} gain entries`],
+              },
+              {
+                label: 'Momentum',
+                title: 'Recent activity',
+                copy: 'Recent achievements and feed activity show what the clan is accomplishing right now.',
+                chips: [
+                  `${clan.recentAchievements.length} achievements`,
+                  `${clan.recentActivity.length} activity events`,
+                ],
+              },
             ]}
           />
 

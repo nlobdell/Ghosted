@@ -2,10 +2,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  AppContext, StatStrip, Panel, AppGrid, Highlight,
+  AppContext, StatStrip, Panel, AppGrid, Highlight, ArchitectureMap,
   CompetitionList, MetricGrid, LeaderboardTable, EmptyState, Banner,
 } from '@/components/app/AppUI';
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
+import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 import type { Competition, LeaderboardEntry } from '@/lib/types';
 
 export default function CompetitionsPage() {
@@ -70,11 +71,41 @@ export default function CompetitionsPage() {
           <Highlight
             theme="community"
             eyebrow="Competition board"
-            title="Track active races and upcoming events."
-            copy="Competition status, windows, and participant progress stay in one consistent view."
+            title="Track Ghosted events and races."
+            copy="Ghosted commonly runs skill-of-the-week competitions. Use this board to monitor timing, participation, and results."
             chips={[
               `${ongoing.length} ongoing`,
               `${upcoming.length} upcoming`,
+            ]}
+          />
+
+          <ArchitectureMap
+            title="Competition guide"
+            copy="This page helps members understand what is running now and what usually runs next."
+            nodes={[
+              {
+                label: 'Now',
+                title: 'Current and upcoming events',
+                copy: 'Track all competitions in one place with clear status for ongoing, upcoming, and finished events.',
+                chips: [`${ongoing.length} ongoing`, `${finished.length} finished`],
+              },
+              {
+                label: 'Format',
+                title: 'Event details',
+                copy: 'Each event shows metric, format, duration, and participant data so members know exactly what is being measured.',
+                chips: [
+                  featured?.metric ?? 'No metric',
+                  featured?.participants ? `${featured.participants.length} participants` : 'No participants',
+                ],
+              },
+              {
+                label: 'Examples',
+                title: 'Typical Ghosted events',
+                copy: 'Recent examples include recurring skill-of-the-week competitions coordinated through Discord.',
+                href: '/app/community/',
+                cta: 'Open community',
+                chips: GHOSTED_CONTENT.wom.competitionExamples.slice(0, 2),
+              },
             ]}
           />
 

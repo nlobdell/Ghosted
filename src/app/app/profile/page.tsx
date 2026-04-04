@@ -6,6 +6,7 @@ import {
   StatStrip,
   Panel,
   AppGrid,
+  ArchitectureMap,
   Highlight,
   MetricGrid,
   TagBlock,
@@ -117,7 +118,7 @@ export default function ProfilePage() {
           { label: 'App Hub', href: '/app/' },
           { label: 'Profile' },
         ]}
-        title="Identity setup"
+        title="Ghosted identity setup"
       />
 
       {error ? <Banner message={error} variant="error" /> : null}
@@ -145,10 +146,39 @@ export default function ProfilePage() {
             theme="dashboard"
             eyebrow="Member identity"
             title="Keep your account, roles, and WOM link in sync."
-            copy="Profile settings drive access and visibility across rewards, giveaways, and community views."
+            copy="Profile settings connect your Ghosted Discord identity, roles, and WOM data across rewards, giveaways, and clan views."
             chips={[
               wom?.linked ? 'WOM linked' : 'WOM not linked',
               user?.isAdmin ? 'Admin account' : 'Member account',
+            ]}
+          />
+
+          <ArchitectureMap
+            title="Profile checklist"
+            copy="Complete these profile steps to unlock the full Ghosted member experience."
+            nodes={[
+              {
+                label: 'Step 1',
+                title: 'Sign in with Discord',
+                copy: 'Your Discord identity is the base account used for rewards, roles, and access control.',
+                chips: [user?.displayName || 'Member', user?.isAdmin ? 'Admin access' : 'Member access'],
+              },
+              {
+                label: 'Step 2',
+                title: 'Link WOM',
+                copy: 'Link your RuneScape profile to appear in clan intelligence and competition views.',
+                href: '/app/community/',
+                cta: 'Open community',
+                chips: [wom?.linked ? 'WOM linked' : 'WOM not linked', wom?.membership?.groupName ?? 'No group'],
+              },
+              {
+                label: 'Step 3',
+                title: 'Keep roles synced',
+                copy: 'Roles and perks determine giveaway eligibility and personalized access inside the hub.',
+                href: '/app/giveaways/',
+                cta: 'Open giveaways',
+                chips: [`${user?.roles.length ?? 0} roles`, `${user?.perks.length ?? 0} perks`],
+              },
             ]}
           />
 

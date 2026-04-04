@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AppHeader } from '@/components/app/AppHeader';
+import { GhostedNav } from '@/components/GhostedNav';
 
 export const metadata: Metadata = {
   title: {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-page app-shell">
-      <AppHeader />
+      <GhostedNav sticky />
       {children}
     </div>
   );
