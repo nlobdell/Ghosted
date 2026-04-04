@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import '@/casino/style.css';
 import {
   fetchConfig,
   fetchGames,
