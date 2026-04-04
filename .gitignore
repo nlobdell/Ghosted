@@ -5,5 +5,6 @@ node_modules/
 .claude/
 .vshistory/
 .idea/
-.DS_Store.next/
-node_modules/
+.DS_Store
+.next/
+tsconfig.tsbuildinfo
