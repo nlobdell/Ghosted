@@ -1,0 +1,14 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/admin/page": "/admin",
+  "/app/casino/page": "/app/casino",
+  "/app/clan/page": "/app/clan",
+  "/app/community/page": "/app/community",
+  "/app/competitions/page": "/app/competitions",
+  "/app/giveaways/page": "/app/giveaways",
+  "/app/page": "/app",
+  "/app/profile/page": "/app/profile",
+  "/app/rewards/page": "/app/rewards",
+  "/page": "/"
+}

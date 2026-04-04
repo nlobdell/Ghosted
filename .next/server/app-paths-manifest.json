@@ -1,0 +1,14 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/app/casino/page": "app/app/casino/page.js",
+  "/app/clan/page": "app/app/clan/page.js",
+  "/app/community/page": "app/app/community/page.js",
+  "/app/competitions/page": "app/app/competitions/page.js",
+  "/app/giveaways/page": "app/app/giveaways/page.js",
+  "/app/page": "app/app/page.js",
+  "/app/profile/page": "app/app/profile/page.js",
+  "/app/rewards/page": "app/app/rewards/page.js",
+  "/page": "app/page.js"
+}

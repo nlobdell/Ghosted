@@ -5,4 +5,5 @@ node_modules/
 .claude/
 .vshistory/
 .idea/
-.DS_Store
+.DS_Store.next/
+node_modules/

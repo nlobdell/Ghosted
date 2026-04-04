@@ -5,14 +5,16 @@ import ghostUrl from '../assets/symbols/ghost.svg';
 import lanternUrl from '../assets/symbols/lantern.svg';
 import maskUrl from '../assets/symbols/mask.svg';
 import moonUrl from '../assets/symbols/moon.svg';
-import reelStopUrl from '../assets/audio/reel-stop.wav';
 import runeUrl from '../assets/symbols/rune.svg';
 import scatterUrl from '../assets/symbols/scatter.svg';
-import spinStartUrl from '../assets/audio/spin-start.wav';
-import featureUrl from '../assets/audio/feature-trigger.wav';
-import missUrl from '../assets/audio/miss.wav';
 import wildUrl from '../assets/symbols/wild.svg';
-import winUrl from '../assets/audio/win.wav';
+
+// Audio served from /public/audio/ to avoid bundler issues with binary assets
+const reelStopUrl = '/audio/reel-stop.wav';
+const spinStartUrl = '/audio/spin-start.wav';
+const featureUrl = '/audio/feature-trigger.wav';
+const missUrl = '/audio/miss.wav';
+const winUrl = '/audio/win.wav';
 
 export const SYMBOL_TEXTURES = {
   coin: { key: 'symbol-coin', url: coinUrl },

@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/app/layout,_N_T_/app/competitions/layout,_N_T_/app/competitions/page,_N_T_/app/competitions"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/app/competitions/__PAGE__",
+    "/app/competitions",
+    "/app",
+    "/_index",
+    "/_head"
+  ]
+}
