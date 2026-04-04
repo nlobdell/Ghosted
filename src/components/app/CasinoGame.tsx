@@ -92,7 +92,7 @@ export default function CasinoGame() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthed || !selectedGame || !stageRef.current) return;
+    if (loadState !== 'ready' || !isAuthed || !selectedGame || !stageRef.current) return;
     let cancelled = false;
     const renderer = rendererRef.current ?? new SlotRenderer();
     rendererRef.current = renderer;
@@ -117,7 +117,7 @@ export default function CasinoGame() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthed, latestResult, selectedGame]);
+  }, [isAuthed, latestResult, loadState, selectedGame]);
 
   useEffect(() => {
     return () => {
