@@ -26,45 +26,47 @@ export function SiteNav() {
 
   return (
     <nav className="site-nav" aria-label="Primary">
-      <div className="nav-inner">
-
-        {/* Logo */}
+      <div className="nav-shell">
         <Link href="/" className="nav-brand">
           <span className="nav-brand-dot" aria-hidden="true" />
-          Ghosted
+          <span className="nav-brand__copy">
+            <strong>Ghosted</strong>
+            <span>Clan hall</span>
+          </span>
         </Link>
 
-        {/* Desktop links (hidden on mobile via CSS) */}
         <div className="nav-links">
-          {NAV_LINKS.map((l) => (
-            <Link
-              key={l.key}
-              href={l.href}
-              className="nav-link"
-              aria-current={active === l.key ? 'page' : undefined}
-            >
-              {l.label}
-            </Link>
-          ))}
-          {EXTERNAL_LINKS.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="button button--small"
-            >
-              {l.label}
-            </a>
-          ))}
+          <div className="nav-link-group">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.key}
+                href={link.href}
+                className="nav-link"
+                aria-current={active === link.key ? 'page' : undefined}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+          <div className="nav-utility-links">
+            {EXTERNAL_LINKS.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="nav-link nav-link--small"
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
         </div>
 
-        {/* Desktop auth (hidden on mobile via CSS) */}
         <div className="nav-auth">
           <AuthWidget variant="public" />
         </div>
 
-        {/* Mobile toggle (hidden on desktop via CSS) */}
         <button
           type="button"
           className="nav-toggle button button--secondary button--small"
@@ -75,10 +77,8 @@ export function SiteNav() {
         >
           Menu
         </button>
-
       </div>
 
-      {/* Mobile drawer */}
       {open && (
         <div id="site-nav-drawer" className="nav-drawer">
           <div
@@ -95,7 +95,10 @@ export function SiteNav() {
             <div className="nav-drawer-header">
               <Link href="/" className="nav-brand" onClick={() => setOpen(false)}>
                 <span className="nav-brand-dot" aria-hidden="true" />
-                Ghosted
+                <span className="nav-brand__copy">
+                  <strong>Ghosted</strong>
+                  <span>Clan hall</span>
+                </span>
               </Link>
               <button
                 type="button"
@@ -110,27 +113,27 @@ export function SiteNav() {
             <AuthWidget variant="mobile" />
 
             <div className="nav-drawer-links">
-              {NAV_LINKS.map((l) => (
+              {NAV_LINKS.map((link) => (
                 <Link
-                  key={l.key}
-                  href={l.href}
+                  key={link.key}
+                  href={link.href}
                   className="nav-link"
-                  aria-current={active === l.key ? 'page' : undefined}
+                  aria-current={active === link.key ? 'page' : undefined}
                   onClick={() => setOpen(false)}
                 >
-                  {l.label}
+                  {link.label}
                 </Link>
               ))}
-              {EXTERNAL_LINKS.map((l) => (
+              {EXTERNAL_LINKS.map((link) => (
                 <a
-                  key={l.label}
-                  href={l.href}
+                  key={link.label}
+                  href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="button button--small"
+                  className="nav-link"
                   onClick={() => setOpen(false)}
                 >
-                  {l.label}
+                  {link.label}
                 </a>
               ))}
             </div>

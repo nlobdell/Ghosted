@@ -17,6 +17,9 @@
 .casino-stage-shell {
   position: relative;
   overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(14, 24, 30, 0.96), rgba(8, 14, 19, 0.98)),
+    rgba(255, 255, 255, 0.02);
 }
 
 .casino-stage-shell::before {
@@ -25,8 +28,8 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at top right, rgba(231, 193, 122, 0.16), transparent 24%),
-    radial-gradient(circle at 14% 18%, rgba(143, 208, 201, 0.09), transparent 18%);
+    radial-gradient(circle at top right, rgba(224, 177, 93, 0.16), transparent 24%),
+    radial-gradient(circle at 14% 18%, rgba(120, 168, 176, 0.11), transparent 18%);
 }
 
 .casino-stage-shell__top {
@@ -63,11 +66,11 @@
   display: flex;
   align-items: stretch;
   border-radius: 1.6rem;
-  border: 1px solid rgba(231, 193, 122, 0.18);
+  border: 1px solid rgba(224, 177, 93, 0.22);
   background:
-    radial-gradient(circle at top center, rgba(231, 193, 122, 0.18), transparent 42%),
-    radial-gradient(circle at 50% 120%, rgba(217, 123, 82, 0.18), transparent 30%),
-    linear-gradient(180deg, rgba(20, 15, 23, 0.98), rgba(7, 6, 10, 1));
+    radial-gradient(circle at top center, rgba(224, 177, 93, 0.18), transparent 42%),
+    radial-gradient(circle at 50% 120%, rgba(155, 100, 49, 0.2), transparent 30%),
+    linear-gradient(180deg, rgba(12, 21, 28, 0.98), rgba(4, 9, 13, 1));
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.04),
     0 24px 56px rgba(0, 0, 0, 0.24);
@@ -110,9 +113,9 @@
   align-content: start;
   grid-template-columns: minmax(0, 1fr);
   border-radius: 1.2rem;
-  border: 1px solid rgba(231, 193, 122, 0.12);
+  border: 1px solid rgba(224, 177, 93, 0.14);
   background:
-    linear-gradient(180deg, rgba(27, 22, 25, 0.94), rgba(13, 11, 14, 0.98)),
+    linear-gradient(180deg, rgba(16, 26, 32, 0.94), rgba(9, 15, 20, 0.98)),
     rgba(255, 255, 255, 0.02);
 }
 
@@ -123,9 +126,9 @@
 .casino-console {
   padding: 1.15rem;
   border-radius: 1.1rem;
-  border: 1px solid rgba(231, 193, 122, 0.16);
+  border: 1px solid rgba(224, 177, 93, 0.18);
   background:
-    linear-gradient(135deg, rgba(231, 193, 122, 0.14), rgba(143, 208, 201, 0.08)),
+    linear-gradient(135deg, rgba(224, 177, 93, 0.14), rgba(120, 168, 176, 0.08)),
     rgba(255, 255, 255, 0.02);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
@@ -216,8 +219,8 @@
   border-radius: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.07);
   background:
-    linear-gradient(180deg, rgba(231, 193, 122, 0.08), rgba(0, 0, 0, 0)),
-    rgba(18, 15, 21, 0.96);
+    linear-gradient(180deg, rgba(224, 177, 93, 0.08), rgba(0, 0, 0, 0)),
+    rgba(12, 21, 27, 0.96);
   color: var(--text-strong);
   cursor: pointer;
   padding: 1rem;
@@ -231,11 +234,11 @@
 .casino-machine-button:hover,
 .casino-machine-button.is-active {
   transform: translateY(-1px);
-  border-color: rgba(231, 193, 122, 0.24);
+  border-color: rgba(224, 177, 93, 0.28);
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.22);
   background:
-    linear-gradient(180deg, rgba(231, 193, 122, 0.12), rgba(0, 0, 0, 0)),
-    rgba(24, 19, 26, 0.98);
+    linear-gradient(180deg, rgba(224, 177, 93, 0.12), rgba(0, 0, 0, 0)),
+    rgba(16, 26, 33, 0.98);
 }
 
 .casino-machine-button__top,
@@ -326,8 +329,8 @@
   min-height: 2.15rem;
   padding: 0.2rem 0.45rem;
   border-radius: 0.75rem;
-  background: rgba(231, 193, 122, 0.08);
-  border: 1px solid rgba(231, 193, 122, 0.14);
+  background: rgba(224, 177, 93, 0.08);
+  border: 1px solid rgba(224, 177, 93, 0.16);
   font-size: 1.1rem;
 }
 

@@ -22,21 +22,31 @@ export default function DashboardPage() {
       try {
         const [rw, gv] = await Promise.all([
           getJSON<RewardsData>('/api/rewards').catch((err: Error) => {
-            if (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized') || err.message.toLowerCase().includes('not authenticated')) {
+            if (
+              err.message.includes('401') ||
+              err.message.toLowerCase().includes('unauthorized') ||
+              err.message.toLowerCase().includes('not authenticated')
+            ) {
               setAuthed(false);
               return null;
             }
             throw err;
           }),
-          getJSON<{ giveaways: GiveawayItem[] }>('/api/giveaways').then((d) => d.giveaways ?? []).catch(() => [] as GiveawayItem[]),
+          getJSON<{ giveaways: GiveawayItem[] }>('/api/giveaways')
+            .then((data) => data.giveaways ?? [])
+            .catch(() => [] as GiveawayItem[]),
         ]);
+
         if (rw) setRewards(rw);
         setGiveaways(gv);
 
         const [clan, comps] = await Promise.all([
           getJSON<{ group?: { name?: string; memberCount?: number } }>('/api/wom/clan').catch(() => null),
-          getJSON<{ competitions?: { id: number; title: string; status: string }[] }>('/api/wom/competitions?limit=6').then((d) => d.competitions ?? []).catch(() => [] as { id: number; title: string; status: string }[]),
+          getJSON<{ competitions?: { id: number; title: string; status: string }[] }>('/api/wom/competitions?limit=6')
+            .then((data) => data.competitions ?? [])
+            .catch(() => [] as { id: number; title: string; status: string }[]),
         ]);
+
         setWomClan(clan);
         setCompetitions(comps);
       } catch (err) {
@@ -45,10 +55,11 @@ export default function DashboardPage() {
         setLoading(false);
       }
     }
+
     load();
   }, []);
 
-  const activeGiveaways = giveaways.filter((g) => g.status === 'active');
+  const activeGiveaways = giveaways.filter((item) => item.status === 'active');
 
   return (
     <main id="main-content" className="page-shell">
@@ -67,21 +78,18 @@ export default function DashboardPage() {
         }
       />
 
-      {error && <Banner message={error} variant="error" />}
-
-      {!authed && (
-        <Banner message="Sign in with Discord to access your member dashboard." variant="info" />
-      )}
+      {error ? <Banner message={error} variant="error" /> : null}
+      {!authed ? <Banner message="Sign in with Discord to access your member dashboard." variant="info" /> : null}
 
       {loading ? (
-        <Banner message="Loading dashboard…" variant="info" />
+        <Banner message="Loading dashboard..." variant="info" />
       ) : (
         <>
           <StatStrip
             stats={[
-              { label: 'Balance', value: rewards ? formatPoints(rewards.balance) : '—', href: '/app/rewards/' },
+              { label: 'Balance', value: rewards ? formatPoints(rewards.balance) : '-', href: '/app/rewards/' },
               { label: 'Active giveaways', value: String(activeGiveaways.length), href: '/app/giveaways/' },
-              { label: 'Community live', value: String(competitions.filter((c) => c.status === 'ongoing').length), href: '/app/community/' },
+              { label: 'Community live', value: String(competitions.filter((item) => item.status === 'ongoing').length), href: '/app/community/' },
               { label: 'WOM link', value: womClan?.group?.name ?? 'Not configured', href: '/app/profile/' },
             ]}
           />
@@ -90,13 +98,17 @@ export default function DashboardPage() {
             theme="dashboard"
             eyebrow="Command center"
             title="Ghosted member hub"
-            copy="Track your balance, browse active giveaways, and keep an eye on clan competitions — all from one place."
+            copy="Track your balance, browse active giveaways, and monitor clan competitions from one workspace."
             actions={
               <>
                 <Link href="/app/rewards/" className="button button--secondary button--small">View rewards</Link>
                 <Link href="/app/giveaways/" className="button button--secondary button--small">Live drops</Link>
               </>
             }
+            chips={[
+              rewards ? formatPoints(rewards.balance) : 'Balance unavailable',
+              `${activeGiveaways.length} active giveaways`,
+            ]}
           />
 
           <AppGrid>
@@ -106,8 +118,8 @@ export default function DashboardPage() {
               body={
                 <RouteList
                   routes={[
-                    { href: '/app/community/', label: 'Community', meta: `${womClan?.group?.memberCount ?? '—'} members` },
-                    { href: '/app/rewards/', label: 'Rewards', meta: rewards ? formatPoints(rewards.balance) : '—' },
+                    { href: '/app/community/', label: 'Community', meta: `${womClan?.group?.memberCount ?? '-'} members` },
+                    { href: '/app/rewards/', label: 'Rewards', meta: rewards ? formatPoints(rewards.balance) : '-' },
                     { href: '/app/giveaways/', label: 'Giveaways', meta: `${activeGiveaways.length} active` },
                     { href: '/app/casino/', label: 'Casino', meta: 'Spin to win' },
                     { href: '/app/profile/', label: 'Profile', meta: 'Identity' },
@@ -115,19 +127,20 @@ export default function DashboardPage() {
                 />
               }
             />
+
             <Panel
               title="Profile summary"
               eyebrow="Your account"
               body={
                 authed && rewards ? (
-                  <>
+                  <div className="app-stack">
                     <div>
                       <div className="data-row"><span className="label">Balance</span><strong>{formatPoints(rewards.balance)}</strong></div>
                       <div className="data-row"><span className="label">Daily remaining</span><strong>{rewards.dailyCap !== null ? formatPoints(rewards.dailyRemaining) : 'No cap'}</strong></div>
                       <div className="data-row"><span className="label">Ledger entries</span><strong>{rewards.entries.length}</strong></div>
                     </div>
                     <Link href="/app/profile/" className="button button--secondary button--small">View profile</Link>
-                  </>
+                  </div>
                 ) : (
                   <EmptyState
                     message="Sign in to see your profile summary."
@@ -138,14 +151,14 @@ export default function DashboardPage() {
             />
           </AppGrid>
 
-          {rewards && rewards.entries.length > 0 && (
+          {rewards && rewards.entries.length > 0 ? (
             <Panel
               title="Recent activity"
               eyebrow="Ledger"
               chip={`${rewards.entries.length} entries`}
               body={<LedgerTable entries={rewards.entries.slice(0, 6)} />}
             />
-          )}
+          ) : null}
         </>
       )}
     </main>
