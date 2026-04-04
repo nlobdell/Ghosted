@@ -1217,7 +1217,14 @@
         gap: 0.85rem;
     }
 
-        .pillar-card ul {
+        .pillar-card__icon {
+        width: 2.8rem;
+        height: 2.8rem;
+        object-fit: contain;
+        filter: drop-shadow(0 0 14px rgba(155, 107, 255, 0.22));
+    }
+
+    .pillar-card ul {
             margin: 0;
             padding-left: 1rem;
             color: var(--text-muted);
