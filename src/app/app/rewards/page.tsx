@@ -6,7 +6,6 @@ import {
   StatStrip,
   Panel,
   AppGrid,
-  Highlight,
   MetricGrid,
   LedgerTable,
   EmptyState,
@@ -14,6 +13,7 @@ import {
 } from '@/components/app/AppUI';
 import { formatPoints, formatPointsFull, formatDate, getJSON } from '@/lib/api';
 import type { RewardsData, GiveawayItem, ShellData } from '@/lib/types';
+import styles from './page.module.css';
 
 export default function RewardsPage() {
   const [rewards, setRewards] = useState<RewardsData | null>(null);
@@ -30,9 +30,9 @@ export default function RewardsPage() {
       const [rewardsData, giveawaysData, shellData] = await Promise.all([
         getJSON<RewardsData>('/api/rewards').catch((err: Error) => {
           if (
-            err.message.includes('401') ||
-            err.message.toLowerCase().includes('unauthorized') ||
-            err.message.toLowerCase().includes('not authenticated')
+            err.message.includes('401')
+            || err.message.toLowerCase().includes('unauthorized')
+            || err.message.toLowerCase().includes('not authenticated')
           ) {
             setAuthed(false);
             return null;
@@ -71,7 +71,7 @@ export default function RewardsPage() {
     try {
       const result = await getJSON<{ result: { balance: number; entriesRemaining: number } }>(
         `/api/giveaways/${id}/enter`,
-        { method: 'POST' }
+        { method: 'POST' },
       );
       setResultMsg({
         text: `Entry added. ${formatPoints(result.result.balance)} left, ${result.result.entriesRemaining} entries remaining.`,
@@ -90,7 +90,7 @@ export default function RewardsPage() {
   const isAuthed = authed && !!shell?.authenticated;
 
   return (
-    <main id="main-content" className="page-shell">
+    <main id="main-content" className={`page-shell ${styles.page}`}>
       <AppContext
         breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/app/' }, { label: 'Rewards' }]}
         title="Rewards and drops"
@@ -119,77 +119,70 @@ export default function RewardsPage() {
             ]}
           />
 
-          <Highlight
-            eyebrow="Ghosted economy"
+          <Panel
+            tier="primary"
+            eyebrow="Balance"
             title={formatPointsFull(rewards.balance)}
-            copy={
-              rewards.dailyCap !== null
-                ? `${formatPointsFull(rewards.dailyRemaining)} remaining today out of a ${formatPointsFull(rewards.dailyCap)} daily cap.`
-                : 'No daily spending cap is active on your account.'
-            }
-            stage={{
-              label: 'Rewards signal',
-              primary: activeDrops.length > 0
-                ? `${activeDrops.length} active drop${activeDrops.length !== 1 ? 's' : ''}`
-                : 'No active drops',
-              secondary: `Balance ${formatPoints(rewards.balance)}`,
-              chips: [
-                isAuthed ? 'Entry enabled' : 'Browse mode',
-                rewards.dailyCap !== null ? `Daily cap ${formatPoints(rewards.dailyCap)}` : 'No cap',
-              ],
-            }}
-            actions={
-              <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
-            }
+            chip={activeDrops.length > 0 ? `${activeDrops.length} active` : 'No active drops'}
+            body={(
+              <div className="app-stack">
+                <p className="app-panel-note">
+                  {rewards.dailyCap !== null
+                    ? `${formatPointsFull(rewards.dailyRemaining)} remaining today out of ${formatPointsFull(rewards.dailyCap)}.`
+                    : 'No daily spending cap is active on your account.'}
+                </p>
+                <div className="app-inline-actions">
+                  <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
+                  <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
+                  <span className="app-chip">{isAuthed ? 'Entry enabled' : 'Browse mode'}</span>
+                </div>
+              </div>
+            )}
           />
 
-          {/* Active drops — most members come here to enter */}
           {activeDrops.length > 0 ? (
-            <>
-              <AppGrid>
-                {activeDrops.map((item) => (
-                  <Panel
-                    tier="primary"
-                    key={item.id}
-                    eyebrow="Active drop"
-                    title={item.title}
-                    chip={item.status}
-                    body={
-                      <div className="app-stack">
-                        {item.description ? <p className="app-panel-note">{item.description}</p> : null}
-                        <MetricGrid
-                          items={[
-                            ['Cost', formatPoints(item.pointCost)],
-                            ['Entries', `${item.userEntries} / ${item.maxEntries}`],
-                            ['Closes', formatDate(item.endAt)],
-                            ['Access', item.requiredRole ? item.requiredRole.label : 'Linked members'],
-                          ]}
-                        />
-                        <div className="app-inline-actions">
-                          <button
-                            className="button"
-                            disabled={!item.canEnter || entering === item.id}
-                            onClick={() => handleEnter(item.id)}
-                          >
-                            {entering === item.id ? 'Entering...' : 'Enter drop'}
-                          </button>
-                        </div>
+            <AppGrid>
+              {activeDrops.map((item) => (
+                <Panel
+                  tier="primary"
+                  key={item.id}
+                  eyebrow="Active drop"
+                  title={item.title}
+                  chip={item.status}
+                  body={(
+                    <div className="app-stack">
+                      {item.description ? <p className="app-panel-note">{item.description}</p> : null}
+                      <MetricGrid
+                        items={[
+                          ['Cost', formatPoints(item.pointCost)],
+                          ['Entries', `${item.userEntries} / ${item.maxEntries}`],
+                          ['Closes', formatDate(item.endAt)],
+                          ['Access', item.requiredRole ? item.requiredRole.label : 'Linked members'],
+                        ]}
+                      />
+                      <div className="app-inline-actions">
+                        <button
+                          className="button"
+                          disabled={!item.canEnter || entering === item.id}
+                          onClick={() => handleEnter(item.id)}
+                        >
+                          {entering === item.id ? 'Entering...' : 'Enter drop'}
+                        </button>
                       </div>
-                    }
-                  />
-                ))}
-              </AppGrid>
-            </>
+                    </div>
+                  )}
+                />
+              ))}
+            </AppGrid>
           ) : null}
 
-          {/* Scheduled and finished drops — compact list */}
           {otherDrops.length > 0 ? (
             <Panel
               tier="meta"
-              eyebrow="Drops"
+              eyebrow="Archive"
               title={activeDrops.length > 0 ? 'Upcoming and closed' : 'All drops'}
               chip={`${giveaways.length} total`}
-              body={
+              body={(
                 <div className="app-route-list">
                   {otherDrops.map((item) => (
                     <div key={item.id} className="app-route" style={{ cursor: 'default' }}>
@@ -201,7 +194,7 @@ export default function RewardsPage() {
                     </div>
                   ))}
                 </div>
-              }
+              )}
             />
           ) : null}
 
@@ -214,7 +207,6 @@ export default function RewardsPage() {
             />
           ) : null}
 
-          {/* Full ledger */}
           <Panel
             tier="meta"
             eyebrow="History"

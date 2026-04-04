@@ -54,7 +54,7 @@ export function AuthWidget({ variant, shellData }: Props) {
           </span>
         </a>
         <div className="site-profile-widget__actions">
-          {user.isAdmin ? (
+          {user.isAdmin && variant === 'mobile' ? (
             <a className="button button--secondary button--small" href="/admin/">Admin</a>
           ) : null}
           <button

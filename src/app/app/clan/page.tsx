@@ -6,7 +6,6 @@ import {
   StatStrip,
   Panel,
   AppGrid,
-  Highlight,
   MetricGrid,
   LeaderboardTable,
   Feed,
@@ -17,6 +16,7 @@ import {
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 import type { ClanData, Competition, LeaderboardEntry, AchievementItem, ActivityItem } from '@/lib/types';
+import styles from './page.module.css';
 
 export default function ClanPage() {
   const [clan, setClan] = useState<ClanData | null>(null);
@@ -65,7 +65,7 @@ export default function ClanPage() {
 
   if (!womConfigured) {
     return (
-      <main id="main-content" className="page-shell">
+      <main id="main-content" className={`page-shell ${styles.page}`}>
         <AppContext
           breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/app/' }, { label: 'Clan' }]}
           title="Ghosted clan"
@@ -82,13 +82,11 @@ export default function ClanPage() {
   const upcoming = competitions.filter((c) => c.status === 'upcoming');
 
   return (
-    <main id="main-content" className="page-shell">
+    <main id="main-content" className={`page-shell ${styles.page}`}>
       <AppContext
         breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/app/' }, { label: 'Clan' }]}
-        title="Ghosted clan"
-        actions={
-          <Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>
-        }
+        title="Clan board"
+        actions={<Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>}
       />
 
       {error ? <Banner message={error} variant="error" /> : null}
@@ -107,95 +105,70 @@ export default function ClanPage() {
             ]}
           />
 
-          <Highlight
-            eyebrow="Clan"
-            title={clan.group.name}
-            copy={
-              clan.group.description ??
-              `Verified WOM group ${GHOSTED_CONTENT.wom.groupId}. Focused on raids, bossing, and weekly skill events. Home world ${GHOSTED_CONTENT.wom.homeworld}, clan chat ${GHOSTED_CONTENT.wom.clanChat}.`
-            }
-            stage={{
-              label: 'Clan signal',
-              primary: hiscores[0]?.player?.displayName
-                ? `Top player: ${hiscores[0].player.displayName}`
-                : `${clan.group.memberCount} members`,
-              secondary: ongoing.length > 0
-                ? `${ongoing.length} competition${ongoing.length !== 1 ? 's' : ''} live`
-                : `${upcoming.length} upcoming`,
-              chips: [
-                `${clan.group.memberCount} members`,
-                `${clan.linkCoverage.linkedUsers} linked`,
-              ],
-            }}
-            actions={
-              <Link href="/app/competitions/" className="button button--secondary button--small">
-                Competitions
-              </Link>
-            }
-          />
-
-          {/* Roster + Active events side by side */}
           <AppGrid>
             <Panel
               tier="primary"
-              eyebrow="Roster"
-              title="Group details"
-              body={
-                <MetricGrid
-                  items={[
-                    ['Name', clan.group.name],
-                    ['Verified', clan.group.verified ? 'Yes' : 'No'],
-                    ['Members', String(clan.group.memberCount)],
-                    ['Score', clan.group.score !== undefined ? String(clan.group.score) : '-'],
-                    ['Clan chat', clan.group.clanChat ?? GHOSTED_CONTENT.wom.clanChat],
-                    ['Home world', String(clan.group.homeworld ?? GHOSTED_CONTENT.wom.homeworld)],
-                  ]}
-                />
-              }
+              eyebrow="Roster health"
+              title={clan.group.name}
+              body={(
+                <div className="app-stack">
+                  <p className="app-panel-note">
+                    Verified WOM group {GHOSTED_CONTENT.wom.groupId}. Monitor core membership health and clan identity data.
+                  </p>
+                  <MetricGrid
+                    items={[
+                      ['Members', String(clan.group.memberCount)],
+                      ['Linked users', String(clan.linkCoverage.linkedUsers)],
+                      ['Verified', clan.group.verified ? 'Yes' : 'No'],
+                      ['Home world', String(clan.group.homeworld ?? GHOSTED_CONTENT.wom.homeworld)],
+                      ['Clan chat', clan.group.clanChat ?? GHOSTED_CONTENT.wom.clanChat],
+                      ['Score', clan.group.score !== undefined ? String(clan.group.score) : '-'],
+                    ]}
+                  />
+                </div>
+              )}
             />
             <Panel
               tier="primary"
-              eyebrow="Events"
-              title="Competition watch"
-              body={<CompetitionList entries={competitions} compact />}
-            />
-          </AppGrid>
-
-          {/* Hiscores + Weekly gains */}
-          <AppGrid>
-            <Panel
-              tier="primary"
-              eyebrow="Hiscores"
+              eyebrow="Top performers"
               title="Overall leaders"
-              body={
+              body={(
                 <LeaderboardTable
                   entries={hiscores}
                   valueFormatter={(entry) => formatMaybeNumber(entry.value)}
                   valueLabel="Level"
                 />
-              }
+              )}
+            />
+          </AppGrid>
+
+          <AppGrid>
+            <Panel
+              tier="primary"
+              eyebrow="Event watch"
+              title={ongoing.length > 0 ? `${ongoing.length} competitions live` : `${upcoming.length} competitions upcoming`}
+              body={<CompetitionList entries={competitions} compact />}
             />
             <Panel
               tier="primary"
-              eyebrow="This week"
+              eyebrow="Progression"
               title="Weekly gains"
-              body={
+              body={(
                 <LeaderboardTable
                   entries={gains}
                   valueFormatter={(entry) => `+${formatMaybeNumber(entry.gained ?? entry.progress?.gained)}`}
                   valueLabel="XP gained"
                 />
-              }
+              )}
             />
           </AppGrid>
 
-          {/* Achievements + Activity */}
           <AppGrid>
             <Panel
               tier="meta"
-              eyebrow="Milestones"
+              eyebrow="History"
               title="Recent achievements"
-              body={
+              body={(
                 <Feed
                   items={clan.recentAchievements.slice(0, 6).map((a: AchievementItem) => ({
                     title: a.title ?? a.type ?? 'Achievement',
@@ -203,13 +176,13 @@ export default function ClanPage() {
                     eyebrow: a.metric,
                   }))}
                 />
-              }
+              )}
             />
             <Panel
               tier="meta"
               eyebrow="Activity"
-              title="Recent activity"
-              body={
+              title="Recent clan activity"
+              body={(
                 <Feed
                   items={clan.recentActivity.slice(0, 6).map((a: ActivityItem) => ({
                     title: a.title ?? a.type ?? 'Activity',
@@ -217,7 +190,7 @@ export default function ClanPage() {
                     eyebrow: a.type,
                   }))}
                 />
-              }
+              )}
             />
           </AppGrid>
         </>

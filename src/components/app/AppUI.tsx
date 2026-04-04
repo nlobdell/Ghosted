@@ -13,14 +13,18 @@ export function AppContext({
   title,
   actions,
   slim = true,
+  className,
 }: {
   breadcrumbs: BreadcrumbItem[];
   title: string;
   actions?: ReactNode;
   slim?: boolean;
+  className?: string;
 }) {
+  const sectionClassName = ['app-context', slim ? '' : 'app-context--wide', className].filter(Boolean).join(' ');
+
   return (
-    <section className={`app-context${slim ? '' : ' app-context--wide'}`}>
+    <section className={sectionClassName}>
       <nav className="app-breadcrumbs" aria-label="Breadcrumb">
         {breadcrumbs.map((crumb, index) => (
           <span key={`${crumb.label}-${index}`} className="app-breadcrumbs__item">
@@ -60,16 +64,18 @@ function renderStat(stat: StatItem, className: string) {
 export function StatStrip({
   stats,
   leadIndex = 0,
+  className,
 }: {
   stats: StatItem[];
   leadIndex?: number;
+  className?: string;
 }) {
   const safeLeadIndex = Math.max(0, Math.min(leadIndex, Math.max(0, stats.length - 1)));
   const leadStat = stats[safeLeadIndex] ?? null;
   const secondaryStats = stats.filter((_, index) => index !== safeLeadIndex);
 
   return (
-    <section className="app-summary-grid" aria-label="Summary statistics">
+    <section className={['app-summary-grid', className].filter(Boolean).join(' ')} aria-label="Summary statistics">
       {leadStat ? renderStat(leadStat, 'app-stat app-stat--lead') : null}
       {secondaryStats.length ? (
         <div className="app-summary-grid__secondary">
@@ -88,6 +94,7 @@ export function Panel({
   href,
   subtle,
   tier = 'primary',
+  className,
 }: {
   eyebrow?: string;
   title: string;
@@ -96,12 +103,14 @@ export function Panel({
   href?: string;
   subtle?: boolean;
   tier?: 'primary' | 'meta';
+  className?: string;
 }) {
-  const className = [
+  const panelClassName = [
     'app-panel',
     `app-panel--${tier}`,
     href ? 'app-panel--link' : '',
     subtle ? 'app-card--subtle' : '',
+    className,
   ]
     .filter(Boolean)
     .join(' ');
@@ -121,17 +130,17 @@ export function Panel({
 
   if (href) {
     return (
-      <Link href={href} className={className}>
+      <Link href={href} className={panelClassName}>
         {header}
       </Link>
     );
   }
 
-  return <article className={className}>{header}</article>;
+  return <article className={panelClassName}>{header}</article>;
 }
 
-export function AppGrid({ children }: { children: ReactNode }) {
-  return <section className="app-grid-two">{children}</section>;
+export function AppGrid({ children, className }: { children: ReactNode; className?: string }) {
+  return <section className={['app-grid-two', className].filter(Boolean).join(' ')}>{children}</section>;
 }
 
 export interface ArchitectureNode {
@@ -204,6 +213,7 @@ export function Highlight({
   copy,
   actions,
   stage,
+  className,
 }: {
   eyebrow?: string;
   title: string;
@@ -215,9 +225,10 @@ export function Highlight({
     secondary?: string;
     chips?: string[];
   };
+  className?: string;
 }) {
   return (
-    <section className={`highlight-shell${stage ? '' : ' highlight-shell--single'}`}>
+    <section className={['highlight-shell', stage ? '' : 'highlight-shell--single', className].filter(Boolean).join(' ')}>
       <div className="highlight-copy">
         {eyebrow ? <p className="kicker">{eyebrow}</p> : null}
         <h2 className="highlight-copy__title">{title}</h2>
@@ -450,9 +461,17 @@ export function CompetitionList({
   );
 }
 
-export function EmptyState({ message, action }: { message: string; action?: ReactNode }) {
+export function EmptyState({
+  message,
+  action,
+  className,
+}: {
+  message: string;
+  action?: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="app-empty">
+    <div className={['app-empty', className].filter(Boolean).join(' ')}>
       <p>{message}</p>
       {action}
     </div>
@@ -462,12 +481,19 @@ export function EmptyState({ message, action }: { message: string; action?: Reac
 export function Banner({
   message,
   variant = 'info',
+  className,
 }: {
   message: string;
   variant?: 'info' | 'warning' | 'error';
+  className?: string;
 }) {
+  const variantClassName = variant === 'info' ? '' : `is-${variant}`;
+
   return (
-    <div role={variant === 'error' ? 'alert' : 'status'} className={`app-banner${variant === 'info' ? '' : ` is-${variant}`}`}>
+    <div
+      role={variant === 'error' ? 'alert' : 'status'}
+      className={['app-banner', variantClassName, className].filter(Boolean).join(' ')}
+    >
       {message}
     </div>
   );
