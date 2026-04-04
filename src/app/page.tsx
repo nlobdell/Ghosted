@@ -65,6 +65,7 @@ export default function HomePage() {
 
           {/* Hero content */}
           <div
+            className="hero-grid"
             style={{
               position: 'relative', zIndex: 2,
               display: 'grid',
@@ -184,7 +185,7 @@ export default function HomePage() {
               </p>
               <h2>Three layers. One clan.</h2>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '1rem' }}>
+            <div className="pillar-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '1rem' }}>
               {PILLARS.map((p) => (
                 <article
                   key={p.label}
@@ -271,29 +272,6 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {/* Button styles (global — used on many pages) */}
-      <style>{`
-        .button {
-          display: inline-flex; align-items: center; justify-content: center;
-          gap: 0.55rem; min-height: 3rem; padding: 0.82rem 1.15rem;
-          border-radius: 999px; border: 1px solid rgba(255, 230, 188, 0.16);
-          background: linear-gradient(180deg, rgba(173, 145, 255, 0.98), rgba(95, 75, 139, 0.94));
-          color: #120d1c; font-weight: 800; text-decoration: none;
-          box-shadow: 0 0 48px rgba(155, 107, 255, 0.16);
-          transition: transform var(--ease-standard), filter var(--ease-standard);
-          touch-action: manipulation;
-        }
-        .button:hover { transform: translateY(-1px); filter: brightness(1.04); }
-        .button--secondary {
-          background: rgba(255,255,255,0.03); color: #f3f1f9;
-          border-color: rgba(220, 212, 255, 0.09); box-shadow: none;
-        }
-        .button--secondary:hover { background: rgba(255,255,255,0.07); border-color: rgba(166, 143, 255, 0.24); }
-        .button--small { min-height: 2.55rem; padding: 0.58rem 0.92rem; font-size: 0.92rem; }
-        @media (max-width: 980px) {
-          .site-menu-toggle { display: inline-flex !important; }
-        }
-      `}</style>
     </div>
   );
 }
