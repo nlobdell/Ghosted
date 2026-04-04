@@ -169,7 +169,7 @@ export function Panel({
 
 export function AppGrid({ children }: { children: React.ReactNode }) {
   return (
-    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem' }}>
+    <section className="app-grid-two" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem' }}>
       {children}
     </section>
   );
@@ -198,6 +198,7 @@ export function Highlight({
   return (
     <section style={{ display: 'grid' }}>
       <article
+        className="highlight-split"
         style={{
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 1fr) minmax(240px, 0.82fr)',
@@ -246,7 +247,7 @@ export function Highlight({
 
 export function MetricGrid({ items }: { items: [string, string][] }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem' }}>
+    <div className="app-grid-two" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem' }}>
       {items.map(([label, value]) => (
         <div key={label} style={{ display: 'grid', gap: '0.28rem', padding: '0.85rem 0.95rem', borderRadius: '0.95rem', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.035)' }}>
           <span style={{ color: '#9d96ad', fontSize: '0.76rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{label}</span>
