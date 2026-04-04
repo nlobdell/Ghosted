@@ -10,19 +10,25 @@ function formatPts(value: number) {
 
 interface Props {
   variant: 'public' | 'app' | 'mobile';
+  shellData?: ShellData | null;
 }
 
-export function AuthWidget({ variant }: Props) {
-  const [shell, setShell] = useState<ShellData | null>(null);
+export function AuthWidget({ variant, shellData }: Props) {
+  const [shell, setShell] = useState<ShellData | null>(shellData ?? null);
 
   useEffect(() => {
+    if (shellData !== undefined) {
+      setShell(shellData);
+      return;
+    }
+
     fetch(`/api/site-shell?next=${encodeURIComponent(window.location.pathname)}`, {
       headers: { Accept: 'application/json' },
     })
       .then((response) => response.json())
       .then(setShell)
       .catch(() => null);
-  }, []);
+  }, [shellData]);
 
   if (!shell) return null;
 

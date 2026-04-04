@@ -1,44 +1,62 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { SiteNav } from '@/components/SiteNav';
-import { AppGrid, AppContext, Highlight, Panel, RouteList } from '@/components/app/AppUI';
+import { GhostedNav } from '@/components/GhostedNav';
+import {
+  AppGrid,
+  AppContext,
+  ArchitectureMap,
+  Highlight,
+  Panel,
+  RouteList,
+} from '@/components/app/AppUI';
+import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 
 export const metadata: Metadata = {
-  title: 'Ghosted Clan | The Hall',
+  title: 'Ghosted Clan | Community Hub',
 };
 
 const CORE_ROUTES = [
-  { href: '/app/community/', label: 'Community', meta: 'Clan overview and competition activity' },
-  { href: '/app/rewards/', label: 'Rewards', meta: 'Balance, ledger, and point economy' },
-  { href: '/app/giveaways/', label: 'Giveaways', meta: 'Active drops and entry requirements' },
-  { href: '/app/casino/', label: 'Casino', meta: 'Live slot floor and spin history' },
-  { href: '/app/profile/', label: 'Profile', meta: 'Identity, linking, and member status' },
+  { href: '/app/', label: 'App Hub', meta: 'Daily member workspace' },
+  { href: '/app/community/', label: 'Community', meta: 'Clan pulse, hiscores, and events' },
+  { href: '/app/rewards/', label: 'Rewards', meta: 'Your points, caps, and ledger activity' },
+  { href: '/app/giveaways/', label: 'Giveaways', meta: 'Live drops and entry requirements' },
+  { href: '/app/casino/', label: 'Casino', meta: 'Points slots tied to rewards balance' },
+  { href: '/app/profile/', label: 'Profile', meta: 'Discord roles and WOM linking' },
 ];
 
-const OPERATING_COLUMNS = [
+const CLAN_OVERVIEW = [
   {
-    title: 'Live community',
-    copy: 'Ghosted starts on stream and in Discord, then carries that momentum into member tools.',
-    chip: 'Broadcast + Discord',
-    href: 'https://www.twitch.tv/vghosted',
-    cta: 'Watch Twitch',
-    external: true,
-  },
-  {
-    title: 'Member workflow',
-    copy: 'The app keeps rewards, competitions, giveaways, and casino play in one consistent interface.',
-    chip: 'In-app loop',
-    href: '/app/',
-    cta: 'Open App Hub',
-    external: false,
-  },
-  {
-    title: 'First-time orientation',
-    copy: 'New members should understand where to click first without context switching across different visual systems.',
-    chip: 'First class surface',
-    href: 'https://discord.gg/ghosted',
+    label: 'Join',
+    title: 'Start in Discord',
+    copy: `${GHOSTED_CONTENT.discord.description} Members land in #${GHOSTED_CONTENT.discord.welcomeChannel} after joining the invite.`,
+    href: GHOSTED_CONTENT.links.discord,
     cta: 'Join Discord',
     external: true,
+    chips: [
+      `~${GHOSTED_CONTENT.discord.memberCountApprox.toLocaleString()} members`,
+      `~${GHOSTED_CONTENT.discord.onlineCountApprox.toLocaleString()} online`,
+      `Boost Tier ${GHOSTED_CONTENT.discord.boostTier}`,
+    ],
+  },
+  {
+    label: 'Play',
+    title: 'Run events and progression',
+    copy: GHOSTED_CONTENT.wom.summary,
+    href: '/app/',
+    cta: 'Open App Hub',
+    chips: ['Raids', 'Bossing', 'Skill of the week', 'Giveaways'],
+  },
+  {
+    label: 'Track',
+    title: 'Verified clan records',
+    copy: `Ghosted is tracked in WOM Group ${GHOSTED_CONTENT.wom.groupId} with verified data for roster, gains, and competitions.`,
+    href: '/app/community/',
+    cta: 'View Clan Data',
+    chips: [
+      `${GHOSTED_CONTENT.wom.memberCount} members`,
+      `World ${GHOSTED_CONTENT.wom.homeworld}`,
+      `Clan chat: ${GHOSTED_CONTENT.wom.clanChat}`,
+    ],
   },
 ];
 
@@ -47,7 +65,7 @@ export default function HomePage() {
     <div className="landing-page">
       <header className="landing-hero landing-hero--appblend">
         <div className="container landing-hero__frame">
-          <SiteNav />
+          <GhostedNav />
         </div>
       </header>
 
@@ -55,92 +73,81 @@ export default function HomePage() {
         <AppContext
           breadcrumbs={[
             { label: 'Ghosted', href: '/' },
-            { label: 'Clan hall' },
           ]}
-          title="One hall. One workflow."
+          title="Ghosted — OSRS clan hall"
           actions={
             <>
-              <a className="button" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
+              <a className="button" href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer">
                 Join Discord
               </a>
               <Link className="button button--secondary" href="/app/">
-                Open App Hub
+                Enter the Hall
               </Link>
             </>
           }
         />
 
         <Highlight
-          eyebrow="Unified experience"
-          title="Public entry and member tools now belong to the same product surface."
-          copy="The homepage is app-forward: navigate to the real workflows immediately, with the same structural language used inside the member area."
-          chips={['Community + rewards + giveaways + casino', 'Consistent navigation and spacing']}
+          eyebrow="Welcome to Ghosted"
+          title="A social OSRS clan. Events, progression, and community."
+          copy={`Led by vghosted on Twitch. ${GHOSTED_CONTENT.wom.memberCount} members verified in WOM. Competitions, giveaways, rewards, and a clan casino all tied to one shared points balance.`}
+          chips={[
+            `~${GHOSTED_CONTENT.discord.memberCountApprox.toLocaleString()} Discord members`,
+            `${GHOSTED_CONTENT.wom.memberCount} WOM members`,
+            `World ${GHOSTED_CONTENT.wom.homeworld}`,
+          ]}
           actions={
             <>
-              <Link className="button button--secondary button--small" href="/app/community/">
-                Community
-              </Link>
-              <Link className="button button--secondary button--small" href="/app/casino/">
-                Casino
-              </Link>
+              <a className="button button--secondary button--small" href={GHOSTED_CONTENT.links.twitch} target="_blank" rel="noopener noreferrer">
+                Watch on Twitch
+              </a>
+              <a className="button button--secondary button--small" href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer">
+                Join Discord
+              </a>
             </>
           }
           theme="dashboard"
         />
 
+        <ArchitectureMap
+          title="How it works"
+          copy="Join the Discord, link your account, and start participating in events."
+          nodes={CLAN_OVERVIEW}
+        />
+
         <AppGrid>
           <Panel
-            eyebrow="Primary routes"
-            title="Go directly to member tools"
+            eyebrow="Member sections"
+            title="Everything in the hall"
             body={<RouteList routes={CORE_ROUTES} />}
           />
           <Panel
-            eyebrow="Why Ghosted"
-            title="Built to operate, not just to market"
-            body={
+            eyebrow="The clan"
+            title="Ghosted at a glance"
+            body={(
               <div className="app-stack">
                 <p className="app-panel-note">
-                  Ghosted keeps the stream, Discord community, and member app in one coherent system so players can move from discovery to action without friction.
+                  Streamer-led OSRS clan running weekly skill events, bossing, and raids. Coordinated through Discord and tracked in Wise Old Man.
                 </p>
                 <div className="app-inline-actions">
-                  <a className="button button--secondary button--small" href="https://www.twitch.tv/vghosted" target="_blank" rel="noopener noreferrer">
-                    Twitch
-                  </a>
-                  <a className="button button--secondary button--small" href="https://discord.gg/ghosted" target="_blank" rel="noopener noreferrer">
-                    Discord
-                  </a>
+                  <span className="app-chip">{`${GHOSTED_CONTENT.wom.memberCount} members`}</span>
+                  <span className="app-chip">{`World ${GHOSTED_CONTENT.wom.homeworld}`}</span>
+                  <span className="app-chip">{`CC: ${GHOSTED_CONTENT.wom.clanChat}`}</span>
+                </div>
+                <div className="app-inline-actions">
+                  <a className="button button--secondary button--small" href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer">Join Discord</a>
+                  <Link className="button button--secondary button--small" href="/app/">Enter the Hall</Link>
                 </div>
               </div>
-            }
+            )}
           />
         </AppGrid>
-
-        <section className="landing-band landing-band--home">
-          <div className="landing-panel-grid">
-            {OPERATING_COLUMNS.map((column) => (
-              <article key={column.title} className="landing-panel">
-                <span className="landing-rail__eyebrow">{column.chip}</span>
-                <h3>{column.title}</h3>
-                <p>{column.copy}</p>
-                {column.external ? (
-                  <a className="button button--secondary button--small" href={column.href} target="_blank" rel="noopener noreferrer">
-                    {column.cta}
-                  </a>
-                ) : (
-                  <Link className="button button--secondary button--small" href={column.href}>
-                    {column.cta}
-                  </Link>
-                )}
-              </article>
-            ))}
-          </div>
-        </section>
       </main>
 
       <footer className="landing-footer">
         <div className="container landing-footer__inner">
           <p>&copy; {new Date().getFullYear()} Ghosted Clan.</p>
-          <p>Unified public and member surface.</p>
+          <p>Led by vghosted on Twitch. Organized in Discord.</p>
         </div>
       </footer>
     </div>

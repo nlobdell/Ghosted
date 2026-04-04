@@ -2,10 +2,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  AppContext, StatStrip, Panel, AppGrid, Highlight,
+  AppContext, StatStrip, Panel, AppGrid, Highlight, ArchitectureMap,
   LeaderboardTable, EmptyState, Banner, CompetitionList,
 } from '@/components/app/AppUI';
 import { formatMaybeNumber, getJSON } from '@/lib/api';
+import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 import type { ClanData, Competition, LeaderboardEntry } from '@/lib/types';
 
 export default function CommunityPage() {
@@ -56,10 +57,10 @@ export default function CommunityPage() {
             { label: 'App Hub', href: '/app/' },
             { label: 'Community' },
           ]}
-          title="Community overview"
+          title="Ghosted community overview"
         />
         <EmptyState
-          message="Wise Old Man integration is not configured. Set up WOM to see clan data."
+          message="Wise Old Man integration is not configured. Set up WOM to load the verified Ghosted group data."
           action={<Link href="/app/" className="button button--secondary button--small">Back to hub</Link>}
         />
       </main>
@@ -77,7 +78,7 @@ export default function CommunityPage() {
           { label: 'App Hub', href: '/app/' },
           { label: 'Community' },
         ]}
-        title="Community overview"
+        title="Ghosted community overview"
         actions={
           <>
             <Link href="/app/clan/" className="button button--secondary button--small">Clan detail</Link>
@@ -105,13 +106,44 @@ export default function CommunityPage() {
             theme="community"
             eyebrow="Clan watch"
             title={clan?.group.name ?? 'Ghosted clan'}
-            copy={clan?.group.description ?? 'Track clan members, hiscores, and competitions.'}
+            copy={clan?.group.description ?? `Ghosted is a verified WOM group (${GHOSTED_CONTENT.wom.groupId}) focused on raids, social events, bossing, and weekly skill competitions.`}
             actions={
               <>
                 <Link href="/app/clan/" className="button button--secondary button--small">Clan detail</Link>
                 <Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>
               </>
             }
+          />
+
+          <ArchitectureMap
+            title="Community guide"
+            copy="Use this page to understand clan health, events, and progression activity."
+            nodes={[
+              {
+                label: 'Pulse',
+                title: 'Roster and activity',
+                copy: 'Start with member totals, linked users, and live activity so you know how active the clan is right now.',
+                href: '/app/community/',
+                cta: 'Stay on overview',
+                chips: [`${clan?.group.memberCount ?? '-'} members`, `${ongoing.length} live comps`],
+              },
+              {
+                label: 'Records',
+                title: 'Clan detail and milestones',
+                copy: `Dive into deep clan records, achievements, and membership context including world ${GHOSTED_CONTENT.wom.homeworld} and clan chat ${GHOSTED_CONTENT.wom.clanChat}.`,
+                href: '/app/clan/',
+                cta: 'Open clan detail',
+                chips: ['Group metrics', 'Recent activity'],
+              },
+              {
+                label: 'Events',
+                title: 'Competition board',
+                copy: 'Track upcoming and active competitions, including recurring skill-of-the-week events announced in Discord.',
+                href: '/app/competitions/',
+                cta: 'Open competitions',
+                chips: [`${upcoming.length} upcoming`, `${competitions.length} tracked`],
+              },
+            ]}
           />
 
           <AppGrid>

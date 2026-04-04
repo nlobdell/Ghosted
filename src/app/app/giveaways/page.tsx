@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
-  AppContext, StatStrip, Panel, AppGrid, Highlight,
+  AppContext, StatStrip, Panel, AppGrid, Highlight, ArchitectureMap,
   MetricGrid, EmptyState, Banner,
 } from '@/components/app/AppUI';
 import { formatPoints, formatDate, getJSON } from '@/lib/api';
@@ -96,15 +96,44 @@ export default function GiveawaysPage() {
 
           <Highlight
             eyebrow="Giveaways"
-            title="Live drops first."
-            copy="Active entries stay on top with cost and access visible."
+            title="Ghosted drop board."
+            copy="Active drops stay on top so members can quickly enter giveaways announced across the Ghosted Discord community."
             chips={[`${activeCount} active`, authed ? 'Member entry enabled' : 'Browse mode']}
             theme="giveaways"
           />
 
+          <ArchitectureMap
+            title="Giveaway rules"
+            copy="Each Ghosted drop follows the same structure so members can quickly see eligibility and cost."
+            nodes={[
+              {
+                label: 'Status',
+                title: 'Live first',
+                copy: 'Active giveaways are shown first, followed by scheduled and closed campaigns.',
+                chips: [`${activeCount} active`, `${giveaways.length} total`],
+              },
+              {
+                label: 'Cost',
+                title: 'Points and limits',
+                copy: 'Every drop shows point cost, entry caps, and close time tied to your rewards balance.',
+                href: '/app/rewards/',
+                cta: 'Open rewards',
+                chips: ['Point cost', 'Entry limits', 'Close windows'],
+              },
+              {
+                label: 'Access',
+                title: 'Role requirements',
+                copy: 'Some drops require Discord roles, so keep your profile linked and role sync current.',
+                href: '/app/profile/',
+                cta: 'Open profile',
+                chips: [authed ? 'Signed in' : 'Browse mode', 'Role-gated entries'],
+              },
+            ]}
+          />
+
           <AppGrid>
             {giveaways.length === 0 ? (
-              <Panel title="No giveaways yet" body={<EmptyState message="Ghosted has not published any giveaways yet." />} />
+              <Panel title="No giveaways yet" body={<EmptyState message="No Ghosted giveaways are published yet." />} />
             ) : (
               giveaways.map((item) => (
                 <Panel

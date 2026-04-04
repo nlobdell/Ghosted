@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  AppContext, StatStrip, Panel, Highlight,
+  AppContext, StatStrip, Panel, Highlight, ArchitectureMap,
   LedgerTable, EmptyState, Banner,
 } from '@/components/app/AppUI';
 import { formatPoints, formatPointsFull, getJSON } from '@/lib/api';
@@ -68,7 +68,7 @@ export default function RewardsPage() {
 
           <Highlight
             theme="rewards"
-            eyebrow="Balance rail"
+            eyebrow="Ghosted economy"
             title={formatPointsFull(rewards.balance)}
             copy={
               rewards.dailyCap !== null
@@ -81,6 +81,36 @@ export default function RewardsPage() {
                 <Link href="/app/giveaways/" className="button button--secondary button--small">Giveaways</Link>
               </>
             }
+          />
+
+          <ArchitectureMap
+            title="How Ghosted points work"
+            copy="Your rewards balance powers giveaways and casino play, with every change visible in your ledger."
+            nodes={[
+              {
+                label: 'Balance',
+                title: 'Current points and cap',
+                copy: 'Your current balance and daily cap determine what you can spend today.',
+                chips: [
+                  formatPoints(rewards.balance),
+                  rewards.dailyCap !== null ? `${formatPoints(rewards.dailyRemaining)} remaining` : 'No daily cap',
+                ],
+              },
+              {
+                label: 'Spend',
+                title: 'Where points are used',
+                copy: 'Use points for casino spins or giveaway entries. Both use the same shared Ghosted ledger.',
+                href: '/app/casino/',
+                cta: 'Open casino',
+                chips: ['Shared economy', 'Points-only flows'],
+              },
+              {
+                label: 'History',
+                title: 'Ledger transparency',
+                copy: 'Every points change is recorded so members can always review their rewards activity.',
+                chips: [`${rewards.entries.length} entries`, `${Array.isArray(rewards.spins) ? rewards.spins.length : 0} spins`],
+              },
+            ]}
           />
 
           <Panel

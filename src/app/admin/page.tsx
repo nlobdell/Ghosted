@@ -5,6 +5,7 @@ import {
   StatStrip,
   Panel,
   AppGrid,
+  ArchitectureMap,
   Highlight,
   MetricGrid,
   DenseTable,
@@ -144,10 +145,35 @@ export default function AdminPage() {
 
       <Highlight
         eyebrow="Admin"
-        title="Run Ghosted"
-        copy="Grant points, launch drops, and refresh WOM data."
-        chips={[`Actor: ${data?.actor.displayName ?? ''}`, data?.overview.wom?.configured ? 'WOM live' : 'WOM offline']}
+        title="Operate Ghosted"
+        copy="Keep the clan economy healthy, launch community drops, and refresh WOM-backed clan visibility for the broader Ghosted Discord community."
+        chips={[`Actor: ${data?.actor.displayName ?? ''}`, data?.overview.wom?.configured ? 'WOM live (Group 6371)' : 'WOM offline']}
         theme="admin"
+      />
+
+      <ArchitectureMap
+        title="Operator playbook"
+        copy="Daily Ghosted operations focus on economy integrity, drop management, and synced clan data."
+        nodes={[
+          {
+            label: 'Economy',
+            title: 'Economy controls',
+            copy: 'Grant or correct points and verify balances that drive member casino play and giveaway participation.',
+            chips: ['Rewards ledger', 'Balance corrections'],
+          },
+          {
+            label: 'Drops',
+            title: 'Giveaway lifecycle',
+            copy: 'Create Ghosted campaigns with role gates, entry costs, and draw states mapped to member routes.',
+            chips: ['Role-gated entries', 'Campaign state'],
+          },
+          {
+            label: 'Sync',
+            title: 'External sync',
+            copy: 'Refresh WOM-backed data and validate runtime health across auth, users, and community integrations.',
+            chips: [data?.overview.wom?.configured ? 'WOM configured' : 'WOM missing', 'System status'],
+          },
+        ]}
       />
 
       <AppGrid>
@@ -218,7 +244,7 @@ export default function AdminPage() {
                 ]}
               />
               <p className="app-panel-note">
-                Ghosted is intentionally read-only for the WOM group. Refresh clears cache drift without editing membership.
+                Ghosted keeps WOM group data read-only. Refresh clears cache drift without editing live clan membership.
               </p>
               <button
                 className="button"

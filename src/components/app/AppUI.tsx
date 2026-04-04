@@ -109,6 +109,70 @@ export function AppGrid({ children }: { children: ReactNode }) {
   return <section className="app-grid-two">{children}</section>;
 }
 
+export interface ArchitectureNode {
+  label: string;
+  title: string;
+  copy: string;
+  href?: string;
+  external?: boolean;
+  cta?: string;
+  chips?: string[];
+}
+
+export function ArchitectureMap({
+  title,
+  copy,
+  nodes,
+}: {
+  title: string;
+  copy?: string;
+  nodes: ArchitectureNode[];
+}) {
+  return (
+    <section className="architecture-map">
+      <div className="architecture-map__heading">
+        <h3>{title}</h3>
+        {copy ? <p>{copy}</p> : null}
+      </div>
+      <div className="architecture-map__grid">
+        {nodes.map((node) => {
+          const body = (
+            <article key={node.title} className="architecture-node">
+              <span className="architecture-node__label">{node.label}</span>
+              <h4>{node.title}</h4>
+              <p>{node.copy}</p>
+              {node.chips?.length ? (
+                <div className="architecture-node__chips">
+                  {node.chips.map((chip) => (
+                    <span key={chip} className="app-chip">{chip}</span>
+                  ))}
+                </div>
+              ) : null}
+              {node.href && node.cta ? (
+                node.external ? (
+                  <a
+                    className="button button--secondary button--small"
+                    href={node.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {node.cta}
+                  </a>
+                ) : (
+                  <Link className="button button--secondary button--small" href={node.href}>
+                    {node.cta}
+                  </Link>
+                )
+              ) : null}
+            </article>
+          );
+          return body;
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function Highlight({
   eyebrow,
   title,
@@ -125,12 +189,12 @@ export function Highlight({
   theme?: string;
 }) {
   const themes: Record<string, { label: string; title: string; art: string[] }> = {
-    admin: { label: 'Control room', title: 'Operator lane', art: ['/symbols/crown.svg', '/symbols/rune.svg'] },
-    community: { label: 'Clan watch', title: 'Roster and comps', art: ['/symbols/rune.svg', '/symbols/ghost.svg'] },
-    giveaways: { label: 'Drop board', title: 'Live entries', art: ['/symbols/scatter.svg', '/symbols/crown.svg'] },
-    rewards: { label: 'Ledger rail', title: 'Balance and burn', art: ['/symbols/coin.svg', '/symbols/rune.svg'] },
-    casino: { label: 'Casino floor', title: 'Slots and streaks', art: ['/symbols/wild.svg', '/symbols/coin.svg'] },
-    dashboard: { label: 'Command deck', title: 'Member flow', art: ['/symbols/ghost.svg', '/symbols/lantern.svg'] },
+    admin: { label: 'Operator tools', title: 'Clan operations', art: ['/symbols/crown.svg', '/symbols/rune.svg'] },
+    community: { label: 'Community board', title: 'Roster and events', art: ['/symbols/rune.svg', '/symbols/ghost.svg'] },
+    giveaways: { label: 'Drop board', title: 'Entries and access', art: ['/symbols/scatter.svg', '/symbols/crown.svg'] },
+    rewards: { label: 'Points ledger', title: 'Balance and history', art: ['/symbols/coin.svg', '/symbols/rune.svg'] },
+    casino: { label: 'Casino floor', title: 'Machines and results', art: ['/symbols/wild.svg', '/symbols/coin.svg'] },
+    dashboard: { label: 'Member hub', title: 'Daily essentials', art: ['/symbols/ghost.svg', '/symbols/lantern.svg'] },
   };
 
   const selected = themes[theme] ?? themes.dashboard;

@@ -1,7 +1,22 @@
+export type NavVisibility = 'always' | 'authenticated' | 'admin';
+
+// Nav groups organise member sections into three zones:
+//   clan     – roster, events, and clan records
+//   economy  – the shared points economy (rewards, drops, casino)
+//   you      – personal profile and linking
+export type NavGroup = 'clan' | 'economy' | 'you';
+
 export type NavLink = {
   key: string;
   label: string;
   href: string;
+  visibility: NavVisibility;
+  group?: NavGroup;
+};
+
+export type NavLinkGroup = {
+  group: NavGroup | undefined;
+  links: NavLink[];
 };
 
 export type ExternalLink = {
@@ -9,22 +24,27 @@ export type ExternalLink = {
   href: string;
 };
 
-export const PUBLIC_NAV_LINKS: NavLink[] = [
-  { key: 'home', label: 'Home', href: '/' },
-  { key: 'community', label: 'Community', href: '/app/community/' },
-  { key: 'rewards', label: 'Rewards', href: '/app/rewards/' },
-  { key: 'giveaways', label: 'Giveaways', href: '/app/giveaways/' },
-  { key: 'casino', label: 'Casino', href: '/app/casino/' },
-  { key: 'app', label: 'App Hub', href: '/app/' },
-];
+export type NavViewer = {
+  authenticated: boolean;
+  isAdmin: boolean;
+};
 
-export const APP_NAV_LINKS: NavLink[] = [
-  { key: 'community', label: 'Community', href: '/app/community/' },
-  { key: 'competitions', label: 'Competitions', href: '/app/competitions/' },
-  { key: 'rewards', label: 'Rewards', href: '/app/rewards/' },
-  { key: 'giveaways', label: 'Giveaways', href: '/app/giveaways/' },
-  { key: 'profile', label: 'Profile', href: '/app/profile/' },
-  { key: 'casino', label: 'Casino', href: '/app/casino/' },
+export const NAV_GROUP_LABELS: Record<NavGroup, string> = {
+  clan: 'Clan',
+  economy: 'Economy',
+  you: 'You',
+};
+
+export const PRIMARY_NAV_LINKS: NavLink[] = [
+  { key: 'home', label: 'Home', href: '/', visibility: 'always' },
+  { key: 'hub', label: 'Hall', href: '/app/', visibility: 'authenticated' },
+  { key: 'community', label: 'Community', href: '/app/community/', visibility: 'authenticated', group: 'clan' },
+  { key: 'competitions', label: 'Competitions', href: '/app/competitions/', visibility: 'authenticated', group: 'clan' },
+  { key: 'rewards', label: 'Rewards', href: '/app/rewards/', visibility: 'authenticated', group: 'economy' },
+  { key: 'giveaways', label: 'Giveaways', href: '/app/giveaways/', visibility: 'authenticated', group: 'economy' },
+  { key: 'casino', label: 'Casino', href: '/app/casino/', visibility: 'authenticated', group: 'economy' },
+  { key: 'profile', label: 'Profile', href: '/app/profile/', visibility: 'authenticated', group: 'you' },
+  { key: 'admin', label: 'Admin', href: '/admin/', visibility: 'admin' },
 ];
 
 export const EXTERNAL_NAV_LINKS: ExternalLink[] = [
@@ -38,24 +58,44 @@ function normalizePath(path: string) {
   return path;
 }
 
-export function getPublicActiveKey(path: string) {
-  const normalized = normalizePath(path);
-  if (normalized === '/') return 'home';
-  if (normalized.startsWith('/app/community') || normalized.startsWith('/app/clan')) return 'community';
-  if (normalized.startsWith('/app/rewards')) return 'rewards';
-  if (normalized.startsWith('/app/giveaways')) return 'giveaways';
-  if (normalized.startsWith('/app/casino')) return 'casino';
-  if (normalized.startsWith('/app')) return 'app';
-  return '';
+function canView(link: NavLink, viewer: NavViewer) {
+  if (link.visibility === 'always') return true;
+  if (link.visibility === 'authenticated') return viewer.authenticated;
+  return viewer.authenticated && viewer.isAdmin;
 }
 
-export function getAppActiveKey(path: string) {
+export function getVisiblePrimaryLinks(viewer: NavViewer) {
+  return PRIMARY_NAV_LINKS.filter((link) => canView(link, viewer));
+}
+
+// Returns visible links bucketed into sequential groups, preserving order.
+// Ungrouped links (home, hub, admin) get their own buckets with group=undefined.
+export function getVisibleGroupedLinks(viewer: NavViewer): NavLinkGroup[] {
+  const visible = getVisiblePrimaryLinks(viewer);
+  const result: NavLinkGroup[] = [];
+
+  for (const link of visible) {
+    const last = result[result.length - 1];
+    if (last && last.group === link.group) {
+      last.links.push(link);
+    } else {
+      result.push({ group: link.group, links: [link] });
+    }
+  }
+
+  return result;
+}
+
+export function getActiveNavKey(path: string) {
   const normalized = normalizePath(path);
+  if (normalized === '/') return 'home';
+  if (normalized === '/app') return 'hub';
   if (normalized.startsWith('/app/community') || normalized.startsWith('/app/clan')) return 'community';
   if (normalized.startsWith('/app/competitions')) return 'competitions';
   if (normalized.startsWith('/app/rewards')) return 'rewards';
   if (normalized.startsWith('/app/giveaways')) return 'giveaways';
   if (normalized.startsWith('/app/profile')) return 'profile';
   if (normalized.startsWith('/app/casino')) return 'casino';
+  if (normalized.startsWith('/admin')) return 'admin';
   return '';
 }
