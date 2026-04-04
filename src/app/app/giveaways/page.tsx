@@ -73,8 +73,8 @@ export default function GiveawaysPage() {
         title="Live drops"
         actions={
           <>
-            <Link href="/app/rewards/" className="button">Check Balance</Link>
-            <Link href="/app/profile/" className="button button--secondary">Review Roles</Link>
+            <Link href="/app/rewards/" className="button button--secondary button--small">Check Balance</Link>
+            <Link href="/app/profile/" className="button button--secondary button--small">Review Roles</Link>
           </>
         }
       />

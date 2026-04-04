@@ -2,8 +2,16 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  AppContext, StatStrip, Panel, AppGrid, Highlight,
-  MetricGrid, LeaderboardTable, Feed, EmptyState, Banner,
+  AppContext,
+  StatStrip,
+  Panel,
+  AppGrid,
+  Highlight,
+  MetricGrid,
+  LeaderboardTable,
+  Feed,
+  EmptyState,
+  Banner,
 } from '@/components/app/AppUI';
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
 import type { ClanData, LeaderboardEntry, AchievementItem, ActivityItem } from '@/lib/types';
@@ -20,19 +28,24 @@ export default function ClanPage() {
       try {
         const [clanData, hiscoresData, gainsData] = await Promise.all([
           getJSON<ClanData>('/api/wom/clan'),
-          getJSON<{ hiscores?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=8').then((d) => d.hiscores ?? []).catch(() => [] as LeaderboardEntry[]),
-          getJSON<{ gains?: LeaderboardEntry[] }>('/api/wom/gains?metric=overall&period=week&limit=8').then((d) => d.gains ?? []).catch(() => [] as LeaderboardEntry[]),
+          getJSON<{ hiscores?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=8')
+            .then((data) => data.hiscores ?? [])
+            .catch(() => [] as LeaderboardEntry[]),
+          getJSON<{ gains?: LeaderboardEntry[] }>('/api/wom/gains?metric=overall&period=week&limit=8')
+            .then((data) => data.gains ?? [])
+            .catch(() => [] as LeaderboardEntry[]),
         ]);
         setClan(clanData);
         setHiscores(hiscoresData);
         setGains(gainsData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load clan data.');
+      } catch (nextError) {
+        setError(nextError instanceof Error ? nextError.message : 'Failed to load clan data.');
       } finally {
         setLoading(false);
       }
     }
-    load();
+
+    void load();
   }, []);
 
   return (
@@ -45,15 +58,13 @@ export default function ClanPage() {
           { label: 'Clan' },
         ]}
         title="Clan detail"
-        actions={
-          <Link href="/app/community/" className="button button--secondary button--small">Community</Link>
-        }
+        actions={<Link href="/app/community/" className="button button--secondary button--small">Community</Link>}
       />
 
-      {error && <Banner message={error} variant="error" />}
+      {error ? <Banner message={error} variant="error" /> : null}
 
       {loading ? (
-        <Banner message="Loading clan data…" variant="info" />
+        <Banner message="Loading clan data..." variant="info" />
       ) : clan ? (
         <>
           <StatStrip
@@ -61,7 +72,28 @@ export default function ClanPage() {
               { label: 'Group members', value: String(clan.group.memberCount) },
               { label: 'Ghosted links', value: String(clan.linkCoverage.linkedUsers) },
               { label: 'Maxed totals', value: String(clan.statistics.maxedTotalCount) },
-              { label: 'Avg total level', value: clan.statistics.averageOverallLevel ? String(Math.round(clan.statistics.averageOverallLevel)) : '—' },
+              {
+                label: 'Avg total level',
+                value: clan.statistics.averageOverallLevel
+                  ? String(Math.round(clan.statistics.averageOverallLevel))
+                  : '-',
+              },
+            ]}
+          />
+
+          <Highlight
+            theme="community"
+            eyebrow="Clan detail"
+            title={clan.group.name}
+            copy="Detailed clan metrics, hiscores, gains, and recent activity in one consistent member surface."
+            actions={
+              <Link href="/app/competitions/" className="button button--secondary button--small">
+                Competitions
+              </Link>
+            }
+            chips={[
+              `${clan.group.memberCount} members`,
+              `${clan.linkCoverage.linkedUsers} linked`,
             ]}
           />
 
@@ -69,23 +101,23 @@ export default function ClanPage() {
             <Panel
               title="Group details"
               eyebrow="Clan info"
-              body={
+              body={(
                 <MetricGrid
                   items={[
                     ['Name', clan.group.name],
                     ['Verified', clan.group.verified ? 'Yes' : 'No'],
                     ['Members', String(clan.group.memberCount)],
-                    ['Score', clan.group.score !== undefined ? String(clan.group.score) : '—'],
-                    ['Clan chat', clan.group.clanChat ?? '—'],
-                    ['Home world', clan.group.homeworld ?? '—'],
+                    ['Score', clan.group.score !== undefined ? String(clan.group.score) : '-'],
+                    ['Clan chat', clan.group.clanChat ?? '-'],
+                    ['Home world', clan.group.homeworld ?? '-'],
                   ]}
                 />
-              }
+              )}
             />
             <Panel
               title="Link coverage"
               eyebrow="WOM integration"
-              body={
+              body={(
                 <MetricGrid
                   items={[
                     ['Tracked users', String(clan.linkCoverage.trackedUsers)],
@@ -96,7 +128,7 @@ export default function ClanPage() {
                     ['Maxed 200ms', String(clan.statistics.maxed200msCount)],
                   ]}
                 />
-              }
+              )}
             />
           </AppGrid>
 
@@ -104,24 +136,24 @@ export default function ClanPage() {
             <Panel
               title="Overall hiscores"
               eyebrow="Top players"
-              body={
+              body={(
                 <LeaderboardTable
                   entries={hiscores}
-                  valueFormatter={(e) => formatMaybeNumber(e.value)}
+                  valueFormatter={(entry) => formatMaybeNumber(entry.value)}
                   valueLabel="Level"
                 />
-              }
+              )}
             />
             <Panel
               title="Weekly gains"
               eyebrow="This week"
-              body={
+              body={(
                 <LeaderboardTable
                   entries={gains}
-                  valueFormatter={(e) => `+${formatMaybeNumber(e.gained ?? e.progress?.gained)}`}
+                  valueFormatter={(entry) => `+${formatMaybeNumber(entry.gained ?? entry.progress?.gained)}`}
                   valueLabel="XP gained"
                 />
-              }
+              )}
             />
           </AppGrid>
 
@@ -129,32 +161,28 @@ export default function ClanPage() {
             <Panel
               title="Recent achievements"
               eyebrow="Milestones"
-              body={
+              body={(
                 <Feed
-                  items={
-                    clan.recentAchievements.slice(0, 8).map((a: AchievementItem) => ({
-                      title: a.title ?? a.type ?? 'Achievement',
-                      meta: a.createdAt ? formatDate(a.createdAt) : undefined,
-                      eyebrow: a.metric,
-                    }))
-                  }
+                  items={clan.recentAchievements.slice(0, 8).map((achievement: AchievementItem) => ({
+                    title: achievement.title ?? achievement.type ?? 'Achievement',
+                    meta: achievement.createdAt ? formatDate(achievement.createdAt) : undefined,
+                    eyebrow: achievement.metric,
+                  }))}
                 />
-              }
+              )}
             />
             <Panel
               title="Recent activity"
               eyebrow="Activity log"
-              body={
+              body={(
                 <Feed
-                  items={
-                    clan.recentActivity.slice(0, 8).map((a: ActivityItem) => ({
-                      title: a.title ?? a.type ?? 'Activity',
-                      meta: a.createdAt ? formatDate(a.createdAt) : undefined,
-                      eyebrow: a.type,
-                    }))
-                  }
+                  items={clan.recentActivity.slice(0, 8).map((activity: ActivityItem) => ({
+                    title: activity.title ?? activity.type ?? 'Activity',
+                    meta: activity.createdAt ? formatDate(activity.createdAt) : undefined,
+                    eyebrow: activity.type,
+                  }))}
                 />
-              }
+              )}
             />
           </AppGrid>
         </>

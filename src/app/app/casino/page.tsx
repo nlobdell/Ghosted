@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { AppContext } from '@/components/app/AppUI';
+import { AppContext, Highlight } from '@/components/app/AppUI';
 import CasinoGame from '@/components/app/CasinoGame';
 
 export default function CasinoPage() {
@@ -19,6 +19,13 @@ export default function CasinoPage() {
             <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
           </>
         }
+      />
+      <Highlight
+        theme="casino"
+        eyebrow="Casino floor"
+        title="Points-only slots, built into the core app."
+        copy="Spin machines, track your session, and use the same reward economy that powers the rest of Ghosted."
+        chips={['Shared rewards balance', 'Machine switching and live history']}
       />
       <CasinoGame />
     </main>

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  AppContext, StatStrip, Panel, AppGrid,
+  AppContext, StatStrip, Panel, AppGrid, Highlight,
   CompetitionList, MetricGrid, LeaderboardTable, EmptyState, Banner,
 } from '@/components/app/AppUI';
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
@@ -64,6 +64,17 @@ export default function CompetitionsPage() {
               { label: 'Ongoing', value: String(ongoing.length) },
               { label: 'Upcoming', value: String(upcoming.length) },
               { label: 'Finished', value: String(finished.length) },
+            ]}
+          />
+
+          <Highlight
+            theme="community"
+            eyebrow="Competition board"
+            title="Track active races and upcoming events."
+            copy="Competition status, windows, and participant progress stay in one consistent view."
+            chips={[
+              `${ongoing.length} ongoing`,
+              `${upcoming.length} upcoming`,
             ]}
           />
 
