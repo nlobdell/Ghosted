@@ -17,12 +17,12 @@ async function boot() {
     const authRoot = document.querySelector<HTMLElement>('[data-auth]');
     const summaryRoot = document.querySelector<HTMLElement>('[data-summary]');
     const contentRoot = document.querySelector<HTMLElement>('[data-content]');
-    if (!authRoot || !summaryRoot || !contentRoot || !nextState.config || !nextState.me) {
+    if (!summaryRoot || !contentRoot || !nextState.config || !nextState.me) {
       previousState = nextState;
       return;
     }
 
-    if (!previousState || authSignature(previousState) !== authSignature(nextState)) {
+    if (authRoot && (!previousState || authSignature(previousState) !== authSignature(nextState))) {
       authRoot.innerHTML = renderAuth(nextState.config, nextState.me);
       authRoot.querySelector<HTMLElement>('[data-logout]')?.addEventListener('click', async () => {
         await logout();
