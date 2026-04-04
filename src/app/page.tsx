@@ -7,27 +7,27 @@ export const metadata: Metadata = {
 };
 
 const BENTO_ITEMS = [
-  { href: '/app/community/', icon: '/src/casino/assets/symbols/rune.svg', label: 'Community', sub: 'Roster, events, and clan comps', wide: true },
-  { href: '/app/rewards/', icon: '/src/casino/assets/symbols/coin.svg', label: 'Rewards', sub: 'Balance and ledger' },
-  { href: '/app/giveaways/', icon: '/src/casino/assets/symbols/scatter.svg', label: 'Giveaways', sub: 'Live drops' },
-  { href: '/app/casino/', icon: '/src/casino/assets/symbols/ghost.svg', label: 'Casino', sub: 'Points floor', wide: true, accent: true },
+  { href: '/app/community/', icon: '/symbols/rune.svg', label: 'Community', sub: 'Roster, events, and clan comps', wide: true },
+  { href: '/app/rewards/', icon: '/symbols/coin.svg', label: 'Rewards', sub: 'Balance and ledger' },
+  { href: '/app/giveaways/', icon: '/symbols/scatter.svg', label: 'Giveaways', sub: 'Live drops' },
+  { href: '/app/casino/', icon: '/symbols/ghost.svg', label: 'Casino', sub: 'Points floor', wide: true, accent: true },
 ];
 
 const PILLARS = [
   {
-    icon: '/src/casino/assets/symbols/lantern.svg',
+    icon: '/symbols/lantern.svg',
     label: 'Watch',
     heading: 'Twitch starts it.',
     copy: 'Live stream moments and watch nights on the vghosted channel create the first reason to show up.',
   },
   {
-    icon: '/src/casino/assets/symbols/ghost.svg',
+    icon: '/symbols/ghost.svg',
     label: 'Belong',
     heading: 'Discord holds it.',
     copy: 'Roles, events, and daily conversation live where the community already talks and coordinates.',
   },
   {
-    icon: '/src/casino/assets/symbols/rune.svg',
+    icon: '/symbols/rune.svg',
     label: 'Act',
     heading: 'The app drives it.',
     copy: 'Rewards, giveaways, competitions, and casino play give members repeatable reasons to come back.',
