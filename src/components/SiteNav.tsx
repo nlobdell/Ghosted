@@ -5,8 +5,12 @@ import { useState } from 'react';
 import { AuthWidget } from './AuthWidget';
 
 const NAV_LINKS = [
-  { key: 'home', label: 'Home',    href: '/' },
-  { key: 'app',  label: 'App Hub', href: '/app/' },
+  { key: 'home', label: 'Home', href: '/' },
+  { key: 'community', label: 'Community', href: '/app/community/' },
+  { key: 'rewards', label: 'Rewards', href: '/app/rewards/' },
+  { key: 'giveaways', label: 'Giveaways', href: '/app/giveaways/' },
+  { key: 'casino', label: 'Casino', href: '/app/casino/' },
+  { key: 'app', label: 'App Hub', href: '/app/' },
 ];
 
 const EXTERNAL_LINKS = [
@@ -16,6 +20,10 @@ const EXTERNAL_LINKS = [
 
 function getActiveKey(path: string) {
   if (path === '/') return 'home';
+  if (path.startsWith('/app/community') || path.startsWith('/app/clan')) return 'community';
+  if (path.startsWith('/app/rewards')) return 'rewards';
+  if (path.startsWith('/app/giveaways')) return 'giveaways';
+  if (path.startsWith('/app/casino')) return 'casino';
   if (path.startsWith('/app')) return 'app';
   return '';
 }
