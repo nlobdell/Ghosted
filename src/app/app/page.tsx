@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { AnimatedCompanionStage } from '@/components/companion/AnimatedCompanionStage';
 import {
   AppContext,
   StatStrip,
-  Highlight,
   Panel,
   AppGrid,
   LeaderboardTable,
@@ -15,11 +15,28 @@ import {
 } from '@/components/app/AppUI';
 import { formatPoints, formatMaybeNumber, getJSON } from '@/lib/api';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
-import type { RewardsData, GiveawayItem, LeaderboardEntry, WomEntriesResponse } from '@/lib/types';
+import type {
+  CompanionData,
+  GiveawayItem,
+  LeaderboardEntry,
+  RewardsData,
+  WomEntriesResponse,
+} from '@/lib/types';
 import styles from './page.module.css';
+
+function isAuthError(error: Error) {
+  const message = error.message.toLowerCase();
+  return (
+    error.message.includes('401')
+    || message.includes('unauthorized')
+    || message.includes('not authenticated')
+    || message.includes('please sign in')
+  );
+}
 
 export default function DashboardPage() {
   const [rewards, setRewards] = useState<RewardsData | null>(null);
+  const [companion, setCompanion] = useState<CompanionData | null>(null);
   const [giveaways, setGiveaways] = useState<GiveawayItem[]>([]);
   const [womClan, setWomClan] = useState<{ group?: { name?: string; memberCount?: number } } | null>(null);
   const [competitions, setCompetitions] = useState<{ id: number; title: string; status: string }[]>([]);
@@ -31,24 +48,28 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [nextRewards, nextGiveaways] = await Promise.all([
-          getJSON<RewardsData>('/api/rewards').catch((nextError: Error) => {
-            if (
-              nextError.message.includes('401')
-              || nextError.message.toLowerCase().includes('unauthorized')
-              || nextError.message.toLowerCase().includes('not authenticated')
-            ) {
+        const fetchAuthed = async <T,>(path: string) => {
+          try {
+            return await getJSON<T>(path);
+          } catch (nextError) {
+            if (nextError instanceof Error && isAuthError(nextError)) {
               setAuthed(false);
               return null;
             }
             throw nextError;
-          }),
+          }
+        };
+
+        const [nextRewards, nextCompanion, nextGiveaways] = await Promise.all([
+          fetchAuthed<RewardsData>('/api/rewards'),
+          fetchAuthed<CompanionData>('/api/companion'),
           getJSON<{ giveaways: GiveawayItem[] }>('/api/giveaways')
             .then((data) => data.giveaways ?? [])
             .catch(() => [] as GiveawayItem[]),
         ]);
 
         if (nextRewards) setRewards(nextRewards);
+        if (nextCompanion) setCompanion(nextCompanion);
         setGiveaways(nextGiveaways);
 
         const [clan, comps, hiscoresData] = await Promise.all([
@@ -78,121 +99,158 @@ export default function DashboardPage() {
   const ongoingComps = competitions.filter((c) => c.status === 'ongoing');
   const upcomingComps = competitions.filter((c) => c.status === 'upcoming');
   const featuredComp = ongoingComps[0] ?? upcomingComps[0] ?? null;
+  const companionReady = authed && Boolean(companion);
+
+  const scoreboardStats = companionReady && companion
+    ? [
+      { label: 'Balance', value: formatPoints(companion.balance), href: '/app/rewards/' },
+      { label: 'Unlocked', value: String(companion.ownedCount), href: '/app/companion/' },
+      { label: 'Active drops', value: String(activeDrops.length), href: '/app/rewards/' },
+      { label: 'Live competitions', value: String(ongoingComps.length), href: '/app/competitions/' },
+    ]
+    : [
+      { label: 'Clan members', value: String(womClan?.group?.memberCount ?? '-'), href: '/app/clan/' },
+      { label: 'Active drops', value: String(activeDrops.length), href: '/app/rewards/' },
+      { label: 'Live competitions', value: String(ongoingComps.length), href: '/app/competitions/' },
+      { label: 'Ghostling', value: 'Preview ready', href: '/app/companion/' },
+    ];
 
   return (
     <main id="main-content" className={`page-shell ${styles.page}`}>
       <AppContext
         breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall' }]}
         title="Today in Ghosted"
-        summary="See what is live, where your points stand, and your highest-value next action."
+        summary="Start with your Ghostling, then move into the points loop, live competitions, and the wider clan pulse."
         actions={(
           <>
+            <Link href="/app/companion/" className="button button--secondary button--small">Ghostling</Link>
             <a href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer" className="button button--secondary button--small">Discord</a>
-            <Link href="/app/clan/" className="button button--secondary button--small">Clan</Link>
           </>
         )}
       />
 
       {error ? <Banner message={error} variant="error" /> : null}
-      {!authed ? <Banner message="Sign in with Discord to access your member workspace." variant="info" /> : null}
+      {!authed ? <Banner message="Sign in with Discord to load your Ghostling, points balance, and personal hall actions." variant="info" /> : null}
 
       {loading ? (
         <Banner message="Loading the hall..." variant="info" />
       ) : (
         <>
-          <Highlight
-            className="hall-spotlight"
-            eyebrow="Live focus"
-            title={featuredComp ? featuredComp.title : 'Clan pulse'}
-            copy={
-              featuredComp
-                ? 'Start with the live event, then move into your rewards and current clan status.'
-                : 'No live competition is active right now, so the best next move is checking your balance and the clan board.'
-            }
-            actions={(
-              <>
-                <Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>
-                <Link href="/app/companion/" className="button button--secondary button--small">Companion</Link>
+          <section className={styles.spotlight}>
+            <div className={styles.spotlightCopy}>
+              <p className="kicker">Ghostling-first hall</p>
+              <h2 className={styles.spotlightTitle}>
+                {companionReady && companion
+                  ? `${companion.user.displayName}'s Ghostling is ready to lead the hall.`
+                  : 'Lead with your Ghostling, then move through everything else.'}
+              </h2>
+              <p className={styles.spotlightText}>
+                {companionReady && companion
+                  ? `You have ${formatPoints(companion.balance)} ready for cosmetics, drops, and the rest of the Ghosted loop. Tune the loadout first, then branch into rewards, casino, and live clan events.`
+                  : 'Sign in to load your own Ghostling, sync your balance, and turn the hall into a personal starting point instead of a generic overview.'}
+              </p>
+
+              <div className="app-inline-actions">
+                <Link href="/app/companion/" className="button button--secondary button--small">Open Ghostling</Link>
                 <Link href="/app/rewards/" className="button button--secondary button--small">Rewards</Link>
-              </>
-            )}
-            stage={
-              hiscores[0]
-                ? {
-                  label: 'Top hiscore',
-                  primary: hiscores[0].player?.displayName || hiscores[0].player?.username || 'Ghosted member',
-                  secondary: `${formatMaybeNumber(hiscores[0].value)} overall level`,
-                  chips: [
-                    `${ongoingComps.length} live competitions`,
-                    `${womClan?.group?.memberCount ?? '-'} members`,
-                  ],
-                }
-                : {
-                  label: 'Hall status',
-                  primary: `${womClan?.group?.memberCount ?? '-'} clan members`,
-                  secondary: `${activeDrops.length} active drops available`,
-                  chips: [`${ongoingComps.length} live competitions`],
-                }
-            }
-          />
+                <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
+                {!companionReady ? (
+                  <Link href="/auth/discord/login" className="button button--secondary button--small">Sign in</Link>
+                ) : null}
+              </div>
+
+              <div className={styles.loopGrid}>
+                <article className={styles.loopCard}>
+                  <span>Loadout</span>
+                  <strong>{companionReady && companion ? `${companion.equippedCount}/4 slots equipped` : 'Default preview active'}</strong>
+                </article>
+                <article className={styles.loopCard}>
+                  <span>Economy</span>
+                  <strong>{companionReady && companion ? `${companion.ownedCount} unlocks owned` : `${activeDrops.length} active drops waiting`}</strong>
+                </article>
+                <article className={styles.loopCard}>
+                  <span>Live hall</span>
+                  <strong>{featuredComp ? featuredComp.title : `${ongoingComps.length} competitions live`}</strong>
+                </article>
+              </div>
+            </div>
+
+            <aside className={styles.spotlightStage}>
+              <div className={styles.stageFrame}>
+                <AnimatedCompanionStage
+                  manifest={companion?.renderManifest}
+                  fallbackSrc={companion?.renderUrl ?? '/api/companion/render'}
+                  alt={companionReady && companion ? `${companion.user.displayName}'s Ghostling` : 'Ghosted Ghostling preview'}
+                  className={styles.stageImage}
+                />
+              </div>
+              <div className={styles.stageMeta}>
+                <strong>{companionReady && companion ? companion.user.displayName : 'Ghosted Ghostling'}</strong>
+                <span>{companionReady && companion ? `@${companion.user.username}` : 'Default Ghostling until sign-in'}</span>
+              </div>
+            </aside>
+          </section>
 
           <StatStrip
-            className="hall-scoreboard"
+            className={`hall-scoreboard ${styles.scoreboard}`}
             leadIndex={0}
-            stats={[
-              { label: 'Balance', value: rewards ? formatPoints(rewards.balance) : '-', href: '/app/rewards/' },
-              { label: 'Active drops', value: String(activeDrops.length), href: '/app/rewards/' },
-              { label: 'Live competitions', value: String(ongoingComps.length), href: '/app/competitions/' },
-              { label: 'Clan members', value: String(womClan?.group?.memberCount ?? '-'), href: '/app/clan/' },
-            ]}
+            stats={scoreboardStats}
           />
 
-          <AppGrid>
+          <AppGrid className={styles.primaryGrid}>
             <Panel
               className="hall-actions"
               tier="primary"
-              eyebrow="You"
-              title="Personal actions"
-              body={
-                authed && rewards ? (
+              eyebrow="Points loop"
+              title="What to do next"
+              body={(
+                companionReady && rewards && companion ? (
                   <div className="app-stack">
                     <div className="data-row">
-                      <span className="label">Balance</span>
+                      <span className="label">Current balance</span>
                       <strong>{formatPoints(rewards.balance)}</strong>
                     </div>
                     <div className="data-row">
                       <span className="label">Daily remaining</span>
                       <strong>{rewards.dailyCap !== null ? formatPoints(rewards.dailyRemaining) : 'No cap'}</strong>
                     </div>
+                    <div className="data-row">
+                      <span className="label">Ghostling unlocks</span>
+                      <strong>{companion.ownedCount} owned</strong>
+                    </div>
                     <div className="app-inline-actions">
-                      <Link href="/app/rewards/" className="button button--secondary button--small">Rewards</Link>
-                      <Link href="/app/companion/" className="button button--secondary button--small">Companion</Link>
-                      <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
+                      <Link href="/app/companion/" className="button button--secondary button--small">Ghostling studio</Link>
+                      <Link href="/app/rewards/" className="button button--secondary button--small">Spend points</Link>
                       <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
+                      <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
                     </div>
                   </div>
                 ) : (
                   <EmptyState
-                    message="Sign in to access personal rewards and account actions."
+                    message="Sign in to access your Ghostling loadout, points balance, and personal hall actions."
                     action={<Link href="/auth/discord/login" className="button button--secondary button--small">Sign in</Link>}
                   />
                 )
-              }
+              )}
             />
 
             <Panel
               className="hall-nav"
               tier="meta"
               eyebrow="Navigate"
-              title="Hall sections"
+              title="Move through the hall"
               body={(
                 <RouteList
                   routes={[
-                    { href: '/app/clan/', label: 'Clan', meta: `${womClan?.group?.memberCount ?? '-'} members` },
-                    { href: '/app/competitions/', label: 'Competitions', meta: `${ongoingComps.length} live` },
-                    { href: '/app/rewards/', label: 'Rewards', meta: rewards ? formatPoints(rewards.balance) : 'Sign in' },
-                    { href: '/app/companion/', label: 'Companion', meta: 'Tiny avatar studio' },
+                    {
+                      href: '/app/companion/',
+                      label: 'Ghostling',
+                      meta: companionReady && companion ? `${companion.ownedCount} unlocks, ${companion.equippedCount}/4 equipped` : 'Ghostling setup + export',
+                    },
+                    { href: '/app/rewards/', label: 'Rewards', meta: rewards ? formatPoints(rewards.balance) : 'Drops + ledger' },
                     { href: '/app/casino/', label: 'Casino', meta: 'Points-only slots' },
+                    { href: '/app/competitions/', label: 'Competitions', meta: `${ongoingComps.length} live` },
+                    { href: '/app/clan/', label: 'Clan', meta: `${womClan?.group?.memberCount ?? '-'} members` },
                     { href: '/app/profile/', label: 'Profile', meta: 'Discord + WOM' },
                   ]}
                 />
@@ -200,7 +258,43 @@ export default function DashboardPage() {
             />
           </AppGrid>
 
-          <AppGrid>
+          <AppGrid className={styles.secondaryGrid}>
+            <Panel
+              className="hall-pulse"
+              tier="meta"
+              eyebrow="Live hall"
+              title={featuredComp ? featuredComp.title : 'Clan pulse'}
+              body={(
+                <div className="app-stack">
+                  <div className="data-row">
+                    <span className="label">Featured event</span>
+                    <strong>{featuredComp ? featuredComp.title : 'No live competition right now'}</strong>
+                  </div>
+                  <div className="data-row">
+                    <span className="label">Clan members</span>
+                    <strong>{womClan?.group?.memberCount ?? '-'}</strong>
+                  </div>
+                  <div className="data-row">
+                    <span className="label">Top hiscore</span>
+                    <strong>
+                      {hiscores[0]
+                        ? `${hiscores[0].player?.displayName || hiscores[0].player?.username || 'Ghosted member'} - ${formatMaybeNumber(hiscores[0].value)}`
+                        : 'Unavailable'}
+                    </strong>
+                  </div>
+                  <div className="data-row">
+                    <span className="label">Active drops</span>
+                    <strong>{activeDrops.length}</strong>
+                  </div>
+                  <div className="app-inline-actions">
+                    <Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>
+                    <Link href="/app/clan/" className="button button--secondary button--small">Clan</Link>
+                    <Link href="/app/rewards/" className="button button--secondary button--small">Giveaways</Link>
+                  </div>
+                </div>
+              )}
+            />
+
             <Panel
               className="hall-leaders"
               tier="primary"
@@ -218,6 +312,9 @@ export default function DashboardPage() {
                 )
               }
             />
+          </AppGrid>
+
+          <section className={styles.ledgerShell}>
             <Panel
               className="hall-ledger"
               tier="meta"
@@ -230,7 +327,7 @@ export default function DashboardPage() {
                   : <EmptyState message="No recent rewards activity yet." />
               }
             />
-          </AppGrid>
+          </section>
         </>
       )}
     </main>

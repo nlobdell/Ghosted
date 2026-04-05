@@ -1,5 +1,5 @@
 .page {
-  --page-gap: 0.95rem;
+  --page-gap: 1.05rem;
   --page-accent: rgba(164, 136, 246, 0.34);
   gap: var(--page-gap);
 }
@@ -17,4 +17,6 @@
 
 .page :global(.casino-rules) {
   background: rgba(14, 12, 23, 0.84);
+  max-width: min(52rem, 100%);
+  justify-self: start;
 }

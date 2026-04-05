@@ -38,11 +38,11 @@ export const NAV_GROUP_LABELS: Record<NavGroup, string> = {
 export const PRIMARY_NAV_LINKS: NavLink[] = [
   { key: 'news', label: 'News', href: '/news/', visibility: 'always' },
   { key: 'hub', label: 'Hall', href: '/app/', visibility: 'authenticated' },
+  { key: 'companion', label: 'Ghostling', href: '/app/companion/', visibility: 'authenticated' },
   { key: 'clan', label: 'Clan', href: '/app/clan/', visibility: 'authenticated', group: 'clan' },
   { key: 'competitions', label: 'Competitions', href: '/app/competitions/', visibility: 'authenticated', group: 'clan' },
   { key: 'rewards', label: 'Rewards', href: '/app/rewards/', visibility: 'authenticated', group: 'economy' },
   { key: 'casino', label: 'Casino', href: '/app/casino/', visibility: 'authenticated', group: 'economy' },
-  { key: 'companion', label: 'Companion', href: '/app/companion/', visibility: 'authenticated', group: 'you' },
   { key: 'profile', label: 'Profile', href: '/app/profile/', visibility: 'authenticated', group: 'you' },
   { key: 'admin', label: 'Admin', href: '/admin/', visibility: 'admin' },
 ];

@@ -1,5 +1,5 @@
 .page {
-  --page-gap: 1rem;
+  --page-gap: 1.05rem;
   --page-accent: rgba(162, 133, 244, 0.34);
   gap: var(--page-gap);
 }
@@ -10,7 +10,7 @@
 
 .page :global(.app-grid-two) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
+  gap: 1rem;
 }
 
 .page :global(.admin-grant),
@@ -40,6 +40,14 @@
 
 .page :global(.admin-highlight) {
   background: rgba(19, 15, 31, 0.93);
+}
+
+.page :global(.admin-highlight .highlight-copy) {
+  max-width: 42rem;
+}
+
+.page :global(.admin-actions .app-form) {
+  gap: 0.95rem;
 }
 
 .page :global(.architecture-map) {
