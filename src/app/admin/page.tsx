@@ -164,7 +164,7 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <main className={`page-shell ${styles.page}`}>
+      <main className={`page-shell workspace-page ${styles.page}`}>
         <Banner message="Loading admin data..." variant="info" />
       </main>
     );
@@ -175,11 +175,11 @@ export default function AdminPage() {
   const publishedNewsCount = newsPosts.filter((post) => post.status === 'published').length;
 
   return (
-    <main id="main-content" className={`page-shell ${styles.page}`}>
+    <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
-          { label: 'Hall', href: '/app/' },
+          { label: 'Hall', href: '/hall/' },
           { label: 'Admin' },
         ]}
         title="Operator console"

@@ -1,0 +1,75 @@
+.page {}
+
+.header {}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  padding: var(--surface-padding);
+  border: 1px solid rgba(191, 179, 255, 0.12);
+  border-radius: 1.6rem;
+  background: linear-gradient(180deg, rgba(16, 13, 25, 0.88), rgba(11, 10, 18, 0.74));
+}
+
+.grid {}
+
+.card,
+.stats,
+.pagination {
+  display: grid;
+  gap: 1rem;
+}
+
+.card h2,
+.card p {
+  margin: 0;
+}
+
+.card p {
+  color: var(--color-text-muted);
+}
+
+.pagination {
+  align-items: center;
+  justify-items: center;
+  padding: 1rem 1.2rem 0;
+}
+
+.paginationMeta {
+  color: var(--color-text-soft);
+  font-size: 0.74rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cardHeader,
+.stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.stats div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.stats span {
+  color: var(--color-text-soft);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.stats strong {
+  color: var(--color-text-strong);
+}

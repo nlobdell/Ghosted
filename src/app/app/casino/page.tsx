@@ -6,17 +6,17 @@ import styles from './page.module.css';
 
 export default function CasinoPage() {
   return (
-    <main id="main-content" className={`page-shell ${styles.page}`}>
+    <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
-          { label: 'Hall', href: '/app/' },
+          { label: 'Hall', href: '/hall/' },
           { label: 'Casino' },
         ]}
         title="Points casino"
         summary="Play the machine with points-only stakes, then return to rewards for economy actions."
         actions={
-          <Link href="/app/rewards/" className="button button--secondary button--small">Balance</Link>
+          <Link href="/hall/rewards/" className="button button--secondary button--small">Balance</Link>
         }
       />
       <CasinoGame />
@@ -30,7 +30,7 @@ export default function CasinoPage() {
             <p className="app-panel-note">Casino uses the same points balance as rewards and giveaways.</p>
             <div className="app-inline-actions">
               <span className="app-chip">No cash value</span>
-              <Link href="/app/rewards/" className="button button--secondary button--small">Open rewards</Link>
+              <Link href="/hall/rewards/" className="button button--secondary button--small">Open rewards</Link>
             </div>
           </div>
         )}

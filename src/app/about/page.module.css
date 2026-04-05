@@ -1,0 +1,25 @@
+.page,
+.join {
+  display: grid;
+  gap: 1rem;
+}
+
+.story {}
+
+.join {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.leadership {}
+
+.card {
+  display: grid;
+  gap: 0.7rem;
+}
+
+@media (max-width: 860px) {
+  .join {
+    grid-template-columns: 1fr;
+  }
+}

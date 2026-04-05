@@ -177,7 +177,7 @@ export default function CasinoGame() {
   function loginHref() {
     if (!config) return '';
     if (config.authConfigured) {
-      return `/auth/discord/login?next=${encodeURIComponent(window.location.pathname)}`;
+      return `/auth/login?next=${encodeURIComponent(window.location.pathname)}`;
     }
     if (config.devAuthEnabled) {
       return `/auth/dev-login?next=${encodeURIComponent(window.location.pathname)}`;
@@ -259,7 +259,7 @@ export default function CasinoGame() {
   return (
     <div id="casino-root">
       <section className="app-summary-grid">
-        <a className="app-stat app-stat--link" href="/app/rewards/">
+        <a className="app-stat app-stat--link" href="/hall/rewards/">
           <div className="app-stat__value">{formatPoints(rewards.balance)}</div>
           <div className="app-stat__label">Balance</div>
         </a>
@@ -271,7 +271,7 @@ export default function CasinoGame() {
           <div className="app-stat__value">{String(selectedGame.freeSpinsRemaining || 0)}</div>
           <div className="app-stat__label">Free spins</div>
         </article>
-        <a className="app-stat app-stat--link" href="/app/rewards/">
+        <a className="app-stat app-stat--link" href="/hall/rewards/">
           <div className="app-stat__value">{rewards.dailyCap === null ? 'Unlimited' : formatPoints(rewards.dailyCap)}</div>
           <div className="app-stat__label">Daily limit</div>
         </a>

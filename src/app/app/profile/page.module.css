@@ -1,11 +1,6 @@
 .page {
-  --page-gap: 1.05rem;
-  --page-accent: rgba(160, 132, 242, 0.34);
-  gap: var(--page-gap);
-}
-
-.page :global(.app-context) {
-  border-left: 4px solid var(--page-accent);
+  --workspace-page-gap: 1.15rem;
+  --workspace-page-accent: rgba(160, 132, 242, 0.34);
 }
 
 .page :global(.app-grid-two) {
@@ -15,7 +10,7 @@
 
 .page :global(.profile-identity-panel .app-metric-grid) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
+  gap: 0.9rem;
 }
 
 .page :global(.profile-identity-panel) {
@@ -29,7 +24,7 @@
 .page :global(.profile-scoreboard),
 .page :global(.profile-scoreboard .app-summary-grid__secondary) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.68rem;
+  gap: 0.9rem;
 }
 
 .page :global(.profile-scoreboard .app-stat--lead) {

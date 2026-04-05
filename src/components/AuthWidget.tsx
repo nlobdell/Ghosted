@@ -48,7 +48,7 @@ export function AuthWidget({ variant, shellData }: Props) {
 
     return (
       <div className={`site-profile-widget site-profile-widget--signed-in site-profile-widget--${variant}`}>
-        <a className="site-profile-widget__card" href="/app/profile/">
+        <a className="site-profile-widget__card" href="/hall/profile/">
           {user.avatarUrl ? (
             <img className="site-profile-widget__avatar" src={user.avatarUrl} alt={user.displayName} />
           ) : (

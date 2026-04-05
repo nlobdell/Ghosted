@@ -124,27 +124,27 @@ export default async function DashboardPage() {
 
   const scoreboardStats = ghostlingReady && companion
     ? [
-      { label: 'Balance', value: formatPoints(companion.balance), href: '/app/rewards/' },
-      { label: 'Unlocked', value: String(companion.ownedCount), href: '/app/companion/' },
-      { label: 'Active drops', value: String(activeDrops.length), href: '/app/rewards/' },
-      { label: 'Live competitions', value: String(ongoingComps.length), href: '/app/competitions/' },
+      { label: 'Balance', value: formatPoints(companion.balance), href: '/hall/rewards/' },
+      { label: 'Unlocked', value: String(companion.ownedCount), href: '/hall/ghostling/' },
+      { label: 'Active drops', value: String(activeDrops.length), href: '/hall/rewards/' },
+      { label: 'Live competitions', value: String(ongoingComps.length), href: '/hall/competitions/' },
     ]
     : [
-      { label: 'Clan members', value: String(womClan?.group?.memberCount ?? '-'), href: '/app/clan/' },
-      { label: 'Active drops', value: String(activeDrops.length), href: '/app/rewards/' },
-      { label: 'Live competitions', value: String(ongoingComps.length), href: '/app/competitions/' },
-      { label: 'Ghostling', value: 'Preview ready', href: '/app/companion/' },
+      { label: 'Clan members', value: String(womClan?.group?.memberCount ?? '-'), href: '/hall/clan/' },
+      { label: 'Active drops', value: String(activeDrops.length), href: '/hall/rewards/' },
+      { label: 'Live competitions', value: String(ongoingComps.length), href: '/hall/competitions/' },
+      { label: 'Ghostling', value: 'Preview ready', href: '/hall/ghostling/' },
     ];
 
   return (
-    <main id="main-content" className={`page-shell ${styles.page}`}>
+    <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
       <AppContext
         breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall' }]}
         title="Today in Ghosted"
         summary="Start with your Ghostling, then move into the points loop, live competitions, and the wider clan pulse."
         actions={(
           <>
-            <Link href="/app/companion/" className="button button--secondary button--small">Ghostling</Link>
+            <Link href="/hall/ghostling/" className="button button--secondary button--small">Ghostling</Link>
             <a href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer" className="button button--secondary button--small">Discord</a>
           </>
         )}
@@ -168,11 +168,11 @@ export default async function DashboardPage() {
           </p>
 
           <div className="app-inline-actions">
-            <Link href="/app/companion/" className="button button--secondary button--small">Open Ghostling</Link>
-            <Link href="/app/rewards/" className="button button--secondary button--small">Rewards</Link>
-            <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
+            <Link href="/hall/ghostling/" className="button button--secondary button--small">Open Ghostling</Link>
+            <Link href="/hall/rewards/" className="button button--secondary button--small">Rewards</Link>
+            <Link href="/hall/casino/" className="button button--secondary button--small">Casino</Link>
             {!ghostlingReady ? (
-              <Link href="/auth/discord/login" className="button button--secondary button--small">Sign in</Link>
+              <Link href="/auth/login?next=%2Fhall%2F" className="button button--secondary button--small">Sign in</Link>
             ) : null}
           </div>
 
@@ -236,16 +236,16 @@ export default async function DashboardPage() {
                   <strong>{companion.ownedCount} owned</strong>
                 </div>
                 <div className="app-inline-actions">
-                  <Link href="/app/companion/" className="button button--secondary button--small">Ghostling studio</Link>
-                  <Link href="/app/rewards/" className="button button--secondary button--small">Spend points</Link>
-                  <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
-                  <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
+                  <Link href="/hall/ghostling/" className="button button--secondary button--small">Ghostling studio</Link>
+                  <Link href="/hall/rewards/" className="button button--secondary button--small">Spend points</Link>
+                  <Link href="/hall/casino/" className="button button--secondary button--small">Casino</Link>
+                  <Link href="/hall/profile/" className="button button--secondary button--small">Profile</Link>
                 </div>
               </div>
             ) : (
               <EmptyState
                 message="Sign in to access your Ghostling loadout, points balance, and personal hall actions."
-                action={<Link href="/auth/discord/login" className="button button--secondary button--small">Sign in</Link>}
+                action={<Link href="/auth/login?next=%2Fhall%2F" className="button button--secondary button--small">Sign in</Link>}
               />
             )
           )}
@@ -260,15 +260,15 @@ export default async function DashboardPage() {
             <RouteList
               routes={[
                 {
-                  href: '/app/companion/',
+                  href: '/hall/ghostling/',
                   label: 'Ghostling',
                   meta: ghostlingReady && companion ? `${companion.ownedCount} unlocks, ${companion.equippedCount}/4 equipped` : 'Ghostling setup + export',
                 },
-                { href: '/app/rewards/', label: 'Rewards', meta: rewards ? formatPoints(rewards.balance) : 'Drops + ledger' },
-                { href: '/app/casino/', label: 'Casino', meta: 'Points-only slots' },
-                { href: '/app/competitions/', label: 'Competitions', meta: `${ongoingComps.length} live` },
-                { href: '/app/clan/', label: 'Clan', meta: `${womClan?.group?.memberCount ?? '-'} members` },
-                { href: '/app/profile/', label: 'Profile', meta: 'Discord + WOM' },
+                { href: '/hall/rewards/', label: 'Rewards', meta: rewards ? formatPoints(rewards.balance) : 'Drops + ledger' },
+                { href: '/hall/casino/', label: 'Casino', meta: 'Points-only slots' },
+                { href: '/hall/competitions/', label: 'Competitions', meta: `${ongoingComps.length} live` },
+                { href: '/hall/clan/', label: 'Clan', meta: `${womClan?.group?.memberCount ?? '-'} members` },
+                { href: '/hall/profile/', label: 'Profile', meta: 'Discord + WOM' },
               ]}
             />
           )}
@@ -304,9 +304,9 @@ export default async function DashboardPage() {
                 <strong>{activeDrops.length}</strong>
               </div>
               <div className="app-inline-actions">
-                <Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>
-                <Link href="/app/clan/" className="button button--secondary button--small">Clan</Link>
-                <Link href="/app/rewards/" className="button button--secondary button--small">Giveaways</Link>
+                <Link href="/hall/competitions/" className="button button--secondary button--small">Competitions</Link>
+                <Link href="/hall/clan/" className="button button--secondary button--small">Clan</Link>
+                <Link href="/hall/rewards/" className="button button--secondary button--small">Giveaways</Link>
               </div>
             </div>
           )}

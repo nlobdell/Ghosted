@@ -5,7 +5,7 @@ export function renderSummary(state: CasinoState) {
   const game = selectedGame(state);
   if (!state.me?.authenticated) {
     return stats([
-      { label: 'Machines', value: String(state.games?.games.length || 0), href: '/app/casino/' },
+      { label: 'Machines', value: String(state.games?.games.length || 0), href: '/hall/casino/' },
       { label: 'Grid', value: '5x3' },
       { label: 'Format', value: 'Points only' },
       { label: 'Access', value: 'Sign in' },
@@ -13,16 +13,16 @@ export function renderSummary(state: CasinoState) {
   }
 
   return stats([
-    { label: 'Balance', value: formatPoints(state.rewards?.balance || state.me.user.balance || 0), href: '/app/rewards/' },
-    { label: 'Machines', value: String(state.games?.games.length || 0), href: '/app/casino/' },
-    { label: 'Free spins', value: String(game?.freeSpinsRemaining || 0), href: '/app/casino/' },
-    { label: 'Daily limit', value: formatWagerLimit(state.rewards?.dailyCap ?? null), href: '/app/rewards/' },
+    { label: 'Balance', value: formatPoints(state.rewards?.balance || state.me.user.balance || 0), href: '/hall/rewards/' },
+    { label: 'Machines', value: String(state.games?.games.length || 0), href: '/hall/casino/' },
+    { label: 'Free spins', value: String(game?.freeSpinsRemaining || 0), href: '/hall/casino/' },
+    { label: 'Daily limit', value: formatWagerLimit(state.rewards?.dailyCap ?? null), href: '/hall/rewards/' },
   ]);
 }
 
 export function renderSignInState(config: ApiConfig) {
   const loginHref = config.authConfigured
-    ? `/auth/discord/login?next=${encodeURIComponent(window.location.pathname)}`
+    ? `/auth/login?next=${encodeURIComponent(window.location.pathname)}`
     : config.devAuthEnabled
       ? `/auth/dev-login?next=${encodeURIComponent(window.location.pathname)}`
       : '';
@@ -37,7 +37,7 @@ export function renderSignInState(config: ApiConfig) {
 export function renderAuth(config: ApiConfig, me: MePayload) {
   if (!me.authenticated) {
     const href = config.authConfigured
-      ? `/auth/discord/login?next=${encodeURIComponent(window.location.pathname)}`
+      ? `/auth/login?next=${encodeURIComponent(window.location.pathname)}`
       : config.devAuthEnabled
         ? `/auth/dev-login?next=${encodeURIComponent(window.location.pathname)}`
         : '#';

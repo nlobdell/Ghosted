@@ -1,0 +1,31 @@
+.page {}
+
+.hero,
+.embed,
+.grid,
+.card {
+  display: grid;
+  gap: 1rem;
+}
+
+.embedHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.frame {
+  width: 100%;
+  min-height: 32rem;
+  border: 0;
+  border-radius: 1.2rem;
+  background: #090810;
+}
+
+@media (max-width: 760px) {
+  .frame {
+    min-height: 20rem;
+  }
+}

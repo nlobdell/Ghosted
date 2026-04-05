@@ -68,7 +68,7 @@ export default function CompanionPage() {
             }
             throw nextError;
           }),
-          getJSON<ShellData>(`/api/site-shell?next=${encodeURIComponent('/app/companion/')}`).catch(() => null),
+          getJSON<ShellData>(`/api/site-shell?next=${encodeURIComponent('/hall/ghostling/')}`).catch(() => null),
         ]);
 
         if (companionData) setCompanion(companionData);
@@ -204,15 +204,15 @@ export default function CompanionPage() {
   }
 
   return (
-    <main id="main-content" className={`page-shell ${styles.page}`}>
+    <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
       <AppContext
-        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/app/' }, { label: 'Ghostling' }]}
+        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/hall/' }, { label: 'Ghostling' }]}
         title="Ghostling studio"
         summary="Equip the Ghostling that now anchors your Ghosted identity, spend from the same shared points loop, and export it anywhere you want the hall to follow."
         actions={(
           <>
-            <Link href="/app/rewards/" className="button button--secondary button--small">Rewards</Link>
-            <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
+            <Link href="/hall/rewards/" className="button button--secondary button--small">Rewards</Link>
+            <Link href="/hall/profile/" className="button button--secondary button--small">Profile</Link>
           </>
         )}
       />
@@ -225,7 +225,7 @@ export default function CompanionPage() {
       ) : !authed ? (
         <EmptyState
           message="Sign in with Discord to unlock Ghostling cosmetics and save a loadout."
-          action={<Link href={shell?.auth.loginHref ?? '/auth/discord/login?next=%2Fapp%2Fcompanion%2F'} className="button button--secondary button--small">Sign in with Discord</Link>}
+          action={<Link href={shell?.auth.loginHref ?? '/auth/login?next=%2Fhall%2Fghostling%2F'} className="button button--secondary button--small">Sign in with Discord</Link>}
         />
       ) : companion ? (
         <>
@@ -276,7 +276,7 @@ export default function CompanionPage() {
             className={styles.scoreboard}
             leadIndex={0}
             stats={[
-              { label: 'Balance', value: formatPoints(companion.balance), href: '/app/rewards/' },
+              { label: 'Balance', value: formatPoints(companion.balance), href: '/hall/rewards/' },
               { label: 'Unlocked', value: String(companion.ownedCount) },
               { label: 'Equipped slots', value: `${companion.equippedCount}/4` },
               { label: 'Share ready', value: 'Yes' },

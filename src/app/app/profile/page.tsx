@@ -131,11 +131,11 @@ export default function ProfilePage() {
   const wom = shell?.wom;
 
   return (
-    <main id="main-content" className={`page-shell ${styles.page}`}>
+    <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
-          { label: 'Hall', href: '/app/' },
+          { label: 'Hall', href: '/hall/' },
           { label: 'Profile' },
         ]}
         title="Ghosted identity setup"
@@ -149,7 +149,7 @@ export default function ProfilePage() {
       ) : !authed || !shell?.authenticated ? (
         <EmptyState
           message="Sign in to view and manage your profile."
-          action={<Link href="/auth/discord/login" className="button button--secondary button--small">Sign in with Discord</Link>}
+          action={<Link href="/auth/login?next=%2Fhall%2Fprofile%2F" className="button button--secondary button--small">Sign in with Discord</Link>}
         />
       ) : (
         <>
@@ -269,7 +269,7 @@ export default function ProfilePage() {
             className="profile-scoreboard"
             leadIndex={0}
             stats={[
-              { label: 'Balance', value: user ? formatPoints(user.balance) : '-', href: '/app/rewards/' },
+              { label: 'Balance', value: user ? formatPoints(user.balance) : '-', href: '/hall/rewards/' },
               { label: 'WOM link', value: wom?.linked ? 'Linked' : 'Not linked' },
               { label: 'Clan rank', value: wom?.membership?.rankLabel ?? '-' },
               { label: 'Roles', value: user ? String(user.roles.length) : '-' },

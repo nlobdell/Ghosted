@@ -1,11 +1,6 @@
 .page {
-  --page-gap: 1.05rem;
-  --page-accent: rgba(164, 136, 246, 0.34);
-  gap: var(--page-gap);
-}
-
-.page :global(.app-context) {
-  border-left: 4px solid var(--page-accent);
+  --workspace-page-gap: 1.15rem;
+  --workspace-page-accent: rgba(164, 136, 246, 0.34);
 }
 
 .page :global(#casino-root) {

@@ -1,29 +1,24 @@
 .page {
-  --page-gap: 1.05rem;
-  --page-accent: rgba(171, 138, 255, 0.34);
-  gap: var(--page-gap);
-}
-
-.page :global(.app-context) {
-  border-left: 4px solid var(--page-accent);
+  --workspace-page-gap: 1.15rem;
+  --workspace-page-accent: rgba(171, 138, 255, 0.34);
 }
 
 .board {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
-  gap: 1.05rem;
+  gap: var(--section-gap);
   align-items: start;
 }
 
 .rail {
   display: grid;
-  gap: 1.05rem;
+  gap: var(--section-gap);
 }
 
 .page :global(.comp-scoreboard),
 .page :global(.comp-scoreboard .app-summary-grid__secondary) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.7rem;
+  gap: 0.9rem;
 }
 
 .page :global(.comp-timeline) {
@@ -42,7 +37,7 @@
 
 .page :global(.comp-featured .app-metric-grid) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
+  gap: 0.9rem;
 }
 
 @media (max-width: 980px) {
