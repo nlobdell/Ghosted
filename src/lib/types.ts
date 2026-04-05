@@ -161,6 +161,7 @@ export interface CompanionItem {
   rarity: string;
   cost: number;
   description: string;
+  active: boolean;
   owned: boolean;
   equipped: boolean;
   previewUrl: string;
@@ -214,11 +215,25 @@ export interface CompanionAdminAssetItem {
   cost: number;
   description: string;
   active: boolean;
+  sortOrder: number;
   frontAssetPath?: string | null;
   frontAssetUrl?: string | null;
   backAssetPath?: string | null;
   backAssetUrl?: string | null;
   previewUrl: string;
+}
+
+export interface CompanionRepoImportCandidate {
+  slug: string;
+  name: string;
+  suggestedSlot?: CompanionSlotKey | null;
+  suggestedRarity?: string | null;
+  suggestedCost?: number | null;
+  suggestedDescription?: string | null;
+  frontAssetPath: string;
+  frontAssetUrl?: string | null;
+  backAssetPath?: string | null;
+  backAssetUrl?: string | null;
 }
 
 export interface CompanionAdminData {
@@ -230,6 +245,7 @@ export interface CompanionAdminData {
     previewUrl: string;
   };
   items: CompanionAdminAssetItem[];
+  repoCandidates: CompanionRepoImportCandidate[];
 }
 
 export interface GiveawayItem {

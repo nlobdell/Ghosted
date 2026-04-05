@@ -191,6 +191,19 @@ export default function AdminPage() {
 
       <AppGrid>
         <Panel
+          className="admin-ghostling"
+          tier="meta"
+          eyebrow="Workflow"
+          title="Ghostling asset vault"
+          href="/admin/ghostling/"
+          body={(
+            <p className="app-panel-note">
+              Hide cosmetics, reorder slot libraries, and import repo art without exposing upload tools on the member-facing Ghostling page.
+            </p>
+          )}
+        />
+
+        <Panel
           className="admin-actions admin-grant"
           tier="primary"
           eyebrow="Workflow"

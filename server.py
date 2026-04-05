@@ -1207,6 +1207,13 @@ def slugify(value: str) -> str:
     return slug or "item"
 
 
+def humanize_slug(value: str) -> str:
+    parts = [part for part in str(value or "").replace("_", "-").split("-") if part]
+    if not parts:
+        return "Ghostling Item"
+    return " ".join(part.capitalize() for part in parts)
+
+
 def env_flag(name: str, default: bool = False) -> bool:
     value = os.getenv(name)
     if value is None:
@@ -2584,6 +2591,7 @@ def companion_admin_payload(connection: sqlite3.Connection) -> dict[str, Any]:
                 "cost": int(row["cost"]),
                 "description": row["description"],
                 "active": bool(row["active"]),
+                "sortOrder": int(row["sort_order"] or 0),
                 "frontAssetPath": row["front_asset_path"],
                 "frontAssetUrl": companion_asset_url(row["front_asset_path"]),
                 "backAssetPath": row["back_asset_path"],
@@ -2592,7 +2600,187 @@ def companion_admin_payload(connection: sqlite3.Connection) -> dict[str, Any]:
             }
             for row in rows
         ],
+        "repoCandidates": repo_companion_import_candidates(connection),
     }
+
+
+def normalize_companion_slot_order(
+    connection: sqlite3.Connection,
+    slot_key: str,
+    ordered_slugs: list[str],
+) -> None:
+    for index, slug in enumerate(ordered_slugs, start=1):
+        connection.execute(
+            "UPDATE companion_catalog SET sort_order = ? WHERE slug = ?",
+            (index * 10, slug),
+        )
+
+
+def set_companion_item_active(
+    connection: sqlite3.Connection,
+    actor_row: sqlite3.Row,
+    slug: str,
+    active: bool,
+) -> dict[str, Any]:
+    item = companion_catalog_any_row(connection, slug)
+    if not item:
+        raise AppError("That companion cosmetic does not exist.", 404)
+
+    connection.execute(
+        "UPDATE companion_catalog SET active = ? WHERE slug = ?",
+        (1 if active else 0, slug),
+    )
+    audit(
+        connection,
+        int(actor_row["id"]),
+        "set_companion_item_active",
+        "companion_catalog",
+        slug,
+        {"active": bool(active)},
+    )
+    connection.commit()
+    return companion_admin_payload(connection)
+
+
+def reorder_companion_item(
+    connection: sqlite3.Connection,
+    actor_row: sqlite3.Row,
+    slug: str,
+    direction: str,
+) -> dict[str, Any]:
+    item = companion_catalog_any_row(connection, slug)
+    if not item:
+        raise AppError("That companion cosmetic does not exist.", 404)
+
+    normalized_direction = str(direction or "").strip().lower()
+    if normalized_direction not in {"up", "down"}:
+        raise AppError("Pick a reorder direction of up or down.", 400)
+
+    slot_key = str(item["slot_key"])
+    slot_rows = [
+        row
+        for row in companion_catalog_rows(connection, active_only=False)
+        if str(row["slot_key"]) == slot_key
+    ]
+    ordered_slugs = [str(row["slug"]) for row in slot_rows]
+    current_index = ordered_slugs.index(slug)
+
+    if normalized_direction == "up" and current_index > 0:
+        swap_index = current_index - 1
+    elif normalized_direction == "down" and current_index < len(ordered_slugs) - 1:
+        swap_index = current_index + 1
+    else:
+        return companion_admin_payload(connection)
+
+    ordered_slugs[current_index], ordered_slugs[swap_index] = ordered_slugs[swap_index], ordered_slugs[current_index]
+    normalize_companion_slot_order(connection, slot_key, ordered_slugs)
+    audit(
+        connection,
+        int(actor_row["id"]),
+        "reorder_companion_item",
+        "companion_catalog",
+        slug,
+        {"slot": slot_key, "direction": normalized_direction, "orderedSlugs": ordered_slugs},
+    )
+    connection.commit()
+    return companion_admin_payload(connection)
+
+
+def import_repo_companion_items(
+    connection: sqlite3.Connection,
+    actor_row: sqlite3.Row,
+    items: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not items:
+        raise AppError("Choose at least one repo cosmetic to import.", 400)
+
+    queued_sort_orders: dict[str, int] = {}
+    imported_slugs: list[str] = []
+    seen_slugs: set[str] = set()
+
+    for raw_item in items:
+        normalized_name = str(raw_item.get("name") or "").strip()
+        if not normalized_name:
+            raise AppError("Every imported cosmetic needs a name.", 400)
+
+        normalized_slug = slugify(str(raw_item.get("slug") or normalized_name))
+        if normalized_slug in seen_slugs:
+            raise AppError("Each imported cosmetic slug must be unique.", 400)
+        if companion_catalog_any_row(connection, normalized_slug):
+            raise AppError(f"The cosmetic slug '{normalized_slug}' already exists.", 409)
+        seen_slugs.add(normalized_slug)
+
+        normalized_slot = str(raw_item.get("slot") or "").strip().lower()
+        if normalized_slot not in COMPANION_SLOT_ORDER:
+            raise AppError("Each repo cosmetic must target a valid Ghostling slot.", 400)
+
+        normalized_rarity = str(raw_item.get("rarity") or "common").strip().lower()
+        if normalized_rarity not in {"common", "rare", "epic", "legendary"}:
+            raise AppError("Choose a rarity of common, rare, epic, or legendary.", 400)
+
+        try:
+            cost = int(raw_item.get("cost") or 0)
+        except (TypeError, ValueError) as exc:
+            raise AppError("Repo cosmetic costs must be whole numbers.", 400) from exc
+        if cost < 0:
+            raise AppError("Companion cosmetic cost cannot be negative.", 400)
+
+        normalized_description = str(raw_item.get("description") or "").strip() or "Imported repo Ghostling cosmetic."
+        front_asset_path = normalize_companion_asset_path(str(raw_item.get("frontAssetPath") or ""))
+        if not front_asset_path.startswith("repo/defaults/items/"):
+            raise AppError("Repo imports must use assets from repo/defaults/items.", 400)
+        front_asset_target = companion_asset_path(front_asset_path)
+        if not front_asset_target.exists() or not front_asset_target.is_file():
+            raise AppError("Repo front asset file could not be found.", 404)
+
+        back_asset_value = str(raw_item.get("backAssetPath") or "").strip()
+        back_asset_path = None
+        if back_asset_value:
+            back_asset_path = normalize_companion_asset_path(back_asset_value)
+            if not back_asset_path.startswith("repo/defaults/items/"):
+                raise AppError("Repo imports must use assets from repo/defaults/items.", 400)
+            back_asset_target = companion_asset_path(back_asset_path)
+            if not back_asset_target.exists() or not back_asset_target.is_file():
+                raise AppError("Repo back asset file could not be found.", 404)
+
+        sort_order = queued_sort_orders.get(normalized_slot)
+        if sort_order is None:
+            sort_order = next_companion_sort_order(connection, normalized_slot)
+        queued_sort_orders[normalized_slot] = sort_order + 10
+
+        connection.execute(
+            """
+            INSERT INTO companion_catalog (
+                slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, active, sort_order, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                normalized_slug,
+                normalized_name,
+                normalized_slot,
+                normalized_rarity,
+                cost,
+                normalized_description,
+                front_asset_path,
+                back_asset_path,
+                1 if raw_item.get("active", True) else 0,
+                sort_order,
+                utc_iso(),
+            ),
+        )
+        imported_slugs.append(normalized_slug)
+
+    audit(
+        connection,
+        int(actor_row["id"]),
+        "import_repo_companion_items",
+        "companion_catalog",
+        ",".join(imported_slugs),
+        {"slugs": imported_slugs},
+    )
+    connection.commit()
+    return companion_admin_payload(connection)
 
 
 def companion_loadout_map(connection: sqlite3.Connection, user_id: int) -> dict[str, str | None]:
@@ -2624,13 +2812,88 @@ def companion_slot_options(
     ]
 
 
+def visible_companion_catalog_rows(
+    catalog_rows: list[sqlite3.Row],
+    owned_slugs: set[str],
+    loadout: dict[str, str | None],
+) -> list[sqlite3.Row]:
+    visible_rows: list[sqlite3.Row] = []
+    for row in catalog_rows:
+        slug = str(row["slug"])
+        slot = str(row["slot_key"])
+        if bool(row["active"]) or slug in owned_slugs or loadout.get(slot) == slug:
+            visible_rows.append(row)
+    return visible_rows
+
+
+def repo_companion_import_candidates(connection: sqlite3.Connection) -> list[dict[str, Any]]:
+    items_root = repo_companion_asset_dir().resolve() / "defaults" / "items"
+    if not items_root.exists() or not items_root.is_dir():
+        return []
+
+    existing_slugs = {
+        str(row["slug"])
+        for row in companion_catalog_rows(connection, active_only=False)
+    }
+    candidates_by_slug: dict[str, dict[str, Any]] = {}
+
+    for asset_path in sorted(items_root.iterdir()):
+        if not asset_path.is_file():
+            continue
+        if asset_path.suffix.lower() not in COMPANION_ALLOWED_ASSET_EXTENSIONS:
+            continue
+
+        stem = asset_path.stem
+        layer: str | None = None
+        base_name = stem
+        if stem.endswith("-front"):
+            layer = "front"
+            base_name = stem[:-6]
+        elif stem.endswith("-back"):
+            layer = "back"
+            base_name = stem[:-5]
+        if not layer:
+            continue
+
+        slug = slugify(base_name)
+        relative_path = f"repo/defaults/items/{asset_path.name}"
+        seed = COMPANION_ITEM_SEED_MAP.get(slug, {})
+        entry = candidates_by_slug.setdefault(
+            slug,
+            {
+                "slug": slug,
+                "name": str(seed.get("name") or humanize_slug(slug)),
+                "suggestedSlot": seed.get("slot"),
+                "suggestedRarity": seed.get("rarity"),
+                "suggestedCost": int(seed.get("cost")) if seed.get("cost") is not None else None,
+                "suggestedDescription": seed.get("description"),
+                "frontAssetPath": None,
+                "frontAssetUrl": None,
+                "backAssetPath": None,
+                "backAssetUrl": None,
+            },
+        )
+        entry[f"{layer}AssetPath"] = relative_path
+        entry[f"{layer}AssetUrl"] = companion_asset_url(relative_path)
+
+    candidates: list[dict[str, Any]] = []
+    for slug, candidate in sorted(candidates_by_slug.items(), key=lambda item: item[1]["name"]):
+        if slug in existing_slugs:
+            continue
+        if not candidate.get("frontAssetPath"):
+            continue
+        candidates.append(candidate)
+    return candidates
+
+
 def companion_payload(
     connection: sqlite3.Connection,
     user_row: sqlite3.Row,
 ) -> dict[str, Any]:
-    catalog_rows = companion_catalog_rows(connection)
+    catalog_rows = companion_catalog_rows(connection, active_only=False)
     owned_slugs = companion_inventory_slugs(connection, int(user_row["id"]))
     loadout = companion_loadout_map(connection, int(user_row["id"]))
+    visible_rows = visible_companion_catalog_rows(catalog_rows, owned_slugs, loadout)
 
     items = [
         {
@@ -2641,13 +2904,14 @@ def companion_payload(
             "rarity": row["rarity"],
             "cost": int(row["cost"]),
             "description": row["description"],
+            "active": bool(row["active"]),
             "owned": row["slug"] in owned_slugs,
             "equipped": loadout.get(row["slot_key"]) == row["slug"],
             "previewUrl": f"/api/companion/render?preview={quote(str(row['slug']))}",
             "frontAssetUrl": companion_asset_url(row["front_asset_path"]),
             "backAssetUrl": companion_asset_url(row["back_asset_path"]),
         }
-        for row in catalog_rows
+        for row in visible_rows
     ]
 
     slots = [
@@ -2755,7 +3019,7 @@ def equip_companion_item(
     value: str | None = None
 
     if slug:
-        item = companion_catalog_row(connection, slug)
+        item = companion_catalog_any_row(connection, slug)
         if not item:
             raise AppError("That companion item does not exist.", 404)
         if item["slot_key"] != normalized_slot:
@@ -4053,6 +4317,11 @@ SITE_NAV_ITEMS = [
     {"key": "profile", "label": "Profile", "href": "/hall/profile/"},
 ]
 
+COMPANION_ITEM_SEED_MAP = {
+    str(item["slug"]): item
+    for item in COMPANION_ITEMS
+}
+
 
 def active_route_key(path: str | None) -> str:
     normalized = normalize_local_path(path)
@@ -4879,6 +5148,15 @@ class GhostedHandler(BaseHTTPRequestHandler):
         if method == "POST" and path == "/api/companion/admin/items/replace-assets":
             self.handle_api_companion_admin_replace_assets(connection)
             return
+        if method == "POST" and path == "/api/companion/admin/items/visibility":
+            self.handle_api_companion_admin_item_visibility(connection)
+            return
+        if method == "POST" and path == "/api/companion/admin/items/reorder":
+            self.handle_api_companion_admin_item_reorder(connection)
+            return
+        if method == "POST" and path == "/api/companion/admin/items/import-repo":
+            self.handle_api_companion_admin_import_repo_items(connection)
+            return
         if method == "POST" and path == "/api/companion/purchase":
             self.handle_api_companion_purchase(connection)
             return
@@ -5134,6 +5412,55 @@ class GhostedHandler(BaseHTTPRequestHandler):
                 ),
                 "companion": companion_payload(connection, actor),
             }
+        )
+
+    def handle_api_companion_admin_item_visibility(self, connection: sqlite3.Connection) -> None:
+        actor = self.require_admin(connection)
+        payload = self.read_json_body()
+        slug = str(payload.get("slug") or "").strip()
+        if not slug:
+            raise AppError("Choose a cosmetic slug to hide or show.", 400)
+        active = bool(payload.get("active"))
+        self.respond_json(
+            {
+                "ok": True,
+                "message": "Companion visibility updated.",
+                "library": set_companion_item_active(connection, actor, slug, active),
+                "companion": companion_payload(connection, actor),
+            }
+        )
+
+    def handle_api_companion_admin_item_reorder(self, connection: sqlite3.Connection) -> None:
+        actor = self.require_admin(connection)
+        payload = self.read_json_body()
+        slug = str(payload.get("slug") or "").strip()
+        direction = str(payload.get("direction") or "").strip().lower()
+        if not slug:
+            raise AppError("Choose a cosmetic slug to reorder.", 400)
+        self.respond_json(
+            {
+                "ok": True,
+                "message": "Companion order updated.",
+                "library": reorder_companion_item(connection, actor, slug, direction),
+                "companion": companion_payload(connection, actor),
+            }
+        )
+
+    def handle_api_companion_admin_import_repo_items(self, connection: sqlite3.Connection) -> None:
+        actor = self.require_admin(connection)
+        payload = self.read_json_body()
+        items = payload.get("items")
+        if not isinstance(items, list):
+            raise AppError("Submit a list of repo cosmetics to import.", 400)
+        normalized_items = [item for item in items if isinstance(item, dict)]
+        self.respond_json(
+            {
+                "ok": True,
+                "message": "Repo Ghostling cosmetics imported.",
+                "library": import_repo_companion_items(connection, actor, normalized_items),
+                "companion": companion_payload(connection, actor),
+            },
+            status=201,
         )
 
     def handle_api_companion_purchase(self, connection: sqlite3.Connection) -> None:

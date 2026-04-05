@@ -10,7 +10,8 @@
 
 .page :global(.admin-grant),
 .page :global(.admin-create),
-.page :global(.admin-news-create) {
+.page :global(.admin-news-create),
+.page :global(.admin-ghostling) {
   border-left: 4px solid rgba(166, 131, 255, 0.5);
   background: rgba(19, 16, 32, 0.93);
 }
