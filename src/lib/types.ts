@@ -82,6 +82,34 @@ export interface RewardsData {
 
 export type CompanionSlotKey = 'hat' | 'face' | 'neck' | 'body';
 
+export interface CompanionLayerAnimation {
+  mode: 'static' | 'spritesheet';
+  fps: number;
+  frameCount: number;
+  frameWidth: number;
+  frameHeight: number;
+  loop: boolean;
+}
+
+export interface CompanionRenderLayer {
+  key: string;
+  role: string;
+  src: string;
+  zIndex: number;
+  animation: CompanionLayerAnimation;
+}
+
+export interface CompanionRenderManifest {
+  width: number;
+  height: number;
+  motion: {
+    bobAmplitudePx: number;
+    bobDurationMs: number;
+    shadowOpacity: number;
+  };
+  layers: CompanionRenderLayer[];
+}
+
 export interface CompanionItem {
   slug: string;
   name: string;
@@ -122,10 +150,15 @@ export interface CompanionData {
   slots: CompanionSlotState[];
   items: CompanionItem[];
   renderUrl: string;
+  animatedRenderUrl: string;
   cardUrl: string;
+  animatedCardUrl: string;
+  renderManifest: CompanionRenderManifest;
   share: {
     avatarUrl: string;
+    animatedAvatarUrl: string;
     cardUrl: string;
+    animatedCardUrl: string;
   };
   baseAssetUrl?: string | null;
 }

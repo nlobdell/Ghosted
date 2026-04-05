@@ -13,6 +13,7 @@ import {
   SectionHeading,
   StatStrip,
 } from '@/components/app/AppUI';
+import { AnimatedCompanionStage } from '@/components/companion/AnimatedCompanionStage';
 import { formatPoints, getJSON } from '@/lib/api';
 import type {
   CompanionAdminData,
@@ -235,8 +236,14 @@ export default function CompanionPage() {
                 <button className="button button--secondary button--small" type="button" onClick={() => copyUrl(companion.share.avatarUrl, 'Avatar URL')}>
                   Copy avatar URL
                 </button>
+                <button className="button button--secondary button--small" type="button" onClick={() => copyUrl(companion.share.animatedAvatarUrl, 'Animated avatar URL')}>
+                  Copy animated avatar
+                </button>
                 <button className="button button--secondary button--small" type="button" onClick={() => copyUrl(companion.share.cardUrl, 'Share card URL')}>
                   Copy share card
+                </button>
+                <button className="button button--secondary button--small" type="button" onClick={() => copyUrl(companion.share.animatedCardUrl, 'Animated share card URL')}>
+                  Copy animated card
                 </button>
                 {companion.baseAssetUrl ? (
                   <a href={companion.baseAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
@@ -247,7 +254,12 @@ export default function CompanionPage() {
             </div>
             <div className={styles.heroStage}>
               <div className={styles.avatarFrame}>
-                <img src={companion.renderUrl} alt={`${companion.user.displayName}'s companion`} className={styles.avatarImage} />
+                <AnimatedCompanionStage
+                  manifest={companion.renderManifest}
+                  fallbackSrc={companion.renderUrl}
+                  alt={`${companion.user.displayName}'s companion`}
+                  className={styles.avatarImage}
+                />
               </div>
               <div className={styles.stageMeta}>
                 <strong>{companion.user.displayName}</strong>
@@ -276,7 +288,12 @@ export default function CompanionPage() {
               body={(
                 <div className={styles.studioBody}>
                   <div className={styles.previewSurface}>
-                    <img src={companion.renderUrl} alt="Equipped companion preview" className={styles.previewImage} />
+                    <AnimatedCompanionStage
+                      manifest={companion.renderManifest}
+                      fallbackSrc={companion.renderUrl}
+                      alt="Equipped companion preview"
+                      className={styles.previewImage}
+                    />
                   </div>
                   <div className={styles.slotList}>
                     {companion.slots.map((slot) => (
@@ -315,7 +332,9 @@ export default function CompanionPage() {
                   <div className={styles.shareList}>
                     {[
                       ['Transparent avatar', companion.share.avatarUrl, 'Copy avatar URL'],
+                      ['Animated avatar (SVG)', companion.share.animatedAvatarUrl, 'Copy animated avatar URL'],
                       ['Discord share card', companion.share.cardUrl, 'Copy card URL'],
+                      ['Animated share card (SVG)', companion.share.animatedCardUrl, 'Copy animated card URL'],
                     ].map(([label, path, actionLabel]) => (
                       <div key={label} className={styles.shareRow}>
                         <div>
