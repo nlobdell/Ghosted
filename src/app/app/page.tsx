@@ -15,7 +15,7 @@ import {
 } from '@/components/app/AppUI';
 import { formatPoints, formatMaybeNumber, getJSON } from '@/lib/api';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
-import type { RewardsData, GiveawayItem, LeaderboardEntry } from '@/lib/types';
+import type { RewardsData, GiveawayItem, LeaderboardEntry, WomEntriesResponse } from '@/lib/types';
 import styles from './page.module.css';
 
 export default function DashboardPage() {
@@ -56,8 +56,8 @@ export default function DashboardPage() {
           getJSON<{ competitions?: { id: number; title: string; status: string }[] }>('/api/wom/competitions?limit=6')
             .then((data) => data.competitions ?? [])
             .catch(() => []),
-          getJSON<{ entries?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=3')
-            .then((data) => data.entries ?? [])
+          getJSON<WomEntriesResponse | { hiscores?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=3')
+            .then((data) => ('entries' in data ? data.entries : (data.hiscores ?? [])))
             .catch(() => [] as LeaderboardEntry[]),
         ]);
 

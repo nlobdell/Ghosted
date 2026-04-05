@@ -651,7 +651,15 @@ textarea:focus-visible,
 }
 
 .landing-gate__cta {
+  width: 100%;
+}
+
+.landing-gate__cta--primary {
   min-width: min(22rem, calc(100vw - 2rem));
+}
+
+.landing-gate__cta--subaction {
+  min-width: 0;
 }
 
 .app-page {

@@ -13,7 +13,7 @@ import {
   CompetitionList,
 } from '@/components/app/AppUI';
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
-import type { Competition, LeaderboardEntry } from '@/lib/types';
+import type { Competition, LeaderboardEntry, WomCompetitionDetailResponse, WomCompetitionsResponse } from '@/lib/types';
 import styles from './page.module.css';
 
 export default function CompetitionsPage() {
@@ -25,14 +25,16 @@ export default function CompetitionsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const compsData = await getJSON<{ competitions?: Competition[] }>('/api/wom/competitions?limit=12')
+        const compsData = await getJSON<WomCompetitionsResponse>('/api/wom/competitions?limit=12')
           .then((data) => data.competitions ?? []);
         setCompetitions(compsData);
 
         if (compsData.length > 0) {
           const first = compsData[0];
-          const detail = await getJSON<Competition>(`/api/wom/competitions/${first.id}`).catch(() => null);
-          if (detail) setFeatured(detail);
+          const detail = await getJSON<WomCompetitionDetailResponse | Competition>(`/api/wom/competitions/${first.id}`).catch(() => null);
+          if (detail) {
+            setFeatured('competition' in detail ? detail.competition : detail);
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load competitions.');

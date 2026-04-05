@@ -18,15 +18,15 @@ export default function HomePage() {
           <h1 className="landing-gate__title">Ghosted</h1>
           <p className="landing-gate__line">Twitch-led Old School RuneScape community</p>
           <div className="landing-gate__actions">
-            <Link className="button landing-gate__cta" href="/app/">
+            <Link className="button landing-gate__cta landing-gate__cta--primary" href="/app/">
               Enter the Hall
             </Link>
             <div className="landing-gate__subactions">
-              <Link className="button button--secondary landing-gate__cta" href="/news/">
+              <Link className="button button--secondary landing-gate__cta landing-gate__cta--subaction" href="/news/">
                 Clan News
               </Link>
               <a
-                className="button button--secondary landing-gate__cta"
+                className="button button--secondary landing-gate__cta landing-gate__cta--subaction"
                 href={GHOSTED_CONTENT.links.twitch}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -34,7 +34,7 @@ export default function HomePage() {
                 Twitch
               </a>
               <a
-                className="button button--secondary landing-gate__cta"
+                className="button button--secondary landing-gate__cta landing-gate__cta--subaction"
                 href={GHOSTED_CONTENT.links.discord}
                 target="_blank"
                 rel="noopener noreferrer"
