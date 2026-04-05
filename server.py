@@ -387,8 +387,24 @@ def normalize_companion_asset_path(value: str) -> str:
     return Path(*parts).as_posix()
 
 
+def companion_repo_default_relative_path(relative_path: str) -> str | None:
+    normalized = normalize_companion_asset_path(relative_path)
+    if normalized.startswith("repo/") or normalized.startswith("uploads/"):
+        return None
+    if not normalized.startswith("defaults/"):
+        return None
+    return f"repo/{normalized}"
+
+
 def companion_asset_path(relative_path: str) -> Path:
     normalized = normalize_companion_asset_path(relative_path)
+    repo_fallback = companion_repo_default_relative_path(normalized)
+    if repo_fallback:
+        repo_root = repo_companion_asset_dir().resolve()
+        repo_target = (repo_root / Path(*repo_fallback.split("/")[1:])).resolve()
+        if (repo_root in repo_target.parents or repo_target == repo_root) and repo_target.exists() and repo_target.is_file():
+            return repo_target
+
     parts = normalized.split("/")
     if not parts:
         raise AppError("Companion asset not found.", 404)
@@ -2269,6 +2285,7 @@ def init_database(connection: sqlite3.Connection) -> None:
     seed_default_giveaway(connection)
     seed_default_companion_items(connection)
     ensure_default_companion_base(connection)
+    migrate_legacy_companion_asset_paths(connection)
     connection.commit()
 
 
@@ -2362,8 +2379,20 @@ def seed_default_companion_items(connection: sqlite3.Connection) -> None:
                 rarity = excluded.rarity,
                 cost = excluded.cost,
                 description = excluded.description,
-                front_asset_path = COALESCE(companion_catalog.front_asset_path, excluded.front_asset_path),
-                back_asset_path = COALESCE(companion_catalog.back_asset_path, excluded.back_asset_path),
+                front_asset_path = CASE
+                    WHEN companion_catalog.front_asset_path IS NULL
+                        OR TRIM(companion_catalog.front_asset_path) = ''
+                        OR companion_catalog.front_asset_path LIKE 'defaults/%'
+                    THEN excluded.front_asset_path
+                    ELSE companion_catalog.front_asset_path
+                END,
+                back_asset_path = CASE
+                    WHEN companion_catalog.back_asset_path IS NULL
+                        OR TRIM(companion_catalog.back_asset_path) = ''
+                        OR companion_catalog.back_asset_path LIKE 'defaults/%'
+                    THEN excluded.back_asset_path
+                    ELSE companion_catalog.back_asset_path
+                END,
                 active = excluded.active,
                 sort_order = excluded.sort_order
             """,
@@ -2380,6 +2409,42 @@ def seed_default_companion_items(connection: sqlite3.Connection) -> None:
                 created_at,
             ),
         )
+
+
+def migrate_legacy_companion_asset_paths(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        UPDATE companion_catalog
+        SET front_asset_path = 'repo/' || front_asset_path
+        WHERE front_asset_path LIKE 'defaults/%'
+        """
+    )
+    connection.execute(
+        """
+        UPDATE companion_catalog
+        SET back_asset_path = 'repo/' || back_asset_path
+        WHERE back_asset_path LIKE 'defaults/%'
+        """
+    )
+    connection.execute(
+        """
+        UPDATE companion_settings
+        SET base_asset_path = ?, updated_at = ?
+        WHERE singleton_key = 'default'
+          AND (
+            base_asset_path IS NULL
+            OR TRIM(base_asset_path) = ''
+            OR base_asset_path LIKE 'defaults/%'
+            OR base_asset_path IN (?, ?)
+          )
+        """,
+        (
+            COMPANION_DEFAULT_BASE_ASSET_PATH,
+            utc_iso(),
+            "repo/defaults/base/ghostling-base.svg",
+            "repo/defaults/base/ghostling-base-animated.png",
+        ),
+    )
 
 
 def prune_expired_sessions(connection: sqlite3.Connection) -> None:
