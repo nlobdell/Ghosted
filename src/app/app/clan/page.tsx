@@ -16,7 +16,14 @@ import {
 } from '@/components/app/AppUI';
 import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
-import type { ClanData, Competition, LeaderboardEntry, AchievementItem, ActivityItem } from '@/lib/types';
+import type {
+  ClanData,
+  Competition,
+  LeaderboardEntry,
+  AchievementItem,
+  ActivityItem,
+  WomEntriesResponse,
+} from '@/lib/types';
 import styles from './page.module.css';
 
 export default function ClanPage() {
@@ -42,11 +49,11 @@ export default function ClanPage() {
           getJSON<{ competitions?: Competition[] }>('/api/wom/competitions?limit=8')
             .then((data) => data.competitions ?? [])
             .catch(() => [] as Competition[]),
-          getJSON<{ entries?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=8')
-            .then((data) => data.entries ?? [])
+          getJSON<WomEntriesResponse | { hiscores?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=8')
+            .then((data) => ('entries' in data ? data.entries : (data.hiscores ?? [])))
             .catch(() => [] as LeaderboardEntry[]),
-          getJSON<{ entries?: LeaderboardEntry[] }>('/api/wom/gains?metric=overall&period=week&limit=8')
-            .then((data) => data.entries ?? [])
+          getJSON<WomEntriesResponse | { gains?: LeaderboardEntry[] }>('/api/wom/gains?metric=overall&period=week&limit=8')
+            .then((data) => ('entries' in data ? data.entries : (data.gains ?? [])))
             .catch(() => [] as LeaderboardEntry[]),
         ]);
 

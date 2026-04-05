@@ -233,6 +233,21 @@ export interface Competition {
   participants?: LeaderboardEntry[];
 }
 
+export interface WomEntriesResponse {
+  metric?: string;
+  period?: string;
+  entries: LeaderboardEntry[];
+}
+
+export interface WomCompetitionsResponse {
+  competitions: Competition[];
+}
+
+export interface WomCompetitionDetailResponse {
+  competition: Competition;
+  topHistory?: Array<Record<string, unknown>>;
+}
+
 export interface NewsPost {
   id: number;
   slug: string;
