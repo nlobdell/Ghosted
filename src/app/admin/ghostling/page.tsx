@@ -100,7 +100,8 @@ export default function GhostlingAdminPage() {
 
   async function handleBaseUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     setPendingKey('base');
     setMessage(null);
     try {
@@ -109,7 +110,7 @@ export default function GhostlingAdminPage() {
         body: formData,
       });
       applyLibrary(result, 'Ghostling base updated.');
-      event.currentTarget.reset();
+      form.reset();
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling base upload failed.', variant: 'error' });
     } finally {
@@ -119,7 +120,8 @@ export default function GhostlingAdminPage() {
 
   async function handleCreateItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     setPendingKey('create');
     setMessage(null);
     try {
@@ -128,7 +130,7 @@ export default function GhostlingAdminPage() {
         body: formData,
       });
       applyLibrary(result, 'Ghostling cosmetic created.');
-      event.currentTarget.reset();
+      form.reset();
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Custom Ghostling cosmetic upload failed.', variant: 'error' });
     } finally {
@@ -138,7 +140,8 @@ export default function GhostlingAdminPage() {
 
   async function handleReplaceAssets(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     setPendingKey('replace');
     setMessage(null);
     try {
@@ -147,7 +150,7 @@ export default function GhostlingAdminPage() {
         body: formData,
       });
       applyLibrary(result, 'Ghostling art replaced.');
-      event.currentTarget.reset();
+      form.reset();
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling asset replacement failed.', variant: 'error' });
     } finally {

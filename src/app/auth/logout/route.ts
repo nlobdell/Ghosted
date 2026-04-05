@@ -8,6 +8,8 @@ const COOKIE_NAMES = [
   '__Secure-authjs.callback-url',
   'authjs.csrf-token',
   '__Host-authjs.csrf-token',
+  'ghosted_session',
+  'ghosted_dev_admin',
 ];
 
 async function clearAuthCookies() {

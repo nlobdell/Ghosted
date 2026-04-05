@@ -373,6 +373,31 @@ class GhostedAppTests(unittest.TestCase):
         self.assertTrue(handler.payload["ok"])
         self.assertTrue(any(item["slug"] == "moon-hood" for item in handler.payload["library"]["items"]))
 
+    def test_dev_login_can_grant_admin_in_local_mode(self):
+        class DevLoginHandler(FakeHandler):
+            def __init__(self, path: str):
+                super().__init__(path)
+                self.response_headers = {}
+
+            def send_response(self, status):
+                self.status = status
+
+            def send_header(self, key, value):
+                self.response_headers[key] = value
+
+            def end_headers(self):
+                return None
+
+        with patch.dict(os.environ, {"ENABLE_DEV_AUTH": "true"}, clear=False):
+            handler = DevLoginHandler("/auth/dev-login?discordId=dev-admin&name=ghosted-dev&admin=1&next=/admin/")
+            server.GhostedHandler.handle_dev_login(handler, self.connection, server.urlparse(handler.path))
+
+        row = server.get_user_by_discord_id(self.connection, "dev-admin")
+        self.assertIsNotNone(row)
+        self.assertEqual(row["is_admin"], 1)
+        self.assertEqual(handler.status, 302)
+        self.assertEqual(handler.response_headers.get("Location"), "/admin/")
+
     def test_companion_equip_requires_owned_item(self):
         with self.assertRaises(server.AppError) as exc:
             server.equip_companion_item(self.connection, self.user, "hat", "witch-hat")
