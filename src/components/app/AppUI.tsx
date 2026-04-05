@@ -11,12 +11,14 @@ interface BreadcrumbItem {
 export function AppContext({
   breadcrumbs,
   title,
+  summary,
   actions,
   slim = true,
   className,
 }: {
   breadcrumbs: BreadcrumbItem[];
   title: string;
+  summary?: string;
   actions?: ReactNode;
   slim?: boolean;
   className?: string;
@@ -37,6 +39,7 @@ export function AppContext({
         <h1 className="app-context__title">{title}</h1>
         {actions ? <div className="app-context__actions">{actions}</div> : null}
       </div>
+      {summary ? <p className="app-context__summary">{summary}</p> : null}
     </section>
   );
 }
@@ -274,11 +277,13 @@ export function MetricGrid({ items }: { items: [string, string][] }) {
 
 export function RouteList({
   routes,
+  className,
 }: {
   routes: { href: string; label: string; meta: string; featured?: boolean }[];
+  className?: string;
 }) {
   return (
-    <div className="app-route-list">
+    <div className={['app-route-list', className].filter(Boolean).join(' ')}>
       {routes.map((route) => (
         <Link key={route.href} href={route.href} className={`app-route${route.featured ? ' app-route--featured' : ''}`}>
           <div className="app-route__copy">
@@ -295,14 +300,16 @@ export function TagBlock({
   label,
   values,
   emptyMessage,
+  className,
 }: {
   label: string;
   values?: string[];
   emptyMessage: string;
+  className?: string;
 }) {
   const tags = values?.length ? values : [emptyMessage];
   return (
-    <div className="app-tag-block">
+    <div className={['app-tag-block', className].filter(Boolean).join(' ')}>
       <p className="app-muted">{label}</p>
       <div className="app-tag-list">
         {tags.map((tag) => (
@@ -413,13 +420,15 @@ export function LeaderboardTable({
 
 export function Feed({
   items,
+  className,
 }: {
   items: { title: string; meta?: string; eyebrow?: string }[];
+  className?: string;
 }) {
   if (!items.length) return <EmptyState message="Nothing to show." />;
 
   return (
-    <div className="app-feed">
+    <div className={['app-feed', className].filter(Boolean).join(' ')}>
       {items.map((item, index) => (
         <article key={`${item.title}-${index}`} className="app-feed__item">
           <strong>{item.title}</strong>
@@ -434,14 +443,16 @@ export function Feed({
 export function CompetitionList({
   entries,
   compact = false,
+  className,
 }: {
   entries: { title: string; status: string; metric?: string; type?: string; startsAt?: string; endsAt?: string }[];
   compact?: boolean;
+  className?: string;
 }) {
   if (!entries.length) return <EmptyState message="No competitions yet." />;
 
   return (
-    <div className="app-feed">
+    <div className={['app-feed', className].filter(Boolean).join(' ')}>
       {entries.map((entry, index) => (
         <article key={`${entry.title}-${index}`} className={`app-feed__item${compact ? ' is-compact' : ''}`}>
           <div className="app-card__row">
@@ -504,14 +515,16 @@ export function SectionHeading({
   title,
   copy,
   action,
+  className,
 }: {
   eyebrow?: string;
   title: string;
   copy?: string;
   action?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="app-section-heading">
+    <div className={['app-section-heading', className].filter(Boolean).join(' ')}>
       <div className="app-section-heading__copy">
         {eyebrow ? <p className="kicker">{eyebrow}</p> : null}
         <h3>{title}</h3>
@@ -526,13 +539,15 @@ export function FormField({
   label,
   children,
   note,
+  className,
 }: {
   label: string;
   children: ReactNode;
   note?: string;
+  className?: string;
 }) {
   return (
-    <div className="app-form-field">
+    <div className={['app-form-field', className].filter(Boolean).join(' ')}>
       <label>{label}</label>
       {children}
       {note ? <p className="app-muted">{note}</p> : null}

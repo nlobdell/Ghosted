@@ -11,13 +11,20 @@ export default function HomePage() {
     <div className="landing-page">
       <header className="landing-gate">
         <main id="main-content" className="landing-gate__inner">
-          <p className="landing-gate__kicker">Ghosted clan</p>
+          <p className="landing-gate__kicker">Ghosted clan hall</p>
+          <div className="landing-gate__seal" aria-hidden="true">
+            <span />
+          </div>
           <h1 className="landing-gate__title">Ghosted</h1>
+          <p className="landing-gate__line">Twitch-led Old School RuneScape community</p>
           <div className="landing-gate__actions">
             <Link className="button landing-gate__cta" href="/app/">
               Enter the Hall
             </Link>
             <div className="landing-gate__subactions">
+              <Link className="button button--secondary landing-gate__cta" href="/news/">
+                Clan News
+              </Link>
               <a
                 className="button button--secondary landing-gate__cta"
                 href={GHOSTED_CONTENT.links.twitch}

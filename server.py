@@ -1224,6 +1224,19 @@ def init_database(connection: sqlite3.Connection) -> None:
             created_at TEXT NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS news_posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            slug TEXT NOT NULL UNIQUE,
+            title TEXT NOT NULL,
+            excerpt TEXT NOT NULL,
+            body TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'draft',
+            published_at TEXT,
+            created_by_user_id INTEGER REFERENCES users(id),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS giveaway_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             giveaway_id INTEGER NOT NULL REFERENCES giveaways(id) ON DELETE CASCADE,
@@ -1900,6 +1913,87 @@ def giveaway_status(row: sqlite3.Row) -> str:
     return row["status"]
 
 
+def news_visibility_clause(include_drafts: bool) -> tuple[str, tuple[Any, ...]]:
+    if include_drafts:
+        return "", ()
+    return "WHERE news_posts.status = 'published' AND (news_posts.published_at IS NULL OR news_posts.published_at <= ?)", (utc_iso(),)
+
+
+def list_news_posts(
+    connection: sqlite3.Connection,
+    *,
+    include_drafts: bool = False,
+    limit: int = 12,
+) -> list[dict[str, Any]]:
+    safe_limit = max(1, min(limit, 50))
+    where_clause, where_args = news_visibility_clause(include_drafts)
+    rows = connection.execute(
+        f"""
+        SELECT
+            news_posts.*,
+            users.username AS author_username,
+            users.global_name AS author_global_name
+        FROM news_posts
+        LEFT JOIN users ON users.id = news_posts.created_by_user_id
+        {where_clause}
+        ORDER BY COALESCE(news_posts.published_at, news_posts.created_at) DESC, news_posts.id DESC
+        LIMIT ?
+        """,
+        (*where_args, safe_limit),
+    ).fetchall()
+    return [
+        {
+            "id": row["id"],
+            "slug": row["slug"],
+            "title": row["title"],
+            "excerpt": row["excerpt"],
+            "body": row["body"],
+            "status": row["status"],
+            "publishedAt": row["published_at"],
+            "createdAt": row["created_at"],
+            "updatedAt": row["updated_at"],
+            "authorDisplayName": row["author_global_name"] or row["author_username"] or "Ghosted",
+        }
+        for row in rows
+    ]
+
+
+def get_news_post_by_slug(
+    connection: sqlite3.Connection,
+    slug: str,
+    *,
+    include_drafts: bool = False,
+) -> dict[str, Any] | None:
+    where_clause, where_args = news_visibility_clause(include_drafts)
+    row = connection.execute(
+        f"""
+        SELECT
+            news_posts.*,
+            users.username AS author_username,
+            users.global_name AS author_global_name
+        FROM news_posts
+        LEFT JOIN users ON users.id = news_posts.created_by_user_id
+        {where_clause} {"AND" if where_clause else "WHERE"} news_posts.slug = ?
+        LIMIT 1
+        """,
+        (*where_args, slug),
+    ).fetchone()
+    if not row:
+        return None
+    return {
+        "id": row["id"],
+        "slug": row["slug"],
+        "title": row["title"],
+        "excerpt": row["excerpt"],
+        "body": row["body"],
+        "status": row["status"],
+        "publishedAt": row["published_at"],
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+        "authorDisplayName": row["author_global_name"] or row["author_username"] or "Ghosted",
+    }
+
+
 def list_giveaways(
     connection: sqlite3.Connection,
     user_row: sqlite3.Row | None = None,
@@ -2544,6 +2638,66 @@ def refresh_wom_data(
     return {"deleted": deleted, **refreshed}
 
 
+def create_news_post(
+    connection: sqlite3.Connection,
+    actor_row: sqlite3.Row,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    title = str(payload.get("title", "")).strip()
+    excerpt = str(payload.get("excerpt", "")).strip()
+    body = str(payload.get("body", "")).strip()
+    status = str(payload.get("status", "draft")).strip().lower()
+    published_at_raw = str(payload.get("publishedAt", "")).strip()
+
+    if not title or not excerpt or not body:
+        raise AppError("Title, excerpt, and body are required.")
+    if status not in {"draft", "published"}:
+        raise AppError("Status must be 'draft' or 'published'.")
+
+    now = utc_now()
+    published_at: str | None = None
+    if status == "published":
+        if published_at_raw:
+            parsed = parse_iso(published_at_raw)
+            if not parsed:
+                raise AppError("Published date is invalid.")
+            published_at = utc_iso(parsed.astimezone(timezone.utc))
+        else:
+            published_at = utc_iso(now)
+
+    slug_base = slugify(title)
+    slug = slug_base
+    suffix = 1
+    while connection.execute("SELECT 1 FROM news_posts WHERE slug = ? LIMIT 1", (slug,)).fetchone():
+        suffix += 1
+        slug = f"{slug_base}-{suffix}"
+
+    created_at = utc_iso(now)
+    connection.execute(
+        """
+        INSERT INTO news_posts (
+            slug, title, excerpt, body, status, published_at, created_by_user_id, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (slug, title, excerpt, body, status, published_at, int(actor_row["id"]), created_at, created_at),
+    )
+    post_id = int(connection.execute("SELECT last_insert_rowid()").fetchone()[0])
+    audit(connection, actor_row["id"], "create_news_post", "news_post", str(post_id), {"title": title, "status": status})
+    connection.commit()
+    return {"id": post_id, "slug": slug, "title": title, "status": status, "publishedAt": published_at}
+
+
+def delete_news_post(connection: sqlite3.Connection, actor_row: sqlite3.Row, post_id: int) -> dict[str, Any]:
+    row = connection.execute("SELECT id, slug, title FROM news_posts WHERE id = ?", (post_id,)).fetchone()
+    if not row:
+        raise AppError("News post not found.", 404)
+    connection.execute("DELETE FROM news_posts WHERE id = ?", (post_id,))
+    audit(connection, actor_row["id"], "delete_news_post", "news_post", str(post_id), {"slug": row["slug"], "title": row["title"]})
+    connection.commit()
+    return {"id": int(row["id"]), "slug": row["slug"], "title": row["title"]}
+
+
 def create_giveaway(
     connection: sqlite3.Connection,
     actor_row: sqlite3.Row,
@@ -2710,6 +2864,7 @@ def admin_overview(
         LIMIT 20
         """
     ).fetchall()
+    news_count = int(connection.execute("SELECT COUNT(*) AS count FROM news_posts").fetchone()["count"])
     return {
         "users": [
             {
@@ -2726,6 +2881,7 @@ def admin_overview(
             "configured": wom_group_id() is not None,
             "linkedUsers": count_linked_game_accounts(connection, "osrs"),
         },
+        "newsCount": news_count,
     }
 
 
@@ -2882,6 +3038,12 @@ class GhostedHandler(BaseHTTPRequestHandler):
         if method == "GET" and path == "/api/giveaways":
             self.handle_api_giveaways(connection)
             return
+        if method == "GET" and path == "/api/news":
+            self.handle_api_news(connection, parsed)
+            return
+        if method == "GET" and path.startswith("/api/news/"):
+            self.handle_api_news_detail(connection, path)
+            return
         if method == "POST" and path.startswith("/api/giveaways/") and path.endswith("/enter"):
             self.handle_api_giveaway_enter(connection, path)
             return
@@ -2927,6 +3089,23 @@ class GhostedHandler(BaseHTTPRequestHandler):
         if method == "POST" and path == "/api/admin/wom/refresh":
             actor = self.require_admin(connection)
             result = refresh_wom_data(connection, actor, self.read_json_body())
+            self.respond_json({"ok": True, "result": result})
+            return
+        if method == "GET" and path == "/api/admin/news":
+            self.require_admin(connection)
+            params = parse_qs(parsed.query)
+            limit = int(params.get("limit", ["30"])[0] or 30)
+            self.respond_json({"posts": list_news_posts(connection, include_drafts=True, limit=limit)})
+            return
+        if method == "POST" and path == "/api/admin/news":
+            actor = self.require_admin(connection)
+            result = create_news_post(connection, actor, self.read_json_body())
+            self.respond_json({"ok": True, "result": result}, status=201)
+            return
+        if method == "DELETE" and path.startswith("/api/admin/news/"):
+            actor = self.require_admin(connection)
+            post_id = int(path.split("/")[-1])
+            result = delete_news_post(connection, actor, post_id)
             self.respond_json({"ok": True, "result": result})
             return
         if method == "GET" and path == "/auth/discord/login":
@@ -3043,6 +3222,20 @@ class GhostedHandler(BaseHTTPRequestHandler):
         row = self.current_user(connection)
         role_directory = build_role_directory(build_auth_config(self.base_url()))
         self.respond_json({"giveaways": list_giveaways(connection, row, role_directory=role_directory)})
+
+    def handle_api_news(self, connection: sqlite3.Connection, parsed: Any) -> None:
+        params = parse_qs(parsed.query)
+        limit = int(params.get("limit", ["12"])[0] or 12)
+        self.respond_json({"posts": list_news_posts(connection, limit=limit)})
+
+    def handle_api_news_detail(self, connection: sqlite3.Connection, path: str) -> None:
+        slug = path.split("/api/news/", 1)[-1].strip()
+        if not slug:
+            raise AppError("News slug is required.", 400)
+        post = get_news_post_by_slug(connection, slug)
+        if not post:
+            raise AppError("News post not found.", 404)
+        self.respond_json({"post": post})
 
     def handle_api_giveaway_enter(self, connection: sqlite3.Connection, path: str) -> None:
         row = self.require_user(connection)

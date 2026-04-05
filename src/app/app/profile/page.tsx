@@ -118,6 +118,7 @@ export default function ProfilePage() {
           { label: 'Profile' },
         ]}
         title="Ghosted identity setup"
+        summary="Verify your account identity first, then manage RuneScape linking and synced role access."
       />
 
       {error ? <Banner message={error} variant="error" /> : null}
@@ -133,6 +134,7 @@ export default function ProfilePage() {
         <>
           <AppGrid>
             <Panel
+              className="profile-identity-panel"
               tier="primary"
               title="Identity"
               eyebrow="Your account"
@@ -210,6 +212,7 @@ export default function ProfilePage() {
             />
 
             <Panel
+              className="profile-perks-panel"
               tier="meta"
               title="Roles and perks"
               eyebrow="Discord sync"
@@ -242,6 +245,7 @@ export default function ProfilePage() {
           </AppGrid>
 
           <StatStrip
+            className="profile-scoreboard"
             leadIndex={0}
             stats={[
               { label: 'Balance', value: user ? formatPoints(user.balance) : '-', href: '/app/rewards/' },

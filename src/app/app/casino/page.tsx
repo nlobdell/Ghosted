@@ -14,12 +14,14 @@ export default function CasinoPage() {
           { label: 'Casino' },
         ]}
         title="Points casino"
+        summary="Play the machine with points-only stakes, then return to rewards for economy actions."
         actions={
           <Link href="/app/rewards/" className="button button--secondary button--small">Balance</Link>
         }
       />
       <CasinoGame />
       <Panel
+        className="casino-rules"
         tier="meta"
         eyebrow="Rules"
         title="Points-only machine"

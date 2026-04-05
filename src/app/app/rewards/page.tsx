@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {
   AppContext,
   StatStrip,
+  Highlight,
   Panel,
   AppGrid,
   MetricGrid,
@@ -94,6 +95,7 @@ export default function RewardsPage() {
       <AppContext
         breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/app/' }, { label: 'Rewards' }]}
         title="Rewards and drops"
+        summary="Confirm available balance first, then spend on active drops, then review ledger history."
         actions={<Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>}
       />
 
@@ -110,6 +112,7 @@ export default function RewardsPage() {
       ) : rewards ? (
         <>
           <StatStrip
+            className="rewards-scoreboard"
             leadIndex={0}
             stats={[
               { label: 'Balance', value: formatPoints(rewards.balance) },
@@ -119,31 +122,37 @@ export default function RewardsPage() {
             ]}
           />
 
-          <Panel
-            tier="primary"
-            eyebrow="Balance"
+          <Highlight
+            className="rewards-balance"
+            eyebrow="Economy"
             title={formatPointsFull(rewards.balance)}
-            chip={activeDrops.length > 0 ? `${activeDrops.length} active` : 'No active drops'}
-            body={(
-              <div className="app-stack">
-                <p className="app-panel-note">
-                  {rewards.dailyCap !== null
-                    ? `${formatPointsFull(rewards.dailyRemaining)} remaining today out of ${formatPointsFull(rewards.dailyCap)}.`
-                    : 'No daily spending cap is active on your account.'}
-                </p>
-                <div className="app-inline-actions">
-                  <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
-                  <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
-                  <span className="app-chip">{isAuthed ? 'Entry enabled' : 'Browse mode'}</span>
-                </div>
-              </div>
+            copy={
+              rewards.dailyCap !== null
+                ? `${formatPointsFull(rewards.dailyRemaining)} remaining today out of ${formatPointsFull(rewards.dailyCap)}.`
+                : 'No daily spending cap is active on your account.'
+            }
+            actions={(
+              <>
+                <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
+                <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
+              </>
             )}
+            stage={{
+              label: 'Drop signal',
+              primary: activeDrops.length > 0 ? `${activeDrops.length} active drops` : 'No active drops',
+              secondary: isAuthed ? 'Entry enabled for linked members.' : 'Browse mode only.',
+              chips: [
+                `${rewards.entries.length} ledger entries`,
+                rewards.dailyCap !== null ? `${formatPoints(rewards.dailyRemaining)} left today` : 'No daily cap',
+              ],
+            }}
           />
 
           {activeDrops.length > 0 ? (
             <AppGrid>
               {activeDrops.map((item) => (
                 <Panel
+                  className="rewards-drop"
                   tier="primary"
                   key={item.id}
                   eyebrow="Active drop"
@@ -178,6 +187,7 @@ export default function RewardsPage() {
 
           {otherDrops.length > 0 ? (
             <Panel
+              className="rewards-archive"
               tier="meta"
               eyebrow="Archive"
               title={activeDrops.length > 0 ? 'Upcoming and closed' : 'All drops'}
@@ -200,6 +210,7 @@ export default function RewardsPage() {
 
           {giveaways.length === 0 ? (
             <Panel
+              className="rewards-empty"
               tier="meta"
               eyebrow="Drops"
               title="No giveaways yet"
@@ -208,6 +219,7 @@ export default function RewardsPage() {
           ) : null}
 
           <Panel
+            className="rewards-ledger"
             tier="meta"
             eyebrow="History"
             title="Points ledger"
