@@ -82,6 +82,18 @@ export interface RewardsData {
 
 export type CompanionSlotKey = 'hat' | 'face' | 'neck' | 'body';
 
+export interface CompanionAnimationFrame {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  durationMs: number;
+  offsetX?: number;
+  offsetY?: number;
+  sourceWidth?: number;
+  sourceHeight?: number;
+}
+
 export interface CompanionLayerAnimation {
   mode: 'static' | 'spritesheet';
   fps: number;
@@ -89,6 +101,9 @@ export interface CompanionLayerAnimation {
   frameWidth: number;
   frameHeight: number;
   loop: boolean;
+  sheetWidth?: number;
+  sheetHeight?: number;
+  frames?: CompanionAnimationFrame[];
 }
 
 export interface CompanionRenderLayer {

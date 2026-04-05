@@ -2,7 +2,12 @@
 
 /* eslint-disable @next/next/no-img-element -- Companion animation falls back to runtime image URLs from the app server. */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CompanionRenderLayer, CompanionRenderManifest } from '@/lib/types';
+import type {
+  CompanionAnimationFrame,
+  CompanionLayerAnimation,
+  CompanionRenderLayer,
+  CompanionRenderManifest,
+} from '@/lib/types';
 
 type LoadedLayer = {
   image: HTMLImageElement;
@@ -26,19 +31,42 @@ function loadImage(src: string) {
   });
 }
 
+function resolveFrames(animation: CompanionLayerAnimation): CompanionAnimationFrame[] {
+  if (animation.frames?.length) return animation.frames;
+
+  const frameDuration = animation.fps > 0 ? Math.round(1000 / animation.fps) : 1000;
+  return Array.from({ length: Math.max(1, animation.frameCount) }, (_, index) => ({
+    x: index * animation.frameWidth,
+    y: 0,
+    width: animation.frameWidth,
+    height: animation.frameHeight,
+    durationMs: frameDuration,
+    offsetX: 0,
+    offsetY: 0,
+    sourceWidth: animation.frameWidth,
+    sourceHeight: animation.frameHeight,
+  }));
+}
+
 function currentFrame(layer: CompanionRenderLayer, elapsedMs: number, reducedMotion: boolean) {
   const { animation } = layer;
-  if (
-    reducedMotion
-    || animation.mode !== 'spritesheet'
-    || animation.frameCount <= 1
-    || animation.fps <= 0
-  ) {
-    return 0;
+  const frames = resolveFrames(animation);
+  if (reducedMotion || animation.mode !== 'spritesheet' || frames.length <= 1) {
+    return frames[0];
   }
 
-  const frameDuration = 1000 / animation.fps;
-  return Math.floor(elapsedMs / frameDuration) % animation.frameCount;
+  const totalDuration = frames.reduce((sum, frame) => sum + Math.max(1, frame.durationMs), 0);
+  const playbackTime = animation.loop
+    ? elapsedMs % totalDuration
+    : Math.min(elapsedMs, Math.max(0, totalDuration - 1));
+
+  let cursor = playbackTime;
+  for (const frame of frames) {
+    cursor -= Math.max(1, frame.durationMs);
+    if (cursor < 0) return frame;
+  }
+
+  return frames[frames.length - 1];
 }
 
 function drawLayer(
@@ -53,15 +81,31 @@ function drawLayer(
   const frame = currentFrame(layer, elapsedMs, reducedMotion);
   const { animation } = layer;
 
-  if (animation.mode !== 'spritesheet' || animation.frameCount <= 1) {
+  if (!frame || animation.mode !== 'spritesheet' || animation.frameCount <= 1) {
     context.drawImage(image, 0, 0, image.naturalWidth || width, image.naturalHeight || height, 0, 0, width, height);
     return;
   }
 
-  const sourceWidth = animation.frameWidth;
-  const sourceHeight = animation.frameHeight;
-  const sourceX = frame * sourceWidth;
-  context.drawImage(image, sourceX, 0, sourceWidth, sourceHeight, 0, 0, width, height);
+  const sourceWidth = Math.max(1, frame.sourceWidth ?? frame.width);
+  const sourceHeight = Math.max(1, frame.sourceHeight ?? frame.height);
+  const scaleX = width / sourceWidth;
+  const scaleY = height / sourceHeight;
+  const destX = (frame.offsetX ?? 0) * scaleX;
+  const destY = (frame.offsetY ?? 0) * scaleY;
+  const destWidth = frame.width * scaleX;
+  const destHeight = frame.height * scaleY;
+
+  context.drawImage(
+    image,
+    frame.x,
+    frame.y,
+    frame.width,
+    frame.height,
+    destX,
+    destY,
+    destWidth,
+    destHeight,
+  );
 }
 
 export function AnimatedCompanionStage({

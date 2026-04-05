@@ -221,7 +221,10 @@ COMPANION_ALLOWED_ASSET_EXTENSIONS = {
     ".jpeg": "image/jpeg",
 }
 COMPANION_MAX_UPLOAD_BYTES = 4 * 1024 * 1024
-COMPANION_DEFAULT_BASE_ASSET_PATH = "repo/defaults/base/ghostling-base.svg"
+COMPANION_DEFAULT_BASE_ASSET_PATH = "repo/defaults/base/ghostling-base-animated.png"
+COMPANION_LEGACY_BASE_ASSET_PATHS = {
+    "repo/defaults/base/ghostling-base.svg",
+}
 COMPANION_DEFAULT_BOB_AMPLITUDE_PX = 1.15
 COMPANION_DEFAULT_BOB_DURATION_MS = 2200
 COMPANION_DEFAULT_SHADOW_OPACITY = 0.2
@@ -436,13 +439,33 @@ def companion_asset_animation(relative_path: str | None) -> dict[str, Any]:
         "frameWidth": COMPANION_CANVAS_SIZE,
         "frameHeight": COMPANION_CANVAS_SIZE,
         "loop": True,
+        "sheetWidth": COMPANION_CANVAS_SIZE,
+        "sheetHeight": COMPANION_CANVAS_SIZE,
+        "frames": [
+            {
+                "x": 0,
+                "y": 0,
+                "width": COMPANION_CANVAS_SIZE,
+                "height": COMPANION_CANVAS_SIZE,
+                "durationMs": 1000,
+                "offsetX": 0,
+                "offsetY": 0,
+                "sourceWidth": COMPANION_CANVAS_SIZE,
+                "sourceHeight": COMPANION_CANVAS_SIZE,
+            }
+        ],
     }
     if not relative_path:
         return animation
 
     target = companion_asset_path(relative_path)
-    sidecar = Path(f"{target}.animation.json")
-    if not sidecar.exists() or not sidecar.is_file():
+    sidecar_candidates = [
+        Path(f"{target}.animation.json"),
+        target.with_suffix(".json"),
+        Path(f"{target}.json"),
+    ]
+    sidecar = next((candidate for candidate in sidecar_candidates if candidate.exists() and candidate.is_file()), None)
+    if not sidecar:
         return animation
 
     try:
@@ -450,11 +473,155 @@ def companion_asset_animation(relative_path: str | None) -> dict[str, Any]:
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return animation
 
+    def normalize_frame_entry(entry: dict[str, Any], default_duration_ms: int) -> dict[str, Any] | None:
+        frame_box = entry.get("frame") if isinstance(entry.get("frame"), dict) else entry
+        if not isinstance(frame_box, dict):
+            return None
+
+        try:
+            x = int(frame_box.get("x", 0))
+            y = int(frame_box.get("y", 0))
+            width = int(frame_box.get("w", frame_box.get("width", COMPANION_CANVAS_SIZE)))
+            height = int(frame_box.get("h", frame_box.get("height", COMPANION_CANVAS_SIZE)))
+        except (TypeError, ValueError):
+            return None
+
+        if width <= 0 or height <= 0:
+            return None
+
+        sprite_source = entry.get("spriteSourceSize") if isinstance(entry.get("spriteSourceSize"), dict) else {}
+        source_size = entry.get("sourceSize") if isinstance(entry.get("sourceSize"), dict) else {}
+
+        try:
+            offset_x = int(sprite_source.get("x", entry.get("offsetX", 0)) or 0)
+            offset_y = int(sprite_source.get("y", entry.get("offsetY", 0)) or 0)
+            source_width = int(source_size.get("w", source_size.get("width", entry.get("sourceWidth", width))) or width)
+            source_height = int(source_size.get("h", source_size.get("height", entry.get("sourceHeight", height))) or height)
+            duration_ms = int(entry.get("duration", entry.get("durationMs", default_duration_ms)) or default_duration_ms)
+        except (TypeError, ValueError):
+            return None
+
+        return {
+            "x": x,
+            "y": y,
+            "width": width,
+            "height": height,
+            "durationMs": max(1, duration_ms),
+            "offsetX": max(0, offset_x),
+            "offsetY": max(0, offset_y),
+            "sourceWidth": max(width, source_width),
+            "sourceHeight": max(height, source_height),
+        }
+
+    frames_payload = payload.get("frames")
+    if isinstance(frames_payload, dict):
+        frames_entries = list(frames_payload.values())
+    elif isinstance(frames_payload, list):
+        frames_entries = frames_payload
+    else:
+        frames_entries = []
+
+    default_duration_ms = 100
+    normalized_frames = [
+        frame
+        for frame in (
+            normalize_frame_entry(entry, default_duration_ms)
+            for entry in frames_entries
+            if isinstance(entry, dict)
+        )
+        if frame
+    ]
+
+    meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+    meta_size = meta.get("size") if isinstance(meta.get("size"), dict) else {}
+
+    if len(normalized_frames) == 1:
+        first_frame = normalized_frames[0]
+        try:
+            meta_width = int(meta_size.get("w", meta_size.get("width", first_frame["width"])) or first_frame["width"])
+            meta_height = int(meta_size.get("h", meta_size.get("height", first_frame["height"])) or first_frame["height"])
+        except (TypeError, ValueError):
+            meta_width = int(first_frame["width"])
+            meta_height = int(first_frame["height"])
+
+        if (
+            int(first_frame["x"]) == 0
+            and int(first_frame["y"]) == 0
+            and int(first_frame["width"]) == meta_width
+            and int(first_frame["height"]) == meta_height
+        ):
+            strip_frames: list[dict[str, Any]] = []
+            if meta_width > meta_height and meta_height > 0 and meta_width % meta_height == 0:
+                frame_size = meta_height
+                frame_count = meta_width // frame_size
+                strip_frames = [
+                    {
+                        "x": frame_size * index,
+                        "y": 0,
+                        "width": frame_size,
+                        "height": frame_size,
+                        "durationMs": int(first_frame["durationMs"]),
+                        "offsetX": 0,
+                        "offsetY": 0,
+                        "sourceWidth": frame_size,
+                        "sourceHeight": frame_size,
+                    }
+                    for index in range(frame_count)
+                ]
+            elif meta_height > meta_width and meta_width > 0 and meta_height % meta_width == 0:
+                frame_size = meta_width
+                frame_count = meta_height // frame_size
+                strip_frames = [
+                    {
+                        "x": 0,
+                        "y": frame_size * index,
+                        "width": frame_size,
+                        "height": frame_size,
+                        "durationMs": int(first_frame["durationMs"]),
+                        "offsetX": 0,
+                        "offsetY": 0,
+                        "sourceWidth": frame_size,
+                        "sourceHeight": frame_size,
+                    }
+                    for index in range(frame_count)
+                ]
+
+            if strip_frames:
+                normalized_frames = strip_frames
+
+    if normalized_frames:
+        total_duration_ms = sum(int(frame["durationMs"]) for frame in normalized_frames)
+        average_duration_ms = max(1, round(total_duration_ms / len(normalized_frames)))
+        frame_width = max(int(frame["sourceWidth"]) for frame in normalized_frames)
+        frame_height = max(int(frame["sourceHeight"]) for frame in normalized_frames)
+        try:
+            sheet_width = int(meta_size.get("w", meta_size.get("width", payload.get("sheetWidth", frame_width))) or frame_width)
+        except (TypeError, ValueError):
+            sheet_width = frame_width
+        try:
+            sheet_height = int(meta_size.get("h", meta_size.get("height", payload.get("sheetHeight", frame_height))) or frame_height)
+        except (TypeError, ValueError):
+            sheet_height = frame_height
+
+        return {
+            "mode": "spritesheet",
+            "fps": max(1, round(1000 / average_duration_ms)),
+            "frameCount": len(normalized_frames),
+            "frameWidth": frame_width,
+            "frameHeight": frame_height,
+            "loop": True,
+            "sheetWidth": max(frame_width, sheet_width),
+            "sheetHeight": max(frame_height, sheet_height),
+            "frames": normalized_frames,
+        }
+
     try:
         frame_count = max(1, int(payload.get("frameCount") or payload.get("frames") or 1))
         fps = max(1, int(payload.get("fps") or 8))
         frame_width = max(1, int(payload.get("frameWidth") or payload.get("width") or COMPANION_CANVAS_SIZE))
         frame_height = max(1, int(payload.get("frameHeight") or payload.get("height") or COMPANION_CANVAS_SIZE))
+        sheet_width = max(frame_width, int(payload.get("sheetWidth") or frame_width))
+        sheet_height = max(frame_height, int(payload.get("sheetHeight") or frame_height))
     except (TypeError, ValueError):
         return animation
 
@@ -469,6 +636,22 @@ def companion_asset_animation(relative_path: str | None) -> dict[str, Any]:
         "frameWidth": frame_width,
         "frameHeight": frame_height,
         "loop": bool(payload.get("loop", True)),
+        "sheetWidth": sheet_width,
+        "sheetHeight": sheet_height,
+        "frames": [
+            {
+                "x": frame_width * index,
+                "y": 0,
+                "width": frame_width,
+                "height": frame_height,
+                "durationMs": max(1, round(1000 / fps)),
+                "offsetX": 0,
+                "offsetY": 0,
+                "sourceWidth": frame_width,
+                "sourceHeight": frame_height,
+            }
+            for index in range(frame_count)
+        ],
     }
 
 
@@ -553,6 +736,25 @@ def companion_layer_image(relative_path: str | None) -> str:
     data_uri = companion_asset_data_uri(relative_path)
     if not data_uri:
         return ""
+    animation = companion_asset_animation(relative_path)
+    frames = [frame for frame in animation.get("frames", []) if isinstance(frame, dict)]
+    if animation["mode"] == "spritesheet" and frames:
+        frame = frames[0]
+        source_width = max(1, int(frame.get("sourceWidth", frame.get("width", COMPANION_CANVAS_SIZE))))
+        source_height = max(1, int(frame.get("sourceHeight", frame.get("height", COMPANION_CANVAS_SIZE))))
+        offset_x = int(frame.get("offsetX", 0))
+        offset_y = int(frame.get("offsetY", 0))
+        frame_x = int(frame.get("x", 0))
+        frame_y = int(frame.get("y", 0))
+        sheet_width = max(source_width, int(animation.get("sheetWidth", source_width)))
+        sheet_height = max(source_height, int(animation.get("sheetHeight", source_height)))
+        return (
+            f'<svg x="0" y="0" width="{COMPANION_CANVAS_SIZE}" height="{COMPANION_CANVAS_SIZE}" '
+            f'viewBox="0 0 {source_width} {source_height}" preserveAspectRatio="none">'
+            f'<image href="{data_uri}" x="{offset_x - frame_x}" y="{offset_y - frame_y}" '
+            f'width="{sheet_width}" height="{sheet_height}" preserveAspectRatio="none" />'
+            "</svg>"
+        )
     return (
         f'<image href="{data_uri}" x="0" y="0" width="{COMPANION_CANVAS_SIZE}" '
         f'height="{COMPANION_CANVAS_SIZE}" preserveAspectRatio="none" />'
@@ -1771,7 +1973,8 @@ def ensure_default_companion_base(connection: sqlite3.Connection) -> None:
         "SELECT base_asset_path FROM companion_settings WHERE singleton_key = 'default'",
     ).fetchone()
     if existing:
-        if not existing["base_asset_path"]:
+        current = str(existing["base_asset_path"] or "").strip()
+        if (not current) or current in COMPANION_LEGACY_BASE_ASSET_PATHS:
             connection.execute(
                 "UPDATE companion_settings SET base_asset_path = ?, updated_at = ? WHERE singleton_key = 'default'",
                 (COMPANION_DEFAULT_BASE_ASSET_PATH, utc_iso()),
@@ -2300,7 +2503,8 @@ def companion_animated_layer_markup(relative_path: str | None, layer_id: str) ->
         return "", ""
 
     animation = companion_asset_animation(relative_path)
-    if animation["mode"] != "spritesheet" or int(animation["frameCount"]) <= 1:
+    frames = [frame for frame in animation.get("frames", []) if isinstance(frame, dict)]
+    if animation["mode"] != "spritesheet" or int(animation["frameCount"]) <= 1 or len(frames) <= 1:
         return (
             "",
             (
@@ -2310,9 +2514,27 @@ def companion_animated_layer_markup(relative_path: str | None, layer_id: str) ->
         )
 
     clip_id = f"clip-{layer_id}"
-    frame_count = int(animation["frameCount"])
-    values = ";".join(str(-(COMPANION_CANVAS_SIZE * index)) for index in range(frame_count))
-    duration = max(frame_count / max(int(animation["fps"]), 1), 0.1)
+    frame_source_width = max(int(frame.get("sourceWidth", COMPANION_CANVAS_SIZE)) for frame in frames)
+    frame_source_height = max(int(frame.get("sourceHeight", COMPANION_CANVAS_SIZE)) for frame in frames)
+    scale_x = COMPANION_CANVAS_SIZE / max(1, frame_source_width)
+    scale_y = COMPANION_CANVAS_SIZE / max(1, frame_source_height)
+    sheet_width = max(int(animation.get("sheetWidth", frame_source_width)), frame_source_width) * scale_x
+    sheet_height = max(int(animation.get("sheetHeight", frame_source_height)), frame_source_height) * scale_y
+    total_duration_ms = max(1, sum(max(1, int(frame.get("durationMs", 100))) for frame in frames))
+    elapsed_ms = 0
+    key_times = []
+    x_values = []
+    y_values = []
+    for frame in frames:
+        key_times.append(f"{elapsed_ms / total_duration_ms:.4f}")
+        x_values.append(str((int(frame.get("offsetX", 0)) - int(frame.get("x", 0))) * scale_x))
+        y_values.append(str((int(frame.get("offsetY", 0)) - int(frame.get("y", 0))) * scale_y))
+        elapsed_ms += max(1, int(frame.get("durationMs", 100)))
+
+    key_times.append("1")
+    x_values.append(x_values[-1])
+    y_values.append(y_values[-1])
+    duration = max(total_duration_ms / 1000, 0.1)
     repeat_count = "indefinite" if bool(animation.get("loop", True)) else "1"
     defs = (
         f'<clipPath id="{clip_id}">'
@@ -2321,9 +2543,10 @@ def companion_animated_layer_markup(relative_path: str | None, layer_id: str) ->
     )
     markup = (
         f'<g clip-path="url(#{clip_id})">'
-        f'<image href="{data_uri}" x="0" y="0" width="{COMPANION_CANVAS_SIZE * frame_count}" '
-        f'height="{COMPANION_CANVAS_SIZE}" preserveAspectRatio="none">'
-        f'<animate attributeName="x" values="{values}" dur="{duration:.3f}s" repeatCount="{repeat_count}" calcMode="discrete" />'
+        f'<image href="{data_uri}" x="{x_values[0]}" y="{y_values[0]}" width="{sheet_width:.4f}" '
+        f'height="{sheet_height:.4f}" preserveAspectRatio="none">'
+        f'<animate attributeName="x" values="{";".join(x_values)}" keyTimes="{";".join(key_times)}" dur="{duration:.3f}s" repeatCount="{repeat_count}" calcMode="discrete" />'
+        f'<animate attributeName="y" values="{";".join(y_values)}" keyTimes="{";".join(key_times)}" dur="{duration:.3f}s" repeatCount="{repeat_count}" calcMode="discrete" />'
         "</image>"
         "</g>"
     )
