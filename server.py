@@ -222,6 +222,9 @@ COMPANION_ALLOWED_ASSET_EXTENSIONS = {
 }
 COMPANION_MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 COMPANION_DEFAULT_BASE_ASSET_PATH = "repo/defaults/base/ghostling-base.svg"
+COMPANION_DEFAULT_BOB_AMPLITUDE_PX = 1.15
+COMPANION_DEFAULT_BOB_DURATION_MS = 2200
+COMPANION_DEFAULT_SHADOW_OPACITY = 0.2
 
 
 COMPANION_ITEMS = [
@@ -423,6 +426,127 @@ def companion_asset_data_uri(relative_path: str | None) -> str | None:
         mime = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
     encoded = base64.b64encode(target.read_bytes()).decode("ascii")
     return f"data:{mime};base64,{encoded}"
+
+
+def companion_asset_animation(relative_path: str | None) -> dict[str, Any]:
+    animation = {
+        "mode": "static",
+        "fps": 0,
+        "frameCount": 1,
+        "frameWidth": COMPANION_CANVAS_SIZE,
+        "frameHeight": COMPANION_CANVAS_SIZE,
+        "loop": True,
+    }
+    if not relative_path:
+        return animation
+
+    target = companion_asset_path(relative_path)
+    sidecar = Path(f"{target}.animation.json")
+    if not sidecar.exists() or not sidecar.is_file():
+        return animation
+
+    try:
+        payload = json.loads(sidecar.read_text("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return animation
+
+    try:
+        frame_count = max(1, int(payload.get("frameCount") or payload.get("frames") or 1))
+        fps = max(1, int(payload.get("fps") or 8))
+        frame_width = max(1, int(payload.get("frameWidth") or payload.get("width") or COMPANION_CANVAS_SIZE))
+        frame_height = max(1, int(payload.get("frameHeight") or payload.get("height") or COMPANION_CANVAS_SIZE))
+    except (TypeError, ValueError):
+        return animation
+
+    mode = str(payload.get("mode") or ("spritesheet" if frame_count > 1 else "static")).strip().lower()
+    if mode != "spritesheet" or frame_count <= 1:
+        return animation
+
+    return {
+        "mode": "spritesheet",
+        "fps": fps,
+        "frameCount": frame_count,
+        "frameWidth": frame_width,
+        "frameHeight": frame_height,
+        "loop": bool(payload.get("loop", True)),
+    }
+
+
+def resolve_companion_layer_specs(connection: sqlite3.Connection, loadout: dict[str, str | None]) -> list[dict[str, Any]]:
+    layers: list[dict[str, Any]] = []
+    catalog = companion_catalog_map(connection)
+    body_slug = loadout.get("body")
+    body_item = catalog.get(body_slug or "")
+    if body_item and body_item["back_asset_path"]:
+        layers.append(
+            {
+                "key": "body-back",
+                "role": "body-back",
+                "relativePath": str(body_item["back_asset_path"]),
+                "zIndex": 10,
+            }
+        )
+
+    layers.append(
+        {
+            "key": "base",
+            "role": "base",
+            "relativePath": companion_base_asset_path(connection),
+            "zIndex": 20,
+        }
+    )
+
+    for index, slot in enumerate(("neck", "face", "hat"), start=1):
+        item = catalog.get(loadout.get(slot) or "")
+        if item and item["front_asset_path"]:
+            layers.append(
+                {
+                    "key": f"{slot}-front",
+                    "role": f"{slot}-front",
+                    "relativePath": str(item["front_asset_path"]),
+                    "zIndex": 20 + (index * 10),
+                }
+            )
+
+    if body_item and body_item["front_asset_path"]:
+        layers.append(
+            {
+                "key": "body-front",
+                "role": "body-front",
+                "relativePath": str(body_item["front_asset_path"]),
+                "zIndex": 60,
+            }
+        )
+
+    return layers
+
+
+def companion_render_manifest(connection: sqlite3.Connection, loadout: dict[str, str | None]) -> dict[str, Any]:
+    layers = []
+    for layer in resolve_companion_layer_specs(connection, loadout):
+        src = companion_asset_url(layer["relativePath"])
+        if not src:
+            continue
+        layers.append(
+            {
+                "key": layer["key"],
+                "role": layer["role"],
+                "src": src,
+                "zIndex": int(layer["zIndex"]),
+                "animation": companion_asset_animation(layer["relativePath"]),
+            }
+        )
+
+    return {
+        "width": COMPANION_CANVAS_SIZE,
+        "height": COMPANION_CANVAS_SIZE,
+        "motion": {
+            "bobAmplitudePx": COMPANION_DEFAULT_BOB_AMPLITUDE_PX,
+            "bobDurationMs": COMPANION_DEFAULT_BOB_DURATION_MS,
+            "shadowOpacity": COMPANION_DEFAULT_SHADOW_OPACITY,
+        },
+        "layers": layers,
+    }
 
 
 def companion_layer_image(relative_path: str | None) -> str:
@@ -1910,6 +2034,8 @@ def companion_payload(
     ]
 
     equipped_count = sum(1 for slot in COMPANION_SLOT_ORDER if loadout.get(slot))
+    animated_render_url = f"/api/companion/render-animated?user={int(user_row['id'])}"
+    animated_card_url = f"/api/companion/render-animated?user={int(user_row['id'])}&card=1"
     return {
         "user": {
             "id": int(user_row["id"]),
@@ -1923,10 +2049,15 @@ def companion_payload(
         "slots": slots,
         "items": items,
         "renderUrl": f"/api/companion/render?user={int(user_row['id'])}",
+        "animatedRenderUrl": animated_render_url,
         "cardUrl": f"/api/companion/render?user={int(user_row['id'])}&card=1",
+        "animatedCardUrl": animated_card_url,
+        "renderManifest": companion_render_manifest(connection, loadout),
         "share": {
             "avatarUrl": f"/api/companion/render?user={int(user_row['id'])}",
+            "animatedAvatarUrl": animated_render_url,
             "cardUrl": f"/api/companion/render?user={int(user_row['id'])}&card=1",
+            "animatedCardUrl": animated_card_url,
         },
         "baseAssetUrl": companion_asset_url(companion_base_asset_path(connection)),
     }
@@ -2156,24 +2287,47 @@ def replace_companion_item_assets(
 
 
 def resolve_companion_layers(connection: sqlite3.Connection, loadout: dict[str, str | None]) -> list[str]:
-    layers: list[str] = []
-    catalog = companion_catalog_map(connection)
-    body_slug = loadout.get("body")
-    body_item = catalog.get(body_slug or "")
-    if body_item:
-        layers.append(companion_layer_image(body_item["back_asset_path"]))
+    return [
+        companion_layer_image(layer["relativePath"])
+        for layer in resolve_companion_layer_specs(connection, loadout)
+        if layer.get("relativePath")
+    ]
 
-    layers.append(companion_layer_image(companion_base_asset_path(connection)))
 
-    for slot in ("neck", "face", "hat"):
-        item = catalog.get(loadout.get(slot) or "")
-        if item:
-            layers.append(companion_layer_image(item["front_asset_path"]))
+def companion_animated_layer_markup(relative_path: str | None, layer_id: str) -> tuple[str, str]:
+    data_uri = companion_asset_data_uri(relative_path)
+    if not data_uri:
+        return "", ""
 
-    if body_item:
-        layers.append(companion_layer_image(body_item["front_asset_path"]))
+    animation = companion_asset_animation(relative_path)
+    if animation["mode"] != "spritesheet" or int(animation["frameCount"]) <= 1:
+        return (
+            "",
+            (
+                f'<image href="{data_uri}" x="0" y="0" width="{COMPANION_CANVAS_SIZE}" '
+                f'height="{COMPANION_CANVAS_SIZE}" preserveAspectRatio="none" />'
+            ),
+        )
 
-    return [layer for layer in layers if layer]
+    clip_id = f"clip-{layer_id}"
+    frame_count = int(animation["frameCount"])
+    values = ";".join(str(-(COMPANION_CANVAS_SIZE * index)) for index in range(frame_count))
+    duration = max(frame_count / max(int(animation["fps"]), 1), 0.1)
+    repeat_count = "indefinite" if bool(animation.get("loop", True)) else "1"
+    defs = (
+        f'<clipPath id="{clip_id}">'
+        f'<rect x="0" y="0" width="{COMPANION_CANVAS_SIZE}" height="{COMPANION_CANVAS_SIZE}" />'
+        "</clipPath>"
+    )
+    markup = (
+        f'<g clip-path="url(#{clip_id})">'
+        f'<image href="{data_uri}" x="0" y="0" width="{COMPANION_CANVAS_SIZE * frame_count}" '
+        f'height="{COMPANION_CANVAS_SIZE}" preserveAspectRatio="none">'
+        f'<animate attributeName="x" values="{values}" dur="{duration:.3f}s" repeatCount="{repeat_count}" calcMode="discrete" />'
+        "</image>"
+        "</g>"
+    )
+    return defs, markup
 
 
 def render_companion_svg(
@@ -2219,6 +2373,116 @@ def render_companion_svg(
         f"{layers}"
         "</svg>"
     )
+
+
+def render_animated_companion_svg(
+    connection: sqlite3.Connection,
+    loadout: dict[str, str | None],
+    *,
+    display_name: str,
+    subtitle: str | None = None,
+    card: bool = False,
+) -> str:
+    layer_defs: list[str] = []
+    layer_markup: list[str] = []
+    for layer in resolve_companion_layer_specs(connection, loadout):
+        defs, markup = companion_animated_layer_markup(layer.get("relativePath"), str(layer["key"]))
+        if defs:
+            layer_defs.append(defs)
+        if markup:
+            layer_markup.append(markup)
+
+    layers = "".join(layer_markup)
+    defs = "".join(layer_defs)
+    title = html.escape(display_name)
+    subtitle_text = html.escape(subtitle or "Ghosted Companion")
+    bob_distance = COMPANION_DEFAULT_BOB_AMPLITUDE_PX
+    bob_duration = f"{COMPANION_DEFAULT_BOB_DURATION_MS / 1000:.3f}s"
+
+    if card:
+        return (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320" '
+            'shape-rendering="crispEdges" style="image-rendering:pixelated">'
+            "<defs>"
+            f"{defs}"
+            '<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">'
+            '<stop offset="0%" stop-color="#0b0a11" />'
+            '<stop offset="100%" stop-color="#1b1730" />'
+            "</linearGradient>"
+            "</defs>"
+            '<rect width="480" height="320" rx="28" fill="url(#bg)" />'
+            '<rect x="24" y="24" width="190" height="272" rx="22" fill="#090b11" stroke="#2b3552" />'
+            '<rect x="40" y="40" width="158" height="240" rx="18" fill="#0e1320" />'
+            '<ellipse cx="123" cy="255" rx="44" ry="11" fill="rgba(10, 8, 18, 0.34)">'
+            f'<animate attributeName="rx" values="44;39;44" dur="{bob_duration}" repeatCount="indefinite" />'
+            f'<animate attributeName="opacity" values="0.34;0.22;0.34" dur="{bob_duration}" repeatCount="indefinite" />'
+            "</ellipse>"
+            '<g transform="translate(47 53) scale(4.8)">'
+            "<g>"
+            f'<animateTransform attributeName="transform" type="translate" values="0 0;0 {-bob_distance};0 0" dur="{bob_duration}" repeatCount="indefinite" />'
+            f"{layers}"
+            "</g>"
+            "</g>"
+            '<text x="244" y="106" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14" letter-spacing="2">GHOSTED COMPANION</text>'
+            f'<text x="244" y="152" fill="#f7f6ff" font-family="Arial, sans-serif" font-size="28" font-weight="700">{title}</text>'
+            f'<text x="244" y="184" fill="#b8b0d5" font-family="Arial, sans-serif" font-size="16">{subtitle_text}</text>'
+            '<text x="244" y="226" fill="#d9d4ef" font-family="Arial, sans-serif" font-size="15">Animated SVG export for Ghosted companion previews and future share-card motion.</text>'
+            '<rect x="244" y="250" width="182" height="34" rx="17" fill="#16132a" stroke="#312759" />'
+            '<text x="262" y="271" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14">animated svg share card</text>'
+            "</svg>"
+        )
+
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 32 32" '
+        'shape-rendering="crispEdges" style="image-rendering:pixelated">'
+        "<defs>"
+        f"{defs}"
+        "</defs>"
+        '<ellipse cx="16" cy="29" rx="8.5" ry="2.4" fill="rgba(10, 8, 18, 0.32)">'
+        f'<animate attributeName="rx" values="8.5;7.8;8.5" dur="{bob_duration}" repeatCount="indefinite" />'
+        f'<animate attributeName="opacity" values="0.32;0.2;0.32" dur="{bob_duration}" repeatCount="indefinite" />'
+        "</ellipse>"
+        "<g>"
+        f'<animateTransform attributeName="transform" type="translate" values="0 0;0 {-bob_distance};0 0" dur="{bob_duration}" repeatCount="indefinite" />'
+        f"{layers}"
+        "</g>"
+        "</svg>"
+    )
+
+
+def resolve_companion_render_request(
+    connection: sqlite3.Connection,
+    *,
+    user_ref: str,
+    preview_slug: str,
+    current_user_row: sqlite3.Row | None = None,
+) -> tuple[dict[str, str | None], str, str]:
+    loadout = {slot: None for slot in COMPANION_SLOT_ORDER}
+    display = "Ghosted Companion"
+    subtitle = "Preview"
+
+    if user_ref:
+        row = get_user(connection, int(user_ref)) if user_ref.isdigit() else get_user_by_discord_id(connection, user_ref)
+        if not row:
+            raise AppError("Companion owner not found.", 404)
+        loadout = companion_loadout_map(connection, int(row["id"]))
+        display = display_name(row)
+        subtitle = f"@{row['username']}"
+    elif current_user_row:
+        loadout = companion_loadout_map(connection, int(current_user_row["id"]))
+        display = display_name(current_user_row)
+        subtitle = f"@{current_user_row['username']}"
+
+    if preview_slug:
+        item = companion_catalog_any_row(connection, preview_slug)
+        if not item:
+            raise AppError("Preview item not found.", 404)
+        loadout[str(item["slot_key"])] = preview_slug
+        if not user_ref:
+            display = str(item["name"])
+            subtitle = COMPANION_SLOT_LABELS.get(str(item["slot_key"]), str(item["slot_key"]).title())
+
+    return loadout, display, subtitle
 
 
 def audit(
@@ -3972,6 +4236,9 @@ class GhostedHandler(BaseHTTPRequestHandler):
         if method == "GET" and path == "/api/companion/render":
             self.handle_api_companion_render(connection, parsed)
             return
+        if method == "GET" and path == "/api/companion/render-animated":
+            self.handle_api_companion_render_animated(connection, parsed)
+            return
         if method == "POST" and path == "/api/profile/wom-link":
             self.handle_api_wom_link(connection)
             return
@@ -4247,35 +4514,30 @@ class GhostedHandler(BaseHTTPRequestHandler):
         preview_slug = str(params.get("preview", [""])[0] or "").strip()
         card = str(params.get("card", [""])[0] or "").strip().lower() in {"1", "true", "yes"}
         user_ref = str(params.get("user", [""])[0] or "").strip()
-
-        loadout = {slot: None for slot in COMPANION_SLOT_ORDER}
-        display = "Ghosted Companion"
-        subtitle = "Preview"
-
-        if user_ref:
-            row = get_user(connection, int(user_ref)) if user_ref.isdigit() else get_user_by_discord_id(connection, user_ref)
-            if not row:
-                raise AppError("Companion owner not found.", 404)
-            loadout = companion_loadout_map(connection, int(row["id"]))
-            display = display_name(row)
-            subtitle = f"@{row['username']}"
-        else:
-            row = self.current_user(connection)
-            if row:
-                loadout = companion_loadout_map(connection, int(row["id"]))
-                display = display_name(row)
-                subtitle = f"@{row['username']}"
-
-        if preview_slug:
-            item = companion_catalog_any_row(connection, preview_slug)
-            if not item:
-                raise AppError("Preview item not found.", 404)
-            loadout[str(item["slot_key"])] = preview_slug
-            if not user_ref:
-                display = str(item["name"])
-                subtitle = COMPANION_SLOT_LABELS.get(str(item["slot_key"]), str(item["slot_key"]).title())
-
+        current_row = None if user_ref else self.current_user(connection)
+        loadout, display, subtitle = resolve_companion_render_request(
+            connection,
+            user_ref=user_ref,
+            preview_slug=preview_slug,
+            current_user_row=current_row,
+        )
         self.respond_svg(render_companion_svg(connection, loadout, display_name=display, subtitle=subtitle, card=card))
+
+    def handle_api_companion_render_animated(self, connection: sqlite3.Connection, parsed: Any) -> None:
+        params = parse_qs(parsed.query)
+        preview_slug = str(params.get("preview", [""])[0] or "").strip()
+        card = str(params.get("card", [""])[0] or "").strip().lower() in {"1", "true", "yes"}
+        user_ref = str(params.get("user", [""])[0] or "").strip()
+        current_row = None if user_ref else self.current_user(connection)
+        loadout, display, subtitle = resolve_companion_render_request(
+            connection,
+            user_ref=user_ref,
+            preview_slug=preview_slug,
+            current_user_row=current_row,
+        )
+        self.respond_svg(
+            render_animated_companion_svg(connection, loadout, display_name=display, subtitle=subtitle, card=card)
+        )
 
     def handle_api_companion_asset(self, parsed: Any) -> None:
         raw_path = parsed.path.removeprefix("/api/companion/assets/")
