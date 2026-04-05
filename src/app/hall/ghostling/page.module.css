@@ -231,6 +231,13 @@
   gap: 0.75rem;
 }
 
+.itemChips {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
 .slotHeading span {
   font-size: 0.78rem;
   letter-spacing: 0.08em;
