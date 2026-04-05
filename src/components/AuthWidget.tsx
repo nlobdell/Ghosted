@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element -- Discord avatar URLs are dynamic and not routed through next/image yet. */
 import { useEffect, useState } from 'react';
 import type { ShellData } from '@/lib/types';
 
@@ -14,20 +15,26 @@ interface Props {
 }
 
 export function AuthWidget({ variant, shellData }: Props) {
-  const [shell, setShell] = useState<ShellData | null>(shellData ?? null);
+  const [fetchedShell, setFetchedShell] = useState<ShellData | null>(null);
+  const shell = shellData ?? fetchedShell;
 
   useEffect(() => {
-    if (shellData !== undefined) {
-      setShell(shellData);
-      return;
-    }
+    if (shellData !== undefined) return;
+
+    let active = true;
 
     fetch(`/api/site-shell?next=${encodeURIComponent(window.location.pathname)}`, {
       headers: { Accept: 'application/json' },
     })
       .then((response) => response.json())
-      .then(setShell)
+      .then((payload) => {
+        if (active) setFetchedShell(payload);
+      })
       .catch(() => null);
+
+    return () => {
+      active = false;
+    };
   }, [shellData]);
 
   if (!shell) return null;
@@ -37,7 +44,7 @@ export function AuthWidget({ variant, shellData }: Props) {
     const rankLabel = user.womLink?.membership?.rankLabel ?? user.womLink?.membership?.role ?? (user.womLink?.linked ? 'Member' : 'Discord');
     const subtitle = variant === 'public'
       ? rankLabel
-      : `${formatPts(user.balance)} · ${user.womLink?.linked ? rankLabel : 'RSN not linked'}`;
+      : `${formatPts(user.balance)} - ${user.womLink?.linked ? rankLabel : 'RSN not linked'}`;
 
     return (
       <div className={`site-profile-widget site-profile-widget--signed-in site-profile-widget--${variant}`}>

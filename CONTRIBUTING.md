@@ -46,6 +46,15 @@ npm run git:update:autostash
 ## Open a PR
 - Keep PR scope small (one theme/feature per PR).
 - Fill in `.github/pull_request_template.md`.
+- Ensure the local validation suite passes before pushing:
+
+```powershell
+npm run lint
+npm run typecheck
+npm run build
+npm run test:backend
+```
+
 - Ensure CI checks pass.
 - Use **Squash and merge** in GitHub.
 

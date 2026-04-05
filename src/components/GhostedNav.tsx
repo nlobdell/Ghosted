@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AuthWidget } from '@/components/AuthWidget';
+import { GhostedLogo } from '@/components/GhostedLogo';
 import type { ShellData } from '@/lib/types';
 import {
   EXTERNAL_NAV_LINKS,
@@ -16,7 +17,7 @@ export function GhostedNav({ sticky = false }: { sticky?: boolean }) {
   const activeKey = getActiveNavKey(pathname);
   const [open, setOpen] = useState(false);
   const [shell, setShell] = useState<ShellData | null>(null);
-  const [revealed, setRevealed] = useState(sticky);
+  const [hasScrolledPastThreshold, setHasScrolledPastThreshold] = useState(false);
 
   useEffect(() => {
     fetch(`/api/site-shell?next=${encodeURIComponent(window.location.pathname)}`, {
@@ -28,15 +29,12 @@ export function GhostedNav({ sticky = false }: { sticky?: boolean }) {
   }, []);
 
   useEffect(() => {
-    if (sticky) {
-      setRevealed(true);
-      return;
-    }
+    if (sticky) return;
+
     const onScroll = () => {
-      if (window.scrollY > 28) {
-        setRevealed(true);
-      }
+      setHasScrolledPastThreshold(window.scrollY > 28);
     };
+
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -48,13 +46,14 @@ export function GhostedNav({ sticky = false }: { sticky?: boolean }) {
   };
   const groupedLinks = getVisibleGroupedLinks(viewer);
   const drawerId = 'ghosted-nav-drawer';
+  const revealed = sticky || hasScrolledPastThreshold;
   const wrapperClassName = sticky ? 'app-header' : `site-nav${revealed ? ' site-nav--revealed' : ''}`;
 
   const navShell = (
     <div className="nav-shell">
       <div className="nav-slot nav-slot--brand">
         <Link href="/" className="nav-brand">
-          <span className="nav-brand-dot" aria-hidden="true" />
+          <GhostedLogo className="nav-brand-logo" sizes="44px" decorative />
           <span className="nav-brand__copy">
             <strong>Ghosted</strong>
             <span>Clan hall</span>
@@ -124,7 +123,7 @@ export function GhostedNav({ sticky = false }: { sticky?: boolean }) {
       <div role="dialog" aria-modal="true" aria-label="Primary navigation" className="nav-drawer-panel">
         <div className="nav-drawer-header">
           <Link href="/" className="nav-brand" onClick={() => setOpen(false)}>
-            <span className="nav-brand-dot" aria-hidden="true" />
+            <GhostedLogo className="nav-brand-logo nav-brand-logo--drawer" sizes="48px" decorative />
             <span className="nav-brand__copy">
               <strong>Ghosted</strong>
               <span>Clan hall</span>

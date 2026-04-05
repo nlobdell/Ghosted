@@ -215,47 +215,14 @@ COMPANION_CANVAS_SIZE = 32
 COMPANION_ALLOWED_ASSET_EXTENSIONS = {
     ".svg": "image/svg+xml",
     ".png": "image/png",
+    ".gif": "image/gif",
     ".webp": "image/webp",
     ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg",
 }
 COMPANION_MAX_UPLOAD_BYTES = 4 * 1024 * 1024
-COMPANION_DEFAULT_BASE_ASSET_PATH = "defaults/base/ghostling-base.svg"
+COMPANION_DEFAULT_BASE_ASSET_PATH = "repo/defaults/base/ghostling-base.svg"
 
-
-def pixel_rects(rects: list[tuple[int, int, int, int, str]]) -> str:
-    return "".join(
-        f'<rect x="{x}" y="{y}" width="{width}" height="{height}" fill="{fill}" />'
-        for x, y, width, height, fill in rects
-    )
-
-
-COMPANION_BASE_MARKUP = pixel_rects(
-    [
-        (10, 7, 12, 1, "#07090d"),
-        (8, 8, 16, 1, "#07090d"),
-        (7, 9, 18, 14, "#07090d"),
-        (8, 23, 16, 2, "#07090d"),
-        (9, 25, 14, 2, "#07090d"),
-        (10, 27, 12, 2, "#07090d"),
-        (11, 8, 10, 1, "#39a7d7"),
-        (9, 9, 14, 1, "#39a7d7"),
-        (8, 10, 16, 5, "#39a7d7"),
-        (8, 15, 16, 3, "#3397c7"),
-        (9, 18, 14, 3, "#2e88b7"),
-        (9, 21, 14, 2, "#2777a1"),
-        (10, 23, 12, 2, "#2e88b7"),
-        (11, 25, 10, 2, "#3397c7"),
-        (12, 27, 8, 1, "#39a7d7"),
-        (13, 11, 2, 4, "#f4fbff"),
-        (18, 11, 2, 4, "#f4fbff"),
-        (14, 12, 1, 2, "#0d1622"),
-        (19, 12, 1, 2, "#0d1622"),
-        (15, 17, 2, 1, "#7fc9ec"),
-        (14, 18, 1, 1, "#7fc9ec"),
-        (17, 18, 1, 1, "#7fc9ec"),
-    ]
-)
 
 COMPANION_ITEMS = [
     {
@@ -266,15 +233,7 @@ COMPANION_ITEMS = [
         "cost": 120,
         "description": "A crooked brim for maximum spooky little gremlin energy.",
         "sort_order": 10,
-        "front_markup": pixel_rects(
-            [
-                (9, 3, 8, 1, "#3d255b"),
-                (10, 2, 6, 1, "#3d255b"),
-                (11, 1, 4, 1, "#3d255b"),
-                (7, 4, 14, 2, "#20112f"),
-                (13, 3, 2, 1, "#f6a94a"),
-            ]
-        ),
+        "front_asset_path": "repo/defaults/items/witch-hat-front.svg",
     },
     {
         "slug": "halo",
@@ -284,13 +243,7 @@ COMPANION_ITEMS = [
         "cost": 220,
         "description": "Bright, smug, and a little too clean for a ghost.",
         "sort_order": 20,
-        "front_markup": pixel_rects(
-            [
-                (9, 3, 10, 1, "#f6d36a"),
-                (8, 4, 12, 1, "#f6d36a"),
-                (9, 5, 10, 1, "#fff0b5"),
-            ]
-        ),
+        "front_asset_path": "repo/defaults/items/halo-front.svg",
     },
     {
         "slug": "traffic-cone",
@@ -300,15 +253,7 @@ COMPANION_ITEMS = [
         "cost": 80,
         "description": "Street-certified nonsense for the tiny haunt economy.",
         "sort_order": 30,
-        "front_markup": pixel_rects(
-            [
-                (13, 1, 2, 1, "#ff7e2f"),
-                (12, 2, 4, 1, "#ff7e2f"),
-                (11, 3, 6, 2, "#ff7e2f"),
-                (12, 3, 4, 1, "#fff1e2"),
-                (10, 5, 8, 2, "#bd5116"),
-            ]
-        ),
+        "front_asset_path": "repo/defaults/items/traffic-cone-front.svg",
     },
     {
         "slug": "sleepy-eyes",
@@ -318,12 +263,7 @@ COMPANION_ITEMS = [
         "cost": 60,
         "description": "A half-awake stare for late-night lurkers.",
         "sort_order": 40,
-        "front_markup": pixel_rects(
-            [
-                (12, 12, 3, 1, "#1f2b38"),
-                (18, 12, 3, 1, "#1f2b38"),
-            ]
-        ),
+        "front_asset_path": "repo/defaults/items/sleepy-eyes-front.svg",
     },
     {
         "slug": "fang-smile",
@@ -333,13 +273,7 @@ COMPANION_ITEMS = [
         "cost": 95,
         "description": "Tiny fangs, huge menace, surprisingly approachable.",
         "sort_order": 50,
-        "front_markup": pixel_rects(
-            [
-                (14, 17, 5, 1, "#1f2b38"),
-                (15, 18, 1, 1, "#ffffff"),
-                (17, 18, 1, 1, "#ffffff"),
-            ]
-        ),
+        "front_asset_path": "repo/defaults/items/fang-smile-front.svg",
     },
     {
         "slug": "cracked-mask",
@@ -349,15 +283,7 @@ COMPANION_ITEMS = [
         "cost": 180,
         "description": "A porcelain front with a dramatic fault line.",
         "sort_order": 60,
-        "front_markup": pixel_rects(
-            [
-                (11, 11, 10, 6, "#f3ece1"),
-                (12, 12, 8, 4, "#fff9f0"),
-                (15, 11, 1, 6, "#a58b81"),
-                (13, 13, 1, 1, "#90776d"),
-                (18, 13, 1, 1, "#90776d"),
-            ]
-        ),
+        "front_asset_path": "repo/defaults/items/cracked-mask-front.svg",
     },
     {
         "slug": "bell-collar",
@@ -367,13 +293,7 @@ COMPANION_ITEMS = [
         "cost": 70,
         "description": "A happy jingle before the jump scare.",
         "sort_order": 70,
-        "front_markup": pixel_rects(
-            [
-                (11, 20, 10, 2, "#f3bb5d"),
-                (14, 22, 4, 3, "#f8d16d"),
-                (15, 24, 1, 1, "#7d5410"),
-            ]
-        ),
+        "front_asset_path": "repo/defaults/items/bell-collar-front.svg",
     },
     {
         "slug": "tattered-scarf",
@@ -383,13 +303,7 @@ COMPANION_ITEMS = [
         "cost": 110,
         "description": "Wind-cut fabric with a little travel story in it.",
         "sort_order": 80,
-        "front_markup": pixel_rects(
-            [
-                (10, 20, 12, 3, "#5e7fd6"),
-                (12, 23, 2, 5, "#4256b8"),
-                (18, 23, 2, 4, "#4256b8"),
-            ]
-        ),
+        "front_asset_path": "repo/defaults/items/tattered-scarf-front.svg",
     },
     {
         "slug": "lantern-charm",
@@ -399,13 +313,7 @@ COMPANION_ITEMS = [
         "cost": 175,
         "description": "A warm hanging lantern that reads well in tiny previews.",
         "sort_order": 90,
-        "front_markup": pixel_rects(
-            [
-                (15, 19, 2, 2, "#7a5c39"),
-                (13, 21, 6, 4, "#f7b45a"),
-                (14, 22, 4, 2, "#fff0b0"),
-            ]
-        ),
+        "front_asset_path": "repo/defaults/items/lantern-charm-front.svg",
     },
     {
         "slug": "hoodie",
@@ -415,14 +323,7 @@ COMPANION_ITEMS = [
         "cost": 130,
         "description": "Comfy ghostwear for grinding, lurking, or posting.",
         "sort_order": 100,
-        "front_markup": pixel_rects(
-            [
-                (10, 17, 12, 10, "#536882"),
-                (11, 18, 10, 3, "#32435d"),
-                (13, 21, 2, 6, "#32435d"),
-                (17, 21, 2, 6, "#32435d"),
-            ]
-        ),
+        "front_asset_path": "repo/defaults/items/hoodie-front.svg",
     },
     {
         "slug": "cape",
@@ -432,18 +333,8 @@ COMPANION_ITEMS = [
         "cost": 190,
         "description": "A dramatic cape that turns a peeker into a tiny entrance.",
         "sort_order": 110,
-        "back_markup": pixel_rects(
-            [
-                (8, 16, 16, 8, "#5d2b7d"),
-                (9, 24, 14, 4, "#4b215f"),
-            ]
-        ),
-        "front_markup": pixel_rects(
-            [
-                (11, 18, 10, 8, "#9a52b8"),
-                (18, 18, 3, 7, "#af69c8"),
-            ]
-        ),
+        "front_asset_path": "repo/defaults/items/cape-front.svg",
+        "back_asset_path": "repo/defaults/items/cape-back.svg",
     },
     {
         "slug": "bat-wings",
@@ -453,33 +344,10 @@ COMPANION_ITEMS = [
         "cost": 320,
         "description": "Big silhouette value for people who want their companion noticed.",
         "sort_order": 120,
-        "back_markup": pixel_rects(
-            [
-                (3, 16, 6, 1, "#2d243e"),
-                (2, 17, 7, 2, "#2d243e"),
-                (1, 19, 8, 3, "#2d243e"),
-                (23, 16, 6, 1, "#2d243e"),
-                (23, 17, 7, 2, "#2d243e"),
-                (23, 19, 8, 3, "#2d243e"),
-            ]
-        ),
-        "front_markup": pixel_rects(
-            [
-                (10, 18, 12, 7, "#3d3153"),
-            ]
-        ),
+        "front_asset_path": "repo/defaults/items/bat-wings-front.svg",
+        "back_asset_path": "repo/defaults/items/bat-wings-back.svg",
     },
 ]
-COMPANION_ITEM_BY_SLUG = {item["slug"]: item for item in COMPANION_ITEMS}
-
-
-def pixel_sprite_svg(markup: str) -> str:
-    return (
-        '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" '
-        'shape-rendering="crispEdges" style="image-rendering:pixelated">'
-        f"{markup}"
-        "</svg>"
-    )
 
 
 def companion_asset_dir() -> Path:
@@ -487,6 +355,10 @@ def companion_asset_dir() -> Path:
     if configured:
         return Path(configured).expanduser()
     return DB_DIR / "companion-assets"
+
+
+def repo_companion_asset_dir() -> Path:
+    return BASE_DIR / "assets" / "companion"
 
 
 def normalize_companion_asset_path(value: str) -> str:
@@ -501,54 +373,33 @@ def normalize_companion_asset_path(value: str) -> str:
 
 
 def companion_asset_path(relative_path: str) -> Path:
-    root = companion_asset_dir().resolve()
     normalized = normalize_companion_asset_path(relative_path)
-    target = (root / normalized).resolve()
+    parts = normalized.split("/")
+    if not parts:
+        raise AppError("Companion asset not found.", 404)
+
+    root_key = parts[0]
+    remainder = parts[1:]
+    if root_key == "repo":
+        root = repo_companion_asset_dir().resolve()
+    else:
+        root = companion_asset_dir().resolve()
+        remainder = parts
+
+    target = (root / Path(*remainder)).resolve()
     if root not in target.parents and target != root:
         raise AppError("Companion asset not found.", 404)
     return target
 
 
 def write_companion_asset_file(relative_path: str, data: bytes) -> str:
-    target = companion_asset_path(relative_path)
+    normalized = normalize_companion_asset_path(relative_path)
+    if normalized.startswith("repo/"):
+        raise AppError("Repo companion assets are read-only.", 400)
+    target = companion_asset_path(normalized)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(data)
-    return normalize_companion_asset_path(relative_path)
-
-
-def write_default_companion_asset(relative_path: str, content: str) -> str:
-    target = companion_asset_path(relative_path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    if not target.exists():
-        target.write_text(content, encoding="utf-8")
-    return normalize_companion_asset_path(relative_path)
-
-
-def default_companion_front_asset_path(slug: str) -> str:
-    return f"defaults/items/{slug}-front.svg"
-
-
-def default_companion_back_asset_path(slug: str) -> str:
-    return f"defaults/items/{slug}-back.svg"
-
-
-def ensure_default_companion_assets() -> None:
-    write_default_companion_asset(COMPANION_DEFAULT_BASE_ASSET_PATH, pixel_sprite_svg(COMPANION_BASE_MARKUP))
-
-    for item in COMPANION_ITEMS:
-        front_markup = str(item.get("front_markup") or "").strip()
-        if front_markup:
-            write_default_companion_asset(
-                default_companion_front_asset_path(str(item["slug"])),
-                pixel_sprite_svg(front_markup),
-            )
-
-        back_markup = str(item.get("back_markup") or "").strip()
-        if back_markup:
-            write_default_companion_asset(
-                default_companion_back_asset_path(str(item["slug"])),
-                pixel_sprite_svg(back_markup),
-            )
+    return normalized
 
 
 def companion_asset_url(relative_path: str | None) -> str | None:
@@ -1792,7 +1643,6 @@ def seed_default_giveaway(connection: sqlite3.Connection) -> None:
 
 
 def ensure_default_companion_base(connection: sqlite3.Connection) -> None:
-    ensure_default_companion_assets()
     existing = connection.execute(
         "SELECT base_asset_path FROM companion_settings WHERE singleton_key = 'default'",
     ).fetchone()
@@ -1814,11 +1664,10 @@ def ensure_default_companion_base(connection: sqlite3.Connection) -> None:
 
 
 def seed_default_companion_items(connection: sqlite3.Connection) -> None:
-    ensure_default_companion_assets()
     created_at = utc_iso()
     for item in COMPANION_ITEMS:
-        front_asset_path = default_companion_front_asset_path(str(item["slug"])) if item.get("front_markup") else None
-        back_asset_path = default_companion_back_asset_path(str(item["slug"])) if item.get("back_markup") else None
+        front_asset_path = item.get("front_asset_path")
+        back_asset_path = item.get("back_asset_path")
         connection.execute(
             """
             INSERT INTO companion_catalog (
@@ -1953,7 +1802,7 @@ def store_uploaded_companion_asset(upload: UploadedFile, *, group: str, stem: st
     filename = Path(upload.filename or "").name
     extension = Path(filename).suffix.lower()
     if extension not in COMPANION_ALLOWED_ASSET_EXTENSIONS:
-        raise AppError("Upload a PNG, SVG, WEBP, JPG, or JPEG companion asset.", 400)
+        raise AppError("Upload a PNG, SVG, GIF, WEBP, JPG, or JPEG companion asset.", 400)
     if not upload.data:
         raise AppError("Uploaded companion asset was empty.", 400)
     if len(upload.data) > COMPANION_MAX_UPLOAD_BYTES:
@@ -1969,6 +1818,7 @@ def companion_admin_payload(connection: sqlite3.Connection) -> dict[str, Any]:
     base_path = companion_base_asset_path(connection)
     return {
         "storageRoot": str(companion_asset_dir()),
+        "defaultAssetRoot": str(repo_companion_asset_dir()),
         "base": {
             "assetPath": base_path,
             "assetUrl": companion_asset_url(base_path),

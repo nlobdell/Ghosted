@@ -15,7 +15,6 @@ import type {
   GamesPayload,
   MePayload,
   RewardsPayload,
-  SlotGame,
   SpinResult,
 } from '@/casino/game/types';
 

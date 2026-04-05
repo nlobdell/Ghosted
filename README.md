@@ -16,6 +16,11 @@ The canonical architecture reference is [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 - Pixi.js for the casino renderer
 - Caddy + systemd for VPS hosting
 
+## Requirements
+
+- Node.js `20.9+`
+- Python `3.13` (matches CI)
+
 ## Local Development
 
 1. Install frontend deps:
@@ -50,17 +55,32 @@ http://localhost:3000/app/companion
 
 Companion asset storage:
 
-- Default and uploaded companion art files live under `data/companion-assets/`
+- Hand-authored default Ghostling/base cosmetics live in `assets/companion/defaults/`
+- Uploaded replacement assets live under `data/companion-assets/uploads/`
 - Admin users can upload a replacement base plus custom cosmetic layers directly from `/app/companion`
-- Raw uploaded files are served from `/api/companion/assets/...`
+- Raw repo and uploaded files are both served from `/api/companion/assets/...`
 
 ## Scripts
 
 - `npm run dev` - start Next.js in development mode
 - `npm run build` - production build
 - `npm run start` - run built Next.js app
-- `npm run lint` - run lint checks
+- `npm run typecheck` - run TypeScript checks
+- `npm run lint` - run ESLint against the current Next.js app
+- `npm run lint:fix` - auto-fix safe ESLint issues
+- `npm run test:backend` - run Python backend tests
 - `npm run git:update` - local workflow helper script
+
+## Validation
+
+Before opening a PR, run:
+
+```powershell
+npm run lint
+npm run typecheck
+npm run build
+npm run test:backend
+```
 
 ## Production Notes
 

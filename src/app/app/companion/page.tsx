@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- Companion preview assets are generated at runtime and not routed through next/image yet. */
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
@@ -30,7 +31,7 @@ type CompanionMutationResponse = {
 };
 
 const SLOT_ORDER: CompanionSlotKey[] = ['hat', 'face', 'neck', 'body'];
-const ASSET_ACCEPT = '.png,.svg,.webp,.jpg,.jpeg';
+const ASSET_ACCEPT = '.png,.svg,.gif,.webp,.jpg,.jpeg';
 
 function buildAbsoluteUrl(path: string) {
   if (typeof window === 'undefined') return path;
@@ -410,7 +411,7 @@ export default function CompanionPage() {
               <SectionHeading
                 eyebrow="Asset vault"
                 title="Store real asset files and upload your own art"
-                copy="Companion layers now live as files on disk instead of inline code. Upload 32x32 PNG or SVG layers here, then Ghosted will store the files, register their paths, and render them into the shared avatar/export flow."
+                copy="The default Ghostling and starter cosmetics are now hand-authored files checked into the repo. Follow the sweatling guide here too: keep a black outline, preserve facial readability, and upload transparent PNG, GIF, or SVG layers that stay within the ghost's silhouette."
               />
 
               <AppGrid>
@@ -422,7 +423,11 @@ export default function CompanionPage() {
                   body={(
                     <form onSubmit={handleBaseUpload} className="app-form">
                       <div className={styles.assetMetaBlock}>
-                        <strong>Stored in</strong>
+                        <strong>Repo defaults</strong>
+                        <span>{adminData.defaultAssetRoot}</span>
+                      </div>
+                      <div className={styles.assetMetaBlock}>
+                        <strong>User uploads</strong>
                         <span>{adminData.storageRoot}</span>
                       </div>
                       <div className={styles.assetMetaBlock}>
