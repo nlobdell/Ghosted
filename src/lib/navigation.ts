@@ -42,6 +42,7 @@ export const PRIMARY_NAV_LINKS: NavLink[] = [
   { key: 'competitions', label: 'Competitions', href: '/app/competitions/', visibility: 'authenticated', group: 'clan' },
   { key: 'rewards', label: 'Rewards', href: '/app/rewards/', visibility: 'authenticated', group: 'economy' },
   { key: 'casino', label: 'Casino', href: '/app/casino/', visibility: 'authenticated', group: 'economy' },
+  { key: 'companion', label: 'Companion', href: '/app/companion/', visibility: 'authenticated', group: 'you' },
   { key: 'profile', label: 'Profile', href: '/app/profile/', visibility: 'authenticated', group: 'you' },
   { key: 'admin', label: 'Admin', href: '/admin/', visibility: 'admin' },
 ];
@@ -94,6 +95,7 @@ export function getActiveNavKey(path: string) {
   if (normalized.startsWith('/app/competitions')) return 'competitions';
   if (normalized.startsWith('/app/rewards') || normalized.startsWith('/app/giveaways')) return 'rewards';
   if (normalized.startsWith('/app/profile')) return 'profile';
+  if (normalized.startsWith('/app/companion')) return 'companion';
   if (normalized.startsWith('/app/casino')) return 'casino';
   if (normalized.startsWith('/admin')) return 'admin';
   return '';

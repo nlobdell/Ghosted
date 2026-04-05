@@ -172,6 +172,10 @@ class FakeHandler(server.GhostedHandler):
         self.payload = payload
         self.status = status
 
+    def respond_svg(self, markup, status=200):
+        self.payload = markup
+        self.status = status
+
     def base_url(self):
         return "http://localhost:8000"
 
@@ -274,6 +278,32 @@ class GhostedAppTests(unittest.TestCase):
         result = server.enter_giveaway(self.connection, self.user, int(giveaway["id"]))
         self.assertEqual(result["giveawayId"], giveaway["id"])
         self.assertLess(server.get_balance(self.connection, self.user["id"]), server.STARTING_BALANCE)
+
+    def test_companion_purchase_unlocks_item_and_spends_points(self):
+        payload = server.purchase_companion_item(self.connection, self.user, "witch-hat")
+
+        self.assertEqual(payload["ownedCount"], 1)
+        self.assertEqual(payload["balance"], server.STARTING_BALANCE - 120)
+        inventory = self.connection.execute(
+            "SELECT item_slug FROM user_companion_inventory WHERE user_id = ?",
+            (self.user["id"],),
+        ).fetchall()
+        self.assertEqual([row["item_slug"] for row in inventory], ["witch-hat"])
+
+    def test_companion_equip_requires_owned_item(self):
+        with self.assertRaises(server.AppError) as exc:
+            server.equip_companion_item(self.connection, self.user, "hat", "witch-hat")
+
+        self.assertEqual(exc.exception.status, 400)
+
+    def test_companion_render_preview_endpoint(self):
+        handler = self.make_handler("/api/companion/render?preview=witch-hat", user=self.user)
+
+        server.GhostedHandler.route_request(handler, "GET", self.connection)
+
+        self.assertEqual(handler.status, 200)
+        self.assertIn("<svg", handler.payload)
+        self.assertIn("#39a7d7", handler.payload)
 
     @patch("server.wom_cached_json")
     @patch("server.wom_request_json")
@@ -482,6 +512,7 @@ class GhostedAppTests(unittest.TestCase):
         self.assertEqual(server.active_route_key("/app/clan/"), "community")
         self.assertEqual(server.active_route_key("/app/competitions/"), "community")
         self.assertEqual(server.active_route_key("/app/casino/"), "casino")
+        self.assertEqual(server.active_route_key("/app/companion/"), "companion")
 
     @patch("server.wom_cached_json")
     def test_wom_hiscores_endpoint(self, wom_cached_json):

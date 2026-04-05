@@ -96,7 +96,12 @@ export default function RewardsPage() {
         breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/app/' }, { label: 'Rewards' }]}
         title="Rewards and drops"
         summary="Confirm available balance first, then spend on active drops, then review ledger history."
-        actions={<Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>}
+        actions={(
+          <>
+            <Link href="/app/companion/" className="button button--secondary button--small">Companion</Link>
+            <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
+          </>
+        )}
       />
 
       {error ? <Banner message={error} variant="error" /> : null}
@@ -133,6 +138,7 @@ export default function RewardsPage() {
             }
             actions={(
               <>
+                <Link href="/app/companion/" className="button button--secondary button--small">Companion</Link>
                 <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
                 <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
               </>
