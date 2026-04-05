@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Banner, EmptyState } from '@/components/app/AppUI';
+import { Banner, EmptyState } from '@/components/ui/AppUI';
 import { formatDate } from '@/lib/api';
 import { getServerJSON } from '@/lib/server-api';
 import type { NewsPost } from '@/lib/types';

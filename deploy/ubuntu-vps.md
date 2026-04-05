@@ -34,7 +34,7 @@ sudo npm install
 
 ## 4. Configure env file
 
-Use `/etc/ghosted/ghosted.env` for backend settings and secrets.
+Use `/etc/ghosted/ghosted.env` for both Next.js and Python settings and secrets.
 
 At minimum:
 
@@ -43,6 +43,19 @@ At minimum:
 - `PUBLIC_BASE_URL=https://your-domain.com`
 - `DATABASE_PATH=/var/lib/ghosted/ghosted.db`
 - `SESSION_COOKIE_SECURE=true`
+- `PYTHON_API_URL=http://127.0.0.1:8000`
+- `AUTH_SECRET=<long random secret>`
+- `AUTH_URL=https://your-domain.com`
+- `INTERNAL_API_SECRET=<shared secret used by Next and Python>`
+- `DISCORD_CLIENT_ID=<discord app client id>`
+- `DISCORD_CLIENT_SECRET=<discord app client secret>`
+
+Discord application settings must include this redirect URI for browser sign-in:
+
+- `https://your-domain.com/api/auth/callback/discord`
+
+Legacy Python auth routes, if you still use them directly, can keep:
+
 - `DISCORD_REDIRECT_URI=https://your-domain.com/auth/discord/callback`
 
 ## 5. Run services
@@ -73,6 +86,8 @@ ghosted.example.com {
 
 Next.js handles `/api/*` and `/auth/*` rewrites to the Python API using `PYTHON_API_URL` (default `http://localhost:8000`).
 
+Do not point Caddy at `127.0.0.1:8000` for the public site. That bypasses the Next.js auth layer and breaks Auth.js routes such as `/auth/login` and `/api/auth/*`.
+
 ## 7. Deploy updates
 
 ```bash
@@ -98,6 +113,8 @@ sudo systemctl status ghosted-web --no-pager
 sudo systemctl status ghosted-api --no-pager
 curl -I https://your-domain.com
 curl -I https://your-domain.com/api/config
+curl -I https://your-domain.com/auth/login?next=/hall/
+curl -I https://your-domain.com/api/auth/signin/discord
 ```
 
 ## 9. Backups

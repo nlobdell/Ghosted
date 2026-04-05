@@ -13,7 +13,7 @@ import {
   EmptyState,
   Banner,
   FormField,
-} from '@/components/app/AppUI';
+} from '@/components/ui/AppUI';
 import { formatPoints, getJSON } from '@/lib/api';
 import type { NewsPost } from '@/lib/types';
 import styles from './page.module.css';
