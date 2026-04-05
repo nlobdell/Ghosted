@@ -5665,6 +5665,7 @@ class GhostedHandler(BaseHTTPRequestHandler):
         name = params.get("name", ["ghosted-dev"])[0]
         discord_id = params.get("discordId", ["dev-user-1"])[0]
         roles = [role for role in params.get("role", []) if role]
+        admin_requested = env_flag("DEV_AUTH_ADMIN", False) or str(params.get("admin", [""])[0] or "").strip().lower() in {"1", "true", "yes"}
         fake_user = {
             "id": discord_id,
             "username": name,
@@ -5672,6 +5673,9 @@ class GhostedHandler(BaseHTTPRequestHandler):
             "avatar": None,
         }
         row = create_or_update_user(connection, fake_user, roles)
+        if admin_requested and not row["is_admin"]:
+            connection.execute("UPDATE users SET is_admin = 1, updated_at = ? WHERE id = ?", (utc_iso(), row["id"]))
+            row = get_user_by_discord_id(connection, discord_id)
         ensure_user_rewards(connection, row, build_auth_config(self.base_url()))
         connection.commit()
         token = create_session(connection, row["id"])

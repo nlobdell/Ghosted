@@ -18,9 +18,17 @@ function getPublicOrigin(requestUrl: URL, forwardedHeaders: Headers) {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const devAuthEnabled = process.env.ENABLE_DEV_AUTH === 'true';
   const headerStore = await headers();
   const origin = getPublicOrigin(url, headerStore);
   const nextPath = url.searchParams.get('next') ?? '/hall/';
+
+  if (devAuthEnabled) {
+    const destination = new URL('/auth/dev-login', origin);
+    destination.searchParams.set('next', nextPath);
+    return NextResponse.redirect(destination);
+  }
+
   const destination = new URL('/api/auth/signin', origin);
   destination.searchParams.set('callbackUrl', new URL(nextPath, origin).toString());
   return NextResponse.redirect(destination);

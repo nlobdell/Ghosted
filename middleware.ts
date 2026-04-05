@@ -25,20 +25,23 @@ async function readAuthToken(request: NextRequest) {
 
 export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const legacyDevSession = process.env.ENABLE_DEV_AUTH === 'true'
+  const devAuthEnabled = process.env.ENABLE_DEV_AUTH === 'true';
+  const legacyDevSession = devAuthEnabled
     && Boolean(request.cookies.get('ghosted_session')?.value);
+  const legacyDevAdmin = legacyDevSession
+    && request.cookies.get('ghosted_dev_admin')?.value === '1';
   const token = await readAuthToken(request);
 
   if (pathname.startsWith('/hall') && !token?.sub && !legacyDevSession) {
-    const loginUrl = new URL('/auth/login', request.nextUrl.origin);
+    const loginUrl = new URL(devAuthEnabled ? '/auth/dev-login' : '/auth/login', request.nextUrl.origin);
     loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
 
   const isAdmin = Boolean(token && 'isAdmin' in token && token.isAdmin);
-  if (pathname.startsWith('/admin') && !isAdmin) {
+  if (pathname.startsWith('/admin') && !isAdmin && !legacyDevAdmin) {
     if (!token?.sub && !legacyDevSession) {
-      const loginUrl = new URL('/auth/login', request.nextUrl.origin);
+      const loginUrl = new URL(devAuthEnabled ? '/auth/dev-login' : '/auth/login', request.nextUrl.origin);
       loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
       return NextResponse.redirect(loginUrl);
     }
