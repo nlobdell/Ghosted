@@ -12,7 +12,6 @@ import {
   SectionHeading,
   StatStrip,
 } from '@/components/ui/AppUI';
-import { AnimatedCompanionStage } from '@/components/companion/AnimatedCompanionStage';
 import { formatPoints, getJSON } from '@/lib/api';
 import type {
   CompanionData,
@@ -37,6 +36,37 @@ function toGhostlingCopy(text: string) {
 function buildAbsoluteUrl(path: string) {
   if (typeof window === 'undefined') return path;
   return `${window.location.origin}${path}`;
+}
+
+function slugifyFilename(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'ghostling';
+}
+
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function loadImageFromBlob(blob: Blob) {
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    const image = new window.Image();
+    image.decoding = 'async';
+    image.src = objectUrl;
+    await image.decode();
+    return image;
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  }
 }
 
 export default function CompanionPage() {
@@ -132,6 +162,41 @@ export default function CompanionPage() {
     }
   }
 
+  async function downloadSvg(path: string, filename: string, label: string) {
+    try {
+      const response = await fetch(path, { headers: { Accept: 'image/svg+xml,*/*' } });
+      if (!response.ok) throw new Error(`Request failed: ${path}`);
+      const blob = await response.blob();
+      triggerDownload(blob, filename);
+      setMessage({ text: `${label} downloaded.`, variant: 'info' });
+    } catch (nextError) {
+      setMessage({ text: nextError instanceof Error ? nextError.message : `Unable to download ${label.toLowerCase()}.`, variant: 'error' });
+    }
+  }
+
+  async function downloadPng(path: string, filename: string, label: string, width: number, height: number) {
+    try {
+      const response = await fetch(path, { headers: { Accept: 'image/svg+xml,*/*' } });
+      if (!response.ok) throw new Error(`Request failed: ${path}`);
+      const blob = await response.blob();
+      const image = await loadImageFromBlob(blob);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Canvas export is unavailable in this browser.');
+      context.clearRect(0, 0, width, height);
+      context.imageSmoothingEnabled = false;
+      context.drawImage(image, 0, 0, width, height);
+      const pngBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!pngBlob) throw new Error('PNG export failed.');
+      triggerDownload(pngBlob, filename);
+      setMessage({ text: `${label} downloaded.`, variant: 'info' });
+    } catch (nextError) {
+      setMessage({ text: nextError instanceof Error ? nextError.message : `Unable to download ${label.toLowerCase()}.`, variant: 'error' });
+    }
+  }
+
   return (
     <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
       <AppContext
@@ -167,17 +232,17 @@ export default function CompanionPage() {
                 Equip the live loadout, unlock cosmetics with the points you already earn, and keep a share-ready version of your Ghostling ready for Discord, bios, and anywhere else the hall shows up.
               </p>
               <div className="app-inline-actions">
-                <button className="button button--secondary button--small" type="button" onClick={() => copyUrl(companion.share.avatarUrl, 'Avatar URL')}>
-                  Copy avatar URL
+                <button className="button button--secondary button--small" type="button" onClick={() => void downloadPng(companion.share.avatarUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-avatar.png`, 'Avatar PNG', 512, 512)}>
+                  Download avatar PNG
                 </button>
-                <button className="button button--secondary button--small" type="button" onClick={() => copyUrl(companion.share.animatedAvatarUrl, 'Animated avatar URL')}>
-                  Copy animated avatar
+                <button className="button button--secondary button--small" type="button" onClick={() => void downloadSvg(companion.share.animatedAvatarUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-avatar-animated.svg`, 'Animated avatar SVG')}>
+                  Download animated avatar
                 </button>
-                <button className="button button--secondary button--small" type="button" onClick={() => copyUrl(companion.share.cardUrl, 'Share card URL')}>
-                  Copy share card
+                <button className="button button--secondary button--small" type="button" onClick={() => void downloadPng(companion.share.cardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-card.png`, 'Share card PNG', 480, 320)}>
+                  Download card PNG
                 </button>
-                <button className="button button--secondary button--small" type="button" onClick={() => copyUrl(companion.share.animatedCardUrl, 'Animated share card URL')}>
-                  Copy animated card
+                <button className="button button--secondary button--small" type="button" onClick={() => void downloadSvg(companion.share.animatedCardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-card-animated.svg`, 'Animated card SVG')}>
+                  Download animated card
                 </button>
                 {companion.baseAssetUrl ? (
                   <a href={companion.baseAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
@@ -188,9 +253,8 @@ export default function CompanionPage() {
             </div>
             <div className={styles.heroStage}>
               <div className={styles.avatarFrame}>
-                <AnimatedCompanionStage
-                  manifest={companion.renderManifest}
-                  fallbackSrc={companion.renderUrl}
+                <img
+                  src={companion.animatedRenderUrl}
                   alt={`${companion.user.displayName}'s Ghostling`}
                   className={styles.avatarImage}
                 />
@@ -222,9 +286,8 @@ export default function CompanionPage() {
               body={(
                 <div className={styles.studioBody}>
                   <div className={styles.previewSurface}>
-                    <AnimatedCompanionStage
-                      manifest={companion.renderManifest}
-                      fallbackSrc={companion.renderUrl}
+                    <img
+                      src={companion.animatedRenderUrl}
                       alt="Equipped Ghostling preview"
                       className={styles.previewImage}
                     />
@@ -261,27 +324,60 @@ export default function CompanionPage() {
               body={(
                 <div className={styles.shareBody}>
                   <div className={styles.cardPreview}>
-                    <img src={companion.cardUrl} alt="Ghostling share card" className={styles.cardImage} />
+                    <img src={companion.animatedCardUrl} alt="Animated Ghostling share card" className={styles.cardImage} />
                   </div>
                   <div className={styles.shareList}>
                     {[
-                      ['Transparent avatar', companion.share.avatarUrl, 'Copy avatar URL'],
-                      ['Animated avatar (SVG)', companion.share.animatedAvatarUrl, 'Copy animated avatar URL'],
-                      ['Discord share card', companion.share.cardUrl, 'Copy card URL'],
-                      ['Animated share card (SVG)', companion.share.animatedCardUrl, 'Copy animated card URL'],
-                    ].map(([label, path, actionLabel]) => (
-                      <div key={label} className={styles.shareRow}>
+                      {
+                        label: 'Avatar PNG',
+                        detail: '512 x 512 transparent output for profile images and overlays.',
+                        path: companion.share.avatarUrl,
+                        primaryLabel: 'Download PNG',
+                        primaryAction: () => downloadPng(companion.share.avatarUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-avatar.png`, 'Avatar PNG', 512, 512),
+                      },
+                      {
+                        label: 'Avatar SVG',
+                        detail: 'Animated vector source for sharp exports and future reuse.',
+                        path: companion.share.animatedAvatarUrl,
+                        primaryLabel: 'Download SVG',
+                        primaryAction: () => downloadSvg(companion.share.animatedAvatarUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-avatar-animated.svg`, 'Animated avatar SVG'),
+                      },
+                      {
+                        label: 'Share card PNG',
+                        detail: '480 x 320 social card output ready for Discord posts and uploads.',
+                        path: companion.share.cardUrl,
+                        primaryLabel: 'Download PNG',
+                        primaryAction: () => downloadPng(companion.share.cardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-card.png`, 'Share card PNG', 480, 320),
+                      },
+                      {
+                        label: 'Animated share card SVG',
+                        detail: 'Motion-preserving vector card that matches the homepage Ghostling style.',
+                        path: companion.share.animatedCardUrl,
+                        primaryLabel: 'Download SVG',
+                        primaryAction: () => downloadSvg(companion.share.animatedCardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-card-animated.svg`, 'Animated card SVG'),
+                      },
+                    ].map((item) => (
+                      <div key={item.label} className={styles.shareRow}>
                         <div>
-                          <strong>{label}</strong>
-                          <span>{path}</span>
+                          <strong>{item.label}</strong>
+                          <span>{item.detail}</span>
                         </div>
-                        <button
-                          type="button"
-                          className="button button--secondary button--small"
-                          onClick={() => copyUrl(path, label)}
-                        >
-                          {actionLabel}
-                        </button>
+                        <div className={styles.shareActions}>
+                          <button
+                            type="button"
+                            className="button button--secondary button--small"
+                            onClick={() => void item.primaryAction()}
+                          >
+                            {item.primaryLabel}
+                          </button>
+                          <button
+                            type="button"
+                            className="button button--secondary button--small"
+                            onClick={() => copyUrl(item.path, `${item.label} URL`)}
+                          >
+                            Copy source URL
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -15,6 +15,7 @@ type AnimatedCompanionStageProps = {
   fallbackSrc: string;
   alt: string;
   className?: string;
+  targetSize?: number;
 };
 
 type StageOffset = {
@@ -90,11 +91,19 @@ function addOffsets(...offsets: Array<StageOffset | undefined>): StageOffset {
   );
 }
 
+function pullOffsets(primary: StageOffset, secondary: StageOffset, influence: number): StageOffset {
+  return {
+    x: primary.x + ((secondary.x - primary.x) * influence),
+    y: primary.y + ((secondary.y - primary.y) * influence),
+  };
+}
+
 export function AnimatedCompanionStage({
   manifest,
   fallbackSrc,
   alt,
   className,
+  targetSize = 224,
 }: AnimatedCompanionStageProps) {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const pieceRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -102,7 +111,7 @@ export function AnimatedCompanionStage({
 
   const logicalWidth = Math.max(1, manifest?.width || 32);
   const logicalHeight = Math.max(1, manifest?.height || 32);
-  const stageScale = logicalWidth >= 210 || logicalHeight >= 210 ? 1 : 3;
+  const stageScale = Math.max(1, targetSize / Math.max(logicalWidth, logicalHeight));
   const stageWidth = logicalWidth * stageScale;
   const stageHeight = logicalHeight * stageScale;
 
@@ -161,8 +170,12 @@ export function AnimatedCompanionStage({
     const render = (timestamp: number) => {
       const elapsedMs = timestamp - startTime;
       const rootOffset = resolveChannelOffset(manifest.motion.channels?.[rootKey], elapsedMs, prefersReducedMotion);
-      const bodyOffset = addOffsets(rootOffset, resolveChannelOffset(manifest.motion.channels?.body, elapsedMs, prefersReducedMotion));
-      const headOffset = addOffsets(rootOffset, resolveChannelOffset(manifest.motion.channels?.head, elapsedMs, prefersReducedMotion));
+      const bodyLocal = resolveChannelOffset(manifest.motion.channels?.body, elapsedMs, prefersReducedMotion);
+      const headLocal = resolveChannelOffset(manifest.motion.channels?.head, elapsedMs, prefersReducedMotion);
+      const bodyCoupled = pullOffsets(bodyLocal, headLocal, 0.12);
+      const headCoupled = pullOffsets(headLocal, bodyLocal, 0.34);
+      const bodyOffset = addOffsets(rootOffset, bodyCoupled);
+      const headOffset = addOffsets(rootOffset, headCoupled);
 
       const resolveGroupOffset = (group: string | null | undefined) => {
         if (!group || group === rootKey) return rootOffset;
@@ -172,7 +185,7 @@ export function AnimatedCompanionStage({
       };
 
       if (shadowRef.current) {
-        const shadowBias = (rootOffset.y + bodyOffset.y) * 0.12;
+        const shadowBias = bodyOffset.y * 0.12;
         shadowRef.current.style.transform = `translate(${roundPx(rootOffset.x * stageScale)}px, ${roundPx(rootOffset.y * stageScale)}px) scale(${Math.max(0.8, 1 - shadowBias * 0.02)})`;
         shadowRef.current.style.opacity = `${Math.max(0.12, (manifest.motion.shadowOpacity ?? 0.2) - shadowBias * 0.03)}`;
       }

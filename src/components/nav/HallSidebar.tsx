@@ -9,9 +9,12 @@ const HALL_LINKS = [
   { href: '/hall/clan/', label: 'Clan', meta: 'Roster pulse' },
 ];
 
-export function HallSidebar() {
+export function HallSidebar({ includeAdmin = false }: { includeAdmin?: boolean }) {
   const pathname = usePathname();
   const normalizedPath = pathname !== '/' && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+  const links = includeAdmin
+    ? [...HALL_LINKS, { href: '/admin/', label: 'Admin', meta: 'Operations + tools' }]
+    : HALL_LINKS;
 
   return (
     <aside className="hall-sidebar" aria-label="Hall navigation">
@@ -20,7 +23,7 @@ export function HallSidebar() {
         <h2 className="hall-sidebar__title">The Hall</h2>
       </div>
       <nav className="hall-sidebar__nav">
-        {HALL_LINKS.map((link) => (
+        {links.map((link) => (
           <Link
             key={link.href}
             href={link.href}

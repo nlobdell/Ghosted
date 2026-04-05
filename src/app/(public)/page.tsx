@@ -5,7 +5,7 @@ import { SocialProofStrip } from '@/components/home/SocialProofStrip';
 import { NewsPreview } from '@/components/home/NewsPreview';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 import { getServerJSON } from '@/lib/server-api';
-import type { NewsPost, ShellData } from '@/lib/types';
+import type { CompanionData, NewsPost, ShellData } from '@/lib/types';
 import styles from '../page.module.css';
 
 export const metadata: Metadata = {
@@ -18,9 +18,10 @@ function getHallHref(shellData: ShellData | null) {
 }
 
 export default async function HomePage() {
-  const [newsPayload, shellData] = await Promise.all([
+  const [newsPayload, shellData, companionData] = await Promise.all([
     getServerJSON<{ posts: NewsPost[] }>('/api/news?limit=3'),
     getServerJSON<ShellData>('/api/site-shell?next=%2Fhall%2F'),
+    getServerJSON<CompanionData>('/api/companion'),
   ]);
 
   const previewPosts = newsPayload?.posts?.slice(0, 3) ?? [];
@@ -51,14 +52,14 @@ export default async function HomePage() {
                 <span className={styles.stageLabel}>{stageName ? 'Your Ghostling' : 'Ghostling preview'}</span>
                 <div className={styles.stageCanvas}>
                   <img
-                    src="/api/companion/render-animated"
-                    alt={stageName ? `${stageName}'s Ghostling preview` : 'Ghosted Ghostling preview'}
+                    src={companionData?.animatedRenderUrl ?? '/api/companion/render-animated'}
+                    alt={companionData ? `${companionData.user.displayName}'s Ghostling preview` : stageName ? `${stageName}'s Ghostling preview` : 'Ghosted Ghostling preview'}
                     className={styles.stageImage}
                   />
                 </div>
                 <div className={styles.stageMeta}>
-                  <strong>{stageName ?? 'Ghosted Ghostling'}</strong>
-                  <span>{stageName ? 'Signed-in members see their own Ghostling here.' : 'Visitors see the default ghost until they enter the Hall.'}</span>
+                  <strong>{companionData?.user.displayName ?? stageName ?? 'Ghosted Ghostling'}</strong>
+                  <span>{stageName ? 'Signed-in members see their own Ghostling here.' : 'Visitors see the default Ghostling until they enter the Hall.'}</span>
                 </div>
               </div>
             </aside>

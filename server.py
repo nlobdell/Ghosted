@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import html
+import math
 import mimetypes
 import os
 import random
@@ -225,6 +226,7 @@ COMPANION_ALLOWED_ASSET_EXTENSIONS = {
 COMPANION_MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 COMPANION_DEFAULT_BASE_ASSET_PATH = "repo/defaults/base/ghostling-base-body.png"
 COMPANION_LEGACY_BASE_ASSET_PATHS = {
+    "repo/defaults/base/ghostling-base-body.png",
     "repo/defaults/base/ghostling-base.svg",
     "repo/defaults/base/ghostling-base-animated.png",
 }
@@ -239,130 +241,7 @@ COMPANION_DEFAULT_SLOT_GROUPS = {
 }
 
 
-COMPANION_ITEMS = [
-    {
-        "slug": "witch-hat",
-        "name": "Witch Hat",
-        "slot": "hat",
-        "rarity": "rare",
-        "cost": 120,
-        "description": "A crooked brim for maximum spooky little gremlin energy.",
-        "sort_order": 10,
-        "front_asset_path": "repo/defaults/items/witch-hat-front.svg",
-    },
-    {
-        "slug": "halo",
-        "name": "Halo",
-        "slot": "hat",
-        "rarity": "epic",
-        "cost": 220,
-        "description": "Bright, smug, and a little too clean for a ghost.",
-        "sort_order": 20,
-        "front_asset_path": "repo/defaults/items/halo-front.svg",
-    },
-    {
-        "slug": "traffic-cone",
-        "name": "Traffic Cone",
-        "slot": "hat",
-        "rarity": "common",
-        "cost": 80,
-        "description": "Street-certified nonsense for the tiny haunt economy.",
-        "sort_order": 30,
-        "front_asset_path": "repo/defaults/items/traffic-cone-front.svg",
-    },
-    {
-        "slug": "sleepy-eyes",
-        "name": "Sleepy Eyes",
-        "slot": "face",
-        "rarity": "common",
-        "cost": 60,
-        "description": "A half-awake stare for late-night lurkers.",
-        "sort_order": 40,
-        "front_asset_path": "repo/defaults/items/sleepy-eyes-front.svg",
-    },
-    {
-        "slug": "fang-smile",
-        "name": "Fang Smile",
-        "slot": "face",
-        "rarity": "rare",
-        "cost": 95,
-        "description": "Tiny fangs, huge menace, surprisingly approachable.",
-        "sort_order": 50,
-        "front_asset_path": "repo/defaults/items/fang-smile-front.svg",
-    },
-    {
-        "slug": "cracked-mask",
-        "name": "Cracked Mask",
-        "slot": "face",
-        "rarity": "epic",
-        "cost": 180,
-        "description": "A porcelain front with a dramatic fault line.",
-        "sort_order": 60,
-        "front_asset_path": "repo/defaults/items/cracked-mask-front.svg",
-    },
-    {
-        "slug": "bell-collar",
-        "name": "Bell Collar",
-        "slot": "neck",
-        "rarity": "common",
-        "cost": 70,
-        "description": "A happy jingle before the jump scare.",
-        "sort_order": 70,
-        "front_asset_path": "repo/defaults/items/bell-collar-front.svg",
-    },
-    {
-        "slug": "tattered-scarf",
-        "name": "Tattered Scarf",
-        "slot": "neck",
-        "rarity": "rare",
-        "cost": 110,
-        "description": "Wind-cut fabric with a little travel story in it.",
-        "sort_order": 80,
-        "front_asset_path": "repo/defaults/items/tattered-scarf-front.svg",
-    },
-    {
-        "slug": "lantern-charm",
-        "name": "Lantern Charm",
-        "slot": "neck",
-        "rarity": "epic",
-        "cost": 175,
-        "description": "A warm hanging lantern that reads well in tiny previews.",
-        "sort_order": 90,
-        "front_asset_path": "repo/defaults/items/lantern-charm-front.svg",
-    },
-    {
-        "slug": "hoodie",
-        "name": "Hoodie",
-        "slot": "body",
-        "rarity": "common",
-        "cost": 130,
-        "description": "Comfy ghostwear for grinding, lurking, or posting.",
-        "sort_order": 100,
-        "front_asset_path": "repo/defaults/items/hoodie-front.svg",
-    },
-    {
-        "slug": "cape",
-        "name": "Cape",
-        "slot": "body",
-        "rarity": "rare",
-        "cost": 190,
-        "description": "A dramatic cape that turns a peeker into a tiny entrance.",
-        "sort_order": 110,
-        "front_asset_path": "repo/defaults/items/cape-front.svg",
-        "back_asset_path": "repo/defaults/items/cape-back.svg",
-    },
-    {
-        "slug": "bat-wings",
-        "name": "Bat Wings",
-        "slot": "body",
-        "rarity": "legendary",
-        "cost": 320,
-        "description": "Big silhouette value for people who want their companion noticed.",
-        "sort_order": 120,
-        "front_asset_path": "repo/defaults/items/bat-wings-front.svg",
-        "back_asset_path": "repo/defaults/items/bat-wings-back.svg",
-    },
-]
+COMPANION_ITEMS: list[dict[str, Any]] = []
 
 
 def companion_asset_dir() -> Path:
@@ -795,18 +674,112 @@ def companion_asset_animation(relative_path: str | None) -> dict[str, Any]:
 def companion_default_motion_channels() -> dict[str, Any]:
     return {
         "root": {
-            "offsetX": {"amplitude": 0.22, "durationMs": 4700, "phase": 0.51},
-            "offsetY": {"amplitude": 0.36, "durationMs": 3200, "phase": 0.13},
+            "offsetX": {"amplitude": 0.16, "durationMs": 5200, "phase": 0.49},
+            "offsetY": {"amplitude": 0.26, "durationMs": 4100, "phase": 0.11},
         },
         "body": {
-            "offsetX": {"amplitude": 0.18, "durationMs": 3380, "phase": 0.22},
-            "offsetY": {"amplitude": 0.55, "durationMs": 2460, "phase": 0.35},
+            "offsetX": {"amplitude": 0.12, "durationMs": 3600, "phase": 0.2},
+            "offsetY": {"amplitude": 0.46, "durationMs": 2860, "phase": 0.31},
         },
         "head": {
-            "offsetX": {"amplitude": 0.42, "durationMs": 2140, "phase": 0.43},
-            "offsetY": {"amplitude": 1.35, "durationMs": 1620, "phase": 0.74},
+            "offsetX": {"amplitude": 0.3, "durationMs": 2480, "phase": 0.41},
+            "offsetY": {"amplitude": 0.92, "durationMs": 1820, "phase": 0.72},
         },
     }
+
+
+def companion_svg_translate_animation(
+    wave: dict[str, Any] | None,
+    *,
+    axis: str,
+    steps: int = 10,
+) -> str:
+    if not isinstance(wave, dict):
+        return ""
+    try:
+        amplitude = float(wave.get("amplitude", 0))
+        duration_ms = max(1, int(wave.get("durationMs", 0)))
+        phase = float(wave.get("phase", 0))
+    except (TypeError, ValueError):
+        return ""
+    if amplitude == 0:
+        return ""
+
+    values: list[str] = []
+    for index in range(steps + 1):
+        progress = index / steps
+        radians = progress * math.pi * 2 + (phase * math.pi * 2)
+        offset = math.sin(radians) * amplitude
+        if axis == "x":
+            values.append(f"{offset:.3f} 0")
+        else:
+            values.append(f"0 {offset:.3f}")
+
+    return (
+        '<animateTransform attributeName="transform" type="translate" additive="sum" '
+        f'values="{";".join(values)}" dur="{duration_ms / 1000:.3f}s" repeatCount="indefinite" />'
+    )
+
+
+def companion_svg_motion_group_markup(
+    group_key: str,
+    markup: str,
+    channel: dict[str, Any] | None,
+) -> str:
+    if not markup:
+        return ""
+    x_animation = companion_svg_translate_animation((channel or {}).get("offsetX"), axis="x")
+    y_animation = companion_svg_translate_animation((channel or {}).get("offsetY"), axis="y")
+    return f'<g id="ghostling-{group_key}">{x_animation}{y_animation}{markup}</g>'
+
+
+def wrap_companion_card_text(text: str, *, limit: int) -> list[str]:
+    words = str(text or "").split()
+    if not words:
+        return []
+
+    lines: list[str] = []
+    current = words[0]
+    for word in words[1:]:
+        candidate = f"{current} {word}"
+        if len(candidate) <= limit:
+            current = candidate
+            continue
+        lines.append(current)
+        current = word
+    lines.append(current)
+    return lines
+
+
+def fit_companion_card_title(text: str, *, limit: int = 18) -> str:
+    value = str(text or "").strip()
+    if len(value) <= limit:
+        return html.escape(value)
+    shortened = value[: max(0, limit - 1)].rstrip()
+    return f"{html.escape(shortened)}…"
+
+
+def render_companion_card_copy(
+    *,
+    title: str,
+    subtitle: str,
+    body: str,
+) -> str:
+    title_markup = (
+        f'<text x="244" y="152" fill="#f7f6ff" font-family="Arial, sans-serif" '
+        f'font-size="28" font-weight="700">{fit_companion_card_title(title)}</text>'
+    )
+    subtitle_markup = (
+        f'<text x="244" y="184" fill="#b8b0d5" font-family="Arial, sans-serif" '
+        f'font-size="16">{html.escape(subtitle)}</text>'
+    )
+    body_lines = wrap_companion_card_text(body, limit=34)[:2]
+    body_markup = "".join(
+        f'<text x="244" y="{226 + (index * 20)}" fill="#d9d4ef" font-family="Arial, sans-serif" '
+        f'font-size="15">{html.escape(line)}</text>'
+        for index, line in enumerate(body_lines)
+    )
+    return title_markup + subtitle_markup + body_markup
 
 
 def companion_animation_source_dimensions(animation: dict[str, Any]) -> tuple[int, int]:
@@ -968,8 +941,19 @@ def resolve_companion_layer_specs(connection: sqlite3.Connection, loadout: dict[
         )
 
     base_path = companion_base_asset_path(connection)
-    base_animation = companion_asset_animation(base_path)
-    base_source_width, base_source_height = companion_animation_source_dimensions(base_animation)
+    if base_path:
+        base_animation = companion_asset_animation(base_path)
+        base_source_width, base_source_height = companion_animation_source_dimensions(base_animation)
+    else:
+        base_animation = {
+            "mode": "single",
+            "frameCount": 1,
+            "sheetWidth": COMPANION_CANVAS_SIZE,
+            "sheetHeight": COMPANION_CANVAS_SIZE,
+            "frames": [],
+        }
+        base_source_width = COMPANION_CANVAS_SIZE
+        base_source_height = COMPANION_CANVAS_SIZE
     base_rig = companion_asset_rig(
         base_path,
         source_width=base_source_width,
@@ -988,7 +972,7 @@ def resolve_companion_layer_specs(connection: sqlite3.Connection, loadout: dict[
                     "motionGroup": rig_layer.get("motionGroup"),
                 }
             )
-    else:
+    elif base_path:
         layers.append(
             {
                 "key": "base",
@@ -1036,8 +1020,19 @@ def resolve_companion_layer_specs(connection: sqlite3.Connection, loadout: dict[
 
 def companion_render_manifest(connection: sqlite3.Connection, loadout: dict[str, str | None]) -> dict[str, Any]:
     base_path = companion_base_asset_path(connection)
-    base_animation = companion_asset_animation(base_path)
-    base_source_width, base_source_height = companion_animation_source_dimensions(base_animation)
+    if base_path:
+        base_animation = companion_asset_animation(base_path)
+        base_source_width, base_source_height = companion_animation_source_dimensions(base_animation)
+    else:
+        base_animation = {
+            "mode": "single",
+            "frameCount": 1,
+            "sheetWidth": COMPANION_CANVAS_SIZE,
+            "sheetHeight": COMPANION_CANVAS_SIZE,
+            "frames": [],
+        }
+        base_source_width = COMPANION_CANVAS_SIZE
+        base_source_height = COMPANION_CANVAS_SIZE
     base_rig = companion_asset_rig(
         base_path,
         source_width=base_source_width,
@@ -2294,9 +2289,9 @@ def init_database(connection: sqlite3.Connection) -> None:
     ensure_table_column(connection, "companion_catalog", "back_asset_path", "TEXT")
     seed_default_games(connection)
     seed_default_giveaway(connection)
-    seed_default_companion_items(connection)
     ensure_default_companion_base(connection)
-    migrate_legacy_companion_asset_paths(connection)
+    seed_default_companion_items(connection)
+    remove_repo_default_companion_assets(connection)
     connection.commit()
 
 
@@ -2374,6 +2369,8 @@ def ensure_default_companion_base(connection: sqlite3.Connection) -> None:
 
 
 def seed_default_companion_items(connection: sqlite3.Connection) -> None:
+    if not COMPANION_ITEMS:
+        return
     created_at = utc_iso()
     for item in COMPANION_ITEMS:
         front_asset_path = item.get("front_asset_path")
@@ -2422,21 +2419,22 @@ def seed_default_companion_items(connection: sqlite3.Connection) -> None:
         )
 
 
-def migrate_legacy_companion_asset_paths(connection: sqlite3.Connection) -> None:
-    connection.execute(
+def remove_repo_default_companion_assets(connection: sqlite3.Connection) -> None:
+    legacy_rows = connection.execute(
         """
-        UPDATE companion_catalog
-        SET front_asset_path = 'repo/' || front_asset_path
+        SELECT slug
+        FROM companion_catalog
         WHERE front_asset_path LIKE 'defaults/%'
+           OR back_asset_path LIKE 'defaults/%'
+           OR front_asset_path LIKE 'repo/defaults/items/%'
+           OR back_asset_path LIKE 'repo/defaults/items/%'
         """
-    )
-    connection.execute(
-        """
-        UPDATE companion_catalog
-        SET back_asset_path = 'repo/' || back_asset_path
-        WHERE back_asset_path LIKE 'defaults/%'
-        """
-    )
+    ).fetchall()
+    legacy_slugs = [str(row["slug"]) for row in legacy_rows]
+    if legacy_slugs:
+        placeholders = ",".join("?" for _ in legacy_slugs)
+        connection.execute(f"DELETE FROM companion_catalog WHERE slug IN ({placeholders})", legacy_slugs)
+
     connection.execute(
         """
         UPDATE companion_settings
@@ -2445,13 +2443,16 @@ def migrate_legacy_companion_asset_paths(connection: sqlite3.Connection) -> None
           AND (
             base_asset_path IS NULL
             OR TRIM(base_asset_path) = ''
-            OR base_asset_path LIKE 'defaults/%'
-            OR base_asset_path IN (?, ?)
+            OR
+            base_asset_path LIKE 'defaults/%'
+            OR base_asset_path LIKE 'repo/defaults/base/%'
+            OR base_asset_path IN (?, ?, ?)
           )
         """,
         (
             COMPANION_DEFAULT_BASE_ASSET_PATH,
             utc_iso(),
+            "repo/defaults/base/ghostling-base-body.png",
             "repo/defaults/base/ghostling-base.svg",
             "repo/defaults/base/ghostling-base-animated.png",
         ),
@@ -2580,7 +2581,7 @@ def companion_admin_payload(connection: sqlite3.Connection) -> dict[str, Any]:
         "base": {
             "assetPath": base_path,
             "assetUrl": companion_asset_url(base_path),
-            "previewUrl": "/api/companion/render",
+            "previewUrl": "/api/companion/render-animated",
         },
         "items": [
             {
@@ -2596,7 +2597,7 @@ def companion_admin_payload(connection: sqlite3.Connection) -> dict[str, Any]:
                 "frontAssetUrl": companion_asset_url(row["front_asset_path"]),
                 "backAssetPath": row["back_asset_path"],
                 "backAssetUrl": companion_asset_url(row["back_asset_path"]),
-                "previewUrl": f"/api/companion/render?preview={quote(str(row['slug']))}",
+                "previewUrl": f"/api/companion/render-animated?preview={quote(str(row['slug']))}",
             }
             for row in rows
         ],
@@ -2907,7 +2908,7 @@ def companion_payload(
             "active": bool(row["active"]),
             "owned": row["slug"] in owned_slugs,
             "equipped": loadout.get(row["slot_key"]) == row["slug"],
-            "previewUrl": f"/api/companion/render?preview={quote(str(row['slug']))}",
+            "previewUrl": f"/api/companion/render-animated?preview={quote(str(row['slug']))}",
             "frontAssetUrl": companion_asset_url(row["front_asset_path"]),
             "backAssetUrl": companion_asset_url(row["back_asset_path"]),
         }
@@ -3241,6 +3242,93 @@ def companion_animated_layer_markup(relative_path: str | None, layer_id: str) ->
     return defs, markup
 
 
+def render_empty_companion_svg(
+    *,
+    display_name: str,
+    subtitle: str | None = None,
+    card: bool = False,
+    animated: bool = False,
+) -> str:
+    title = display_name or "Ghosted Ghostling"
+    subtitle_text = subtitle or "Ghostling vault"
+
+    if card:
+        bob = (
+            '<animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="4.2s" repeatCount="indefinite" />'
+            if animated
+            else ""
+        )
+        shadow = (
+            '<ellipse cx="123" cy="255" rx="38" ry="10" fill="rgba(10, 8, 18, 0.28)">'
+            '<animate attributeName="rx" values="38;34;38" dur="4.2s" repeatCount="indefinite" />'
+            '<animate attributeName="opacity" values="0.28;0.18;0.28" dur="4.2s" repeatCount="indefinite" />'
+            "</ellipse>"
+            if animated
+            else '<ellipse cx="123" cy="255" rx="38" ry="10" fill="rgba(10, 8, 18, 0.24)" />'
+        )
+        return (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320">'
+            "<defs>"
+            '<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">'
+            '<stop offset="0%" stop-color="#0b0a11" />'
+            '<stop offset="100%" stop-color="#1b1730" />'
+            "</linearGradient>"
+            "</defs>"
+            '<rect width="480" height="320" rx="28" fill="url(#bg)" />'
+            '<rect x="24" y="24" width="190" height="272" rx="22" fill="#090b11" stroke="#2b3552" />'
+            '<rect x="40" y="40" width="158" height="240" rx="18" fill="#0e1320" />'
+            f"{shadow}"
+            '<g transform="translate(47 53) scale(4.8)">'
+            '<g>'
+            f"{bob}"
+            '<rect x="8" y="7" width="16" height="16" rx="8" fill="rgba(226, 235, 255, 0.14)" stroke="#5a6b93" />'
+            '<circle cx="13" cy="15" r="1.2" fill="#d8e5ff" opacity="0.65" />'
+            '<circle cx="19" cy="15" r="1.2" fill="#d8e5ff" opacity="0.65" />'
+            '<path d="M13 19 C15 21 17 21 19 19" fill="none" stroke="#9bb6ff" stroke-width="1.1" stroke-linecap="round" />'
+            "</g>"
+            "</g>"
+            '<text x="244" y="106" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14" letter-spacing="2">GHOSTED GHOSTLING</text>'
+            f'{render_companion_card_copy(title=title, subtitle=subtitle_text, body="No default Ghostling ships with the site. Upload a base and cosmetics from the admin vault to bring this stage to life.")}'
+            '<rect x="244" y="250" width="182" height="34" rx="17" fill="#16132a" stroke="#312759" />'
+            '<text x="262" y="271" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14">awaiting uploaded art</text>'
+            "</svg>"
+        )
+
+    bob = (
+        '<animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="4.2s" repeatCount="indefinite" />'
+        if animated
+        else ""
+    )
+    shadow = (
+        '<ellipse cx="80" cy="123" rx="26" ry="7" fill="rgba(10, 8, 18, 0.24)">'
+        '<animate attributeName="rx" values="26;22;26" dur="4.2s" repeatCount="indefinite" />'
+        '<animate attributeName="opacity" values="0.24;0.14;0.24" dur="4.2s" repeatCount="indefinite" />'
+        "</ellipse>"
+        if animated
+        else '<ellipse cx="80" cy="123" rx="26" ry="7" fill="rgba(10, 8, 18, 0.18)" />'
+    )
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">'
+        "<defs>"
+        '<linearGradient id="empty-bg" x1="0" y1="0" x2="1" y2="1">'
+        '<stop offset="0%" stop-color="#0d0b16" />'
+        '<stop offset="100%" stop-color="#1a1630" />'
+        "</linearGradient>"
+        "</defs>"
+        '<rect width="160" height="160" rx="30" fill="url(#empty-bg)" />'
+        f"{shadow}"
+        '<g transform="translate(0 0)">'
+        f"{bob}"
+        '<rect x="48" y="34" width="64" height="64" rx="24" fill="rgba(226, 235, 255, 0.12)" stroke="#4b5b86" />'
+        '<circle cx="68" cy="62" r="4" fill="#d8e5ff" opacity="0.68" />'
+        '<circle cx="92" cy="62" r="4" fill="#d8e5ff" opacity="0.68" />'
+        '<path d="M68 79 C74 84 86 84 92 79" fill="none" stroke="#9bb6ff" stroke-width="4" stroke-linecap="round" />'
+        "</g>"
+        '<text x="80" y="145" fill="#cdd8ff" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">No base uploaded yet</text>'
+        "</svg>"
+    )
+
+
 def render_companion_svg(
     connection: sqlite3.Connection,
     loadout: dict[str, str | None],
@@ -3250,10 +3338,17 @@ def render_companion_svg(
     card: bool = False,
 ) -> str:
     layers = "".join(resolve_companion_layers(connection, loadout))
+    if not layers.strip():
+        return render_empty_companion_svg(display_name=display_name, subtitle=subtitle, card=card, animated=False)
 
     if card:
-        title = html.escape(display_name)
-        subtitle_text = html.escape(subtitle or "Ghosted Companion")
+        title = display_name
+        subtitle_text = subtitle or "Ghosted Ghostling"
+        copy_markup = render_companion_card_copy(
+            title=title,
+            subtitle=subtitle_text,
+            body="Spend points, unlock cosmetics, and share your tiny ghost anywhere Ghosted shows up.",
+        )
         return (
             '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320" '
             'shape-rendering="crispEdges" style="image-rendering:pixelated">'
@@ -3269,10 +3364,8 @@ def render_companion_svg(
             '<g transform="translate(47 53) scale(4.8)">'
             f"{layers}"
             "</g>"
-            '<text x="244" y="106" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14" letter-spacing="2">GHOSTED COMPANION</text>'
-            f'<text x="244" y="152" fill="#f7f6ff" font-family="Arial, sans-serif" font-size="28" font-weight="700">{title}</text>'
-            f'<text x="244" y="184" fill="#b8b0d5" font-family="Arial, sans-serif" font-size="16">{subtitle_text}</text>'
-            '<text x="244" y="226" fill="#d9d4ef" font-family="Arial, sans-serif" font-size="15">Spend points, unlock cosmetics, and share your tiny ghost anywhere Ghosted shows up.</text>'
+            '<text x="244" y="106" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14" letter-spacing="2">GHOSTED GHOSTLING</text>'
+            f"{copy_markup}"
             '<rect x="244" y="250" width="170" height="34" rx="17" fill="#16132a" stroke="#312759" />'
             '<text x="262" y="271" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14">discord-ready share card</text>'
             "</svg>"
@@ -3294,21 +3387,67 @@ def render_animated_companion_svg(
     subtitle: str | None = None,
     card: bool = False,
 ) -> str:
+    base_path = companion_base_asset_path(connection)
+    if base_path:
+        base_animation = companion_asset_animation(base_path)
+        base_source_width, base_source_height = companion_animation_source_dimensions(base_animation)
+    else:
+        base_animation = {
+            "mode": "single",
+            "frameCount": 1,
+            "sheetWidth": COMPANION_CANVAS_SIZE,
+            "sheetHeight": COMPANION_CANVAS_SIZE,
+            "frames": [],
+        }
+        base_source_width = COMPANION_CANVAS_SIZE
+        base_source_height = COMPANION_CANVAS_SIZE
+    base_rig = companion_asset_rig(
+        base_path,
+        source_width=base_source_width,
+        source_height=base_source_height,
+    )
     layer_defs: list[str] = []
-    layer_markup: list[str] = []
+    grouped_markup: dict[str, list[str]] = {"root": [], "body": [], "head": []}
     for layer in resolve_companion_layer_specs(connection, loadout):
         defs, markup = companion_animated_layer_markup(layer.get("relativePath"), str(layer["key"]))
         if defs:
             layer_defs.append(defs)
         if markup:
-            layer_markup.append(markup)
+            motion_group = layer.get("motionGroup")
+            if not motion_group and layer.get("slot"):
+                motion_group = base_rig["slotGroups"].get(str(layer["slot"]))
+            group_key = str(motion_group or "root")
+            grouped_markup.setdefault(group_key, []).append(markup)
 
-    layers = "".join(layer_markup)
     defs = "".join(layer_defs)
-    title = html.escape(display_name)
-    subtitle_text = html.escape(subtitle or "Ghosted Companion")
-    bob_distance = COMPANION_DEFAULT_BOB_AMPLITUDE_PX
-    bob_duration = f"{COMPANION_DEFAULT_BOB_DURATION_MS / 1000:.3f}s"
+    has_layers = any(markups for markups in grouped_markup.values())
+    if not has_layers:
+        return render_empty_companion_svg(display_name=display_name, subtitle=subtitle, card=card, animated=True)
+    title = display_name
+    subtitle_text = subtitle or "Ghosted Ghostling"
+    copy_markup = render_companion_card_copy(
+        title=title,
+        subtitle=subtitle_text,
+        body="Animated SVG export with layered Ghostling motion tuned to match the hall.",
+    )
+    motion_channels = base_rig["motionChannels"]
+    head_markup = companion_svg_motion_group_markup("head", "".join(grouped_markup.get("head", [])), motion_channels.get("head"))
+    body_markup = companion_svg_motion_group_markup(
+        "body",
+        "".join(grouped_markup.get("body", [])) + head_markup,
+        motion_channels.get("body"),
+    )
+    other_groups = "".join(
+        companion_svg_motion_group_markup(group_key, "".join(markups), motion_channels.get(group_key))
+        for group_key, markups in grouped_markup.items()
+        if group_key not in {"root", "body", "head"} and markups
+    )
+    layers = companion_svg_motion_group_markup(
+        "root",
+        "".join(grouped_markup.get("root", [])) + other_groups + body_markup,
+        motion_channels.get("root"),
+    )
+    shadow_duration = f"{max(1, int((motion_channels.get('body') or {}).get('offsetY', {}).get('durationMs', COMPANION_DEFAULT_BOB_DURATION_MS))) / 1000:.3f}s"
 
     if card:
         return (
@@ -3325,19 +3464,14 @@ def render_animated_companion_svg(
             '<rect x="24" y="24" width="190" height="272" rx="22" fill="#090b11" stroke="#2b3552" />'
             '<rect x="40" y="40" width="158" height="240" rx="18" fill="#0e1320" />'
             '<ellipse cx="123" cy="255" rx="44" ry="11" fill="rgba(10, 8, 18, 0.34)">'
-            f'<animate attributeName="rx" values="44;39;44" dur="{bob_duration}" repeatCount="indefinite" />'
-            f'<animate attributeName="opacity" values="0.34;0.22;0.34" dur="{bob_duration}" repeatCount="indefinite" />'
+            f'<animate attributeName="rx" values="44;40;44" dur="{shadow_duration}" repeatCount="indefinite" />'
+            f'<animate attributeName="opacity" values="0.34;0.24;0.34" dur="{shadow_duration}" repeatCount="indefinite" />'
             "</ellipse>"
             '<g transform="translate(47 53) scale(4.8)">'
-            "<g>"
-            f'<animateTransform attributeName="transform" type="translate" values="0 0;0 {-bob_distance};0 0" dur="{bob_duration}" repeatCount="indefinite" />'
             f"{layers}"
             "</g>"
-            "</g>"
-            '<text x="244" y="106" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14" letter-spacing="2">GHOSTED COMPANION</text>'
-            f'<text x="244" y="152" fill="#f7f6ff" font-family="Arial, sans-serif" font-size="28" font-weight="700">{title}</text>'
-            f'<text x="244" y="184" fill="#b8b0d5" font-family="Arial, sans-serif" font-size="16">{subtitle_text}</text>'
-            '<text x="244" y="226" fill="#d9d4ef" font-family="Arial, sans-serif" font-size="15">Animated SVG export for Ghosted companion previews and future share-card motion.</text>'
+            '<text x="244" y="106" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14" letter-spacing="2">GHOSTED GHOSTLING</text>'
+            f"{copy_markup}"
             '<rect x="244" y="250" width="182" height="34" rx="17" fill="#16132a" stroke="#312759" />'
             '<text x="262" y="271" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14">animated svg share card</text>'
             "</svg>"
@@ -3350,13 +3484,10 @@ def render_animated_companion_svg(
         f"{defs}"
         "</defs>"
         '<ellipse cx="16" cy="29" rx="8.5" ry="2.4" fill="rgba(10, 8, 18, 0.32)">'
-        f'<animate attributeName="rx" values="8.5;7.8;8.5" dur="{bob_duration}" repeatCount="indefinite" />'
-        f'<animate attributeName="opacity" values="0.32;0.2;0.32" dur="{bob_duration}" repeatCount="indefinite" />'
+        f'<animate attributeName="rx" values="8.5;7.9;8.5" dur="{shadow_duration}" repeatCount="indefinite" />'
+        f'<animate attributeName="opacity" values="0.32;0.22;0.32" dur="{shadow_duration}" repeatCount="indefinite" />'
         "</ellipse>"
-        "<g>"
-        f'<animateTransform attributeName="transform" type="translate" values="0 0;0 {-bob_distance};0 0" dur="{bob_duration}" repeatCount="indefinite" />'
         f"{layers}"
-        "</g>"
         "</svg>"
     )
 
@@ -3369,7 +3500,7 @@ def resolve_companion_render_request(
     current_user_row: sqlite3.Row | None = None,
 ) -> tuple[dict[str, str | None], str, str]:
     loadout = {slot: None for slot in COMPANION_SLOT_ORDER}
-    display = "Ghosted Companion"
+    display = "Ghosted Ghostling"
     subtitle = "Preview"
 
     if user_ref:

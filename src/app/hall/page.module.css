@@ -95,12 +95,8 @@
 }
 
 .stageImage {
-  width: 246px;
-  height: 246px;
-  min-width: 246px;
-  min-height: 246px;
-  max-width: 246px;
-  max-height: 246px;
+  max-width: 100%;
+  justify-self: center;
 }
 
 .stageMeta {
@@ -166,11 +162,6 @@
   }
 
   .stageImage {
-    width: 210px;
-    height: 210px;
-    min-width: 210px;
-    min-height: 210px;
-    max-width: 210px;
-    max-height: 210px;
+    max-width: 100%;
   }
 }

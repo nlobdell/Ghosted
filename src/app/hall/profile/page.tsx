@@ -140,6 +140,7 @@ export default function ProfilePage() {
         ]}
         title="Ghosted identity setup"
         summary="Verify your account identity first, then manage RuneScape linking and synced role access."
+        actions={<Link href="/hall/ghostling/" className="button button--secondary button--small">Ghostling</Link>}
       />
 
       {error ? <Banner message={error} variant="error" /> : null}
@@ -187,6 +188,10 @@ export default function ProfilePage() {
                       ['Clan', wom?.membership?.groupName ?? '-'],
                     ]}
                   />
+
+                  <div className="app-inline-actions">
+                    <Link href="/hall/ghostling/" className="button button--secondary button--small">Open Ghostling studio</Link>
+                  </div>
 
                   {linkResult ? <Banner message={linkResult.message} variant={linkResult.ok ? 'info' : 'error'} /> : null}
 

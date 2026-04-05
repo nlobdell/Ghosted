@@ -270,6 +270,30 @@ class GhostedAppTests(unittest.TestCase):
     def make_handler(self, path: str, *, body: dict | None = None, user=None):
         return FakeHandler(path, body=body, user=user)
 
+    def create_test_companion_item(
+        self,
+        *,
+        slug: str = "moon-hood",
+        name: str = "Moon Hood",
+        slot: str = "hat",
+        cost: int = 90,
+    ):
+        return server.create_companion_item(
+            self.connection,
+            self.user,
+            name=name,
+            slug=slug,
+            slot=slot,
+            rarity="rare",
+            cost=cost,
+            description="Custom upload",
+            front_asset=server.UploadedFile(
+                filename=f"{slug}.svg",
+                content_type="image/svg+xml",
+                data=b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>',
+            ),
+        )
+
     def test_welcome_bonus_is_seeded(self):
         self.assertEqual(server.get_balance(self.connection, self.user["id"]), server.STARTING_BALANCE)
 
@@ -287,7 +311,8 @@ class GhostedAppTests(unittest.TestCase):
         self.assertLess(server.get_balance(self.connection, self.user["id"]), server.STARTING_BALANCE)
 
     def test_companion_purchase_unlocks_item_and_spends_points(self):
-        payload = server.purchase_companion_item(self.connection, self.user, "witch-hat")
+        self.create_test_companion_item(slug="moon-hood", name="Moon Hood", cost=120)
+        payload = server.purchase_companion_item(self.connection, self.user, "moon-hood")
 
         self.assertEqual(payload["ownedCount"], 1)
         self.assertEqual(payload["balance"], server.STARTING_BALANCE - 120)
@@ -295,38 +320,23 @@ class GhostedAppTests(unittest.TestCase):
             "SELECT item_slug FROM user_companion_inventory WHERE user_id = ?",
             (self.user["id"],),
         ).fetchall()
-        self.assertEqual([row["item_slug"] for row in inventory], ["witch-hat"])
+        self.assertEqual([row["item_slug"] for row in inventory], ["moon-hood"])
 
-    def test_companion_seed_writes_default_assets_to_disk(self):
+    def test_companion_starts_without_seeded_cosmetics(self):
         base_row = self.connection.execute(
             "SELECT base_asset_path FROM companion_settings WHERE singleton_key = 'default'",
         ).fetchone()
-        item_row = self.connection.execute(
-            "SELECT front_asset_path FROM companion_catalog WHERE slug = 'witch-hat'",
+        count_row = self.connection.execute(
+            "SELECT COUNT(*) AS value FROM companion_catalog",
         ).fetchone()
 
         self.assertIsNotNone(base_row)
-        self.assertTrue(str(base_row["base_asset_path"]).startswith("repo/"))
-        self.assertTrue(str(item_row["front_asset_path"]).startswith("repo/"))
-        self.assertTrue(server.companion_asset_path(base_row["base_asset_path"]).exists())
-        self.assertTrue(server.companion_asset_path(item_row["front_asset_path"]).exists())
+        self.assertEqual(str(base_row["base_asset_path"]), server.COMPANION_DEFAULT_BASE_ASSET_PATH)
+        self.assertTrue(server.companion_asset_path(str(base_row["base_asset_path"])).exists())
+        self.assertEqual(int(count_row["value"]), 0)
 
     def test_create_companion_item_stores_uploaded_files(self):
-        library = server.create_companion_item(
-            self.connection,
-            self.user,
-            name="Moon Hood",
-            slug="moon-hood",
-            slot="hat",
-            rarity="rare",
-            cost=90,
-            description="Custom upload",
-            front_asset=server.UploadedFile(
-                filename="moon-hood.svg",
-                content_type="image/svg+xml",
-                data=b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>',
-            ),
-        )
+        library = self.create_test_companion_item()
 
         row = self.connection.execute(
             "SELECT front_asset_path FROM companion_catalog WHERE slug = 'moon-hood'",
@@ -399,13 +409,15 @@ class GhostedAppTests(unittest.TestCase):
         self.assertEqual(handler.response_headers.get("Location"), "/admin/")
 
     def test_companion_equip_requires_owned_item(self):
+        self.create_test_companion_item()
         with self.assertRaises(server.AppError) as exc:
-            server.equip_companion_item(self.connection, self.user, "hat", "witch-hat")
+            server.equip_companion_item(self.connection, self.user, "hat", "moon-hood")
 
         self.assertEqual(exc.exception.status, 400)
 
     def test_companion_render_preview_endpoint(self):
-        handler = self.make_handler("/api/companion/render?preview=witch-hat", user=self.user)
+        self.create_test_companion_item()
+        handler = self.make_handler("/api/companion/render?preview=moon-hood", user=self.user)
 
         server.GhostedHandler.route_request(handler, "GET", self.connection)
 
