@@ -247,7 +247,7 @@ export default function GhostlingAdminPage() {
           { label: 'Ghostling' },
         ]}
         title="Ghostling asset vault"
-        summary="Manage the live cosmetic library separately from the member-facing studio. Hide or restore items, reorder them inside each slot, and import repo art into the catalog."
+        summary="Manage the live cosmetic library separately from the member-facing studio. Hide or restore items, reorder them inside each slot, and keep the uploaded Ghostling art vault clean."
         actions={(
           <>
             <Link href="/admin/" className="button button--secondary button--small">Admin home</Link>
@@ -271,7 +271,7 @@ export default function GhostlingAdminPage() {
               { label: 'Catalog items', value: String(totalItems) },
               { label: 'Visible', value: String(activeItems) },
               { label: 'Hidden', value: String(hiddenItems) },
-              { label: 'Repo candidates', value: String(repoCandidates) },
+              { label: 'Pending imports', value: String(repoCandidates) },
             ]}
           />
 
@@ -284,16 +284,12 @@ export default function GhostlingAdminPage() {
               body={(
                 <form onSubmit={handleBaseUpload} className="app-form">
                   <div className={styles.assetMetaBlock}>
-                    <strong>Repo defaults</strong>
-                    <span>{library.defaultAssetRoot}</span>
-                  </div>
-                  <div className={styles.assetMetaBlock}>
                     <strong>User uploads</strong>
                     <span>{library.storageRoot}</span>
                   </div>
                   <div className={styles.assetMetaBlock}>
                     <strong>Current base file</strong>
-                    <span>{library.base.assetPath}</span>
+                    <span>{library.base.assetPath || 'No base uploaded yet'}</span>
                   </div>
                   <FormField label="Base image">
                     <input name="asset" type="file" accept={ASSET_ACCEPT} className="input-base" required />

@@ -1434,6 +1434,15 @@ textarea:focus-visible,
   box-shadow: 0 0 0 3px rgba(184, 168, 255, 0.1);
 }
 
+select.input-base {
+  color-scheme: dark;
+}
+
+select.input-base option {
+  color: #171320;
+  background: #f5f1ff;
+}
+
 .form-grid-two {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

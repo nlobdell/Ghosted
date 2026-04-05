@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { HallTopbar } from '@/components/nav/HallTopbar';
+import { HallSidebar } from '@/components/nav/HallSidebar';
 import { getServerJSON } from '@/lib/server-api';
 import type { ShellData } from '@/lib/types';
 
@@ -13,7 +14,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="app-page app-shell">
       <HallTopbar shellData={shellData} />
-      {children}
+      <div className="hall-layout">
+        <HallSidebar includeAdmin />
+        <div className="hall-main">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }

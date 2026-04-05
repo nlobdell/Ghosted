@@ -198,7 +198,7 @@ export default function AdminPage() {
           href="/admin/ghostling/"
           body={(
             <p className="app-panel-note">
-              Hide cosmetics, reorder slot libraries, and import repo art without exposing upload tools on the member-facing Ghostling page.
+              Hide cosmetics, reorder slot libraries, and manage uploaded art without exposing operator tools on the member-facing Ghostling page.
             </p>
           )}
         />
