@@ -5099,6 +5099,8 @@ class GhostedHandler(BaseHTTPRequestHandler):
             else:
                 fields[name] = content.decode("utf-8", errors="ignore")
 
+        return fields, files
+
     def route_request(self, method: str, connection: sqlite3.Connection) -> None:
         parsed = urlparse(self.path)
         path = parsed.path

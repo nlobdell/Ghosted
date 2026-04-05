@@ -336,6 +336,43 @@ class GhostedAppTests(unittest.TestCase):
         self.assertTrue((self.asset_dir / row["front_asset_path"]).exists())
         self.assertTrue(any(item["slug"] == "moon-hood" for item in library["items"]))
 
+    def test_companion_admin_item_route_accepts_multipart_uploads(self):
+        boundary = "ghosted-boundary"
+        body = (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="name"\r\n\r\n'
+            "Moon Hood\r\n"
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="slot"\r\n\r\n'
+            "hat\r\n"
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="rarity"\r\n\r\n'
+            "rare\r\n"
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="cost"\r\n\r\n'
+            "90\r\n"
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="description"\r\n\r\n'
+            "Custom upload\r\n"
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="frontAsset"; filename="moon-hood.svg"\r\n'
+            "Content-Type: image/svg+xml\r\n\r\n"
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>\r\n'
+            f"--{boundary}--\r\n"
+        ).encode("utf-8")
+        handler = self.make_handler("/api/companion/admin/items", user=self.user)
+        handler.headers = {
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            "Content-Length": str(len(body)),
+        }
+        handler.rfile = io.BytesIO(body)
+
+        server.GhostedHandler.route_request(handler, "POST", self.connection)
+
+        self.assertEqual(handler.status, 201)
+        self.assertTrue(handler.payload["ok"])
+        self.assertTrue(any(item["slug"] == "moon-hood" for item in handler.payload["library"]["items"]))
+
     def test_companion_equip_requires_owned_item(self):
         with self.assertRaises(server.AppError) as exc:
             server.equip_companion_item(self.connection, self.user, "hat", "witch-hat")
