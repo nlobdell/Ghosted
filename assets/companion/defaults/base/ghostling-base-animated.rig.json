@@ -1,0 +1,38 @@
+{
+  "width": 70,
+  "height": 70,
+  "parts": [
+    {
+      "key": "body",
+      "motionGroup": "body",
+      "source": { "x": 23, "y": 45, "w": 24, "h": 23 },
+      "target": { "x": 23, "y": 45, "w": 24, "h": 23 }
+    },
+    {
+      "key": "head",
+      "motionGroup": "head",
+      "source": { "x": 20, "y": 20, "w": 31, "h": 25 },
+      "target": { "x": 20, "y": 20, "w": 31, "h": 25 }
+    }
+  ],
+  "slotGroups": {
+    "hat": "head",
+    "face": "head",
+    "neck": "body",
+    "body": "body"
+  },
+  "motionChannels": {
+    "root": {
+      "offsetX": { "amplitude": 0.22, "durationMs": 4700, "phase": 0.51 },
+      "offsetY": { "amplitude": 0.36, "durationMs": 3200, "phase": 0.13 }
+    },
+    "body": {
+      "offsetX": { "amplitude": 0.18, "durationMs": 3380, "phase": 0.22 },
+      "offsetY": { "amplitude": 0.55, "durationMs": 2460, "phase": 0.35 }
+    },
+    "head": {
+      "offsetX": { "amplitude": 0.42, "durationMs": 2140, "phase": 0.43 },
+      "offsetY": { "amplitude": 1.35, "durationMs": 1620, "phase": 0.74 }
+    }
+  }
+}

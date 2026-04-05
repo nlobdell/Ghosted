@@ -60,6 +60,7 @@
 .itemPreview {
   width: 100%;
   min-height: 15rem;
+  padding: 0.9rem;
   border-radius: 1.1rem;
   background:
     linear-gradient(180deg, rgba(8, 11, 19, 0.88), rgba(14, 22, 34, 0.92));
@@ -67,9 +68,23 @@
 }
 
 .avatarImage,
-.previewImage,
+.previewImage {
+  width: 210px;
+  height: 210px;
+  min-width: 210px;
+  min-height: 210px;
+  max-width: 210px;
+  max-height: 210px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: visible;
+}
+
 .itemPreviewImage {
   width: min(15rem, 100%);
+  height: auto;
+  display: block;
   image-rendering: pixelated;
 }
 

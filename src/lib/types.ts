@@ -94,6 +94,17 @@ export interface CompanionAnimationFrame {
   sourceHeight?: number;
 }
 
+export interface CompanionMotionWave {
+  amplitude: number;
+  durationMs: number;
+  phase?: number;
+}
+
+export interface CompanionMotionChannel {
+  offsetX?: CompanionMotionWave;
+  offsetY?: CompanionMotionWave;
+}
+
 export interface CompanionLayerAnimation {
   mode: 'static' | 'spritesheet';
   fps: number;
@@ -106,21 +117,38 @@ export interface CompanionLayerAnimation {
   frames?: CompanionAnimationFrame[];
 }
 
+export interface CompanionRenderSlice {
+  key: string;
+  sourceX: number;
+  sourceY: number;
+  sourceWidth: number;
+  sourceHeight: number;
+  targetX: number;
+  targetY: number;
+  targetWidth: number;
+  targetHeight: number;
+  motionGroup?: string | null;
+}
+
 export interface CompanionRenderLayer {
   key: string;
   role: string;
   src: string;
   zIndex: number;
   animation: CompanionLayerAnimation;
+  slot?: CompanionSlotKey | null;
+  motionGroup?: string | null;
+  slices?: CompanionRenderSlice[];
 }
 
 export interface CompanionRenderManifest {
   width: number;
   height: number;
   motion: {
-    bobAmplitudePx: number;
-    bobDurationMs: number;
     shadowOpacity: number;
+    rootGroup: string;
+    channels: Record<string, CompanionMotionChannel>;
+    slotGroups: Partial<Record<CompanionSlotKey, string>>;
   };
   layers: CompanionRenderLayer[];
 }
