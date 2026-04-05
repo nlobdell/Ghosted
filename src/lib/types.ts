@@ -14,8 +14,12 @@ export interface ShellUser {
 
 export interface WomLink {
   linked: boolean;
+  playerId?: number | null;
   username?: string;
   displayName?: string;
+  inGroup?: boolean;
+  lastSyncedAt?: string | null;
+  status?: string;
   membership?: {
     role?: string;
     rankLabel?: string;
@@ -35,7 +39,10 @@ export interface ShellData {
   wom: {
     configured: boolean;
     linked: boolean;
+    username?: string | null;
+    displayName?: string | null;
     inGroup: boolean;
+    lastSyncedAt?: string | null;
     membership?: { rankLabel?: string; role?: string; groupName?: string };
   };
 }
@@ -148,10 +155,24 @@ export interface ActivityItem {
 }
 
 export interface WomMeData {
-  linked: boolean;
-  username?: string;
-  displayName?: string;
+  player: {
+    id?: number;
+    username?: string;
+    displayName?: string;
+    type?: string;
+    build?: string;
+    status?: string;
+    exp?: number;
+    ehp?: number;
+    ehb?: number;
+    updatedAt?: string;
+    lastChangedAt?: string;
+    lastImportedAt?: string;
+  };
   membership?: { role?: string; rankLabel?: string; groupName?: string };
+  gains?: Record<string, unknown>;
+  achievements?: AchievementItem[];
+  competitions?: Competition[];
 }
 
 export interface Competition {

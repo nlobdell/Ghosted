@@ -3205,12 +3205,12 @@ class GhostedHandler(BaseHTTPRequestHandler):
         row = self.require_user(connection)
         payload = self.read_json_body()
         result = link_wom_account(connection, row, str(payload.get("username") or ""))
-        self.respond_json({"ok": True, "result": result}, status=201)
+        self.respond_json({"ok": True, "message": "WOM account linked.", "result": result}, status=201)
 
     def handle_api_wom_unlink(self, connection: sqlite3.Connection) -> None:
         row = self.require_user(connection)
         result = unlink_wom_account(connection, row)
-        self.respond_json({"ok": True, "result": result})
+        self.respond_json({"ok": True, "message": "WOM account unlinked.", "result": result})
 
     def handle_api_spin(self, connection: sqlite3.Connection) -> None:
         row = self.require_user(connection)

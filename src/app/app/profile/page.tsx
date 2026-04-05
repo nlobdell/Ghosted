@@ -13,8 +13,14 @@ import {
   FormField,
 } from '@/components/app/AppUI';
 import { formatPoints, getJSON } from '@/lib/api';
-import type { ShellData, WomMeData } from '@/lib/types';
+import type { ShellData, WomLink, WomMeData } from '@/lib/types';
 import styles from './page.module.css';
+
+type WomLinkMutationResponse = {
+  ok: boolean;
+  message?: string;
+  result: WomLink;
+};
 
 export default function ProfilePage() {
   const [shell, setShell] = useState<ShellData | null>(null);
@@ -25,6 +31,30 @@ export default function ProfilePage() {
   const [rsn, setRsn] = useState('');
   const [linking, setLinking] = useState(false);
   const [linkResult, setLinkResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  function syncShellWom(nextLink: WomLink) {
+    setShell((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        wom: {
+          ...current.wom,
+          linked: Boolean(nextLink.linked),
+          username: nextLink.username ?? null,
+          displayName: nextLink.displayName ?? null,
+          inGroup: Boolean(nextLink.inGroup),
+          membership: nextLink.membership,
+          lastSyncedAt: nextLink.lastSyncedAt ?? null,
+        },
+        user: current.user
+          ? {
+            ...current.user,
+            womLink: nextLink,
+          }
+          : current.user,
+      };
+    });
+  }
 
   useEffect(() => {
     async function load() {
@@ -59,22 +89,17 @@ export default function ProfilePage() {
     setLinking(true);
     setLinkResult(null);
     try {
-      const response = await fetch('/api/profile/wom-link', {
+      const payload = await getJSON<WomLinkMutationResponse>('/api/profile/wom-link', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: rsn.trim() }),
       });
-      const payload = await response.json().catch(() => ({})) as { error?: string; message?: string };
-      if (!response.ok) {
-        setLinkResult({ ok: false, message: payload.error ?? 'Failed to link account.' });
-      } else {
-        setLinkResult({ ok: true, message: payload.message ?? 'WOM account linked.' });
-        setRsn('');
-        const womData = await getJSON<WomMeData>('/api/wom/me').catch(() => null);
-        setWomMe(womData);
-        const shellData = await getJSON<ShellData>('/api/site-shell').catch(() => null);
-        if (shellData) setShell(shellData);
-      }
+      syncShellWom(payload.result);
+      setLinkResult({ ok: true, message: payload.message ?? 'WOM account linked.' });
+      setRsn('');
+      const womData = await getJSON<WomMeData>('/api/wom/me').catch(() => null);
+      setWomMe(womData);
+      const shellData = await getJSON<ShellData>('/api/site-shell').catch(() => null);
+      if (shellData) setShell(shellData);
     } catch (nextError) {
       setLinkResult({ ok: false, message: nextError instanceof Error ? nextError.message : 'Failed to link account.' });
     } finally {
@@ -86,19 +111,14 @@ export default function ProfilePage() {
     setLinking(true);
     setLinkResult(null);
     try {
-      const response = await fetch('/api/profile/wom-link', {
+      const payload = await getJSON<WomLinkMutationResponse>('/api/profile/wom-link', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
       });
-      const payload = await response.json().catch(() => ({})) as { error?: string; message?: string };
-      if (!response.ok) {
-        setLinkResult({ ok: false, message: payload.error ?? 'Failed to unlink account.' });
-      } else {
-        setLinkResult({ ok: true, message: payload.message ?? 'WOM account unlinked.' });
-        setWomMe(null);
-        const shellData = await getJSON<ShellData>('/api/site-shell').catch(() => null);
-        if (shellData) setShell(shellData);
-      }
+      syncShellWom(payload.result);
+      setLinkResult({ ok: true, message: payload.message ?? 'WOM account unlinked.' });
+      setWomMe(null);
+      const shellData = await getJSON<ShellData>('/api/site-shell').catch(() => null);
+      if (shellData) setShell(shellData);
     } catch (nextError) {
       setLinkResult({ ok: false, message: nextError instanceof Error ? nextError.message : 'Failed to unlink account.' });
     } finally {
@@ -174,7 +194,7 @@ export default function ProfilePage() {
                       <p className="app-panel-note">
                         Linked as{' '}
                         <strong className="profile-identity__inline-strong">
-                          {womMe?.displayName ?? womMe?.username ?? wom?.membership?.rankLabel ?? 'Member'}
+                          {womMe?.player?.displayName ?? womMe?.player?.username ?? wom?.displayName ?? wom?.username ?? wom?.membership?.rankLabel ?? 'Member'}
                         </strong>
                       </p>
                       <button
