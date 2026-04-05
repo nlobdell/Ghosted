@@ -1,0 +1,261 @@
+.page {
+  --page-gap: 1rem;
+  --page-accent: rgba(110, 204, 255, 0.28);
+  gap: var(--page-gap);
+}
+
+.page :global(.app-context) {
+  border-left: 4px solid var(--page-accent);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(19rem, 0.85fr);
+  gap: 1rem;
+  padding: 1.2rem;
+  border: 1px solid rgba(110, 204, 255, 0.16);
+  border-radius: 1.4rem;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(110, 204, 255, 0.1), transparent 35%),
+    rgba(15, 15, 26, 0.92);
+}
+
+.heroCopy {
+  display: grid;
+  align-content: start;
+  gap: 0.85rem;
+}
+
+.heroTitle {
+  font-size: clamp(2.5rem, 4.5vw, 4.1rem);
+  line-height: 0.9;
+}
+
+.heroText {
+  margin: 0;
+  max-width: 58ch;
+  color: var(--color-text-muted);
+  line-height: 1.72;
+}
+
+.heroStage,
+.avatarFrame,
+.cardPreview,
+.previewSurface,
+.itemPreview {
+  display: grid;
+  place-items: center;
+}
+
+.heroStage {
+  gap: 0.8rem;
+  padding: 1rem;
+  border-radius: 1.2rem;
+  background: rgba(8, 11, 19, 0.8);
+  border: 1px solid rgba(110, 204, 255, 0.16);
+}
+
+.avatarFrame,
+.previewSurface,
+.itemPreview {
+  width: 100%;
+  min-height: 15rem;
+  border-radius: 1.1rem;
+  background:
+    linear-gradient(180deg, rgba(8, 11, 19, 0.88), rgba(14, 22, 34, 0.92));
+  border: 1px solid rgba(110, 204, 255, 0.14);
+}
+
+.avatarImage,
+.previewImage,
+.itemPreviewImage {
+  width: min(15rem, 100%);
+  image-rendering: pixelated;
+}
+
+.stageMeta {
+  display: grid;
+  justify-items: center;
+  gap: 0.08rem;
+  color: var(--color-text-muted);
+}
+
+.stageMeta strong {
+  color: var(--color-text-strong);
+  font-size: 1rem;
+}
+
+.scoreboard,
+.scoreboard :global(.app-summary-grid__secondary) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.scoreboard :global(.app-stat--lead) {
+  background: rgba(14, 19, 31, 0.94);
+}
+
+.studioPanel,
+.sharePanel {
+  min-height: 100%;
+}
+
+.studioBody,
+.shareBody {
+  display: grid;
+  gap: 1rem;
+}
+
+.slotList {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.slotField {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.slotField span {
+  color: var(--color-text-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.cardPreview {
+  width: 100%;
+  padding: 0.45rem;
+  border-radius: 1rem;
+  background: rgba(7, 9, 15, 0.74);
+  border: 1px solid rgba(110, 204, 255, 0.12);
+}
+
+.cardImage {
+  width: 100%;
+  border-radius: 1rem;
+}
+
+.shareList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.shareRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid rgba(110, 204, 255, 0.1);
+}
+
+.shareRow:last-child {
+  border-bottom: 0;
+}
+
+.shareRow div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.shareRow strong {
+  color: var(--color-text-strong);
+}
+
+.shareRow span {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.shopSection,
+.slotGroups,
+.slotGroup,
+.itemGrid,
+.itemCard,
+.itemCopy {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.slotGroups {
+  gap: 1rem;
+}
+
+.slotGroup {
+  padding: 1rem;
+  border: 1px solid rgba(110, 204, 255, 0.1);
+  border-radius: 1.2rem;
+  background: rgba(13, 13, 22, 0.72);
+}
+
+.slotHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.slotHeading span {
+  color: var(--color-text-soft);
+  font-size: 0.8rem;
+}
+
+.itemGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.itemCard {
+  padding: 0.9rem;
+  border: 1px solid rgba(110, 204, 255, 0.12);
+  border-radius: 1rem;
+  background: rgba(18, 18, 29, 0.9);
+}
+
+.itemPreview {
+  min-height: 9.5rem;
+}
+
+.itemHeader,
+.itemFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.itemHeader strong,
+.itemFooter span,
+.itemState {
+  color: var(--color-text-strong);
+}
+
+.itemCopy p {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.58;
+}
+
+.itemState {
+  font-size: 0.82rem;
+  color: #8ccfff;
+}
+
+@media (max-width: 1120px) {
+  .hero,
+  .itemGrid,
+  .scoreboard,
+  .scoreboard :global(.app-summary-grid__secondary) {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .shareRow,
+  .slotHeading,
+  .itemHeader,
+  .itemFooter {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

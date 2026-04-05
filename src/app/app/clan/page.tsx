@@ -42,11 +42,11 @@ export default function ClanPage() {
           getJSON<{ competitions?: Competition[] }>('/api/wom/competitions?limit=8')
             .then((data) => data.competitions ?? [])
             .catch(() => [] as Competition[]),
-          getJSON<{ hiscores?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=8')
-            .then((data) => data.hiscores ?? [])
+          getJSON<{ entries?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=8')
+            .then((data) => data.entries ?? [])
             .catch(() => [] as LeaderboardEntry[]),
-          getJSON<{ gains?: LeaderboardEntry[] }>('/api/wom/gains?metric=overall&period=week&limit=8')
-            .then((data) => data.gains ?? [])
+          getJSON<{ entries?: LeaderboardEntry[] }>('/api/wom/gains?metric=overall&period=week&limit=8')
+            .then((data) => data.entries ?? [])
             .catch(() => [] as LeaderboardEntry[]),
         ]);
 

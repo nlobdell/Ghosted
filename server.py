@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import html
 import mimetypes
 import os
 import random
@@ -195,6 +196,270 @@ DEFAULT_CASINO_GAMES = [
         },
     },
 ]
+
+COMPANION_SLOT_ORDER = ("hat", "face", "neck", "body")
+COMPANION_SLOT_LABELS = {
+    "hat": "Hat",
+    "face": "Face",
+    "neck": "Neck",
+    "body": "Body",
+}
+COMPANION_LOADOUT_COLUMNS = {
+    "hat": "hat_item_slug",
+    "face": "face_item_slug",
+    "neck": "neck_item_slug",
+    "body": "body_item_slug",
+}
+
+
+def pixel_rects(rects: list[tuple[int, int, int, int, str]]) -> str:
+    return "".join(
+        f'<rect x="{x}" y="{y}" width="{width}" height="{height}" fill="{fill}" />'
+        for x, y, width, height, fill in rects
+    )
+
+
+COMPANION_BASE_MARKUP = pixel_rects(
+    [
+        (10, 7, 12, 1, "#07090d"),
+        (8, 8, 16, 1, "#07090d"),
+        (7, 9, 18, 14, "#07090d"),
+        (8, 23, 16, 2, "#07090d"),
+        (9, 25, 14, 2, "#07090d"),
+        (10, 27, 12, 2, "#07090d"),
+        (11, 8, 10, 1, "#39a7d7"),
+        (9, 9, 14, 1, "#39a7d7"),
+        (8, 10, 16, 5, "#39a7d7"),
+        (8, 15, 16, 3, "#3397c7"),
+        (9, 18, 14, 3, "#2e88b7"),
+        (9, 21, 14, 2, "#2777a1"),
+        (10, 23, 12, 2, "#2e88b7"),
+        (11, 25, 10, 2, "#3397c7"),
+        (12, 27, 8, 1, "#39a7d7"),
+        (13, 11, 2, 4, "#f4fbff"),
+        (18, 11, 2, 4, "#f4fbff"),
+        (14, 12, 1, 2, "#0d1622"),
+        (19, 12, 1, 2, "#0d1622"),
+        (15, 17, 2, 1, "#7fc9ec"),
+        (14, 18, 1, 1, "#7fc9ec"),
+        (17, 18, 1, 1, "#7fc9ec"),
+    ]
+)
+
+COMPANION_ITEMS = [
+    {
+        "slug": "witch-hat",
+        "name": "Witch Hat",
+        "slot": "hat",
+        "rarity": "rare",
+        "cost": 120,
+        "description": "A crooked brim for maximum spooky little gremlin energy.",
+        "sort_order": 10,
+        "front_markup": pixel_rects(
+            [
+                (9, 3, 8, 1, "#3d255b"),
+                (10, 2, 6, 1, "#3d255b"),
+                (11, 1, 4, 1, "#3d255b"),
+                (7, 4, 14, 2, "#20112f"),
+                (13, 3, 2, 1, "#f6a94a"),
+            ]
+        ),
+    },
+    {
+        "slug": "halo",
+        "name": "Halo",
+        "slot": "hat",
+        "rarity": "epic",
+        "cost": 220,
+        "description": "Bright, smug, and a little too clean for a ghost.",
+        "sort_order": 20,
+        "front_markup": pixel_rects(
+            [
+                (9, 3, 10, 1, "#f6d36a"),
+                (8, 4, 12, 1, "#f6d36a"),
+                (9, 5, 10, 1, "#fff0b5"),
+            ]
+        ),
+    },
+    {
+        "slug": "traffic-cone",
+        "name": "Traffic Cone",
+        "slot": "hat",
+        "rarity": "common",
+        "cost": 80,
+        "description": "Street-certified nonsense for the tiny haunt economy.",
+        "sort_order": 30,
+        "front_markup": pixel_rects(
+            [
+                (13, 1, 2, 1, "#ff7e2f"),
+                (12, 2, 4, 1, "#ff7e2f"),
+                (11, 3, 6, 2, "#ff7e2f"),
+                (12, 3, 4, 1, "#fff1e2"),
+                (10, 5, 8, 2, "#bd5116"),
+            ]
+        ),
+    },
+    {
+        "slug": "sleepy-eyes",
+        "name": "Sleepy Eyes",
+        "slot": "face",
+        "rarity": "common",
+        "cost": 60,
+        "description": "A half-awake stare for late-night lurkers.",
+        "sort_order": 40,
+        "front_markup": pixel_rects(
+            [
+                (12, 12, 3, 1, "#1f2b38"),
+                (18, 12, 3, 1, "#1f2b38"),
+            ]
+        ),
+    },
+    {
+        "slug": "fang-smile",
+        "name": "Fang Smile",
+        "slot": "face",
+        "rarity": "rare",
+        "cost": 95,
+        "description": "Tiny fangs, huge menace, surprisingly approachable.",
+        "sort_order": 50,
+        "front_markup": pixel_rects(
+            [
+                (14, 17, 5, 1, "#1f2b38"),
+                (15, 18, 1, 1, "#ffffff"),
+                (17, 18, 1, 1, "#ffffff"),
+            ]
+        ),
+    },
+    {
+        "slug": "cracked-mask",
+        "name": "Cracked Mask",
+        "slot": "face",
+        "rarity": "epic",
+        "cost": 180,
+        "description": "A porcelain front with a dramatic fault line.",
+        "sort_order": 60,
+        "front_markup": pixel_rects(
+            [
+                (11, 11, 10, 6, "#f3ece1"),
+                (12, 12, 8, 4, "#fff9f0"),
+                (15, 11, 1, 6, "#a58b81"),
+                (13, 13, 1, 1, "#90776d"),
+                (18, 13, 1, 1, "#90776d"),
+            ]
+        ),
+    },
+    {
+        "slug": "bell-collar",
+        "name": "Bell Collar",
+        "slot": "neck",
+        "rarity": "common",
+        "cost": 70,
+        "description": "A happy jingle before the jump scare.",
+        "sort_order": 70,
+        "front_markup": pixel_rects(
+            [
+                (11, 20, 10, 2, "#f3bb5d"),
+                (14, 22, 4, 3, "#f8d16d"),
+                (15, 24, 1, 1, "#7d5410"),
+            ]
+        ),
+    },
+    {
+        "slug": "tattered-scarf",
+        "name": "Tattered Scarf",
+        "slot": "neck",
+        "rarity": "rare",
+        "cost": 110,
+        "description": "Wind-cut fabric with a little travel story in it.",
+        "sort_order": 80,
+        "front_markup": pixel_rects(
+            [
+                (10, 20, 12, 3, "#5e7fd6"),
+                (12, 23, 2, 5, "#4256b8"),
+                (18, 23, 2, 4, "#4256b8"),
+            ]
+        ),
+    },
+    {
+        "slug": "lantern-charm",
+        "name": "Lantern Charm",
+        "slot": "neck",
+        "rarity": "epic",
+        "cost": 175,
+        "description": "A warm hanging lantern that reads well in tiny previews.",
+        "sort_order": 90,
+        "front_markup": pixel_rects(
+            [
+                (15, 19, 2, 2, "#7a5c39"),
+                (13, 21, 6, 4, "#f7b45a"),
+                (14, 22, 4, 2, "#fff0b0"),
+            ]
+        ),
+    },
+    {
+        "slug": "hoodie",
+        "name": "Hoodie",
+        "slot": "body",
+        "rarity": "common",
+        "cost": 130,
+        "description": "Comfy ghostwear for grinding, lurking, or posting.",
+        "sort_order": 100,
+        "front_markup": pixel_rects(
+            [
+                (10, 17, 12, 10, "#536882"),
+                (11, 18, 10, 3, "#32435d"),
+                (13, 21, 2, 6, "#32435d"),
+                (17, 21, 2, 6, "#32435d"),
+            ]
+        ),
+    },
+    {
+        "slug": "cape",
+        "name": "Cape",
+        "slot": "body",
+        "rarity": "rare",
+        "cost": 190,
+        "description": "A dramatic cape that turns a peeker into a tiny entrance.",
+        "sort_order": 110,
+        "back_markup": pixel_rects(
+            [
+                (8, 16, 16, 8, "#5d2b7d"),
+                (9, 24, 14, 4, "#4b215f"),
+            ]
+        ),
+        "front_markup": pixel_rects(
+            [
+                (11, 18, 10, 8, "#9a52b8"),
+                (18, 18, 3, 7, "#af69c8"),
+            ]
+        ),
+    },
+    {
+        "slug": "bat-wings",
+        "name": "Bat Wings",
+        "slot": "body",
+        "rarity": "legendary",
+        "cost": 320,
+        "description": "Big silhouette value for people who want their companion noticed.",
+        "sort_order": 120,
+        "back_markup": pixel_rects(
+            [
+                (3, 16, 6, 1, "#2d243e"),
+                (2, 17, 7, 2, "#2d243e"),
+                (1, 19, 8, 3, "#2d243e"),
+                (23, 16, 6, 1, "#2d243e"),
+                (23, 17, 7, 2, "#2d243e"),
+                (23, 19, 8, 3, "#2d243e"),
+            ]
+        ),
+        "front_markup": pixel_rects(
+            [
+                (10, 18, 12, 7, "#3d3153"),
+            ]
+        ),
+    },
+]
+COMPANION_ITEM_BY_SLUG = {item["slug"]: item for item in COMPANION_ITEMS}
 
 
 class AppError(Exception):
@@ -1274,10 +1539,39 @@ def init_database(connection: sqlite3.Connection) -> None:
             fetched_at TEXT NOT NULL,
             expires_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS companion_catalog (
+            slug TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            slot_key TEXT NOT NULL,
+            rarity TEXT NOT NULL,
+            cost INTEGER NOT NULL DEFAULT 0,
+            description TEXT NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS user_companion_inventory (
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            item_slug TEXT NOT NULL REFERENCES companion_catalog(slug) ON DELETE CASCADE,
+            unlocked_at TEXT NOT NULL,
+            PRIMARY KEY (user_id, item_slug)
+        );
+
+        CREATE TABLE IF NOT EXISTS user_companion_loadout (
+            user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            hat_item_slug TEXT REFERENCES companion_catalog(slug) ON DELETE SET NULL,
+            face_item_slug TEXT REFERENCES companion_catalog(slug) ON DELETE SET NULL,
+            neck_item_slug TEXT REFERENCES companion_catalog(slug) ON DELETE SET NULL,
+            body_item_slug TEXT REFERENCES companion_catalog(slug) ON DELETE SET NULL,
+            updated_at TEXT NOT NULL
+        );
         """
     )
     seed_default_games(connection)
     seed_default_giveaway(connection)
+    seed_default_companion_items(connection)
     connection.commit()
 
 
@@ -1332,6 +1626,44 @@ def seed_default_giveaway(connection: sqlite3.Connection) -> None:
     )
 
 
+def seed_default_companion_items(connection: sqlite3.Connection) -> None:
+    created_at = utc_iso()
+    for item in COMPANION_ITEMS:
+        connection.execute(
+            """
+            INSERT INTO companion_catalog (
+                slug, name, slot_key, rarity, cost, description, active, sort_order, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+            ON CONFLICT(slug) DO UPDATE SET
+                name = excluded.name,
+                slot_key = excluded.slot_key,
+                rarity = excluded.rarity,
+                cost = excluded.cost,
+                description = excluded.description,
+                active = excluded.active,
+                sort_order = excluded.sort_order
+            """,
+            (
+                item["slug"],
+                item["name"],
+                item["slot"],
+                item["rarity"],
+                item["cost"],
+                item["description"],
+                item["sort_order"],
+                created_at,
+            ),
+        )
+
+    allowed_slugs = tuple(item["slug"] for item in COMPANION_ITEMS)
+    placeholders = ", ".join("?" for _ in allowed_slugs)
+    connection.execute(
+        f"UPDATE companion_catalog SET active = CASE WHEN slug IN ({placeholders}) THEN 1 ELSE 0 END",
+        allowed_slugs,
+    )
+
+
 def prune_expired_sessions(connection: sqlite3.Connection) -> None:
     connection.execute("DELETE FROM sessions WHERE expires_at < ?", (utc_iso(),))
     connection.execute("DELETE FROM auth_states WHERE created_at < ?", (utc_iso(utc_now() - timedelta(hours=1)),))
@@ -1352,6 +1684,272 @@ def append_ledger(
         VALUES (?, ?, ?, ?, ?, ?)
         """,
         (user_id, amount, entry_type, description, json.dumps(metadata or {}), utc_iso()),
+    )
+
+
+def ensure_user_companion_loadout(connection: sqlite3.Connection, user_id: int) -> None:
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO user_companion_loadout (
+            user_id, hat_item_slug, face_item_slug, neck_item_slug, body_item_slug, updated_at
+        )
+        VALUES (?, NULL, NULL, NULL, NULL, ?)
+        """,
+        (user_id, utc_iso()),
+    )
+
+
+def companion_inventory_slugs(connection: sqlite3.Connection, user_id: int) -> set[str]:
+    rows = connection.execute(
+        "SELECT item_slug FROM user_companion_inventory WHERE user_id = ?",
+        (user_id,),
+    ).fetchall()
+    return {str(row["item_slug"]) for row in rows}
+
+
+def companion_catalog_row(connection: sqlite3.Connection, slug: str) -> sqlite3.Row | None:
+    return connection.execute(
+        "SELECT * FROM companion_catalog WHERE slug = ? AND active = 1",
+        (slug,),
+    ).fetchone()
+
+
+def companion_loadout_map(connection: sqlite3.Connection, user_id: int) -> dict[str, str | None]:
+    ensure_user_companion_loadout(connection, user_id)
+    row = connection.execute(
+        "SELECT * FROM user_companion_loadout WHERE user_id = ?",
+        (user_id,),
+    ).fetchone()
+    return {
+        slot: (row[COMPANION_LOADOUT_COLUMNS[slot]] if row else None)
+        for slot in COMPANION_SLOT_ORDER
+    }
+
+
+def companion_slot_options(
+    catalog_rows: list[sqlite3.Row],
+    owned_slugs: set[str],
+    slot: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "slug": row["slug"],
+            "name": row["name"],
+            "rarity": row["rarity"],
+            "cost": int(row["cost"]),
+        }
+        for row in catalog_rows
+        if row["slot_key"] == slot and row["slug"] in owned_slugs
+    ]
+
+
+def companion_payload(
+    connection: sqlite3.Connection,
+    user_row: sqlite3.Row,
+) -> dict[str, Any]:
+    catalog_rows = connection.execute(
+        """
+        SELECT slug, name, slot_key, rarity, cost, description, sort_order
+        FROM companion_catalog
+        WHERE active = 1
+        ORDER BY slot_key ASC, sort_order ASC, name ASC
+        """
+    ).fetchall()
+    owned_slugs = companion_inventory_slugs(connection, int(user_row["id"]))
+    loadout = companion_loadout_map(connection, int(user_row["id"]))
+
+    items = [
+        {
+            "slug": row["slug"],
+            "name": row["name"],
+            "slot": row["slot_key"],
+            "slotLabel": COMPANION_SLOT_LABELS.get(row["slot_key"], row["slot_key"].title()),
+            "rarity": row["rarity"],
+            "cost": int(row["cost"]),
+            "description": row["description"],
+            "owned": row["slug"] in owned_slugs,
+            "equipped": loadout.get(row["slot_key"]) == row["slug"],
+            "previewUrl": f"/api/companion/render?preview={quote(str(row['slug']))}",
+        }
+        for row in catalog_rows
+    ]
+
+    slots = [
+        {
+            "key": slot,
+            "label": COMPANION_SLOT_LABELS[slot],
+            "equippedSlug": loadout.get(slot),
+            "ownedOptions": companion_slot_options(catalog_rows, owned_slugs, slot),
+        }
+        for slot in COMPANION_SLOT_ORDER
+    ]
+
+    equipped_count = sum(1 for slot in COMPANION_SLOT_ORDER if loadout.get(slot))
+    return {
+        "user": {
+            "id": int(user_row["id"]),
+            "displayName": display_name(user_row),
+            "username": user_row["username"],
+        },
+        "balance": get_balance(connection, int(user_row["id"])),
+        "ownedCount": len(owned_slugs),
+        "equippedCount": equipped_count,
+        "loadout": loadout,
+        "slots": slots,
+        "items": items,
+        "renderUrl": f"/api/companion/render?user={int(user_row['id'])}",
+        "cardUrl": f"/api/companion/render?user={int(user_row['id'])}&card=1",
+        "share": {
+            "avatarUrl": f"/api/companion/render?user={int(user_row['id'])}",
+            "cardUrl": f"/api/companion/render?user={int(user_row['id'])}&card=1",
+        },
+    }
+
+
+def purchase_companion_item(
+    connection: sqlite3.Connection,
+    user_row: sqlite3.Row,
+    slug: str,
+) -> dict[str, Any]:
+    item = companion_catalog_row(connection, slug)
+    if not item:
+        raise AppError("That companion item does not exist.", 404)
+
+    user_id = int(user_row["id"])
+    owned_slugs = companion_inventory_slugs(connection, user_id)
+    if slug in owned_slugs:
+        raise AppError("You already unlocked that companion cosmetic.", 400)
+
+    balance = get_balance(connection, user_id)
+    cost = int(item["cost"])
+    if balance < cost:
+        raise AppError("You do not have enough points to unlock that cosmetic.", 400)
+
+    if cost > 0:
+        append_ledger(
+            connection,
+            user_id,
+            -cost,
+            "companion_purchase",
+            f"Unlocked companion cosmetic: {item['name']}.",
+            {"item_slug": slug, "slot": item["slot_key"], "cost": cost},
+        )
+
+    connection.execute(
+        "INSERT INTO user_companion_inventory (user_id, item_slug, unlocked_at) VALUES (?, ?, ?)",
+        (user_id, slug, utc_iso()),
+    )
+
+    ensure_user_companion_loadout(connection, user_id)
+    column = COMPANION_LOADOUT_COLUMNS[str(item["slot_key"])]
+    current = connection.execute(
+        f"SELECT {column} FROM user_companion_loadout WHERE user_id = ?",
+        (user_id,),
+    ).fetchone()
+    if current and not current[column]:
+        connection.execute(
+            f"UPDATE user_companion_loadout SET {column} = ?, updated_at = ? WHERE user_id = ?",
+            (slug, utc_iso(), user_id),
+        )
+
+    connection.commit()
+    return companion_payload(connection, user_row)
+
+
+def equip_companion_item(
+    connection: sqlite3.Connection,
+    user_row: sqlite3.Row,
+    slot: str,
+    slug: str | None,
+) -> dict[str, Any]:
+    normalized_slot = str(slot or "").strip().lower()
+    if normalized_slot not in COMPANION_SLOT_ORDER:
+        raise AppError("That companion slot is invalid.", 400)
+
+    user_id = int(user_row["id"])
+    ensure_user_companion_loadout(connection, user_id)
+    value: str | None = None
+
+    if slug:
+        item = companion_catalog_row(connection, slug)
+        if not item:
+            raise AppError("That companion item does not exist.", 404)
+        if item["slot_key"] != normalized_slot:
+            raise AppError("That cosmetic does not fit the selected slot.", 400)
+        if slug not in companion_inventory_slugs(connection, user_id):
+            raise AppError("Unlock the cosmetic before equipping it.", 400)
+        value = slug
+
+    column = COMPANION_LOADOUT_COLUMNS[normalized_slot]
+    connection.execute(
+        f"UPDATE user_companion_loadout SET {column} = ?, updated_at = ? WHERE user_id = ?",
+        (value, utc_iso(), user_id),
+    )
+    connection.commit()
+    return companion_payload(connection, user_row)
+
+
+def resolve_companion_layers(loadout: dict[str, str | None]) -> list[str]:
+    layers: list[str] = []
+    body_slug = loadout.get("body")
+    body_item = COMPANION_ITEM_BY_SLUG.get(body_slug or "")
+    if body_item and body_item.get("back_markup"):
+        layers.append(str(body_item["back_markup"]))
+
+    layers.append(COMPANION_BASE_MARKUP)
+
+    for slot in ("neck", "face", "hat"):
+        item = COMPANION_ITEM_BY_SLUG.get(loadout.get(slot) or "")
+        if item and item.get("front_markup"):
+            layers.append(str(item["front_markup"]))
+
+    if body_item and body_item.get("front_markup"):
+        layers.append(str(body_item["front_markup"]))
+
+    return layers
+
+
+def render_companion_svg(
+    loadout: dict[str, str | None],
+    *,
+    display_name: str,
+    subtitle: str | None = None,
+    card: bool = False,
+) -> str:
+    layers = "".join(resolve_companion_layers(loadout))
+
+    if card:
+        title = html.escape(display_name)
+        subtitle_text = html.escape(subtitle or "Ghosted Companion")
+        return (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320" '
+            'shape-rendering="crispEdges" style="image-rendering:pixelated">'
+            "<defs>"
+            '<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">'
+            '<stop offset="0%" stop-color="#0b0a11" />'
+            '<stop offset="100%" stop-color="#1b1730" />'
+            "</linearGradient>"
+            "</defs>"
+            '<rect width="480" height="320" rx="28" fill="url(#bg)" />'
+            '<rect x="24" y="24" width="190" height="272" rx="22" fill="#090b11" stroke="#2b3552" />'
+            '<rect x="40" y="40" width="158" height="240" rx="18" fill="#0e1320" />'
+            '<g transform="translate(47 53) scale(4.8)">'
+            f"{layers}"
+            "</g>"
+            '<text x="244" y="106" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14" letter-spacing="2">GHOSTED COMPANION</text>'
+            f'<text x="244" y="152" fill="#f7f6ff" font-family="Arial, sans-serif" font-size="28" font-weight="700">{title}</text>'
+            f'<text x="244" y="184" fill="#b8b0d5" font-family="Arial, sans-serif" font-size="16">{subtitle_text}</text>'
+            '<text x="244" y="226" fill="#d9d4ef" font-family="Arial, sans-serif" font-size="15">Spend points, unlock cosmetics, and share your tiny ghost anywhere Ghosted shows up.</text>'
+            '<rect x="244" y="250" width="170" height="34" rx="17" fill="#16132a" stroke="#312759" />'
+            '<text x="262" y="271" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14">discord-ready share card</text>'
+            "</svg>"
+        )
+
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 32 32" '
+        'shape-rendering="crispEdges" style="image-rendering:pixelated">'
+        f"{layers}"
+        "</svg>"
     )
 
 
@@ -2272,6 +2870,7 @@ SITE_NAV_ITEMS = [
     {"key": "rewards", "label": "Rewards", "href": "/app/rewards/"},
     {"key": "giveaways", "label": "Giveaways", "href": "/app/giveaways/"},
     {"key": "casino", "label": "Casino", "href": "/app/casino/"},
+    {"key": "companion", "label": "Companion", "href": "/app/companion/"},
     {"key": "profile", "label": "Profile", "href": "/app/profile/"},
 ]
 
@@ -2290,6 +2889,8 @@ def active_route_key(path: str | None) -> str:
         return "giveaways"
     if normalized.startswith("/app/casino"):
         return "casino"
+    if normalized.startswith("/app/companion"):
+        return "companion"
     if normalized.startswith("/app/profile"):
         return "profile"
     if normalized.startswith("/admin"):
@@ -3017,6 +3618,18 @@ class GhostedHandler(BaseHTTPRequestHandler):
         if method == "GET" and path == "/api/rewards":
             self.handle_api_rewards(connection)
             return
+        if method == "GET" and path == "/api/companion":
+            self.handle_api_companion(connection)
+            return
+        if method == "POST" and path == "/api/companion/purchase":
+            self.handle_api_companion_purchase(connection)
+            return
+        if method == "POST" and path == "/api/companion/equip":
+            self.handle_api_companion_equip(connection)
+            return
+        if method == "GET" and path == "/api/companion/render":
+            self.handle_api_companion_render(connection, parsed)
+            return
         if method == "POST" and path == "/api/profile/wom-link":
             self.handle_api_wom_link(connection)
             return
@@ -3171,6 +3784,73 @@ class GhostedHandler(BaseHTTPRequestHandler):
                 **wager,
             }
         )
+
+    def handle_api_companion(self, connection: sqlite3.Connection) -> None:
+        row = self.require_user(connection)
+        self.respond_json(companion_payload(connection, row))
+
+    def handle_api_companion_purchase(self, connection: sqlite3.Connection) -> None:
+        row = self.require_user(connection)
+        payload = self.read_json_body()
+        slug = str(payload.get("slug") or "").strip()
+        if not slug:
+            raise AppError("A companion item slug is required.", 400)
+        self.respond_json(
+            {
+                "ok": True,
+                "message": "Companion cosmetic unlocked.",
+                "companion": purchase_companion_item(connection, row, slug),
+            },
+            status=201,
+        )
+
+    def handle_api_companion_equip(self, connection: sqlite3.Connection) -> None:
+        row = self.require_user(connection)
+        payload = self.read_json_body()
+        slot = str(payload.get("slot") or "").strip()
+        slug = str(payload.get("slug") or "").strip() or None
+        self.respond_json(
+            {
+                "ok": True,
+                "message": "Companion updated.",
+                "companion": equip_companion_item(connection, row, slot, slug),
+            }
+        )
+
+    def handle_api_companion_render(self, connection: sqlite3.Connection, parsed: Any) -> None:
+        params = parse_qs(parsed.query)
+        preview_slug = str(params.get("preview", [""])[0] or "").strip()
+        card = str(params.get("card", [""])[0] or "").strip().lower() in {"1", "true", "yes"}
+        user_ref = str(params.get("user", [""])[0] or "").strip()
+
+        loadout = {slot: None for slot in COMPANION_SLOT_ORDER}
+        display = "Ghosted Companion"
+        subtitle = "Preview"
+
+        if user_ref:
+            row = get_user(connection, int(user_ref)) if user_ref.isdigit() else get_user_by_discord_id(connection, user_ref)
+            if not row:
+                raise AppError("Companion owner not found.", 404)
+            loadout = companion_loadout_map(connection, int(row["id"]))
+            display = display_name(row)
+            subtitle = f"@{row['username']}"
+        else:
+            row = self.current_user(connection)
+            if row:
+                loadout = companion_loadout_map(connection, int(row["id"]))
+                display = display_name(row)
+                subtitle = f"@{row['username']}"
+
+        if preview_slug:
+            item = COMPANION_ITEM_BY_SLUG.get(preview_slug)
+            if not item:
+                raise AppError("Preview item not found.", 404)
+            loadout[item["slot"]] = preview_slug
+            if not user_ref:
+                display = item["name"]
+                subtitle = COMPANION_SLOT_LABELS[item["slot"]]
+
+        self.respond_svg(render_companion_svg(loadout, display_name=display, subtitle=subtitle, card=card))
 
     def handle_api_wom_clan(self, connection: sqlite3.Connection) -> None:
         self.respond_json(wom_clan_payload(connection))
@@ -3366,6 +4046,15 @@ class GhostedHandler(BaseHTTPRequestHandler):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def respond_svg(self, markup: str, status: int = 200) -> None:
+        body = markup.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "image/svg+xml; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)

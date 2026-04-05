@@ -80,6 +80,53 @@ export interface RewardsData {
   spins: SpinRecord[];
 }
 
+export type CompanionSlotKey = 'hat' | 'face' | 'neck' | 'body';
+
+export interface CompanionItem {
+  slug: string;
+  name: string;
+  slot: CompanionSlotKey;
+  slotLabel: string;
+  rarity: string;
+  cost: number;
+  description: string;
+  owned: boolean;
+  equipped: boolean;
+  previewUrl: string;
+}
+
+export interface CompanionSlotState {
+  key: CompanionSlotKey;
+  label: string;
+  equippedSlug: string | null;
+  ownedOptions: Array<{
+    slug: string;
+    name: string;
+    rarity: string;
+    cost: number;
+  }>;
+}
+
+export interface CompanionData {
+  user: {
+    id: number;
+    displayName: string;
+    username: string;
+  };
+  balance: number;
+  ownedCount: number;
+  equippedCount: number;
+  loadout: Record<CompanionSlotKey, string | null>;
+  slots: CompanionSlotState[];
+  items: CompanionItem[];
+  renderUrl: string;
+  cardUrl: string;
+  share: {
+    avatarUrl: string;
+    cardUrl: string;
+  };
+}
+
 export interface GiveawayItem {
   id: number;
   title: string;

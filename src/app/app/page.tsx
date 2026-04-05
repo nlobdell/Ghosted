@@ -56,8 +56,8 @@ export default function DashboardPage() {
           getJSON<{ competitions?: { id: number; title: string; status: string }[] }>('/api/wom/competitions?limit=6')
             .then((data) => data.competitions ?? [])
             .catch(() => []),
-          getJSON<{ hiscores?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=3')
-            .then((data) => data.hiscores ?? [])
+          getJSON<{ entries?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=3')
+            .then((data) => data.entries ?? [])
             .catch(() => [] as LeaderboardEntry[]),
         ]);
 
@@ -112,6 +112,7 @@ export default function DashboardPage() {
             actions={(
               <>
                 <Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>
+                <Link href="/app/companion/" className="button button--secondary button--small">Companion</Link>
                 <Link href="/app/rewards/" className="button button--secondary button--small">Rewards</Link>
               </>
             )}
@@ -165,6 +166,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="app-inline-actions">
                       <Link href="/app/rewards/" className="button button--secondary button--small">Rewards</Link>
+                      <Link href="/app/companion/" className="button button--secondary button--small">Companion</Link>
                       <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
                       <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
                     </div>
@@ -189,6 +191,7 @@ export default function DashboardPage() {
                     { href: '/app/clan/', label: 'Clan', meta: `${womClan?.group?.memberCount ?? '-'} members` },
                     { href: '/app/competitions/', label: 'Competitions', meta: `${ongoingComps.length} live` },
                     { href: '/app/rewards/', label: 'Rewards', meta: rewards ? formatPoints(rewards.balance) : 'Sign in' },
+                    { href: '/app/companion/', label: 'Companion', meta: 'Tiny avatar studio' },
                     { href: '/app/casino/', label: 'Casino', meta: 'Points-only slots' },
                     { href: '/app/profile/', label: 'Profile', meta: 'Discord + WOM' },
                   ]}
