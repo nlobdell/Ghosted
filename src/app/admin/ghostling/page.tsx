@@ -44,6 +44,11 @@ function toGhostlingCopy(text: string) {
   return text.replaceAll('Companion', 'Ghostling').replaceAll('companion', 'Ghostling');
 }
 
+function toGhostlingError(text: string) {
+  if (text.startsWith('Request failed:')) return text;
+  return toGhostlingCopy(text);
+}
+
 function createImportDrafts(candidates: CompanionRepoImportCandidate[]): RepoImportDraft[] {
   return candidates.map((candidate) => ({
     ...candidate,
@@ -71,7 +76,7 @@ export default function GhostlingAdminPage() {
       })
       .catch((nextError) => {
         setMessage({
-          text: nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Failed to load the Ghostling library.',
+          text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Failed to load the Ghostling library.',
           variant: 'error',
         });
       })
@@ -106,7 +111,7 @@ export default function GhostlingAdminPage() {
       applyLibrary(result, 'Ghostling base updated.');
       event.currentTarget.reset();
     } catch (nextError) {
-      setMessage({ text: nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Ghostling base upload failed.', variant: 'error' });
+      setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling base upload failed.', variant: 'error' });
     } finally {
       setPendingKey(null);
     }
@@ -125,7 +130,7 @@ export default function GhostlingAdminPage() {
       applyLibrary(result, 'Ghostling cosmetic created.');
       event.currentTarget.reset();
     } catch (nextError) {
-      setMessage({ text: nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Custom Ghostling cosmetic upload failed.', variant: 'error' });
+      setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Custom Ghostling cosmetic upload failed.', variant: 'error' });
     } finally {
       setPendingKey(null);
     }
@@ -144,7 +149,7 @@ export default function GhostlingAdminPage() {
       applyLibrary(result, 'Ghostling art replaced.');
       event.currentTarget.reset();
     } catch (nextError) {
-      setMessage({ text: nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Ghostling asset replacement failed.', variant: 'error' });
+      setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling asset replacement failed.', variant: 'error' });
     } finally {
       setPendingKey(null);
     }
@@ -160,7 +165,7 @@ export default function GhostlingAdminPage() {
       });
       applyLibrary(result, active ? 'Ghostling cosmetic restored.' : 'Ghostling cosmetic hidden.');
     } catch (nextError) {
-      setMessage({ text: nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Ghostling visibility update failed.', variant: 'error' });
+      setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling visibility update failed.', variant: 'error' });
     } finally {
       setPendingKey(null);
     }
@@ -176,7 +181,7 @@ export default function GhostlingAdminPage() {
       });
       applyLibrary(result, 'Ghostling order updated.');
     } catch (nextError) {
-      setMessage({ text: nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Ghostling reorder failed.', variant: 'error' });
+      setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling reorder failed.', variant: 'error' });
     } finally {
       setPendingKey(null);
     }
@@ -211,7 +216,7 @@ export default function GhostlingAdminPage() {
       });
       applyLibrary(result, 'Repo Ghostling cosmetics imported.');
     } catch (nextError) {
-      setMessage({ text: nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Repo Ghostling import failed.', variant: 'error' });
+      setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Repo Ghostling import failed.', variant: 'error' });
     } finally {
       setPendingKey(null);
     }
