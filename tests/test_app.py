@@ -483,7 +483,7 @@ class GhostedAppTests(unittest.TestCase):
         self.assertEqual(payload["membership"]["rankLabel"], "Member")
 
     def test_site_shell_signed_out_response(self):
-        handler = self.make_handler("/api/site-shell?next=/app/")
+        handler = self.make_handler("/api/site-shell?next=/hall/")
 
         server.GhostedHandler.route_request(handler, "GET", self.connection)
 
@@ -497,7 +497,7 @@ class GhostedAppTests(unittest.TestCase):
         self.assertEqual(handler.payload["navigation"][0]["key"], "home")
 
     def test_site_shell_signed_in_without_wom_link(self):
-        handler = self.make_handler("/api/site-shell?next=/app/profile/", user=self.user)
+        handler = self.make_handler("/api/site-shell?next=/hall/profile/", user=self.user)
 
         server.GhostedHandler.route_request(handler, "GET", self.connection)
 
@@ -512,7 +512,7 @@ class GhostedAppTests(unittest.TestCase):
     def test_site_shell_signed_in_with_wom_rank(self, wom_cached_json):
         server.save_user_game_account(self.connection, self.user["id"], "osrs", PLAYER)
         wom_cached_json.return_value = PLAYER_GROUPS
-        handler = self.make_handler("/api/site-shell?next=/app/profile/", user=self.user)
+        handler = self.make_handler("/api/site-shell?next=/hall/profile/", user=self.user)
 
         server.GhostedHandler.route_request(handler, "GET", self.connection)
 
@@ -525,7 +525,7 @@ class GhostedAppTests(unittest.TestCase):
     def test_site_shell_signed_in_with_linked_player_outside_group(self, wom_cached_json):
         server.save_user_game_account(self.connection, self.user["id"], "osrs", PLAYER)
         wom_cached_json.return_value = OUTSIDER_GROUPS
-        handler = self.make_handler("/api/site-shell?next=/app/profile/", user=self.user)
+        handler = self.make_handler("/api/site-shell?next=/hall/profile/", user=self.user)
 
         server.GhostedHandler.route_request(handler, "GET", self.connection)
 
@@ -543,7 +543,7 @@ class GhostedAppTests(unittest.TestCase):
         server.ensure_user_rewards(self.connection, member, server.build_auth_config("http://localhost:8000"))
         member = server.get_user_by_discord_id(self.connection, "member-user")
 
-        payload = server.site_shell_payload(self.connection, member, base_url="http://localhost:8000", next_path="/app/clan/")
+        payload = server.site_shell_payload(self.connection, member, base_url="http://localhost:8000", next_path="/hall/clan/")
 
         self.assertEqual(payload["activeRouteKey"], "community")
         self.assertNotIn("admin", [item["key"] for item in payload["navigation"]])
@@ -555,10 +555,10 @@ class GhostedAppTests(unittest.TestCase):
         self.assertIn("admin", [item["key"] for item in payload["navigation"]])
 
     def test_active_route_key_groups_related_routes(self):
-        self.assertEqual(server.active_route_key("/app/clan/"), "community")
-        self.assertEqual(server.active_route_key("/app/competitions/"), "community")
-        self.assertEqual(server.active_route_key("/app/casino/"), "casino")
-        self.assertEqual(server.active_route_key("/app/companion/"), "companion")
+        self.assertEqual(server.active_route_key("/hall/clan/"), "community")
+        self.assertEqual(server.active_route_key("/hall/competitions/"), "community")
+        self.assertEqual(server.active_route_key("/hall/casino/"), "casino")
+        self.assertEqual(server.active_route_key("/hall/ghostling/"), "companion")
 
     @patch("server.wom_cached_json")
     def test_wom_hiscores_endpoint(self, wom_cached_json):

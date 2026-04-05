@@ -4058,28 +4058,16 @@ def active_route_key(path: str | None) -> str:
     normalized = normalize_local_path(path)
     if normalized == "/":
         return "home"
-    if normalized in {"/app", "/app/", "/hall", "/hall/"}:
+    if normalized in {"/hall", "/hall/"}:
         return "app"
-    if normalized.startswith("/app/community") or normalized.startswith("/app/clan") or normalized.startswith("/app/competitions"):
-        return "community"
     if normalized.startswith("/hall/clan") or normalized.startswith("/hall/competitions"):
         return "community"
-    if normalized.startswith("/app/rewards") or normalized.startswith("/app/giveaways"):
-        return "rewards"
     if normalized.startswith("/hall/rewards"):
         return "rewards"
-    if normalized.startswith("/hall/giveaways"):
-        return "giveaways"
-    if normalized.startswith("/app/casino"):
-        return "casino"
     if normalized.startswith("/hall/casino"):
         return "casino"
-    if normalized.startswith("/app/companion"):
-        return "companion"
     if normalized.startswith("/hall/ghostling"):
         return "companion"
-    if normalized.startswith("/app/profile"):
-        return "profile"
     if normalized.startswith("/hall/profile"):
         return "profile"
     if normalized.startswith("/admin"):
@@ -5373,13 +5361,6 @@ class GhostedHandler(BaseHTTPRequestHandler):
             return BASE_DIR / "site.js"
         if path.startswith("/src/"):
             return (BASE_DIR / path.lstrip("/")).resolve()
-        if path in {"/app", "/app/"}:
-            return BASE_DIR / "app" / "index.html"
-        if path.startswith("/app/"):
-            candidate = (BASE_DIR / path.lstrip("/")).resolve()
-            if candidate.is_dir():
-                candidate = candidate / "index.html"
-            return candidate
         if path in {"/admin", "/admin/"}:
             return BASE_DIR / "admin" / "index.html"
         if path.startswith("/admin/"):

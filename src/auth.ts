@@ -11,6 +11,8 @@ type DiscordIdentityProfile = {
 
 export const { handlers, auth } = NextAuth({
   secret: process.env.AUTH_SECRET,
+  // This app runs behind Caddy on a VPS, so Auth.js needs to trust forwarded host headers in production.
+  trustHost: true,
   session: {
     strategy: 'jwt',
   },
@@ -142,6 +144,18 @@ export const { handlers, auth } = NextAuth({
         };
       });
       return enriched as typeof session;
+    },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith('/')) return new URL(url, baseUrl).toString();
+
+      try {
+        const target = new URL(url);
+        if (target.origin === baseUrl) return target.toString();
+      } catch {
+        return baseUrl;
+      }
+
+      return baseUrl;
     },
   },
 });
