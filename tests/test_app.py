@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import shutil
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -199,11 +200,15 @@ class FakeHandler(server.GhostedHandler):
 
 class GhostedAppTests(unittest.TestCase):
     def setUp(self):
+        self.asset_dir = Path.cwd() / "data" / "test-companion-assets"
+        if self.asset_dir.exists():
+            shutil.rmtree(self.asset_dir)
         self.env_patch = patch.dict(
             os.environ,
             {
                 "WOM_GROUP_ID": "123",
                 "WOM_CACHE_TTL_SECONDS": "900",
+                "COMPANION_ASSET_DIR": str(self.asset_dir),
             },
             clear=False,
         )
@@ -227,6 +232,8 @@ class GhostedAppTests(unittest.TestCase):
         self.connection.close()
         if self.db_path.exists():
             self.db_path.unlink()
+        if self.asset_dir.exists():
+            shutil.rmtree(self.asset_dir)
         self.env_patch.stop()
 
     def wom_cached_side_effect(self, connection, path, *, query=None, force_refresh=False, allow_stale=True):
@@ -290,6 +297,43 @@ class GhostedAppTests(unittest.TestCase):
         ).fetchall()
         self.assertEqual([row["item_slug"] for row in inventory], ["witch-hat"])
 
+    def test_companion_seed_writes_default_assets_to_disk(self):
+        base_row = self.connection.execute(
+            "SELECT base_asset_path FROM companion_settings WHERE singleton_key = 'default'",
+        ).fetchone()
+        item_row = self.connection.execute(
+            "SELECT front_asset_path FROM companion_catalog WHERE slug = 'witch-hat'",
+        ).fetchone()
+
+        self.assertIsNotNone(base_row)
+        self.assertTrue((self.asset_dir / base_row["base_asset_path"]).exists())
+        self.assertTrue((self.asset_dir / item_row["front_asset_path"]).exists())
+
+    def test_create_companion_item_stores_uploaded_files(self):
+        library = server.create_companion_item(
+            self.connection,
+            self.user,
+            name="Moon Hood",
+            slug="moon-hood",
+            slot="hat",
+            rarity="rare",
+            cost=90,
+            description="Custom upload",
+            front_asset=server.UploadedFile(
+                filename="moon-hood.svg",
+                content_type="image/svg+xml",
+                data=b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>',
+            ),
+        )
+
+        row = self.connection.execute(
+            "SELECT front_asset_path FROM companion_catalog WHERE slug = 'moon-hood'",
+        ).fetchone()
+        self.assertIsNotNone(row)
+        self.assertIn("uploads/items", row["front_asset_path"])
+        self.assertTrue((self.asset_dir / row["front_asset_path"]).exists())
+        self.assertTrue(any(item["slug"] == "moon-hood" for item in library["items"]))
+
     def test_companion_equip_requires_owned_item(self):
         with self.assertRaises(server.AppError) as exc:
             server.equip_companion_item(self.connection, self.user, "hat", "witch-hat")
@@ -303,7 +347,7 @@ class GhostedAppTests(unittest.TestCase):
 
         self.assertEqual(handler.status, 200)
         self.assertIn("<svg", handler.payload)
-        self.assertIn("#39a7d7", handler.payload)
+        self.assertIn("data:image/svg+xml;base64", handler.payload)
 
     @patch("server.wom_cached_json")
     @patch("server.wom_request_json")

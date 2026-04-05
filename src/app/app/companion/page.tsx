@@ -1,18 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   AppContext,
   AppGrid,
   Banner,
   EmptyState,
+  FormField,
   Panel,
   SectionHeading,
   StatStrip,
 } from '@/components/app/AppUI';
 import { formatPoints, getJSON } from '@/lib/api';
 import type {
+  CompanionAdminData,
   CompanionData,
   CompanionItem,
   CompanionSlotKey,
@@ -24,9 +26,11 @@ type CompanionMutationResponse = {
   ok: boolean;
   message?: string;
   companion: CompanionData;
+  library?: CompanionAdminData;
 };
 
 const SLOT_ORDER: CompanionSlotKey[] = ['hat', 'face', 'neck', 'body'];
+const ASSET_ACCEPT = '.png,.svg,.webp,.jpg,.jpeg';
 
 function buildAbsoluteUrl(path: string) {
   if (typeof window === 'undefined') return path;
@@ -36,6 +40,7 @@ function buildAbsoluteUrl(path: string) {
 export default function CompanionPage() {
   const [companion, setCompanion] = useState<CompanionData | null>(null);
   const [shell, setShell] = useState<ShellData | null>(null);
+  const [adminData, setAdminData] = useState<CompanionAdminData | null>(null);
   const [loading, setLoading] = useState(true);
   const [authed, setAuthed] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +67,11 @@ export default function CompanionPage() {
 
         if (companionData) setCompanion(companionData);
         if (shellData) setShell(shellData);
+
+        if (shellData?.user?.isAdmin) {
+          const library = await getJSON<CompanionAdminData>('/api/companion/admin/library');
+          setAdminData(library);
+        }
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : 'Failed to load the companion studio.');
       } finally {
@@ -81,6 +91,14 @@ export default function CompanionPage() {
     return groups;
   }, [companion?.items]);
 
+  const adminItems = adminData?.items ?? [];
+
+  function applyMutation(result: CompanionMutationResponse) {
+    setCompanion(result.companion);
+    if (result.library) setAdminData(result.library);
+    setMessage({ text: result.message ?? 'Companion updated.', variant: 'info' });
+  }
+
   async function handlePurchase(slug: string) {
     setPendingKey(`buy:${slug}`);
     setMessage(null);
@@ -89,8 +107,7 @@ export default function CompanionPage() {
         method: 'POST',
         body: JSON.stringify({ slug }),
       });
-      setCompanion(result.companion);
-      setMessage({ text: result.message ?? 'Companion cosmetic unlocked.', variant: 'info' });
+      applyMutation(result);
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? nextError.message : 'Unable to unlock cosmetic.', variant: 'error' });
     } finally {
@@ -106,10 +123,66 @@ export default function CompanionPage() {
         method: 'POST',
         body: JSON.stringify({ slot, slug }),
       });
-      setCompanion(result.companion);
-      setMessage({ text: result.message ?? 'Companion updated.', variant: 'info' });
+      applyMutation(result);
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? nextError.message : 'Unable to update companion.', variant: 'error' });
+    } finally {
+      setPendingKey(null);
+    }
+  }
+
+  async function handleBaseUpload(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    setPendingKey('admin:base');
+    setMessage(null);
+    try {
+      const result = await getJSON<CompanionMutationResponse>('/api/companion/admin/base', {
+        method: 'POST',
+        body: formData,
+      });
+      applyMutation(result);
+      event.currentTarget.reset();
+    } catch (nextError) {
+      setMessage({ text: nextError instanceof Error ? nextError.message : 'Base upload failed.', variant: 'error' });
+    } finally {
+      setPendingKey(null);
+    }
+  }
+
+  async function handleCreateItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    setPendingKey('admin:create');
+    setMessage(null);
+    try {
+      const result = await getJSON<CompanionMutationResponse>('/api/companion/admin/items', {
+        method: 'POST',
+        body: formData,
+      });
+      applyMutation(result);
+      event.currentTarget.reset();
+    } catch (nextError) {
+      setMessage({ text: nextError instanceof Error ? nextError.message : 'Custom cosmetic upload failed.', variant: 'error' });
+    } finally {
+      setPendingKey(null);
+    }
+  }
+
+  async function handleReplaceAssets(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    setPendingKey('admin:replace');
+    setMessage(null);
+    try {
+      const result = await getJSON<CompanionMutationResponse>('/api/companion/admin/items/replace-assets', {
+        method: 'POST',
+        body: formData,
+      });
+      applyMutation(result);
+      event.currentTarget.reset();
+    } catch (nextError) {
+      setMessage({ text: nextError instanceof Error ? nextError.message : 'Asset replacement failed.', variant: 'error' });
     } finally {
       setPendingKey(null);
     }
@@ -164,6 +237,11 @@ export default function CompanionPage() {
                 <button className="button button--secondary button--small" type="button" onClick={() => copyUrl(companion.share.cardUrl, 'Share card URL')}>
                   Copy share card
                 </button>
+                {companion.baseAssetUrl ? (
+                  <a href={companion.baseAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                    Open base asset
+                  </a>
+                ) : null}
               </div>
             </div>
             <div className={styles.heroStage}>
@@ -326,6 +404,183 @@ export default function CompanionPage() {
               })}
             </div>
           </section>
+
+          {shell?.user?.isAdmin && adminData ? (
+            <section className={styles.adminSection}>
+              <SectionHeading
+                eyebrow="Asset vault"
+                title="Store real asset files and upload your own art"
+                copy="Companion layers now live as files on disk instead of inline code. Upload 32x32 PNG or SVG layers here, then Ghosted will store the files, register their paths, and render them into the shared avatar/export flow."
+              />
+
+              <AppGrid>
+                <Panel
+                  className={styles.adminPanel}
+                  tier="primary"
+                  eyebrow="Base asset"
+                  title="Replace the current ghost base"
+                  body={(
+                    <form onSubmit={handleBaseUpload} className="app-form">
+                      <div className={styles.assetMetaBlock}>
+                        <strong>Stored in</strong>
+                        <span>{adminData.storageRoot}</span>
+                      </div>
+                      <div className={styles.assetMetaBlock}>
+                        <strong>Current base file</strong>
+                        <span>{adminData.base.assetPath}</span>
+                      </div>
+                      <FormField label="Base image">
+                        <input name="asset" type="file" accept={ASSET_ACCEPT} className="input-base" required />
+                      </FormField>
+                      <div className="app-inline-actions">
+                        <button className="button" type="submit" disabled={pendingKey === 'admin:base'}>
+                          {pendingKey === 'admin:base' ? 'Uploading...' : 'Upload base'}
+                        </button>
+                        {adminData.base.assetUrl ? (
+                          <a href={adminData.base.assetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                            Open raw file
+                          </a>
+                        ) : null}
+                      </div>
+                    </form>
+                  )}
+                />
+
+                <Panel
+                  className={styles.adminPanel}
+                  tier="meta"
+                  eyebrow="Create cosmetic"
+                  title="Add a custom companion item"
+                  body={(
+                    <form onSubmit={handleCreateItem} className="app-form">
+                      <div className="form-grid-two">
+                        <FormField label="Name">
+                          <input name="name" type="text" placeholder="Moon Hood" className="input-base" required />
+                        </FormField>
+                        <FormField label="Slug (optional)">
+                          <input name="slug" type="text" placeholder="moon-hood" className="input-base" />
+                        </FormField>
+                      </div>
+                      <div className="form-grid-two">
+                        <FormField label="Slot">
+                          <select name="slot" className="input-base" defaultValue="hat">
+                            <option value="hat">Hat</option>
+                            <option value="face">Face</option>
+                            <option value="neck">Neck</option>
+                            <option value="body">Body</option>
+                          </select>
+                        </FormField>
+                        <FormField label="Rarity">
+                          <select name="rarity" className="input-base" defaultValue="common">
+                            <option value="common">Common</option>
+                            <option value="rare">Rare</option>
+                            <option value="epic">Epic</option>
+                            <option value="legendary">Legendary</option>
+                          </select>
+                        </FormField>
+                      </div>
+                      <div className="form-grid-two">
+                        <FormField label="Cost">
+                          <input name="cost" type="number" min="0" defaultValue="120" className="input-base" required />
+                        </FormField>
+                        <FormField label="Front asset">
+                          <input name="frontAsset" type="file" accept={ASSET_ACCEPT} className="input-base" required />
+                        </FormField>
+                      </div>
+                      <FormField label="Back asset (optional)">
+                        <input name="backAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
+                      </FormField>
+                      <FormField label="Description">
+                        <textarea
+                          name="description"
+                          rows={3}
+                          className="input-base"
+                          placeholder="Short flavor text for the unlock card."
+                        />
+                      </FormField>
+                      <button className="button" type="submit" disabled={pendingKey === 'admin:create'}>
+                        {pendingKey === 'admin:create' ? 'Creating...' : 'Create cosmetic'}
+                      </button>
+                    </form>
+                  )}
+                />
+              </AppGrid>
+
+              <AppGrid>
+                <Panel
+                  className={styles.adminPanel}
+                  tier="meta"
+                  eyebrow="Replace art"
+                  title="Swap files for an existing cosmetic"
+                  body={(
+                    <form onSubmit={handleReplaceAssets} className="app-form">
+                      <FormField label="Cosmetic">
+                        <select name="slug" className="input-base" defaultValue={adminItems[0]?.slug ?? ''} required>
+                          {adminItems.map((item) => (
+                            <option key={item.slug} value={item.slug}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                      </FormField>
+                      <div className="form-grid-two">
+                        <FormField label="Front asset">
+                          <input name="frontAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
+                        </FormField>
+                        <FormField label="Back asset">
+                          <input name="backAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
+                        </FormField>
+                      </div>
+                      <button className="button" type="submit" disabled={pendingKey === 'admin:replace'}>
+                        {pendingKey === 'admin:replace' ? 'Replacing...' : 'Replace asset files'}
+                      </button>
+                    </form>
+                  )}
+                />
+
+                <Panel
+                  className={styles.adminPanel}
+                  tier="meta"
+                  eyebrow="Library"
+                  title="Current stored assets"
+                  body={(
+                    <div className={styles.libraryGrid}>
+                      {adminItems.map((item) => (
+                        <article key={item.slug} className={styles.libraryCard}>
+                          <div className={styles.libraryPreview}>
+                            <img src={item.previewUrl} alt={item.name} className={styles.libraryPreviewImage} />
+                          </div>
+                          <div className={styles.libraryCopy}>
+                            <div className={styles.libraryHeader}>
+                              <strong>{item.name}</strong>
+                              <span className="app-chip">{item.slot}</span>
+                            </div>
+                            <p>{item.description}</p>
+                            <div className={styles.assetMetaList}>
+                              <span>{item.frontAssetPath ?? 'No front asset'}</span>
+                              {item.backAssetPath ? <span>{item.backAssetPath}</span> : null}
+                            </div>
+                            <div className="app-inline-actions">
+                              {item.frontAssetUrl ? (
+                                <a href={item.frontAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                                  Front file
+                                </a>
+                              ) : null}
+                              {item.backAssetUrl ? (
+                                <a href={item.backAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                                  Back file
+                                </a>
+                              ) : null}
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                />
+              </AppGrid>
+            </section>
+          ) : null}
         </>
       ) : (
         <EmptyState message="Could not load the companion studio." />

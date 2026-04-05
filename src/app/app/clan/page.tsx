@@ -88,6 +88,16 @@ export default function ClanPage() {
 
   const ongoing = competitions.filter((c) => c.status === 'ongoing');
   const upcoming = competitions.filter((c) => c.status === 'upcoming');
+  const finished = competitions.filter((c) => c.status === 'finished');
+  const leaderboardEntries = hiscores.length > 0 ? hiscores : (clan?.featuredHiscores?.entries ?? []);
+  const gainsEntries = gains.length > 0 ? gains : (clan?.featuredGains?.entries ?? []);
+  const topLeader = leaderboardEntries[0];
+  const topGainer = gainsEntries[0];
+  const trackedMembers = clan?.linkCoverage.trackedUsers ?? 0;
+  const linkedMembers = clan?.linkCoverage.linkedUsers ?? 0;
+  const groupMemberCount = clan?.linkCoverage.groupMemberCount ?? clan?.group.memberCount ?? 0;
+  const unlinkedMembers = clan?.linkCoverage.unlinkedUsers ?? Math.max(groupMemberCount - linkedMembers, 0);
+  const linkRate = groupMemberCount > 0 ? `${Math.round((linkedMembers / groupMemberCount) * 100)}%` : '-';
 
   return (
     <main id="main-content" className={`page-shell ${styles.page}`}>
@@ -111,21 +121,21 @@ export default function ClanPage() {
             copy="Use this board to monitor roster health, active competition pressure, and the members setting the pace."
             actions={<Link href="/app/competitions/" className="button button--secondary button--small">View competitions</Link>}
             stage={
-              hiscores[0]
+              topLeader
                 ? {
                   label: 'Top performer',
-                  primary: hiscores[0].player?.displayName || hiscores[0].player?.username || 'Ghosted member',
-                  secondary: `${formatMaybeNumber(hiscores[0].value)} overall level`,
+                  primary: topLeader.player?.displayName || topLeader.player?.username || 'Ghosted member',
+                  secondary: `${formatMaybeNumber(topLeader.value)} overall level`,
                   chips: [
                     `${ongoing.length} live events`,
-                    `${clan.linkCoverage.linkedUsers} linked members`,
+                    `${linkRate} linked coverage`,
                   ],
                 }
                 : {
                   label: 'Clan status',
                   primary: `${clan.group.memberCount} members`,
                   secondary: `${ongoing.length} competitions live`,
-                  chips: [`${clan.linkCoverage.linkedUsers} linked users`],
+                  chips: [`${linkRate} linked coverage`],
                 }
             }
           />
@@ -135,9 +145,9 @@ export default function ClanPage() {
             leadIndex={0}
             stats={[
               { label: 'Members', value: String(clan.group.memberCount) },
-              { label: 'Linked', value: String(clan.linkCoverage.linkedUsers) },
+              { label: 'Linked coverage', value: linkRate },
               { label: 'Live competitions', value: String(ongoing.length), href: '/app/competitions/' },
-              { label: 'Weekly gains tracked', value: String(gains.length) },
+              { label: 'Maxed total', value: String(clan.statistics.maxedTotalCount) },
             ]}
           />
 
@@ -155,11 +165,20 @@ export default function ClanPage() {
                   <MetricGrid
                     items={[
                       ['Members', String(clan.group.memberCount)],
-                      ['Linked users', String(clan.linkCoverage.linkedUsers)],
+                      ['Tracked users', String(trackedMembers)],
+                      ['Linked users', String(linkedMembers)],
+                      ['Unlinked users', String(unlinkedMembers)],
+                      ['Coverage', linkRate],
                       ['Verified', clan.group.verified ? 'Yes' : 'No'],
                       ['Home world', String(clan.group.homeworld ?? GHOSTED_CONTENT.wom.homeworld)],
                       ['Clan chat', clan.group.clanChat ?? GHOSTED_CONTENT.wom.clanChat],
                       ['Score', clan.group.score !== undefined ? String(clan.group.score) : '-'],
+                      ['Avg overall', formatMaybeNumber(clan.statistics.averageOverallLevel)],
+                      ['Avg EHP', formatMaybeNumber(clan.statistics.averageEhp)],
+                      ['Avg EHB', formatMaybeNumber(clan.statistics.averageEhb)],
+                      ['Maxed total', String(clan.statistics.maxedTotalCount)],
+                      ['Maxed combat', String(clan.statistics.maxedCombatCount)],
+                      ['200m players', String(clan.statistics.maxed200msCount)],
                     ]}
                   />
                 </div>
@@ -172,7 +191,7 @@ export default function ClanPage() {
               title="Overall leaders"
               body={(
                 <LeaderboardTable
-                  entries={hiscores}
+                  entries={leaderboardEntries}
                   valueFormatter={(entry) => formatMaybeNumber(entry.value)}
                   valueLabel="Level"
                 />
@@ -186,7 +205,19 @@ export default function ClanPage() {
               tier="primary"
               eyebrow="Event watch"
               title={ongoing.length > 0 ? `${ongoing.length} competitions live` : `${upcoming.length} competitions upcoming`}
-              body={<CompetitionList entries={competitions} compact />}
+              body={(
+                <div className="app-stack">
+                  <MetricGrid
+                    items={[
+                      ['Live', String(ongoing.length)],
+                      ['Upcoming', String(upcoming.length)],
+                      ['Finished', String(finished.length)],
+                      ['Weekly gain leader', topGainer?.player?.displayName || topGainer?.player?.username || '-'],
+                    ]}
+                  />
+                  <CompetitionList entries={competitions} compact />
+                </div>
+              )}
             />
             <Panel
               className="clan-gains"
@@ -195,7 +226,7 @@ export default function ClanPage() {
               title="Weekly gains"
               body={(
                 <LeaderboardTable
-                  entries={gains}
+                  entries={gainsEntries}
                   valueFormatter={(entry) => `+${formatMaybeNumber(entry.gained ?? entry.progress?.gained)}`}
                   valueLabel="XP gained"
                 />
