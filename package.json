@@ -1,7 +1,7 @@
 {
   "name": "ghosted",
   "version": "1.0.0",
-  "description": "Ghosted is now a lightweight Python web app with:",
+  "description": "Ghosted is a split-stack clan platform with a Next.js frontend and Python backend.",
   "main": "index.js",
   "directories": {
     "test": "tests"
@@ -10,7 +10,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test:backend": "python -m unittest tests.test_app",
     "git:update": "powershell -ExecutionPolicy Bypass -File scripts/git-update.ps1",
     "git:update:autostash": "powershell -ExecutionPolicy Bypass -File scripts/git-update.ps1 -Autostash"
   },
@@ -22,6 +25,9 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "bugs": {
     "url": "https://github.com/nlobdell/Ghosted/issues"
   },
@@ -38,6 +44,8 @@
     "@types/node": "^24.8.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.2",
     "postcss": "^8.5.8",
     "typescript": "^5.9.3",
     "vite": "^7.1.10"

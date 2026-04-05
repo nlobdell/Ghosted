@@ -5,7 +5,6 @@ import {
   AppContext,
   StatStrip,
   Panel,
-  AppGrid,
   MetricGrid,
   LeaderboardTable,
   EmptyState,

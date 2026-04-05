@@ -172,7 +172,7 @@ export class SlotRenderer {
 
     await Promise.all(
       this.reels.map((reel, reelIndex) =>
-        this.spinReel(reel, reelIndex, game.reelSymbols, result.grid[reelIndex] || [], result)
+        this.spinReel(reel, reelIndex, game.reelSymbols, result.grid[reelIndex] || [])
       )
     );
 
@@ -341,7 +341,7 @@ export class SlotRenderer {
     }
   }
 
-  private async spinReel(reel: ReelView, reelIndex: number, poolSource: string[], finalReel: string[], result: SpinResult) {
+  private async spinReel(reel: ReelView, reelIndex: number, poolSource: string[], finalReel: string[]) {
     const profile = motionProfile(this.activeGame);
     const pool = poolSource.length ? poolSource : ['coin', 'moon', 'ghost'];
     const target = normalizeReel(finalReel, pool);

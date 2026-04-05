@@ -306,8 +306,10 @@ class GhostedAppTests(unittest.TestCase):
         ).fetchone()
 
         self.assertIsNotNone(base_row)
-        self.assertTrue((self.asset_dir / base_row["base_asset_path"]).exists())
-        self.assertTrue((self.asset_dir / item_row["front_asset_path"]).exists())
+        self.assertTrue(str(base_row["base_asset_path"]).startswith("repo/"))
+        self.assertTrue(str(item_row["front_asset_path"]).startswith("repo/"))
+        self.assertTrue(server.companion_asset_path(base_row["base_asset_path"]).exists())
+        self.assertTrue(server.companion_asset_path(item_row["front_asset_path"]).exists())
 
     def test_create_companion_item_stores_uploaded_files(self):
         library = server.create_companion_item(

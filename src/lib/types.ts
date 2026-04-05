@@ -147,6 +147,7 @@ export interface CompanionAdminAssetItem {
 
 export interface CompanionAdminData {
   storageRoot: string;
+  defaultAssetRoot: string;
   base: {
     assetPath: string;
     assetUrl?: string | null;
