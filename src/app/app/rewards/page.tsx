@@ -98,7 +98,7 @@ export default function RewardsPage() {
         summary="Confirm available balance first, then spend on active drops, then review ledger history."
         actions={(
           <>
-            <Link href="/app/companion/" className="button button--secondary button--small">Companion</Link>
+            <Link href="/app/companion/" className="button button--secondary button--small">Ghostling</Link>
             <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
           </>
         )}
@@ -138,7 +138,7 @@ export default function RewardsPage() {
             }
             actions={(
               <>
-                <Link href="/app/companion/" className="button button--secondary button--small">Companion</Link>
+                <Link href="/app/companion/" className="button button--secondary button--small">Ghostling</Link>
                 <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
                 <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
               </>

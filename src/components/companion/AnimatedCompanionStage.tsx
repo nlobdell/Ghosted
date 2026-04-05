@@ -3,7 +3,6 @@
 /* eslint-disable @next/next/no-img-element -- Companion animation falls back to runtime image URLs from the app server. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
-  CompanionAnimationFrame,
   CompanionMotionChannel,
   CompanionMotionWave,
   CompanionRenderLayer,

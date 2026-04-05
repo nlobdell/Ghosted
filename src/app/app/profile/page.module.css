@@ -1,5 +1,5 @@
 .page {
-  --page-gap: 1rem;
+  --page-gap: 1.05rem;
   --page-accent: rgba(160, 132, 242, 0.34);
   gap: var(--page-gap);
 }
@@ -10,7 +10,12 @@
 
 .page :global(.app-grid-two) {
   grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr);
-  gap: 0.9rem;
+  gap: 1rem;
+}
+
+.page :global(.profile-identity-panel .app-metric-grid) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
 }
 
 .page :global(.profile-identity-panel) {
@@ -23,7 +28,7 @@
 
 .page :global(.profile-scoreboard),
 .page :global(.profile-scoreboard .app-summary-grid__secondary) {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.68rem;
 }
 
@@ -46,7 +51,8 @@
 
 @media (max-width: 640px) {
   .page :global(.profile-scoreboard),
-  .page :global(.profile-scoreboard .app-summary-grid__secondary) {
+  .page :global(.profile-scoreboard .app-summary-grid__secondary),
+  .page :global(.profile-identity-panel .app-metric-grid) {
     grid-template-columns: 1fr;
   }
 }

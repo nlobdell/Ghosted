@@ -34,6 +34,10 @@ type CompanionMutationResponse = {
 const SLOT_ORDER: CompanionSlotKey[] = ['hat', 'face', 'neck', 'body'];
 const ASSET_ACCEPT = '.png,.svg,.gif,.webp,.jpg,.jpeg';
 
+function toGhostlingCopy(text: string) {
+  return text.replaceAll('Companion', 'Ghostling').replaceAll('companion', 'Ghostling');
+}
+
 function buildAbsoluteUrl(path: string) {
   if (typeof window === 'undefined') return path;
   return `${window.location.origin}${path}`;
@@ -75,7 +79,7 @@ export default function CompanionPage() {
           setAdminData(library);
         }
       } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : 'Failed to load the companion studio.');
+        setError(nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Failed to load the Ghostling studio.');
       } finally {
         setLoading(false);
       }
@@ -98,7 +102,7 @@ export default function CompanionPage() {
   function applyMutation(result: CompanionMutationResponse) {
     setCompanion(result.companion);
     if (result.library) setAdminData(result.library);
-    setMessage({ text: result.message ?? 'Companion updated.', variant: 'info' });
+    setMessage({ text: toGhostlingCopy(result.message ?? 'Ghostling updated.'), variant: 'info' });
   }
 
   async function handlePurchase(slug: string) {
@@ -111,7 +115,7 @@ export default function CompanionPage() {
       });
       applyMutation(result);
     } catch (nextError) {
-      setMessage({ text: nextError instanceof Error ? nextError.message : 'Unable to unlock cosmetic.', variant: 'error' });
+      setMessage({ text: nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Unable to unlock Ghostling cosmetic.', variant: 'error' });
     } finally {
       setPendingKey(null);
     }
@@ -127,7 +131,7 @@ export default function CompanionPage() {
       });
       applyMutation(result);
     } catch (nextError) {
-      setMessage({ text: nextError instanceof Error ? nextError.message : 'Unable to update companion.', variant: 'error' });
+      setMessage({ text: nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Unable to update Ghostling.', variant: 'error' });
     } finally {
       setPendingKey(null);
     }
@@ -146,7 +150,7 @@ export default function CompanionPage() {
       applyMutation(result);
       event.currentTarget.reset();
     } catch (nextError) {
-      setMessage({ text: nextError instanceof Error ? nextError.message : 'Base upload failed.', variant: 'error' });
+      setMessage({ text: nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Ghostling base upload failed.', variant: 'error' });
     } finally {
       setPendingKey(null);
     }
@@ -165,7 +169,7 @@ export default function CompanionPage() {
       applyMutation(result);
       event.currentTarget.reset();
     } catch (nextError) {
-      setMessage({ text: nextError instanceof Error ? nextError.message : 'Custom cosmetic upload failed.', variant: 'error' });
+      setMessage({ text: nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Custom Ghostling cosmetic upload failed.', variant: 'error' });
     } finally {
       setPendingKey(null);
     }
@@ -184,7 +188,7 @@ export default function CompanionPage() {
       applyMutation(result);
       event.currentTarget.reset();
     } catch (nextError) {
-      setMessage({ text: nextError instanceof Error ? nextError.message : 'Asset replacement failed.', variant: 'error' });
+      setMessage({ text: nextError instanceof Error ? toGhostlingCopy(nextError.message) : 'Ghostling asset replacement failed.', variant: 'error' });
     } finally {
       setPendingKey(null);
     }
@@ -202,9 +206,9 @@ export default function CompanionPage() {
   return (
     <main id="main-content" className={`page-shell ${styles.page}`}>
       <AppContext
-        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/app/' }, { label: 'Companion' }]}
-        title="Ghost companion studio"
-        summary="Spend Ghosted points on a tiny companion avatar, lock in a loadout, and export it as a shareable image for Discord, bios, and anywhere else your ghost needs to appear."
+        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/app/' }, { label: 'Ghostling' }]}
+        title="Ghostling studio"
+        summary="Equip the Ghostling that now anchors your Ghosted identity, spend from the same shared points loop, and export it anywhere you want the hall to follow."
         actions={(
           <>
             <Link href="/app/rewards/" className="button button--secondary button--small">Rewards</Link>
@@ -217,20 +221,20 @@ export default function CompanionPage() {
       {message ? <Banner message={message.text} variant={message.variant} /> : null}
 
       {loading ? (
-        <Banner message="Loading companion studio..." variant="info" />
+        <Banner message="Loading Ghostling studio..." variant="info" />
       ) : !authed ? (
         <EmptyState
-          message="Sign in with Discord to unlock companion cosmetics and save a loadout."
+          message="Sign in with Discord to unlock Ghostling cosmetics and save a loadout."
           action={<Link href={shell?.auth.loginHref ?? '/auth/discord/login?next=%2Fapp%2Fcompanion%2F'} className="button button--secondary button--small">Sign in with Discord</Link>}
         />
       ) : companion ? (
         <>
           <section className={styles.hero}>
             <div className={styles.heroCopy}>
-              <p className="kicker">Standalone app</p>
-              <h2 className={styles.heroTitle}>A little ghost that lives in your points economy.</h2>
+              <p className="kicker">Hall center</p>
+              <h2 className={styles.heroTitle}>Your Ghostling is now the front door to Ghosted.</h2>
               <p className={styles.heroText}>
-                This is intentionally lighter than a storefront site: one companion, one loadout, and a clean unlock loop tied directly to the points you already earn in Ghosted.
+                Equip the live loadout, unlock cosmetics with the points you already earn, and keep a share-ready version of your Ghostling ready for Discord, bios, and anywhere else the hall shows up.
               </p>
               <div className="app-inline-actions">
                 <button className="button button--secondary button--small" type="button" onClick={() => copyUrl(companion.share.avatarUrl, 'Avatar URL')}>
@@ -257,7 +261,7 @@ export default function CompanionPage() {
                 <AnimatedCompanionStage
                   manifest={companion.renderManifest}
                   fallbackSrc={companion.renderUrl}
-                  alt={`${companion.user.displayName}'s companion`}
+                  alt={`${companion.user.displayName}'s Ghostling`}
                   className={styles.avatarImage}
                 />
               </div>
@@ -284,14 +288,14 @@ export default function CompanionPage() {
               className={styles.studioPanel}
               tier="primary"
               eyebrow="Loadout"
-              title="Equip your current companion"
+              title="Equip your current Ghostling"
               body={(
                 <div className={styles.studioBody}>
                   <div className={styles.previewSurface}>
                     <AnimatedCompanionStage
                       manifest={companion.renderManifest}
                       fallbackSrc={companion.renderUrl}
-                      alt="Equipped companion preview"
+                      alt="Equipped Ghostling preview"
                       className={styles.previewImage}
                     />
                   </div>
@@ -327,7 +331,7 @@ export default function CompanionPage() {
               body={(
                 <div className={styles.shareBody}>
                   <div className={styles.cardPreview}>
-                    <img src={companion.cardUrl} alt="Companion share card" className={styles.cardImage} />
+                    <img src={companion.cardUrl} alt="Ghostling share card" className={styles.cardImage} />
                   </div>
                   <div className={styles.shareList}>
                     {[
@@ -357,11 +361,11 @@ export default function CompanionPage() {
           </AppGrid>
 
           <section className={styles.shopSection}>
-            <SectionHeading
-              eyebrow="Unlockables"
-              title="Companion cosmetics"
-              copy="Unlock once, equip whenever you want. Everything here spends from the same Ghosted points balance you already use for rewards and drops."
-            />
+              <SectionHeading
+                eyebrow="Unlockables"
+                title="Ghostling cosmetics"
+                copy="Unlock once, equip whenever you want. Every cosmetic pulls from the same Ghosted points balance you already use for rewards, drops, and the rest of the hall."
+              />
             <div className={styles.slotGroups}>
               {SLOT_ORDER.map((slot) => {
                 const items = groupedItems.get(slot) ?? [];
@@ -430,7 +434,7 @@ export default function CompanionPage() {
               <SectionHeading
                 eyebrow="Asset vault"
                 title="Store real asset files and upload your own art"
-                copy="The default Ghostling and starter cosmetics are now hand-authored files checked into the repo. Follow the sweatling guide here too: keep a black outline, preserve facial readability, and upload transparent PNG, GIF, or SVG layers that stay within the ghost's silhouette."
+                copy="The default Ghostling and starter cosmetics are hand-authored repo assets. Keep the outline readable, preserve the face, and upload transparent PNG, GIF, or SVG layers that stay inside the ghost silhouette."
               />
 
               <AppGrid>
@@ -474,7 +478,7 @@ export default function CompanionPage() {
                   className={styles.adminPanel}
                   tier="meta"
                   eyebrow="Create cosmetic"
-                  title="Add a custom companion item"
+                  title="Add a custom Ghostling item"
                   body={(
                     <form onSubmit={handleCreateItem} className="app-form">
                       <div className="form-grid-two">
@@ -607,7 +611,7 @@ export default function CompanionPage() {
           ) : null}
         </>
       ) : (
-        <EmptyState message="Could not load the companion studio." />
+        <EmptyState message="Could not load the Ghostling studio." />
       )}
     </main>
   );

@@ -1,6 +1,6 @@
 .page {
-  --page-gap: 1rem;
-  --page-accent: rgba(110, 204, 255, 0.28);
+  --page-gap: 1.05rem;
+  --page-accent: rgba(166, 131, 255, 0.34);
   gap: var(--page-gap);
 }
 
@@ -10,25 +10,47 @@
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(19rem, 0.85fr);
-  gap: 1rem;
-  padding: 1.2rem;
-  border: 1px solid rgba(110, 204, 255, 0.16);
-  border-radius: 1.4rem;
+  grid-template-columns: minmax(0, 1.12fr) minmax(18rem, 0.88fr);
+  gap: 1.1rem;
+  padding: 1.32rem;
+  border: 1px solid rgba(166, 131, 255, 0.16);
+  border-radius: 1.5rem;
   background:
-    radial-gradient(circle at 20% 0%, rgba(110, 204, 255, 0.1), transparent 35%),
-    rgba(15, 15, 26, 0.92);
+    radial-gradient(circle at 76% 18%, rgba(166, 131, 255, 0.18), transparent 18%),
+    radial-gradient(circle at 22% 0%, rgba(120, 91, 221, 0.12), transparent 24%),
+    rgba(16, 13, 25, 0.92);
+}
+
+.heroCopy,
+.heroStage,
+.studioBody,
+.shareBody,
+.slotList,
+.shareList,
+.shopSection,
+.adminSection,
+.slotGroups,
+.slotGroup,
+.itemGrid,
+.itemCard,
+.itemCopy,
+.libraryGrid,
+.libraryCard,
+.libraryCopy,
+.assetMetaList {
+  display: grid;
+  gap: 0.95rem;
 }
 
 .heroCopy {
-  display: grid;
   align-content: start;
-  gap: 0.85rem;
+  gap: 0.9rem;
+  max-width: 46rem;
 }
 
 .heroTitle {
-  font-size: clamp(2.5rem, 4.5vw, 4.1rem);
-  line-height: 0.9;
+  font-size: clamp(2.7rem, 5vw, 4.6rem);
+  line-height: 0.88;
 }
 
 .heroText {
@@ -42,46 +64,52 @@
 .avatarFrame,
 .cardPreview,
 .previewSurface,
-.itemPreview {
+.itemPreview,
+.libraryPreview {
   display: grid;
   place-items: center;
 }
 
 .heroStage {
-  gap: 0.8rem;
+  gap: 0.9rem;
   padding: 1rem;
-  border-radius: 1.2rem;
-  background: rgba(8, 11, 19, 0.8);
-  border: 1px solid rgba(110, 204, 255, 0.16);
+  border-radius: 1.3rem;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(166, 131, 255, 0.12), transparent 28%),
+    rgba(11, 10, 18, 0.8);
+  border: 1px solid rgba(166, 131, 255, 0.14);
 }
 
 .avatarFrame,
 .previewSurface,
-.itemPreview {
+.itemPreview,
+.libraryPreview {
   width: 100%;
   min-height: 15rem;
-  padding: 0.9rem;
-  border-radius: 1.1rem;
+  padding: 0.95rem;
+  border-radius: 1.15rem;
+  border: 1px solid rgba(166, 131, 255, 0.12);
   background:
-    linear-gradient(180deg, rgba(8, 11, 19, 0.88), rgba(14, 22, 34, 0.92));
-  border: 1px solid rgba(110, 204, 255, 0.14);
+    radial-gradient(circle at 50% 55%, rgba(166, 131, 255, 0.18), transparent 24%),
+    linear-gradient(180deg, rgba(9, 8, 15, 0.92), rgba(17, 14, 28, 0.96));
 }
 
 .avatarImage,
 .previewImage {
-  width: 210px;
-  height: 210px;
-  min-width: 210px;
-  min-height: 210px;
-  max-width: 210px;
-  max-height: 210px;
+  width: 220px;
+  height: 220px;
+  min-width: 220px;
+  min-height: 220px;
+  max-width: 220px;
+  max-height: 220px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
   overflow: visible;
 }
 
-.itemPreviewImage {
+.itemPreviewImage,
+.libraryPreviewImage {
   width: min(15rem, 100%);
   height: auto;
   display: block;
@@ -91,23 +119,31 @@
 .stageMeta {
   display: grid;
   justify-items: center;
-  gap: 0.08rem;
+  gap: 0.1rem;
   color: var(--color-text-muted);
 }
 
-.stageMeta strong {
+.stageMeta strong,
+.shareRow strong,
+.slotField span,
+.itemHeader strong,
+.itemFooter span,
+.itemState,
+.assetMetaBlock strong,
+.libraryHeader strong {
   color: var(--color-text-strong);
-  font-size: 1rem;
 }
 
 .scoreboard,
 .scoreboard :global(.app-summary-grid__secondary) {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
 }
 
 .scoreboard :global(.app-stat--lead) {
-  background: rgba(14, 19, 31, 0.94);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(166, 131, 255, 0.16), transparent 34%),
+    rgba(20, 16, 32, 0.92);
 }
 
 .studioPanel,
@@ -115,34 +151,26 @@
   min-height: 100%;
 }
 
-.studioBody,
-.shareBody {
-  display: grid;
-  gap: 1rem;
-}
-
 .slotList {
-  display: grid;
-  gap: 0.8rem;
+  gap: 0.85rem;
 }
 
 .slotField {
   display: grid;
-  gap: 0.38rem;
+  gap: 0.42rem;
 }
 
 .slotField span {
-  color: var(--color-text-strong);
   font-size: 0.82rem;
   font-weight: 700;
 }
 
 .cardPreview {
   width: 100%;
-  padding: 0.45rem;
+  padding: 0.55rem;
   border-radius: 1rem;
-  background: rgba(7, 9, 15, 0.74);
-  border: 1px solid rgba(110, 204, 255, 0.12);
+  border: 1px solid rgba(166, 131, 255, 0.12);
+  background: rgba(8, 7, 13, 0.74);
 }
 
 .cardImage {
@@ -151,8 +179,7 @@
 }
 
 .shareList {
-  display: grid;
-  gap: 0.75rem;
+  gap: 0.7rem;
 }
 
 .shareRow {
@@ -160,8 +187,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.8rem;
-  padding: 0.9rem 0;
-  border-bottom: 1px solid rgba(110, 204, 255, 0.1);
+  padding: 0.95rem 0;
+  border-bottom: 1px solid rgba(166, 131, 255, 0.1);
 }
 
 .shareRow:last-child {
@@ -170,63 +197,51 @@
 
 .shareRow div {
   display: grid;
-  gap: 0.12rem;
+  gap: 0.14rem;
 }
 
-.shareRow strong {
-  color: var(--color-text-strong);
+.shareRow span,
+.slotHeading span,
+.assetMetaBlock span,
+.assetMetaList span,
+.libraryCopy p,
+.itemCopy p {
+  color: var(--color-text-muted);
 }
 
 .shareRow span {
-  color: var(--color-text-muted);
   font-size: 0.82rem;
   word-break: break-all;
 }
 
-.shopSection,
-.adminSection,
 .slotGroups,
-.slotGroup,
-.itemGrid,
-.itemCard,
-.itemCopy,
-.libraryGrid,
-.libraryCard,
-.libraryCopy,
-.assetMetaList {
-  display: grid;
-  gap: 0.85rem;
-}
-
-.slotGroups {
-  gap: 1rem;
-}
-
 .adminSection {
-  gap: 1rem;
+  gap: 1.05rem;
 }
 
 .slotGroup {
-  padding: 1rem;
-  border: 1px solid rgba(110, 204, 255, 0.1);
+  padding: 1.08rem;
+  border: 1px solid rgba(166, 131, 255, 0.12);
   border-radius: 1.2rem;
-  background: rgba(13, 13, 22, 0.72);
+  background: rgba(14, 12, 23, 0.76);
 }
 
 .adminPanel {
   min-height: 100%;
-  border-left: 4px solid rgba(110, 204, 255, 0.28);
+  border-left: 4px solid rgba(166, 131, 255, 0.22);
 }
 
-.slotHeading {
+.slotHeading,
+.itemHeader,
+.itemFooter,
+.libraryHeader {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
 }
 
 .slotHeading span {
-  color: var(--color-text-soft);
   font-size: 0.8rem;
 }
 
@@ -234,59 +249,41 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.itemCard {
-  padding: 0.9rem;
-  border: 1px solid rgba(110, 204, 255, 0.12);
+.itemCard,
+.libraryCard {
+  padding: 1rem;
   border-radius: 1rem;
-  background: rgba(18, 18, 29, 0.9);
+  border: 1px solid rgba(166, 131, 255, 0.12);
+  background: rgba(18, 15, 29, 0.9);
 }
 
-.itemPreview {
+.itemPreview,
+.libraryPreview {
   min-height: 9.5rem;
 }
 
-.itemHeader,
-.itemFooter {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.itemHeader strong,
-.itemFooter span,
-.itemState {
-  color: var(--color-text-strong);
-}
-
-.itemCopy p {
+.itemCopy p,
+.libraryCopy p {
   margin: 0;
-  color: var(--color-text-muted);
   line-height: 1.58;
 }
 
 .itemState {
   font-size: 0.82rem;
-  color: #8ccfff;
+  color: #d7c7ff;
 }
 
 .assetMetaBlock {
   display: grid;
-  gap: 0.18rem;
-  padding: 0.8rem 0.9rem;
-  border-radius: 0.9rem;
-  background: rgba(12, 16, 26, 0.82);
-  border: 1px solid rgba(110, 204, 255, 0.1);
-}
-
-.assetMetaBlock strong,
-.libraryHeader strong {
-  color: var(--color-text-strong);
+  gap: 0.22rem;
+  padding: 0.85rem 0.92rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(166, 131, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .assetMetaBlock span,
 .assetMetaList span {
-  color: var(--color-text-muted);
   font-size: 0.82rem;
   word-break: break-word;
 }
@@ -295,47 +292,22 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.libraryCard {
-  padding: 0.9rem;
-  border-radius: 1rem;
-  background: rgba(12, 15, 24, 0.88);
-  border: 1px solid rgba(110, 204, 255, 0.12);
-}
-
-.libraryPreview {
-  display: grid;
-  place-items: center;
-  min-height: 9rem;
-  border-radius: 0.95rem;
-  background: linear-gradient(180deg, rgba(8, 11, 19, 0.88), rgba(14, 22, 34, 0.92));
-  border: 1px solid rgba(110, 204, 255, 0.14);
-}
-
 .libraryPreviewImage {
   width: min(8rem, 100%);
-  image-rendering: pixelated;
-}
-
-.libraryCopy p {
-  margin: 0;
-  color: var(--color-text-muted);
-  line-height: 1.54;
-}
-
-.libraryHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
 }
 
 .assetMetaList {
   gap: 0.3rem;
 }
 
+@media (max-width: 1280px) {
+  .itemGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1120px) {
   .hero,
-  .itemGrid,
   .libraryGrid,
   .scoreboard,
   .scoreboard :global(.app-summary-grid__secondary) {
@@ -351,5 +323,19 @@
   .libraryHeader {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .avatarImage,
+  .previewImage {
+    width: 210px;
+    height: 210px;
+    min-width: 210px;
+    min-height: 210px;
+    max-width: 210px;
+    max-height: 210px;
+  }
+
+  .itemGrid {
+    grid-template-columns: 1fr;
   }
 }

@@ -71,12 +71,13 @@ export default function CompetitionsPage() {
         <>
           <StatStrip
             className="comp-scoreboard"
-            leadIndex={1}
+            leadIndex={0}
             stats={[
-              { label: 'Tracked comps', value: String(competitions.length) },
+              
               { label: 'Ongoing', value: String(ongoing.length) },
-              { label: 'Upcoming', value: String(upcoming.length) },
               { label: 'Finished', value: String(finished.length) },
+              { label: 'Tracked comps', value: String(competitions.length) },
+              { label: 'Upcoming', value: String(upcoming.length) },
             ]}
           />
 

@@ -1,5 +1,5 @@
 .page {
-  --page-gap: 1rem;
+  --page-gap: 1.05rem;
   --page-accent: rgba(166, 131, 255, 0.34);
   gap: var(--page-gap);
 }
@@ -8,23 +8,120 @@
   border-left: 4px solid var(--page-accent);
 }
 
-.page :global(.hall-spotlight) {
-  border-color: rgba(166, 131, 255, 0.18);
+.spotlight,
+.spotlightCopy,
+.spotlightStage,
+.loopGrid,
+.loopCard,
+.stageMeta,
+.ledgerShell {
+  display: grid;
+  gap: 1rem;
 }
 
-.page :global(.hall-scoreboard) {
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+.spotlight {
+  grid-template-columns: minmax(0, 1.18fr) minmax(18rem, 0.82fr);
+  align-items: stretch;
+  gap: 1.1rem;
+  padding: 1.32rem;
+  border: 1px solid rgba(166, 131, 255, 0.16);
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(circle at 78% 18%, rgba(166, 131, 255, 0.16), transparent 18%),
+    radial-gradient(circle at 28% 0%, rgba(120, 91, 221, 0.12), transparent 24%),
+    rgba(16, 13, 25, 0.92);
+}
+
+.spotlightCopy {
+  align-content: start;
+  gap: 0.9rem;
+  max-width: 46rem;
+}
+
+.spotlightTitle {
+  font-size: clamp(2.6rem, 5vw, 4.5rem);
+  line-height: 0.88;
+}
+
+.spotlightText {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+
+.loopGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.8rem;
 }
 
-.page :global(.hall-scoreboard .app-summary-grid__secondary) {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.7rem;
+.loopCard {
+  padding: 1rem;
+  border: 1px solid rgba(166, 131, 255, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.025);
 }
 
-.page :global(.app-grid-two) {
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+.loopCard span {
+  color: var(--color-text-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.loopCard strong,
+.stageMeta strong {
+  color: var(--color-text-strong);
+}
+
+.spotlightStage {
+  align-content: center;
   gap: 0.85rem;
+}
+
+.stageFrame {
+  display: grid;
+  place-items: center;
+  min-height: 22rem;
+  padding: 1rem;
+  border-radius: 1.3rem;
+  border: 1px solid rgba(166, 131, 255, 0.14);
+  background:
+    radial-gradient(circle at 50% 58%, rgba(166, 131, 255, 0.22), transparent 22%),
+    linear-gradient(180deg, rgba(10, 9, 16, 0.9), rgba(17, 13, 27, 0.96));
+}
+
+.stageImage {
+  width: 238px;
+  height: 238px;
+  min-width: 238px;
+  min-height: 238px;
+  max-width: 238px;
+  max-height: 238px;
+}
+
+.stageMeta {
+  justify-items: center;
+  gap: 0.15rem;
+  color: var(--color-text-muted);
+}
+
+.scoreboard,
+.scoreboard :global(.app-summary-grid__secondary) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.page :global(.hall-scoreboard .app-stat--lead) {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(166, 131, 255, 0.16), transparent 34%),
+    rgba(20, 16, 32, 0.92);
+}
+
+.primaryGrid,
+.secondaryGrid {
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
 }
 
 .page :global(.hall-actions),
@@ -32,23 +129,46 @@
   background: rgba(20, 16, 32, 0.9);
 }
 
-.page :global(.hall-nav) {
+.page :global(.hall-nav),
+.page :global(.hall-pulse),
+.page :global(.hall-ledger) {
   background: rgba(15, 13, 24, 0.84);
 }
 
-.page :global(.hall-ledger) {
-  background: rgba(14, 12, 23, 0.82);
+.page :global(.hall-nav .app-route:first-child) {
+  border-top: 1px solid rgba(166, 131, 255, 0.16);
 }
 
-@media (max-width: 1080px) {
-  .page :global(.hall-scoreboard),
-  .page :global(.app-grid-two) {
+.ledgerShell :global(.app-panel) {
+  min-height: 100%;
+}
+
+@media (max-width: 1120px) {
+  .spotlight,
+  .primaryGrid,
+  .secondaryGrid,
+  .scoreboard,
+  .scoreboard :global(.app-summary-grid__secondary),
+  .loopGrid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 760px) {
-  .page :global(.hall-scoreboard .app-summary-grid__secondary) {
-    grid-template-columns: 1fr;
+  .spotlight {
+    padding: 1rem;
+  }
+
+  .stageFrame {
+    min-height: 18rem;
+  }
+
+  .stageImage {
+    width: 210px;
+    height: 210px;
+    min-width: 210px;
+    min-height: 210px;
+    max-width: 210px;
+    max-height: 210px;
   }
 }
