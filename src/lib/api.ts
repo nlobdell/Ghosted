@@ -6,8 +6,14 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
 });
 
 export async function getJSON<T = unknown>(url: string, options?: RequestInit): Promise<T> {
+  const headers = new Headers(options?.headers);
+  const isFormData = typeof FormData !== 'undefined' && options?.body instanceof FormData;
+  if (!isFormData && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers,
     ...options,
   });
   const payload = await res.json().catch(() => ({})) as { error?: string } & T;

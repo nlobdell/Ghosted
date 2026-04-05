@@ -34,6 +34,16 @@
   background: rgba(18, 15, 30, 0.9);
 }
 
+.page :global(.clan-roster .app-metric-grid) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.page :global(.clan-events .app-metric-grid) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
 .page :global(.clan-history),
 .page :global(.clan-activity) {
   background: rgba(14, 12, 23, 0.82);
@@ -48,6 +58,11 @@
 
 @media (max-width: 760px) {
   .page :global(.clan-scoreboard .app-summary-grid__secondary) {
+    grid-template-columns: 1fr;
+  }
+
+  .page :global(.clan-roster .app-metric-grid),
+  .page :global(.clan-events .app-metric-grid) {
     grid-template-columns: 1fr;
   }
 }

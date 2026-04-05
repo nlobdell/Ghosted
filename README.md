@@ -5,7 +5,7 @@ Ghosted is a community platform for the Ghosted Old School RuneScape clan, built
 - a **Next.js frontend** (`src/app`)
 - a **Python API/backend** (`server.py`)
 - a **SQLite data layer** for rewards, giveaways, casino history, and news publishing
-- a **companion avatar app** that lets members spend points on a tiny ghost, equip cosmetics, and export a shareable image
+- a **companion avatar app** that lets members spend points on a tiny ghost, equip cosmetics, upload custom asset files, and export a shareable image
 
 The canonical architecture reference is [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
@@ -47,6 +47,12 @@ Companion studio:
 ```text
 http://localhost:3000/app/companion
 ```
+
+Companion asset storage:
+
+- Default and uploaded companion art files live under `data/companion-assets/`
+- Admin users can upload a replacement base plus custom cosmetic layers directly from `/app/companion`
+- Raw uploaded files are served from `/api/companion/assets/...`
 
 ## Scripts
 

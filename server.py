@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import html
 import mimetypes
@@ -18,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qs, quote, urlencode, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 
@@ -210,6 +211,16 @@ COMPANION_LOADOUT_COLUMNS = {
     "neck": "neck_item_slug",
     "body": "body_item_slug",
 }
+COMPANION_CANVAS_SIZE = 32
+COMPANION_ALLOWED_ASSET_EXTENSIONS = {
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+}
+COMPANION_MAX_UPLOAD_BYTES = 4 * 1024 * 1024
+COMPANION_DEFAULT_BASE_ASSET_PATH = "defaults/base/ghostling-base.svg"
 
 
 def pixel_rects(rects: list[tuple[int, int, int, int, str]]) -> str:
@@ -460,6 +471,138 @@ COMPANION_ITEMS = [
     },
 ]
 COMPANION_ITEM_BY_SLUG = {item["slug"]: item for item in COMPANION_ITEMS}
+
+
+def pixel_sprite_svg(markup: str) -> str:
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" '
+        'shape-rendering="crispEdges" style="image-rendering:pixelated">'
+        f"{markup}"
+        "</svg>"
+    )
+
+
+def companion_asset_dir() -> Path:
+    configured = os.getenv("COMPANION_ASSET_DIR")
+    if configured:
+        return Path(configured).expanduser()
+    return DB_DIR / "companion-assets"
+
+
+def normalize_companion_asset_path(value: str) -> str:
+    candidate = Path(str(value or "").strip().replace("\\", "/"))
+    if candidate.is_absolute():
+        raise AppError("Invalid companion asset path.", 400)
+
+    parts = [part for part in candidate.parts if part not in ("", ".")]
+    if not parts or any(part == ".." for part in parts):
+        raise AppError("Invalid companion asset path.", 400)
+    return Path(*parts).as_posix()
+
+
+def companion_asset_path(relative_path: str) -> Path:
+    root = companion_asset_dir().resolve()
+    normalized = normalize_companion_asset_path(relative_path)
+    target = (root / normalized).resolve()
+    if root not in target.parents and target != root:
+        raise AppError("Companion asset not found.", 404)
+    return target
+
+
+def write_companion_asset_file(relative_path: str, data: bytes) -> str:
+    target = companion_asset_path(relative_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(data)
+    return normalize_companion_asset_path(relative_path)
+
+
+def write_default_companion_asset(relative_path: str, content: str) -> str:
+    target = companion_asset_path(relative_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.exists():
+        target.write_text(content, encoding="utf-8")
+    return normalize_companion_asset_path(relative_path)
+
+
+def default_companion_front_asset_path(slug: str) -> str:
+    return f"defaults/items/{slug}-front.svg"
+
+
+def default_companion_back_asset_path(slug: str) -> str:
+    return f"defaults/items/{slug}-back.svg"
+
+
+def ensure_default_companion_assets() -> None:
+    write_default_companion_asset(COMPANION_DEFAULT_BASE_ASSET_PATH, pixel_sprite_svg(COMPANION_BASE_MARKUP))
+
+    for item in COMPANION_ITEMS:
+        front_markup = str(item.get("front_markup") or "").strip()
+        if front_markup:
+            write_default_companion_asset(
+                default_companion_front_asset_path(str(item["slug"])),
+                pixel_sprite_svg(front_markup),
+            )
+
+        back_markup = str(item.get("back_markup") or "").strip()
+        if back_markup:
+            write_default_companion_asset(
+                default_companion_back_asset_path(str(item["slug"])),
+                pixel_sprite_svg(back_markup),
+            )
+
+
+def companion_asset_url(relative_path: str | None) -> str | None:
+    if not relative_path:
+        return None
+    normalized = normalize_companion_asset_path(relative_path)
+    encoded_parts = [quote(part) for part in normalized.split("/")]
+    return f"/api/companion/assets/{'/'.join(encoded_parts)}"
+
+
+def companion_asset_data_uri(relative_path: str | None) -> str | None:
+    if not relative_path:
+        return None
+
+    target = companion_asset_path(relative_path)
+    if not target.exists() or not target.is_file():
+        return None
+
+    mime = COMPANION_ALLOWED_ASSET_EXTENSIONS.get(target.suffix.lower())
+    if not mime:
+        mime = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+    encoded = base64.b64encode(target.read_bytes()).decode("ascii")
+    return f"data:{mime};base64,{encoded}"
+
+
+def companion_layer_image(relative_path: str | None) -> str:
+    data_uri = companion_asset_data_uri(relative_path)
+    if not data_uri:
+        return ""
+    return (
+        f'<image href="{data_uri}" x="0" y="0" width="{COMPANION_CANVAS_SIZE}" '
+        f'height="{COMPANION_CANVAS_SIZE}" preserveAspectRatio="none" />'
+    )
+
+
+def parse_header_parameters(header_value: str) -> tuple[str, dict[str, str]]:
+    parts = [segment.strip() for segment in str(header_value or "").split(";") if segment.strip()]
+    if not parts:
+        return "", {}
+
+    params: dict[str, str] = {}
+    for part in parts[1:]:
+        if "=" not in part:
+            continue
+        key, value = part.split("=", 1)
+        params[key.strip().lower()] = value.strip().strip('"')
+    return parts[0].lower(), params
+
+
+@dataclass
+class UploadedFile:
+    filename: str
+    content_type: str
+    data: bytes
 
 
 class AppError(Exception):
@@ -1407,6 +1550,17 @@ def normalize_spin_storage(raw: Any) -> dict[str, Any]:
     return {"symbols": [], "grid": []}
 
 
+def table_columns(connection: sqlite3.Connection, table_name: str) -> set[str]:
+    rows = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return {str(row["name"]) for row in rows}
+
+
+def ensure_table_column(connection: sqlite3.Connection, table_name: str, column_name: str, definition: str) -> None:
+    if column_name in table_columns(connection, table_name):
+        return
+    connection.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
+
+
 def init_database(connection: sqlite3.Connection) -> None:
     connection.executescript(
         """
@@ -1547,6 +1701,8 @@ def init_database(connection: sqlite3.Connection) -> None:
             rarity TEXT NOT NULL,
             cost INTEGER NOT NULL DEFAULT 0,
             description TEXT NOT NULL,
+            front_asset_path TEXT,
+            back_asset_path TEXT,
             active INTEGER NOT NULL DEFAULT 1,
             sort_order INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL
@@ -1567,11 +1723,20 @@ def init_database(connection: sqlite3.Connection) -> None:
             body_item_slug TEXT REFERENCES companion_catalog(slug) ON DELETE SET NULL,
             updated_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS companion_settings (
+            singleton_key TEXT PRIMARY KEY,
+            base_asset_path TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
         """
     )
+    ensure_table_column(connection, "companion_catalog", "front_asset_path", "TEXT")
+    ensure_table_column(connection, "companion_catalog", "back_asset_path", "TEXT")
     seed_default_games(connection)
     seed_default_giveaway(connection)
     seed_default_companion_items(connection)
+    ensure_default_companion_base(connection)
     connection.commit()
 
 
@@ -1626,21 +1791,48 @@ def seed_default_giveaway(connection: sqlite3.Connection) -> None:
     )
 
 
+def ensure_default_companion_base(connection: sqlite3.Connection) -> None:
+    ensure_default_companion_assets()
+    existing = connection.execute(
+        "SELECT base_asset_path FROM companion_settings WHERE singleton_key = 'default'",
+    ).fetchone()
+    if existing:
+        if not existing["base_asset_path"]:
+            connection.execute(
+                "UPDATE companion_settings SET base_asset_path = ?, updated_at = ? WHERE singleton_key = 'default'",
+                (COMPANION_DEFAULT_BASE_ASSET_PATH, utc_iso()),
+            )
+        return
+
+    connection.execute(
+        """
+        INSERT INTO companion_settings (singleton_key, base_asset_path, updated_at)
+        VALUES ('default', ?, ?)
+        """,
+        (COMPANION_DEFAULT_BASE_ASSET_PATH, utc_iso()),
+    )
+
+
 def seed_default_companion_items(connection: sqlite3.Connection) -> None:
+    ensure_default_companion_assets()
     created_at = utc_iso()
     for item in COMPANION_ITEMS:
+        front_asset_path = default_companion_front_asset_path(str(item["slug"])) if item.get("front_markup") else None
+        back_asset_path = default_companion_back_asset_path(str(item["slug"])) if item.get("back_markup") else None
         connection.execute(
             """
             INSERT INTO companion_catalog (
-                slug, name, slot_key, rarity, cost, description, active, sort_order, created_at
+                slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, active, sort_order, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
             ON CONFLICT(slug) DO UPDATE SET
                 name = excluded.name,
                 slot_key = excluded.slot_key,
                 rarity = excluded.rarity,
                 cost = excluded.cost,
                 description = excluded.description,
+                front_asset_path = COALESCE(companion_catalog.front_asset_path, excluded.front_asset_path),
+                back_asset_path = COALESCE(companion_catalog.back_asset_path, excluded.back_asset_path),
                 active = excluded.active,
                 sort_order = excluded.sort_order
             """,
@@ -1651,17 +1843,12 @@ def seed_default_companion_items(connection: sqlite3.Connection) -> None:
                 item["rarity"],
                 item["cost"],
                 item["description"],
+                front_asset_path,
+                back_asset_path,
                 item["sort_order"],
                 created_at,
             ),
         )
-
-    allowed_slugs = tuple(item["slug"] for item in COMPANION_ITEMS)
-    placeholders = ", ".join("?" for _ in allowed_slugs)
-    connection.execute(
-        f"UPDATE companion_catalog SET active = CASE WHEN slug IN ({placeholders}) THEN 1 ELSE 0 END",
-        allowed_slugs,
-    )
 
 
 def prune_expired_sessions(connection: sqlite3.Connection) -> None:
@@ -1714,6 +1901,99 @@ def companion_catalog_row(connection: sqlite3.Connection, slug: str) -> sqlite3.
     ).fetchone()
 
 
+def companion_catalog_any_row(connection: sqlite3.Connection, slug: str) -> sqlite3.Row | None:
+    return connection.execute(
+        "SELECT * FROM companion_catalog WHERE slug = ?",
+        (slug,),
+    ).fetchone()
+
+
+def companion_catalog_rows(connection: sqlite3.Connection, *, active_only: bool = True) -> list[sqlite3.Row]:
+    query = """
+        SELECT slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, active, sort_order, created_at
+        FROM companion_catalog
+    """
+    if active_only:
+        query += " WHERE active = 1"
+    query += " ORDER BY slot_key ASC, sort_order ASC, name ASC"
+    return connection.execute(query).fetchall()
+
+
+def companion_catalog_map(connection: sqlite3.Connection, *, active_only: bool = False) -> dict[str, sqlite3.Row]:
+    return {
+        str(row["slug"]): row
+        for row in companion_catalog_rows(connection, active_only=active_only)
+    }
+
+
+def companion_base_asset_path(connection: sqlite3.Connection) -> str:
+    ensure_default_companion_base(connection)
+    row = connection.execute(
+        "SELECT base_asset_path FROM companion_settings WHERE singleton_key = 'default'",
+    ).fetchone()
+    value = str(row["base_asset_path"] or "").strip() if row else ""
+    if value:
+        try:
+            if companion_asset_path(value).exists():
+                return value
+        except AppError:
+            pass
+    return COMPANION_DEFAULT_BASE_ASSET_PATH
+
+
+def next_companion_sort_order(connection: sqlite3.Connection, slot_key: str) -> int:
+    row = connection.execute(
+        "SELECT COALESCE(MAX(sort_order), 0) AS value FROM companion_catalog WHERE slot_key = ?",
+        (slot_key,),
+    ).fetchone()
+    return int(row["value"] or 0) + 10
+
+
+def store_uploaded_companion_asset(upload: UploadedFile, *, group: str, stem: str) -> str:
+    filename = Path(upload.filename or "").name
+    extension = Path(filename).suffix.lower()
+    if extension not in COMPANION_ALLOWED_ASSET_EXTENSIONS:
+        raise AppError("Upload a PNG, SVG, WEBP, JPG, or JPEG companion asset.", 400)
+    if not upload.data:
+        raise AppError("Uploaded companion asset was empty.", 400)
+    if len(upload.data) > COMPANION_MAX_UPLOAD_BYTES:
+        raise AppError("Companion asset uploads are capped at 4 MB.", 400)
+
+    safe_stem = slugify(stem or Path(filename).stem or "companion-asset")
+    unique_name = f"{safe_stem}-{secrets.token_hex(4)}{extension}"
+    return write_companion_asset_file(f"uploads/{group}/{unique_name}", upload.data)
+
+
+def companion_admin_payload(connection: sqlite3.Connection) -> dict[str, Any]:
+    rows = companion_catalog_rows(connection, active_only=False)
+    base_path = companion_base_asset_path(connection)
+    return {
+        "storageRoot": str(companion_asset_dir()),
+        "base": {
+            "assetPath": base_path,
+            "assetUrl": companion_asset_url(base_path),
+            "previewUrl": "/api/companion/render",
+        },
+        "items": [
+            {
+                "slug": row["slug"],
+                "name": row["name"],
+                "slot": row["slot_key"],
+                "rarity": row["rarity"],
+                "cost": int(row["cost"]),
+                "description": row["description"],
+                "active": bool(row["active"]),
+                "frontAssetPath": row["front_asset_path"],
+                "frontAssetUrl": companion_asset_url(row["front_asset_path"]),
+                "backAssetPath": row["back_asset_path"],
+                "backAssetUrl": companion_asset_url(row["back_asset_path"]),
+                "previewUrl": f"/api/companion/render?preview={quote(str(row['slug']))}",
+            }
+            for row in rows
+        ],
+    }
+
+
 def companion_loadout_map(connection: sqlite3.Connection, user_id: int) -> dict[str, str | None]:
     ensure_user_companion_loadout(connection, user_id)
     row = connection.execute(
@@ -1747,14 +2027,7 @@ def companion_payload(
     connection: sqlite3.Connection,
     user_row: sqlite3.Row,
 ) -> dict[str, Any]:
-    catalog_rows = connection.execute(
-        """
-        SELECT slug, name, slot_key, rarity, cost, description, sort_order
-        FROM companion_catalog
-        WHERE active = 1
-        ORDER BY slot_key ASC, sort_order ASC, name ASC
-        """
-    ).fetchall()
+    catalog_rows = companion_catalog_rows(connection)
     owned_slugs = companion_inventory_slugs(connection, int(user_row["id"]))
     loadout = companion_loadout_map(connection, int(user_row["id"]))
 
@@ -1770,6 +2043,8 @@ def companion_payload(
             "owned": row["slug"] in owned_slugs,
             "equipped": loadout.get(row["slot_key"]) == row["slug"],
             "previewUrl": f"/api/companion/render?preview={quote(str(row['slug']))}",
+            "frontAssetUrl": companion_asset_url(row["front_asset_path"]),
+            "backAssetUrl": companion_asset_url(row["back_asset_path"]),
         }
         for row in catalog_rows
     ]
@@ -1803,6 +2078,7 @@ def companion_payload(
             "avatarUrl": f"/api/companion/render?user={int(user_row['id'])}",
             "cardUrl": f"/api/companion/render?user={int(user_row['id'])}&card=1",
         },
+        "baseAssetUrl": companion_asset_url(companion_base_asset_path(connection)),
     }
 
 
@@ -1889,34 +2165,176 @@ def equip_companion_item(
     return companion_payload(connection, user_row)
 
 
-def resolve_companion_layers(loadout: dict[str, str | None]) -> list[str]:
-    layers: list[str] = []
-    body_slug = loadout.get("body")
-    body_item = COMPANION_ITEM_BY_SLUG.get(body_slug or "")
-    if body_item and body_item.get("back_markup"):
-        layers.append(str(body_item["back_markup"]))
+def upload_companion_base_asset(
+    connection: sqlite3.Connection,
+    actor_row: sqlite3.Row,
+    asset: UploadedFile,
+) -> dict[str, Any]:
+    asset_path = store_uploaded_companion_asset(asset, group="base", stem="ghostling-base")
+    connection.execute(
+        """
+        INSERT INTO companion_settings (singleton_key, base_asset_path, updated_at)
+        VALUES ('default', ?, ?)
+        ON CONFLICT(singleton_key) DO UPDATE SET
+            base_asset_path = excluded.base_asset_path,
+            updated_at = excluded.updated_at
+        """,
+        (asset_path, utc_iso()),
+    )
+    audit(
+        connection,
+        int(actor_row["id"]),
+        "upload_companion_base_asset",
+        "companion_settings",
+        "default",
+        {"assetPath": asset_path},
+    )
+    connection.commit()
+    return companion_admin_payload(connection)
 
-    layers.append(COMPANION_BASE_MARKUP)
+
+def create_companion_item(
+    connection: sqlite3.Connection,
+    actor_row: sqlite3.Row,
+    *,
+    name: str,
+    slug: str | None,
+    slot: str,
+    rarity: str,
+    cost: int,
+    description: str,
+    front_asset: UploadedFile,
+    back_asset: UploadedFile | None = None,
+) -> dict[str, Any]:
+    normalized_slot = str(slot or "").strip().lower()
+    if normalized_slot not in COMPANION_SLOT_ORDER:
+        raise AppError("Pick a valid companion slot for the cosmetic.", 400)
+
+    normalized_name = str(name or "").strip()
+    if not normalized_name:
+        raise AppError("A cosmetic name is required.", 400)
+
+    normalized_slug = slugify(slug or normalized_name)
+    if companion_catalog_any_row(connection, normalized_slug):
+        raise AppError("That cosmetic slug already exists.", 409)
+
+    normalized_rarity = str(rarity or "").strip().lower() or "common"
+    if normalized_rarity not in {"common", "rare", "epic", "legendary"}:
+        raise AppError("Choose a rarity of common, rare, epic, or legendary.", 400)
+    normalized_description = str(description or "").strip() or "Custom uploaded companion cosmetic."
+    if cost < 0:
+        raise AppError("Companion cosmetic cost cannot be negative.", 400)
+
+    front_asset_path = store_uploaded_companion_asset(front_asset, group="items", stem=f"{normalized_slug}-front")
+    back_asset_path = (
+        store_uploaded_companion_asset(back_asset, group="items", stem=f"{normalized_slug}-back")
+        if back_asset and back_asset.data
+        else None
+    )
+    created_at = utc_iso()
+    connection.execute(
+        """
+        INSERT INTO companion_catalog (
+            slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, active, sort_order, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+        """,
+        (
+            normalized_slug,
+            normalized_name,
+            normalized_slot,
+            normalized_rarity,
+            cost,
+            normalized_description,
+            front_asset_path,
+            back_asset_path,
+            next_companion_sort_order(connection, normalized_slot),
+            created_at,
+        ),
+    )
+    audit(
+        connection,
+        int(actor_row["id"]),
+        "create_companion_item",
+        "companion_catalog",
+        normalized_slug,
+        {"slot": normalized_slot, "frontAssetPath": front_asset_path, "backAssetPath": back_asset_path},
+    )
+    connection.commit()
+    return companion_admin_payload(connection)
+
+
+def replace_companion_item_assets(
+    connection: sqlite3.Connection,
+    actor_row: sqlite3.Row,
+    slug: str,
+    *,
+    front_asset: UploadedFile | None = None,
+    back_asset: UploadedFile | None = None,
+) -> dict[str, Any]:
+    item = companion_catalog_any_row(connection, slug)
+    if not item:
+        raise AppError("That companion cosmetic does not exist.", 404)
+    if not front_asset and not back_asset:
+        raise AppError("Upload at least one asset file to replace.", 400)
+
+    next_front_asset_path = item["front_asset_path"]
+    next_back_asset_path = item["back_asset_path"]
+    if front_asset and front_asset.data:
+        next_front_asset_path = store_uploaded_companion_asset(front_asset, group="items", stem=f"{slug}-front")
+    if back_asset and back_asset.data:
+        next_back_asset_path = store_uploaded_companion_asset(back_asset, group="items", stem=f"{slug}-back")
+
+    connection.execute(
+        """
+        UPDATE companion_catalog
+        SET front_asset_path = ?, back_asset_path = ?
+        WHERE slug = ?
+        """,
+        (next_front_asset_path, next_back_asset_path, slug),
+    )
+    audit(
+        connection,
+        int(actor_row["id"]),
+        "replace_companion_item_assets",
+        "companion_catalog",
+        slug,
+        {"frontAssetPath": next_front_asset_path, "backAssetPath": next_back_asset_path},
+    )
+    connection.commit()
+    return companion_admin_payload(connection)
+
+
+def resolve_companion_layers(connection: sqlite3.Connection, loadout: dict[str, str | None]) -> list[str]:
+    layers: list[str] = []
+    catalog = companion_catalog_map(connection)
+    body_slug = loadout.get("body")
+    body_item = catalog.get(body_slug or "")
+    if body_item:
+        layers.append(companion_layer_image(body_item["back_asset_path"]))
+
+    layers.append(companion_layer_image(companion_base_asset_path(connection)))
 
     for slot in ("neck", "face", "hat"):
-        item = COMPANION_ITEM_BY_SLUG.get(loadout.get(slot) or "")
-        if item and item.get("front_markup"):
-            layers.append(str(item["front_markup"]))
+        item = catalog.get(loadout.get(slot) or "")
+        if item:
+            layers.append(companion_layer_image(item["front_asset_path"]))
 
-    if body_item and body_item.get("front_markup"):
-        layers.append(str(body_item["front_markup"]))
+    if body_item:
+        layers.append(companion_layer_image(body_item["front_asset_path"]))
 
-    return layers
+    return [layer for layer in layers if layer]
 
 
 def render_companion_svg(
+    connection: sqlite3.Connection,
     loadout: dict[str, str | None],
     *,
     display_name: str,
     subtitle: str | None = None,
     card: bool = False,
 ) -> str:
-    layers = "".join(resolve_companion_layers(loadout))
+    layers = "".join(resolve_companion_layers(connection, loadout))
 
     if card:
         title = html.escape(display_name)
@@ -3584,6 +4002,65 @@ class GhostedHandler(BaseHTTPRequestHandler):
         except json.JSONDecodeError as exc:
             raise AppError(f"Invalid JSON body: {exc}", 400) from exc
 
+    def read_multipart_body(self) -> tuple[dict[str, str], dict[str, UploadedFile]]:
+        content_type = str(self.headers.get("Content-Type") or "")
+        if "multipart/form-data" not in content_type.lower():
+            raise AppError("Expected multipart/form-data for companion asset uploads.", 400)
+
+        _, content_type_params = parse_header_parameters(content_type)
+        boundary = content_type_params.get("boundary")
+        if not boundary:
+            raise AppError("Upload request is missing a multipart boundary.", 400)
+
+        length = int(self.headers.get("Content-Length", "0"))
+        if length <= 0:
+            raise AppError("Upload request body was empty.", 400)
+
+        raw = self.rfile.read(length)
+        delimiter = f"--{boundary}".encode("utf-8")
+        fields: dict[str, str] = {}
+        files: dict[str, UploadedFile] = {}
+        for chunk in raw.split(delimiter):
+            part = chunk.strip()
+            if not part or part == b"--":
+                continue
+            if part.startswith(b"--"):
+                break
+            if part.startswith(b"\r\n"):
+                part = part[2:]
+            if part.endswith(b"--"):
+                part = part[:-2]
+            part = part.rstrip(b"\r\n")
+            if b"\r\n\r\n" not in part:
+                continue
+
+            raw_headers, data = part.split(b"\r\n\r\n", 1)
+            headers: dict[str, str] = {}
+            for line in raw_headers.decode("utf-8", errors="ignore").split("\r\n"):
+                if ":" not in line:
+                    continue
+                key, value = line.split(":", 1)
+                headers[key.strip().lower()] = value.strip()
+
+            disposition, disposition_params = parse_header_parameters(headers.get("content-disposition", ""))
+            if disposition != "form-data":
+                continue
+
+            name = disposition_params.get("name")
+            if not name:
+                continue
+
+            filename = disposition_params.get("filename")
+            content = data.rstrip(b"\r\n")
+            if filename:
+                files[name] = UploadedFile(
+                    filename=Path(filename).name,
+                    content_type=headers.get("content-type", "application/octet-stream"),
+                    data=content,
+                )
+            else:
+                fields[name] = content.decode("utf-8", errors="ignore")
+
     def route_request(self, method: str, connection: sqlite3.Connection) -> None:
         parsed = urlparse(self.path)
         path = parsed.path
@@ -3621,11 +4098,26 @@ class GhostedHandler(BaseHTTPRequestHandler):
         if method == "GET" and path == "/api/companion":
             self.handle_api_companion(connection)
             return
+        if method == "GET" and path == "/api/companion/admin/library":
+            self.handle_api_companion_admin_library(connection)
+            return
+        if method == "POST" and path == "/api/companion/admin/base":
+            self.handle_api_companion_admin_base(connection)
+            return
+        if method == "POST" and path == "/api/companion/admin/items":
+            self.handle_api_companion_admin_items(connection)
+            return
+        if method == "POST" and path == "/api/companion/admin/items/replace-assets":
+            self.handle_api_companion_admin_replace_assets(connection)
+            return
         if method == "POST" and path == "/api/companion/purchase":
             self.handle_api_companion_purchase(connection)
             return
         if method == "POST" and path == "/api/companion/equip":
             self.handle_api_companion_equip(connection)
+            return
+        if method == "GET" and path.startswith("/api/companion/assets/"):
+            self.handle_api_companion_asset(parsed)
             return
         if method == "GET" and path == "/api/companion/render":
             self.handle_api_companion_render(connection, parsed)
@@ -3789,6 +4281,89 @@ class GhostedHandler(BaseHTTPRequestHandler):
         row = self.require_user(connection)
         self.respond_json(companion_payload(connection, row))
 
+    def handle_api_companion_admin_library(self, connection: sqlite3.Connection) -> None:
+        self.require_admin(connection)
+        self.respond_json(companion_admin_payload(connection))
+
+    def handle_api_companion_admin_base(self, connection: sqlite3.Connection) -> None:
+        actor = self.require_admin(connection)
+        _, files = self.read_multipart_body()
+        asset = files.get("asset")
+        if not asset:
+            raise AppError("Upload a base asset file first.", 400)
+
+        self.respond_json(
+            {
+                "ok": True,
+                "message": "Companion base updated.",
+                "library": upload_companion_base_asset(connection, actor, asset),
+                "companion": companion_payload(connection, actor),
+            },
+            status=201,
+        )
+
+    def handle_api_companion_admin_items(self, connection: sqlite3.Connection) -> None:
+        actor = self.require_admin(connection)
+        fields, files = self.read_multipart_body()
+        name = str(fields.get("name") or "").strip()
+        slug = str(fields.get("slug") or "").strip() or None
+        slot = str(fields.get("slot") or "").strip()
+        rarity = str(fields.get("rarity") or "").strip()
+        description = str(fields.get("description") or "").strip()
+        cost_raw = str(fields.get("cost") or "0").strip()
+        try:
+            cost = int(cost_raw or "0")
+        except ValueError as exc:
+            raise AppError("Companion cosmetic cost must be a whole number.", 400) from exc
+
+        front_asset = files.get("frontAsset")
+        if not front_asset:
+            raise AppError("A front asset image is required for new cosmetics.", 400)
+        back_asset = files.get("backAsset")
+        self.respond_json(
+            {
+                "ok": True,
+                "message": "Custom companion cosmetic created.",
+                "library": create_companion_item(
+                    connection,
+                    actor,
+                    name=name,
+                    slug=slug,
+                    slot=slot,
+                    rarity=rarity,
+                    cost=cost,
+                    description=description,
+                    front_asset=front_asset,
+                    back_asset=back_asset,
+                ),
+                "companion": companion_payload(connection, actor),
+            },
+            status=201,
+        )
+
+    def handle_api_companion_admin_replace_assets(self, connection: sqlite3.Connection) -> None:
+        actor = self.require_admin(connection)
+        fields, files = self.read_multipart_body()
+        slug = str(fields.get("slug") or "").strip()
+        if not slug:
+            raise AppError("Choose a cosmetic slug to replace assets for.", 400)
+        front_asset = files.get("frontAsset")
+        back_asset = files.get("backAsset")
+        self.respond_json(
+            {
+                "ok": True,
+                "message": "Companion assets replaced.",
+                "library": replace_companion_item_assets(
+                    connection,
+                    actor,
+                    slug,
+                    front_asset=front_asset,
+                    back_asset=back_asset,
+                ),
+                "companion": companion_payload(connection, actor),
+            }
+        )
+
     def handle_api_companion_purchase(self, connection: sqlite3.Connection) -> None:
         row = self.require_user(connection)
         payload = self.read_json_body()
@@ -3842,15 +4417,35 @@ class GhostedHandler(BaseHTTPRequestHandler):
                 subtitle = f"@{row['username']}"
 
         if preview_slug:
-            item = COMPANION_ITEM_BY_SLUG.get(preview_slug)
+            item = companion_catalog_any_row(connection, preview_slug)
             if not item:
                 raise AppError("Preview item not found.", 404)
-            loadout[item["slot"]] = preview_slug
+            loadout[str(item["slot_key"])] = preview_slug
             if not user_ref:
-                display = item["name"]
-                subtitle = COMPANION_SLOT_LABELS[item["slot"]]
+                display = str(item["name"])
+                subtitle = COMPANION_SLOT_LABELS.get(str(item["slot_key"]), str(item["slot_key"]).title())
 
-        self.respond_svg(render_companion_svg(loadout, display_name=display, subtitle=subtitle, card=card))
+        self.respond_svg(render_companion_svg(connection, loadout, display_name=display, subtitle=subtitle, card=card))
+
+    def handle_api_companion_asset(self, parsed: Any) -> None:
+        raw_path = parsed.path.removeprefix("/api/companion/assets/")
+        relative_path = unquote(raw_path)
+        target = companion_asset_path(relative_path)
+        if not target.exists() or not target.is_file():
+            raise AppError("Companion asset not found.", 404)
+
+        mime = (
+            COMPANION_ALLOWED_ASSET_EXTENSIONS.get(target.suffix.lower())
+            or mimetypes.guess_type(target.name)[0]
+            or "application/octet-stream"
+        )
+        body = target.read_bytes()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
 
     def handle_api_wom_clan(self, connection: sqlite3.Connection) -> None:
         self.respond_json(wom_clan_payload(connection))

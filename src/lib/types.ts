@@ -93,6 +93,8 @@ export interface CompanionItem {
   owned: boolean;
   equipped: boolean;
   previewUrl: string;
+  frontAssetUrl?: string | null;
+  backAssetUrl?: string | null;
 }
 
 export interface CompanionSlotState {
@@ -125,6 +127,32 @@ export interface CompanionData {
     avatarUrl: string;
     cardUrl: string;
   };
+  baseAssetUrl?: string | null;
+}
+
+export interface CompanionAdminAssetItem {
+  slug: string;
+  name: string;
+  slot: CompanionSlotKey;
+  rarity: string;
+  cost: number;
+  description: string;
+  active: boolean;
+  frontAssetPath?: string | null;
+  frontAssetUrl?: string | null;
+  backAssetPath?: string | null;
+  backAssetUrl?: string | null;
+  previewUrl: string;
+}
+
+export interface CompanionAdminData {
+  storageRoot: string;
+  base: {
+    assetPath: string;
+    assetUrl?: string | null;
+    previewUrl: string;
+  };
+  items: CompanionAdminAssetItem[];
 }
 
 export interface GiveawayItem {
@@ -181,8 +209,18 @@ export interface ClanData {
     maxedCombatCount: number;
     maxed200msCount: number;
     averageOverallLevel?: number;
+    averageOverallExperience?: number;
     averageEhp?: number;
     averageEhb?: number;
+  };
+  featuredHiscores?: {
+    metric?: string;
+    entries: LeaderboardEntry[];
+  };
+  featuredGains?: {
+    metric?: string;
+    period?: string;
+    entries: LeaderboardEntry[];
   };
   recentAchievements: AchievementItem[];
   recentActivity: ActivityItem[];
