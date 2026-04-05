@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const headerStore = await headers();
   const origin = getPublicOrigin(url, headerStore);
   const nextPath = url.searchParams.get('next') ?? '/hall/';
-  const destination = new URL('/api/auth/signin/discord', origin);
+  const destination = new URL('/api/auth/signin', origin);
   destination.searchParams.set('callbackUrl', new URL(nextPath, origin).toString());
   return NextResponse.redirect(destination);
 }

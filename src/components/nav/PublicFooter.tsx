@@ -14,6 +14,8 @@ export function PublicFooter({ hallHref }: { hallHref: string }) {
           <Link href="/news/">News</Link>
           <Link href="/media/">Media</Link>
           <Link href="/about/">About</Link>
+          <Link href="/privacy/">Privacy</Link>
+          <Link href="/terms/">Terms</Link>
           <a href={hallHref}>Enter the Hall</a>
           <a href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer">Discord</a>
         </div>
