@@ -53,6 +53,7 @@ Default `PYTHON_API_URL` is `http://localhost:8000`.
 ### Public
 
 - `/` - app-forward landing surface
+- `/news/`, `/news/:slug` - public clan news feed and post detail
 
 ### Member app
 
@@ -82,6 +83,7 @@ All pages rely on the same design system in [`src/app/globals.css`](./src/app/gl
 - `/api/profile/wom-link` (`POST` link, `DELETE` unlink)
 - `/api/casino/games`, `/api/casino/spin`
 - `/api/giveaways`, `/api/giveaways/:id/enter`
+- `/api/news`, `/api/news/:slug`
 - `/api/admin/*`
 - `/auth/*`
 

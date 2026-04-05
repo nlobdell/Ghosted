@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {
   AppContext,
   StatStrip,
+  Highlight,
   Panel,
   AppGrid,
   MetricGrid,
@@ -86,6 +87,7 @@ export default function ClanPage() {
       <AppContext
         breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/app/' }, { label: 'Clan' }]}
         title="Clan board"
+        summary="Track roster health first, then top performers, then recent activity."
         actions={<Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>}
       />
 
@@ -95,7 +97,34 @@ export default function ClanPage() {
         <Banner message="Loading clan data..." variant="info" />
       ) : clan ? (
         <>
+          <Highlight
+            className="clan-spotlight"
+            eyebrow="Roster signal"
+            title={clan.group.name}
+            copy="Use this board to monitor roster health, active competition pressure, and the members setting the pace."
+            actions={<Link href="/app/competitions/" className="button button--secondary button--small">View competitions</Link>}
+            stage={
+              hiscores[0]
+                ? {
+                  label: 'Top performer',
+                  primary: hiscores[0].player?.displayName || hiscores[0].player?.username || 'Ghosted member',
+                  secondary: `${formatMaybeNumber(hiscores[0].value)} overall level`,
+                  chips: [
+                    `${ongoing.length} live events`,
+                    `${clan.linkCoverage.linkedUsers} linked members`,
+                  ],
+                }
+                : {
+                  label: 'Clan status',
+                  primary: `${clan.group.memberCount} members`,
+                  secondary: `${ongoing.length} competitions live`,
+                  chips: [`${clan.linkCoverage.linkedUsers} linked users`],
+                }
+            }
+          />
+
           <StatStrip
+            className="clan-scoreboard"
             leadIndex={0}
             stats={[
               { label: 'Members', value: String(clan.group.memberCount) },
@@ -107,6 +136,7 @@ export default function ClanPage() {
 
           <AppGrid>
             <Panel
+              className="clan-roster"
               tier="primary"
               eyebrow="Roster health"
               title={clan.group.name}
@@ -129,6 +159,7 @@ export default function ClanPage() {
               )}
             />
             <Panel
+              className="clan-leaders"
               tier="primary"
               eyebrow="Top performers"
               title="Overall leaders"
@@ -144,12 +175,14 @@ export default function ClanPage() {
 
           <AppGrid>
             <Panel
+              className="clan-events"
               tier="primary"
               eyebrow="Event watch"
               title={ongoing.length > 0 ? `${ongoing.length} competitions live` : `${upcoming.length} competitions upcoming`}
               body={<CompetitionList entries={competitions} compact />}
             />
             <Panel
+              className="clan-gains"
               tier="primary"
               eyebrow="Progression"
               title="Weekly gains"
@@ -165,6 +198,7 @@ export default function ClanPage() {
 
           <AppGrid>
             <Panel
+              className="clan-history"
               tier="meta"
               eyebrow="History"
               title="Recent achievements"
@@ -179,6 +213,7 @@ export default function ClanPage() {
               )}
             />
             <Panel
+              className="clan-activity"
               tier="meta"
               eyebrow="Activity"
               title="Recent clan activity"

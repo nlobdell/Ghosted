@@ -1,30 +1,20 @@
 .page {
-  --page-accent: rgba(160, 127, 252, 0.34);
-  --page-surface: rgba(10, 8, 18, 0.82);
-  --page-gap: 0.78rem;
-  --panel-density: 0.86rem;
+  --page-gap: 0.95rem;
+  --page-accent: rgba(164, 136, 246, 0.34);
   gap: var(--page-gap);
 }
 
 .page :global(.app-context) {
-  padding: 0.86rem 0.95rem;
-  border-left: 3px solid var(--page-accent);
-  background: var(--page-surface);
-}
-
-.page :global(.app-context__title) {
-  font-size: clamp(2rem, 4.5vw, 3rem);
+  border-left: 4px solid var(--page-accent);
 }
 
 .page :global(#casino-root) {
-  min-height: 72vh;
-  border-color: rgba(166, 131, 255, 0.3);
-  border-radius: 1rem;
-  background: rgba(7, 6, 12, 0.88);
+  min-height: 74vh;
+  border-radius: 1.1rem;
+  border-color: rgba(166, 131, 255, 0.24);
+  background: rgba(8, 7, 14, 0.94);
 }
 
-.page :global(.app-panel) {
-  padding: var(--panel-density);
-  background: rgba(255, 255, 255, 0.008);
-  border-color: rgba(166, 131, 255, 0.17);
+.page :global(.casino-rules) {
+  background: rgba(14, 12, 23, 0.84);
 }

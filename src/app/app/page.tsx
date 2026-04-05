@@ -4,12 +4,14 @@ import Link from 'next/link';
 import {
   AppContext,
   StatStrip,
+  Highlight,
   Panel,
   AppGrid,
   LeaderboardTable,
   LedgerTable,
   EmptyState,
   Banner,
+  RouteList,
 } from '@/components/app/AppUI';
 import { formatPoints, formatMaybeNumber, getJSON } from '@/lib/api';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
@@ -82,6 +84,7 @@ export default function DashboardPage() {
       <AppContext
         breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall' }]}
         title="Today in Ghosted"
+        summary="See what is live, where your points stand, and your highest-value next action."
         actions={(
           <>
             <a href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer" className="button button--secondary button--small">Discord</a>
@@ -97,7 +100,43 @@ export default function DashboardPage() {
         <Banner message="Loading the hall..." variant="info" />
       ) : (
         <>
+          <Highlight
+            className="hall-spotlight"
+            eyebrow="Live focus"
+            title={featuredComp ? featuredComp.title : 'Clan pulse'}
+            copy={
+              featuredComp
+                ? 'Start with the live event, then move into your rewards and current clan status.'
+                : 'No live competition is active right now, so the best next move is checking your balance and the clan board.'
+            }
+            actions={(
+              <>
+                <Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>
+                <Link href="/app/rewards/" className="button button--secondary button--small">Rewards</Link>
+              </>
+            )}
+            stage={
+              hiscores[0]
+                ? {
+                  label: 'Top hiscore',
+                  primary: hiscores[0].player?.displayName || hiscores[0].player?.username || 'Ghosted member',
+                  secondary: `${formatMaybeNumber(hiscores[0].value)} overall level`,
+                  chips: [
+                    `${ongoingComps.length} live competitions`,
+                    `${womClan?.group?.memberCount ?? '-'} members`,
+                  ],
+                }
+                : {
+                  label: 'Hall status',
+                  primary: `${womClan?.group?.memberCount ?? '-'} clan members`,
+                  secondary: `${activeDrops.length} active drops available`,
+                  chips: [`${ongoingComps.length} live competitions`],
+                }
+            }
+          />
+
           <StatStrip
+            className="hall-scoreboard"
             leadIndex={0}
             stats={[
               { label: 'Balance', value: rewards ? formatPoints(rewards.balance) : '-', href: '/app/rewards/' },
@@ -107,40 +146,9 @@ export default function DashboardPage() {
             ]}
           />
 
-          <Panel
-            tier="primary"
-            eyebrow="Live focal"
-            title={featuredComp ? featuredComp.title : 'Clan pulse'}
-            chip={featuredComp ? (ongoingComps.length > 0 ? 'Live' : 'Upcoming') : undefined}
-            body={(
-              <div className="app-stack">
-                <p className="app-panel-note">
-                  {featuredComp
-                    ? 'Current event context and the top leaderboard snapshot for quick decisions.'
-                    : 'No live event right now. Use the clan and competition boards for latest updates.'}
-                </p>
-                {hiscores.length > 0 ? (
-                  <LeaderboardTable
-                    entries={hiscores}
-                    valueFormatter={(entry) => formatMaybeNumber(entry.value)}
-                    valueLabel="Level"
-                  />
-                ) : (
-                  <div className="data-row">
-                    <span className="label">Clan members</span>
-                    <strong>{womClan?.group?.memberCount ?? '-'}</strong>
-                  </div>
-                )}
-                <div className="app-inline-actions">
-                  <Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>
-                  <Link href="/app/clan/" className="button button--secondary button--small">Clan board</Link>
-                </div>
-              </div>
-            )}
-          />
-
           <AppGrid>
             <Panel
+              className="hall-actions"
               tier="primary"
               eyebrow="You"
               title="Personal actions"
@@ -171,37 +179,55 @@ export default function DashboardPage() {
             />
 
             <Panel
+              className="hall-nav"
               tier="meta"
               eyebrow="Navigate"
               title="Hall sections"
               body={(
-                <div className="app-route-list">
-                  {[
+                <RouteList
+                  routes={[
                     { href: '/app/clan/', label: 'Clan', meta: `${womClan?.group?.memberCount ?? '-'} members` },
                     { href: '/app/competitions/', label: 'Competitions', meta: `${ongoingComps.length} live` },
                     { href: '/app/rewards/', label: 'Rewards', meta: rewards ? formatPoints(rewards.balance) : 'Sign in' },
                     { href: '/app/casino/', label: 'Casino', meta: 'Points-only slots' },
                     { href: '/app/profile/', label: 'Profile', meta: 'Discord + WOM' },
-                  ].map((route) => (
-                    <Link key={route.href} href={route.href} className="app-route">
-                      <div className="app-route__copy"><strong>{route.label}</strong></div>
-                      <span className="app-route__meta">{route.meta}</span>
-                    </Link>
-                  ))}
-                </div>
+                  ]}
+                />
               )}
             />
           </AppGrid>
 
-          {rewards && rewards.entries.length > 0 ? (
+          <AppGrid>
             <Panel
+              className="hall-leaders"
+              tier="primary"
+              eyebrow="Snapshot"
+              title="Leaderboard preview"
+              body={
+                hiscores.length > 0 ? (
+                  <LeaderboardTable
+                    entries={hiscores}
+                    valueFormatter={(entry) => formatMaybeNumber(entry.value)}
+                    valueLabel="Level"
+                  />
+                ) : (
+                  <EmptyState message="Leaderboard data is unavailable right now." />
+                )
+              }
+            />
+            <Panel
+              className="hall-ledger"
               tier="meta"
               eyebrow="Ledger"
               title="Recent activity"
-              chip={`${rewards.entries.length} entries`}
-              body={<LedgerTable entries={rewards.entries.slice(0, 6)} />}
+              chip={rewards ? `${rewards.entries.length} entries` : undefined}
+              body={
+                rewards && rewards.entries.length > 0
+                  ? <LedgerTable entries={rewards.entries.slice(0, 6)} />
+                  : <EmptyState message="No recent rewards activity yet." />
+              }
             />
-          ) : null}
+          </AppGrid>
         </>
       )}
     </main>

@@ -1,85 +1,54 @@
 .page {
-  --page-accent: rgba(126, 94, 224, 0.38);
-  --page-surface: rgba(12, 10, 20, 0.9);
-  --page-gap: 0.72rem;
-  --panel-density: 0.88rem;
+  --page-gap: 1rem;
+  --page-accent: rgba(166, 131, 255, 0.34);
   gap: var(--page-gap);
 }
 
 .page :global(.app-context) {
-  padding: 0.92rem 1rem;
   border-left: 4px solid var(--page-accent);
-  background: var(--page-surface);
 }
 
-.page :global(.app-context__title) {
-  font-size: clamp(2.2rem, 5vw, 3.5rem);
+.page :global(.hall-spotlight) {
+  border-color: rgba(166, 131, 255, 0.18);
 }
 
-.page :global(.app-summary-grid) {
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: 0.72rem;
+.page :global(.hall-scoreboard) {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 0.8rem;
 }
 
-.page :global(.app-summary-grid__secondary) {
+.page :global(.hall-scoreboard .app-summary-grid__secondary) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.58rem;
-}
-
-.page :global(.app-stat) {
-  border-color: rgba(166, 131, 255, 0.24);
-  background: rgba(255, 255, 255, 0.015);
-}
-
-.page :global(.app-stat--lead) {
-  min-height: 9rem;
-  background: linear-gradient(140deg, rgba(166, 131, 255, 0.17), rgba(255, 255, 255, 0.02));
+  gap: 0.7rem;
 }
 
 .page :global(.app-grid-two) {
-  gap: 0.72rem;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 0.85rem;
 }
 
-.page :global(.app-panel) {
-  padding: var(--panel-density);
-  border-color: rgba(166, 131, 255, 0.22);
+.page :global(.hall-actions),
+.page :global(.hall-leaders) {
+  background: rgba(20, 16, 32, 0.9);
 }
 
-.page :global(.app-panel--primary) {
-  background: linear-gradient(150deg, rgba(166, 131, 255, 0.1), rgba(15, 12, 25, 0.95));
+.page :global(.hall-nav) {
+  background: rgba(15, 13, 24, 0.84);
 }
 
-.page :global(.app-panel--meta) {
-  background: rgba(255, 255, 255, 0.012);
+.page :global(.hall-ledger) {
+  background: rgba(14, 12, 23, 0.82);
 }
 
-.page :global(.app-route),
-.page :global(.app-feed__item),
-.page :global(.data-row) {
-  border-bottom-color: rgba(166, 131, 255, 0.16);
-}
-
-.page :global(.app-table) {
-  background: rgba(9, 7, 14, 0.86);
-}
-
-.page :global(.app-table th),
-.page :global(.app-table td) {
-  padding: 0.74rem 0.84rem;
-}
-
-@media (max-width: 1120px) {
-  .page :global(.app-summary-grid) {
+@media (max-width: 1080px) {
+  .page :global(.hall-scoreboard),
+  .page :global(.app-grid-two) {
     grid-template-columns: 1fr;
-  }
-
-  .page :global(.app-summary-grid__secondary) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 760px) {
-  .page :global(.app-summary-grid__secondary) {
+  .page :global(.hall-scoreboard .app-summary-grid__secondary) {
     grid-template-columns: 1fr;
   }
 }

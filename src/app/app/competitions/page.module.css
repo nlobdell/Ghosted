@@ -1,70 +1,59 @@
 .page {
-  --page-accent: rgba(160, 126, 249, 0.36);
-  --page-surface: rgba(11, 9, 19, 0.9);
-  --page-gap: 0.92rem;
-  --panel-density: 0.94rem;
+  --page-gap: 1rem;
+  --page-accent: rgba(171, 138, 255, 0.34);
   gap: var(--page-gap);
 }
 
 .page :global(.app-context) {
-  padding: 1.04rem 1.12rem;
   border-left: 4px solid var(--page-accent);
-  background: var(--page-surface);
 }
 
-.page :global(.app-summary-grid),
-.page :global(.app-summary-grid__secondary) {
+.board {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.rail {
+  display: grid;
+  gap: 1rem;
+}
+
+.page :global(.comp-scoreboard),
+.page :global(.comp-scoreboard .app-summary-grid__secondary) {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.66rem;
+  gap: 0.7rem;
 }
 
-.page :global(.app-stat) {
-  min-height: 5rem;
-  border-color: rgba(166, 131, 255, 0.24);
-  background: rgba(255, 255, 255, 0.012);
+.page :global(.comp-timeline) {
+  background: rgba(18, 15, 31, 0.92);
+  border-left: 4px solid rgba(166, 131, 255, 0.48);
 }
 
-.page :global(.app-stat--lead) {
-  background: linear-gradient(150deg, rgba(166, 131, 255, 0.16), rgba(255, 255, 255, 0.015));
+.page :global(.comp-timeline .app-feed__item) {
+  padding: 0.72rem 0;
 }
 
-.page :global(.app-panel) {
-  padding: var(--panel-density);
-  border-color: rgba(166, 131, 255, 0.22);
-}
-
-.page :global(.app-panel:nth-of-type(1)) {
-  border-left: 4px solid rgba(166, 131, 255, 0.45);
-}
-
-.page :global(.app-feed__item) {
-  border: 1px solid rgba(166, 131, 255, 0.16);
-  border-left: 3px solid rgba(166, 131, 255, 0.4);
-  border-radius: 0.72rem;
-  margin-bottom: 0.5rem;
-  padding: 0.78rem 0.85rem;
-  background: rgba(255, 255, 255, 0.012);
-}
-
-.page :global(.app-feed__item:last-child) {
-  margin-bottom: 0;
-}
-
-.page :global(.app-grid-two) {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 0.84rem;
+.page :global(.comp-featured),
+.page :global(.comp-leaders) {
+  background: rgba(17, 14, 28, 0.88);
 }
 
 @media (max-width: 980px) {
-  .page :global(.app-summary-grid),
-  .page :global(.app-summary-grid__secondary) {
+  .page :global(.comp-scoreboard),
+  .page :global(.comp-scoreboard .app-summary-grid__secondary) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .board {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 680px) {
-  .page :global(.app-summary-grid),
-  .page :global(.app-summary-grid__secondary) {
+  .page :global(.comp-scoreboard),
+  .page :global(.comp-scoreboard .app-summary-grid__secondary) {
     grid-template-columns: 1fr;
   }
 }

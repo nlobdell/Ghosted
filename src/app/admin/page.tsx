@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   AppContext,
   StatStrip,
@@ -14,6 +15,7 @@ import {
   FormField,
 } from '@/components/app/AppUI';
 import { formatPoints, getJSON } from '@/lib/api';
+import type { NewsPost } from '@/lib/types';
 import styles from './page.module.css';
 
 interface AdminOverview {
@@ -22,6 +24,7 @@ interface AdminOverview {
     users: { id: number; displayName: string; balance: number; isAdmin: boolean }[];
     giveaways: { id: number; title: string; status: string }[];
     wom: { configured: boolean; linkedUsers: number } | null;
+    newsCount?: number;
   };
 }
 
@@ -29,22 +32,30 @@ interface DiscordRolesPayload {
   roles: { id: string; name: string }[];
 }
 
+interface AdminNewsPayload {
+  posts: NewsPost[];
+}
+
 export default function AdminPage() {
   const [data, setData] = useState<AdminOverview | null>(null);
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
+  const [newsPosts, setNewsPosts] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; variant: 'info' | 'error' } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deletingPostId, setDeletingPostId] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
       getJSON<AdminOverview>('/api/admin/overview'),
       getJSON<DiscordRolesPayload>('/api/admin/discord-roles'),
+      getJSON<AdminNewsPayload>('/api/admin/news?limit=50'),
     ])
-      .then(([nextData, nextRoles]) => {
+      .then(([nextData, nextRoles, nextNews]) => {
         setData(nextData);
         setRoles(nextRoles.roles ?? []);
+        setNewsPosts(nextNews.posts ?? []);
       })
       .catch((nextError) => setError(nextError instanceof Error ? nextError.message : 'Failed to load admin data.'))
       .finally(() => setLoading(false));
@@ -110,6 +121,47 @@ export default function AdminPage() {
     }
   };
 
+  const handleCreateNews = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    setSubmitting(true);
+    setMessage(null);
+    try {
+      await getJSON('/api/admin/news', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: formData.get('title'),
+          excerpt: formData.get('excerpt'),
+          body: formData.get('body'),
+          status: formData.get('status'),
+          publishedAt: formData.get('publishedAt') || undefined,
+        }),
+      });
+      const refreshed = await getJSON<AdminNewsPayload>('/api/admin/news?limit=50');
+      setNewsPosts(refreshed.posts ?? []);
+      setMessage({ text: 'News post saved.', variant: 'info' });
+      event.currentTarget.reset();
+    } catch (err) {
+      setMessage({ text: err instanceof Error ? err.message : 'News publish failed.', variant: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteNews = async (postId: number) => {
+    setDeletingPostId(postId);
+    setMessage(null);
+    try {
+      await getJSON(`/api/admin/news/${postId}`, { method: 'DELETE' });
+      setNewsPosts((current) => current.filter((post) => post.id !== postId));
+      setMessage({ text: 'News post deleted.', variant: 'info' });
+    } catch (err) {
+      setMessage({ text: err instanceof Error ? err.message : 'Delete failed.', variant: 'error' });
+    } finally {
+      setDeletingPostId(null);
+    }
+  };
+
   if (loading) {
     return (
       <main className={`page-shell ${styles.page}`}>
@@ -120,6 +172,7 @@ export default function AdminPage() {
 
   const activeGiveaways = data?.overview.giveaways.filter((giveaway) => giveaway.status === 'active').length ?? 0;
   const adminCount = data?.overview.users.filter((user) => user.isAdmin).length ?? 0;
+  const publishedNewsCount = newsPosts.filter((post) => post.status === 'published').length;
 
   return (
     <main id="main-content" className={`page-shell ${styles.page}`}>
@@ -130,6 +183,7 @@ export default function AdminPage() {
           { label: 'Admin' },
         ]}
         title="Operator console"
+        summary="Execute economy actions first, verify sync health second, and use tables last for audits."
       />
 
       {error ? <Banner message={error} variant="error" /> : null}
@@ -137,6 +191,7 @@ export default function AdminPage() {
 
       <AppGrid>
         <Panel
+          className="admin-actions admin-grant"
           tier="primary"
           eyebrow="Workflow"
           title="Grant points"
@@ -157,6 +212,7 @@ export default function AdminPage() {
         />
 
         <Panel
+          className="admin-actions admin-create"
           tier="primary"
           eyebrow="Workflow"
           title="Create giveaway"
@@ -191,17 +247,85 @@ export default function AdminPage() {
         />
       </AppGrid>
 
+      <AppGrid>
+        <Panel
+          className="admin-actions admin-news-create"
+          tier="primary"
+          eyebrow="Content"
+          title="Publish news update"
+          body={(
+            <form onSubmit={handleCreateNews} className="app-form">
+              <FormField label="Title">
+                <input name="title" type="text" placeholder="Update headline" className="input-base" required />
+              </FormField>
+              <FormField label="Excerpt">
+                <input name="excerpt" type="text" placeholder="One-sentence summary" className="input-base" required />
+              </FormField>
+              <FormField label="Body">
+                <textarea name="body" rows={6} className="input-base" placeholder="Write the update..." required />
+              </FormField>
+              <div className="form-grid-two">
+                <FormField label="Status">
+                  <select name="status" className="input-base" defaultValue="draft">
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                  </select>
+                </FormField>
+                <FormField label="Publish at (optional)">
+                  <input name="publishedAt" type="datetime-local" className="input-base" />
+                </FormField>
+              </div>
+              <button className="button" type="submit" disabled={submitting}>Save post</button>
+            </form>
+          )}
+        />
+        <Panel
+          className="admin-news-list"
+          tier="meta"
+          eyebrow="Content"
+          title="Recent news posts"
+          body={newsPosts.length ? (
+            <div className="app-feed">
+              {newsPosts.slice(0, 10).map((post) => (
+                <article key={post.id} className="app-feed__item">
+                  <div className="app-card__row">
+                    <strong>{post.title}</strong>
+                    <span className="app-chip">{post.status}</span>
+                  </div>
+                  <div className="app-feed__meta">{post.excerpt}</div>
+                  <div className="app-inline-actions">
+                    <Link href={`/news/${post.slug}/`} className="button button--secondary button--small">Open</Link>
+                    <button
+                      type="button"
+                      className="button button--secondary button--small"
+                      onClick={() => handleDeleteNews(post.id)}
+                      disabled={deletingPostId === post.id}
+                    >
+                      {deletingPostId === post.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <EmptyState message="No news posts created yet." />
+          )}
+        />
+      </AppGrid>
+
       <StatStrip
+        className="admin-scoreboard"
         leadIndex={0}
         stats={[
           { label: 'Tracked users', value: String(data?.overview.users.length ?? 0) },
           { label: 'Live giveaways', value: String(activeGiveaways) },
           { label: 'WOM links', value: String(data?.overview.wom?.linkedUsers ?? 0) },
-          { label: 'Admin users', value: String(adminCount) },
+          { label: 'Published news', value: String(publishedNewsCount) },
         ]}
       />
 
       <Highlight
+        className="admin-highlight"
         eyebrow="Operator state"
         title="System snapshot"
         copy="Manage the economy first, then verify sync and records."
@@ -215,6 +339,7 @@ export default function AdminPage() {
 
       <AppGrid>
         <Panel
+          className="admin-sync"
           tier="meta"
           eyebrow="Sync"
           title="Wise Old Man refresh"
@@ -243,6 +368,7 @@ export default function AdminPage() {
         />
 
         <Panel
+          className="admin-health"
           tier="meta"
           eyebrow="Status"
           title="System health"
@@ -281,11 +407,18 @@ export default function AdminPage() {
             copy: 'Refresh WOM-backed data and validate runtime health across auth, users, and integrations.',
             chips: [data?.overview.wom?.configured ? 'WOM configured' : 'WOM missing', 'System status'],
           },
+          {
+            label: 'Content',
+            title: 'Clan communications',
+            copy: 'Publish official updates to the public news feed from one moderated admin workflow.',
+            chips: [`${publishedNewsCount} published`, `${newsPosts.length} total posts`],
+          },
         ]}
       />
 
       <AppGrid>
         <Panel
+          className="admin-users"
           tier="meta"
           title="Users"
           body={(
@@ -298,6 +431,7 @@ export default function AdminPage() {
         />
 
         <Panel
+          className="admin-giveaways"
           tier="meta"
           title="Giveaway draws"
           body={

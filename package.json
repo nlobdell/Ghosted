@@ -27,18 +27,18 @@
   },
   "homepage": "https://github.com/nlobdell/Ghosted#readme",
   "dependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
     "next": "^16.2.2",
     "pixi.js": "^8.13.2",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^24.8.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "postcss": "^8.5.8",
-    "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3",
     "vite": "^7.1.10"
   }

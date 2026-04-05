@@ -58,6 +58,7 @@ export default function CompetitionsPage() {
           { label: 'Competitions' },
         ]}
         title="Competition board"
+        summary="Start with the active timeline, then drill into featured details and leaderboard context."
         actions={<Link href="/app/clan/" className="button button--secondary button--small">Clan</Link>}
       />
 
@@ -68,6 +69,7 @@ export default function CompetitionsPage() {
       ) : (
         <>
           <StatStrip
+            className="comp-scoreboard"
             leadIndex={1}
             stats={[
               { label: 'Tracked comps', value: String(competitions.length) },
@@ -84,53 +86,57 @@ export default function CompetitionsPage() {
             />
           ) : (
             <>
-              <Panel
-                tier="primary"
-                eyebrow="Timeline"
-                title="Live and upcoming events"
-                chip={`${ongoing.length} live`}
-                body={<CompetitionList entries={competitions} />}
-              />
-
-              <AppGrid>
+              <section className={styles.board}>
                 <Panel
+                  className="comp-timeline"
                   tier="primary"
-                  eyebrow="Featured"
-                  title={featured?.title ?? 'Featured competition'}
-                  body={
-                    featured ? (
-                      <MetricGrid
-                        items={[
-                          ['Status', featured.status],
-                          ['Metric', featured.metric ?? '-'],
-                          ['Type', featured.type ?? '-'],
-                          ['Starts', formatDate(featured.startsAt ?? null)],
-                          ['Ends', formatDate(featured.endsAt ?? null)],
-                          ['Participants', featured.participants ? String(featured.participants.length) : '-'],
-                        ]}
-                      />
-                    ) : (
-                      <EmptyState message="No featured competition selected." />
-                    )
-                  }
+                  eyebrow="Timeline"
+                  title="Live and upcoming events"
+                  chip={`${ongoing.length} live`}
+                  body={<CompetitionList entries={competitions} />}
                 />
-                <Panel
-                  tier="primary"
-                  eyebrow="Leaders"
-                  title="Featured leaderboard"
-                  body={
-                    featuredParticipants && featuredParticipants.length > 0 ? (
-                      <LeaderboardTable
-                        entries={featuredParticipants}
-                        valueFormatter={(entry) => formatMaybeNumber(entry.progress?.gained ?? entry.gained ?? entry.value)}
-                        valueLabel="Progress"
-                      />
-                    ) : (
-                      <EmptyState message="Leaderboard data will appear after participants are recorded." />
-                    )
-                  }
-                />
-              </AppGrid>
+                <div className={styles.rail}>
+                  <Panel
+                    className="comp-featured"
+                    tier="primary"
+                    eyebrow="Featured"
+                    title={featured?.title ?? 'Featured competition'}
+                    body={
+                      featured ? (
+                        <MetricGrid
+                          items={[
+                            ['Status', featured.status],
+                            ['Metric', featured.metric ?? '-'],
+                            ['Type', featured.type ?? '-'],
+                            ['Starts', formatDate(featured.startsAt ?? null)],
+                            ['Ends', formatDate(featured.endsAt ?? null)],
+                            ['Participants', featured.participants ? String(featured.participants.length) : '-'],
+                          ]}
+                        />
+                      ) : (
+                        <EmptyState message="No featured competition selected." />
+                      )
+                    }
+                  />
+                  <Panel
+                    className="comp-leaders"
+                    tier="meta"
+                    eyebrow="Leaders"
+                    title="Featured leaderboard"
+                    body={
+                      featuredParticipants && featuredParticipants.length > 0 ? (
+                        <LeaderboardTable
+                          entries={featuredParticipants}
+                          valueFormatter={(entry) => formatMaybeNumber(entry.progress?.gained ?? entry.gained ?? entry.value)}
+                          valueLabel="Progress"
+                        />
+                      ) : (
+                        <EmptyState message="Leaderboard data will appear after participants are recorded." />
+                      )
+                    }
+                  />
+                </div>
+              </section>
             </>
           )}
         </>

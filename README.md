@@ -4,7 +4,7 @@ Ghosted is a community platform for the Ghosted Old School RuneScape clan, built
 
 - a **Next.js frontend** (`src/app`)
 - a **Python API/backend** (`server.py`)
-- a **SQLite data layer** for rewards, giveaways, and casino history
+- a **SQLite data layer** for rewards, giveaways, casino history, and news publishing
 
 The canonical architecture reference is [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
@@ -73,3 +73,4 @@ If backend logic changed, restart the Python API service too.
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md)
 - [`deploy/ubuntu-vps.md`](./deploy/ubuntu-vps.md)
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md)
+- [`STYLING_METHOD.md`](./STYLING_METHOD.md)

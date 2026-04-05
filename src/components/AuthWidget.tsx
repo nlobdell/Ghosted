@@ -34,9 +34,10 @@ export function AuthWidget({ variant, shellData }: Props) {
 
   if (shell.authenticated && shell.user) {
     const user = shell.user;
+    const rankLabel = user.womLink?.membership?.rankLabel ?? user.womLink?.membership?.role ?? (user.womLink?.linked ? 'Member' : 'Discord');
     const subtitle = variant === 'public'
-      ? `${formatPts(user.balance)} | ${user.womLink?.membership?.rankLabel ?? user.womLink?.membership?.role ?? (user.womLink?.linked ? 'Member' : 'Discord only')}`
-      : `${user.womLink?.linked ? (user.womLink.membership?.rankLabel ?? user.womLink.membership?.role ?? 'Member') : 'Link your RSN from Profile'} | ${formatPts(user.balance)}`;
+      ? rankLabel
+      : `${formatPts(user.balance)} · ${user.womLink?.linked ? rankLabel : 'RSN not linked'}`;
 
     return (
       <div className={`site-profile-widget site-profile-widget--signed-in site-profile-widget--${variant}`}>

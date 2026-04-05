@@ -164,3 +164,16 @@ export interface Competition {
   endsAt?: string;
   participants?: LeaderboardEntry[];
 }
+
+export interface NewsPost {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  body: string;
+  status: 'draft' | 'published';
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  authorDisplayName: string;
+}
