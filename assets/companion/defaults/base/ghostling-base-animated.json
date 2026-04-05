@@ -1,0 +1,22 @@
+{ "frames": {
+   "BaseSweatling210-Sheet.png": {
+    "frame": { "x": 0, "y": 0, "w": 2730, "h": 70 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 2730, "h": 70 },
+    "sourceSize": { "w": 2730, "h": 70 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "https://www.aseprite.org/",
+  "version": "1.3.17-x64",
+  "image": "BaseSweatling210-Sheet-sheet.png",
+  "format": "RGBA8888",
+  "size": { "w": 2730, "h": 70 },
+  "scale": "1",
+  "layers": [
+   { "name": "Layer 1", "opacity": 255, "blendMode": "normal" }
+  ]
+ }
+}
