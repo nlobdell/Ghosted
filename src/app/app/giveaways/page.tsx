@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function GiveawaysRedirect() {
-  redirect('/app/rewards/');
+  redirect('/hall/rewards/');
 }

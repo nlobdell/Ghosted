@@ -1,17 +1,23 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, IBM_Plex_Sans } from 'next/font/google';
+import { DM_Sans, Space_Mono, Syne } from 'next/font/google';
 import './globals.css';
 
-const displayFont = Cormorant_Garamond({
+const displayFont = Syne({
   subsets: ['latin'],
-  weight: ['600', '700'],
+  weight: ['600', '700', '800'],
   variable: '--font-ghosted-display',
 });
 
-const bodyFont = IBM_Plex_Sans({
+const bodyFont = DM_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-ghosted-body',
+});
+
+const monoFont = Space_Mono({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-ghosted-mono',
 });
 
 export const metadata: Metadata = {
@@ -26,7 +32,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${displayFont.variable} ${bodyFont.variable}`}>
+      <body className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
         <a className="site-skip-link" href="#main-content">
           Skip to main content
         </a>

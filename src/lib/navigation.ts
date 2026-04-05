@@ -37,13 +37,13 @@ export const NAV_GROUP_LABELS: Record<NavGroup, string> = {
 
 export const PRIMARY_NAV_LINKS: NavLink[] = [
   { key: 'news', label: 'News', href: '/news/', visibility: 'always' },
-  { key: 'hub', label: 'Hall', href: '/app/', visibility: 'authenticated' },
-  { key: 'companion', label: 'Ghostling', href: '/app/companion/', visibility: 'authenticated' },
-  { key: 'clan', label: 'Clan', href: '/app/clan/', visibility: 'authenticated', group: 'clan' },
-  { key: 'competitions', label: 'Competitions', href: '/app/competitions/', visibility: 'authenticated', group: 'clan' },
-  { key: 'rewards', label: 'Rewards', href: '/app/rewards/', visibility: 'authenticated', group: 'economy' },
-  { key: 'casino', label: 'Casino', href: '/app/casino/', visibility: 'authenticated', group: 'economy' },
-  { key: 'profile', label: 'Profile', href: '/app/profile/', visibility: 'authenticated', group: 'you' },
+  { key: 'hub', label: 'Hall', href: '/hall/', visibility: 'authenticated' },
+  { key: 'companion', label: 'Ghostling', href: '/hall/ghostling/', visibility: 'authenticated' },
+  { key: 'clan', label: 'Clan', href: '/hall/clan/', visibility: 'authenticated', group: 'clan' },
+  { key: 'competitions', label: 'Competitions', href: '/hall/competitions/', visibility: 'authenticated', group: 'clan' },
+  { key: 'rewards', label: 'Rewards', href: '/hall/rewards/', visibility: 'authenticated', group: 'economy' },
+  { key: 'casino', label: 'Casino', href: '/hall/casino/', visibility: 'authenticated', group: 'economy' },
+  { key: 'profile', label: 'Profile', href: '/hall/profile/', visibility: 'authenticated', group: 'you' },
   { key: 'admin', label: 'Admin', href: '/admin/', visibility: 'admin' },
 ];
 
@@ -90,13 +90,13 @@ export function getActiveNavKey(path: string) {
   const normalized = normalizePath(path);
   if (normalized === '/') return '';
   if (normalized.startsWith('/news')) return 'news';
-  if (normalized === '/app') return 'hub';
-  if (normalized.startsWith('/app/community') || normalized.startsWith('/app/clan')) return 'clan';
-  if (normalized.startsWith('/app/competitions')) return 'competitions';
-  if (normalized.startsWith('/app/rewards') || normalized.startsWith('/app/giveaways')) return 'rewards';
-  if (normalized.startsWith('/app/profile')) return 'profile';
-  if (normalized.startsWith('/app/companion')) return 'companion';
-  if (normalized.startsWith('/app/casino')) return 'casino';
+  if (normalized === '/hall') return 'hub';
+  if (normalized.startsWith('/hall/clan')) return 'clan';
+  if (normalized.startsWith('/hall/competitions')) return 'competitions';
+  if (normalized.startsWith('/hall/rewards')) return 'rewards';
+  if (normalized.startsWith('/hall/profile')) return 'profile';
+  if (normalized.startsWith('/hall/ghostling')) return 'companion';
+  if (normalized.startsWith('/hall/casino')) return 'casino';
   if (normalized.startsWith('/admin')) return 'admin';
   return '';
 }

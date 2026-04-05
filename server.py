@@ -1234,6 +1234,10 @@ def env_int(name: str, default: int) -> int:
         return default
 
 
+def internal_api_secret() -> str | None:
+    return env_text("INTERNAL_API_SECRET")
+
+
 def wom_api_base() -> str:
     return (env_text("WOM_API_BASE") or DEFAULT_WOM_API_BASE).rstrip("/")
 
@@ -4040,13 +4044,13 @@ SITE_UTILITY_GROUPS = {
 
 SITE_NAV_ITEMS = [
     {"key": "home", "label": "Home", "href": "/"},
-    {"key": "app", "label": "App Hub", "href": "/app/"},
-    {"key": "community", "label": "Community", "href": "/app/community/"},
-    {"key": "rewards", "label": "Rewards", "href": "/app/rewards/"},
-    {"key": "giveaways", "label": "Giveaways", "href": "/app/giveaways/"},
-    {"key": "casino", "label": "Casino", "href": "/app/casino/"},
-    {"key": "companion", "label": "Companion", "href": "/app/companion/"},
-    {"key": "profile", "label": "Profile", "href": "/app/profile/"},
+    {"key": "app", "label": "Hall", "href": "/hall/"},
+    {"key": "community", "label": "Clan", "href": "/hall/clan/"},
+    {"key": "rewards", "label": "Rewards", "href": "/hall/rewards/"},
+    {"key": "giveaways", "label": "Giveaways", "href": "/hall/rewards/"},
+    {"key": "casino", "label": "Casino", "href": "/hall/casino/"},
+    {"key": "companion", "label": "Ghostling", "href": "/hall/ghostling/"},
+    {"key": "profile", "label": "Profile", "href": "/hall/profile/"},
 ]
 
 
@@ -4054,19 +4058,29 @@ def active_route_key(path: str | None) -> str:
     normalized = normalize_local_path(path)
     if normalized == "/":
         return "home"
-    if normalized in {"/app", "/app/"}:
+    if normalized in {"/app", "/app/", "/hall", "/hall/"}:
         return "app"
     if normalized.startswith("/app/community") or normalized.startswith("/app/clan") or normalized.startswith("/app/competitions"):
         return "community"
-    if normalized.startswith("/app/rewards"):
+    if normalized.startswith("/hall/clan") or normalized.startswith("/hall/competitions"):
+        return "community"
+    if normalized.startswith("/app/rewards") or normalized.startswith("/app/giveaways"):
         return "rewards"
-    if normalized.startswith("/app/giveaways"):
+    if normalized.startswith("/hall/rewards"):
+        return "rewards"
+    if normalized.startswith("/hall/giveaways"):
         return "giveaways"
     if normalized.startswith("/app/casino"):
         return "casino"
+    if normalized.startswith("/hall/casino"):
+        return "casino"
     if normalized.startswith("/app/companion"):
         return "companion"
+    if normalized.startswith("/hall/ghostling"):
+        return "companion"
     if normalized.startswith("/app/profile"):
+        return "profile"
+    if normalized.startswith("/hall/profile"):
         return "profile"
     if normalized.startswith("/admin"):
         return "admin"
@@ -4725,6 +4739,16 @@ class GhostedHandler(BaseHTTPRequestHandler):
         return morsel.value if morsel else None
 
     def current_user(self, connection: sqlite3.Connection) -> sqlite3.Row | None:
+        internal_secret = internal_api_secret()
+        request_secret = str(self.headers.get("X-Ghosted-Internal-Secret") or "").strip()
+        if internal_secret and request_secret and secrets.compare_digest(request_secret, internal_secret):
+            forwarded_user_id = str(self.headers.get("X-Ghosted-User-Id") or "").strip()
+            forwarded_discord_id = str(self.headers.get("X-Ghosted-User-Discord-Id") or "").strip()
+            if forwarded_user_id.isdigit():
+                return get_user(connection, int(forwarded_user_id))
+            if forwarded_discord_id:
+                return get_user_by_discord_id(connection, forwarded_discord_id)
+
         token = self.current_session_token()
         if not token:
             return None
@@ -5280,7 +5304,7 @@ class GhostedHandler(BaseHTTPRequestHandler):
                 "Discord auth is not configured. Set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET first.",
                 503,
             )
-        next_path = parse_qs(parsed.query).get("next", ["/app/"])[0]
+        next_path = parse_qs(parsed.query).get("next", ["/hall/"])[0]
         state = create_auth_state(connection, next_path)
         params = urlencode(
             {
@@ -5334,7 +5358,7 @@ class GhostedHandler(BaseHTTPRequestHandler):
         ensure_user_rewards(connection, row, build_auth_config(self.base_url()))
         connection.commit()
         token = create_session(connection, row["id"])
-        next_path = params.get("next", ["/app/"])[0]
+        next_path = params.get("next", ["/hall/"])[0]
         self.send_response(HTTPStatus.FOUND)
         self.send_header("Location", next_path)
         self.send_header("Set-Cookie", session_cookie_header(token))

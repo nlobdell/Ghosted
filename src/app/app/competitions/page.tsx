@@ -51,16 +51,16 @@ export default function CompetitionsPage() {
   const featuredParticipants = featured?.participants?.slice(0, 8) as LeaderboardEntry[] | undefined;
 
   return (
-    <main id="main-content" className={`page-shell ${styles.page}`}>
+    <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
       <AppContext
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
-          { label: 'Hall', href: '/app/' },
+          { label: 'Hall', href: '/hall/' },
           { label: 'Competitions' },
         ]}
         title="Competition board"
         summary="Start with the active timeline, then drill into featured details and leaderboard context."
-        actions={<Link href="/app/clan/" className="button button--secondary button--small">Clan</Link>}
+        actions={<Link href="/hall/clan/" className="button button--secondary button--small">Clan</Link>}
       />
 
       {error ? <Banner message={error} variant="error" /> : null}
@@ -84,7 +84,7 @@ export default function CompetitionsPage() {
           {competitions.length === 0 ? (
             <EmptyState
               message="No competitions found. Make sure WOM is configured and your group has competitions."
-              action={<Link href="/app/clan/" className="button button--secondary button--small">Back to clan</Link>}
+              action={<Link href="/hall/clan/" className="button button--secondary button--small">Back to clan</Link>}
             />
           ) : (
             <>

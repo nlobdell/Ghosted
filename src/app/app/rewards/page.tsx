@@ -49,7 +49,7 @@ export default function RewardsPage() {
             return sorted;
           })
           .catch(() => [] as GiveawayItem[]),
-        getJSON<ShellData>(`/api/site-shell?next=${encodeURIComponent('/app/rewards/')}`).catch(() => null),
+        getJSON<ShellData>(`/api/site-shell?next=${encodeURIComponent('/hall/rewards/')}`).catch(() => null),
       ]);
 
       if (rewardsData) setRewards(rewardsData);
@@ -91,15 +91,15 @@ export default function RewardsPage() {
   const isAuthed = authed && !!shell?.authenticated;
 
   return (
-    <main id="main-content" className={`page-shell ${styles.page}`}>
+    <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
       <AppContext
-        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/app/' }, { label: 'Rewards' }]}
+        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/hall/' }, { label: 'Rewards' }]}
         title="Rewards and drops"
         summary="Confirm available balance first, then spend on active drops, then review ledger history."
         actions={(
           <>
-            <Link href="/app/companion/" className="button button--secondary button--small">Ghostling</Link>
-            <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
+            <Link href="/hall/ghostling/" className="button button--secondary button--small">Ghostling</Link>
+            <Link href="/hall/casino/" className="button button--secondary button--small">Casino</Link>
           </>
         )}
       />
@@ -112,7 +112,7 @@ export default function RewardsPage() {
       ) : !authed ? (
         <EmptyState
           message="Sign in to view your balance, enter drops, and see your history."
-          action={<Link href="/auth/discord/login" className="button button--secondary button--small">Sign in with Discord</Link>}
+          action={<Link href="/auth/login?next=%2Fhall%2Frewards%2F" className="button button--secondary button--small">Sign in with Discord</Link>}
         />
       ) : rewards ? (
         <>
@@ -138,9 +138,9 @@ export default function RewardsPage() {
             }
             actions={(
               <>
-                <Link href="/app/companion/" className="button button--secondary button--small">Ghostling</Link>
-                <Link href="/app/casino/" className="button button--secondary button--small">Casino</Link>
-                <Link href="/app/profile/" className="button button--secondary button--small">Profile</Link>
+                <Link href="/hall/ghostling/" className="button button--secondary button--small">Ghostling</Link>
+                <Link href="/hall/casino/" className="button button--secondary button--small">Casino</Link>
+                <Link href="/hall/profile/" className="button button--secondary button--small">Profile</Link>
               </>
             )}
             stage={{

@@ -73,14 +73,14 @@ export default function ClanPage() {
 
   if (!womConfigured) {
     return (
-      <main id="main-content" className={`page-shell ${styles.page}`}>
+      <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
         <AppContext
-          breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/app/' }, { label: 'Clan' }]}
+          breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/hall/' }, { label: 'Clan' }]}
           title="Ghosted clan"
         />
         <EmptyState
           message="Wise Old Man integration is not configured. Set up WOM to load verified Ghosted group data."
-          action={<Link href="/app/" className="button button--secondary button--small">Back to Hall</Link>}
+          action={<Link href="/hall/" className="button button--secondary button--small">Back to Hall</Link>}
         />
       </main>
     );
@@ -100,12 +100,12 @@ export default function ClanPage() {
   const linkRate = groupMemberCount > 0 ? `${Math.round((linkedMembers / groupMemberCount) * 100)}%` : '-';
 
   return (
-    <main id="main-content" className={`page-shell ${styles.page}`}>
+    <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
       <AppContext
-        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/app/' }, { label: 'Clan' }]}
+        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/hall/' }, { label: 'Clan' }]}
         title="Clan board"
         summary="Track roster health first, then top performers, then recent activity."
-        actions={<Link href="/app/competitions/" className="button button--secondary button--small">Competitions</Link>}
+        actions={<Link href="/hall/competitions/" className="button button--secondary button--small">Competitions</Link>}
       />
 
       {error ? <Banner message={error} variant="error" /> : null}
@@ -119,7 +119,7 @@ export default function ClanPage() {
             eyebrow="Roster signal"
             title={clan.group.name}
             copy="Use this board to monitor roster health, active competition pressure, and the members setting the pace."
-            actions={<Link href="/app/competitions/" className="button button--secondary button--small">View competitions</Link>}
+            actions={<Link href="/hall/competitions/" className="button button--secondary button--small">View competitions</Link>}
             stage={
               topLeader
                 ? {
@@ -146,7 +146,7 @@ export default function ClanPage() {
             stats={[
               { label: 'Members', value: String(clan.group.memberCount) },
               { label: 'Linked coverage', value: linkRate },
-              { label: 'Live competitions', value: String(ongoing.length), href: '/app/competitions/' },
+              { label: 'Live competitions', value: String(ongoing.length), href: '/hall/competitions/' },
               { label: 'Maxed total', value: String(clan.statistics.maxedTotalCount) },
             ]}
           />
@@ -270,7 +270,7 @@ export default function ClanPage() {
       ) : (
         <EmptyState
           message="No clan data available. Check WOM configuration."
-          action={<Link href="/app/" className="button button--secondary button--small">Back to Hall</Link>}
+          action={<Link href="/hall/" className="button button--secondary button--small">Back to Hall</Link>}
         />
       )}
     </main>
