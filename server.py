@@ -9,6 +9,7 @@ import random
 import re
 import secrets
 import sqlite3
+import struct
 import sys
 from collections import Counter
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, quote, unquote, urlencode, urlparse
 from urllib.request import Request, urlopen
+from xml.etree import ElementTree
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -221,13 +223,20 @@ COMPANION_ALLOWED_ASSET_EXTENSIONS = {
     ".jpeg": "image/jpeg",
 }
 COMPANION_MAX_UPLOAD_BYTES = 4 * 1024 * 1024
-COMPANION_DEFAULT_BASE_ASSET_PATH = "repo/defaults/base/ghostling-base-animated.png"
+COMPANION_DEFAULT_BASE_ASSET_PATH = "repo/defaults/base/ghostling-base-body.png"
 COMPANION_LEGACY_BASE_ASSET_PATHS = {
     "repo/defaults/base/ghostling-base.svg",
+    "repo/defaults/base/ghostling-base-animated.png",
 }
 COMPANION_DEFAULT_BOB_AMPLITUDE_PX = 1.15
 COMPANION_DEFAULT_BOB_DURATION_MS = 2200
 COMPANION_DEFAULT_SHADOW_OPACITY = 0.2
+COMPANION_DEFAULT_SLOT_GROUPS = {
+    "hat": "head",
+    "face": "head",
+    "neck": "body",
+    "body": "body",
+}
 
 
 COMPANION_ITEMS = [
@@ -431,27 +440,139 @@ def companion_asset_data_uri(relative_path: str | None) -> str | None:
     return f"data:{mime};base64,{encoded}"
 
 
+def companion_asset_dimensions(relative_path: str | None) -> tuple[int, int]:
+    if not relative_path:
+        return COMPANION_CANVAS_SIZE, COMPANION_CANVAS_SIZE
+
+    target = companion_asset_path(relative_path)
+    if not target.exists() or not target.is_file():
+        return COMPANION_CANVAS_SIZE, COMPANION_CANVAS_SIZE
+
+    suffix = target.suffix.lower()
+
+    try:
+        if suffix == ".png":
+            with target.open("rb") as handle:
+                header = handle.read(24)
+            if header.startswith(b"\x89PNG\r\n\x1a\n") and len(header) >= 24:
+                width, height = struct.unpack(">II", header[16:24])
+                return max(1, int(width)), max(1, int(height))
+
+        if suffix == ".gif":
+            with target.open("rb") as handle:
+                header = handle.read(10)
+            if header[:6] in (b"GIF87a", b"GIF89a") and len(header) >= 10:
+                width, height = struct.unpack("<HH", header[6:10])
+                return max(1, int(width)), max(1, int(height))
+
+        if suffix in {".jpg", ".jpeg"}:
+            with target.open("rb") as handle:
+                if handle.read(2) != b"\xff\xd8":
+                    return COMPANION_CANVAS_SIZE, COMPANION_CANVAS_SIZE
+                while True:
+                    marker_prefix = handle.read(1)
+                    if not marker_prefix:
+                        break
+                    if marker_prefix != b"\xff":
+                        continue
+                    marker = handle.read(1)
+                    while marker == b"\xff":
+                        marker = handle.read(1)
+                    if not marker or marker in {b"\xd8", b"\xd9"}:
+                        continue
+                    segment_length_bytes = handle.read(2)
+                    if len(segment_length_bytes) != 2:
+                        break
+                    segment_length = struct.unpack(">H", segment_length_bytes)[0]
+                    if marker in {
+                        b"\xc0", b"\xc1", b"\xc2", b"\xc3",
+                        b"\xc5", b"\xc6", b"\xc7",
+                        b"\xc9", b"\xca", b"\xcb",
+                        b"\xcd", b"\xce", b"\xcf",
+                    }:
+                        data = handle.read(max(0, segment_length - 2))
+                        if len(data) >= 5:
+                            height, width = struct.unpack(">HH", data[1:5])
+                            return max(1, int(width)), max(1, int(height))
+                        break
+                    handle.seek(max(0, segment_length - 2), 1)
+
+        if suffix == ".webp":
+            with target.open("rb") as handle:
+                header = handle.read(64)
+            if len(header) >= 30 and header[:4] == b"RIFF" and header[8:12] == b"WEBP":
+                chunk = header[12:16]
+                if chunk == b"VP8X" and len(header) >= 30:
+                    width = 1 + int.from_bytes(header[24:27], "little")
+                    height = 1 + int.from_bytes(header[27:30], "little")
+                    return max(1, width), max(1, height)
+                if chunk == b"VP8 " and len(header) >= 30 and header[23:26] == b"\x9d\x01\x2a":
+                    width = struct.unpack("<H", header[26:28])[0] & 0x3FFF
+                    height = struct.unpack("<H", header[28:30])[0] & 0x3FFF
+                    return max(1, int(width)), max(1, int(height))
+                if chunk == b"VP8L" and len(header) >= 25:
+                    bits = int.from_bytes(header[21:25], "little")
+                    width = (bits & 0x3FFF) + 1
+                    height = ((bits >> 14) & 0x3FFF) + 1
+                    return max(1, int(width)), max(1, int(height))
+
+        if suffix == ".svg":
+            try:
+                root = ElementTree.fromstring(target.read_text("utf-8"))
+            except (OSError, UnicodeDecodeError, ElementTree.ParseError):
+                return COMPANION_CANVAS_SIZE, COMPANION_CANVAS_SIZE
+
+            def parse_svg_length(value: str | None) -> int | None:
+                if not value:
+                    return None
+                match = re.match(r"^\s*([0-9]+(?:\.[0-9]+)?)", value)
+                if not match:
+                    return None
+                return max(1, round(float(match.group(1))))
+
+            width = parse_svg_length(root.attrib.get("width"))
+            height = parse_svg_length(root.attrib.get("height"))
+            if width and height:
+                return width, height
+
+            view_box = root.attrib.get("viewBox")
+            if view_box:
+                parts = re.split(r"[\s,]+", view_box.strip())
+                if len(parts) == 4:
+                    try:
+                        width = max(1, round(float(parts[2])))
+                        height = max(1, round(float(parts[3])))
+                        return width, height
+                    except ValueError:
+                        pass
+    except OSError:
+        return COMPANION_CANVAS_SIZE, COMPANION_CANVAS_SIZE
+
+    return COMPANION_CANVAS_SIZE, COMPANION_CANVAS_SIZE
+
+
 def companion_asset_animation(relative_path: str | None) -> dict[str, Any]:
+    asset_width, asset_height = companion_asset_dimensions(relative_path)
     animation = {
         "mode": "static",
         "fps": 0,
         "frameCount": 1,
-        "frameWidth": COMPANION_CANVAS_SIZE,
-        "frameHeight": COMPANION_CANVAS_SIZE,
+        "frameWidth": asset_width,
+        "frameHeight": asset_height,
         "loop": True,
-        "sheetWidth": COMPANION_CANVAS_SIZE,
-        "sheetHeight": COMPANION_CANVAS_SIZE,
+        "sheetWidth": asset_width,
+        "sheetHeight": asset_height,
         "frames": [
             {
                 "x": 0,
                 "y": 0,
-                "width": COMPANION_CANVAS_SIZE,
-                "height": COMPANION_CANVAS_SIZE,
+                "width": asset_width,
+                "height": asset_height,
                 "durationMs": 1000,
                 "offsetX": 0,
                 "offsetY": 0,
-                "sourceWidth": COMPANION_CANVAS_SIZE,
-                "sourceHeight": COMPANION_CANVAS_SIZE,
+                "sourceWidth": asset_width,
+                "sourceHeight": asset_height,
             }
         ],
     }
@@ -655,6 +776,165 @@ def companion_asset_animation(relative_path: str | None) -> dict[str, Any]:
     }
 
 
+def companion_default_motion_channels() -> dict[str, Any]:
+    return {
+        "root": {
+            "offsetX": {"amplitude": 0.22, "durationMs": 4700, "phase": 0.51},
+            "offsetY": {"amplitude": 0.36, "durationMs": 3200, "phase": 0.13},
+        },
+        "body": {
+            "offsetX": {"amplitude": 0.18, "durationMs": 3380, "phase": 0.22},
+            "offsetY": {"amplitude": 0.55, "durationMs": 2460, "phase": 0.35},
+        },
+        "head": {
+            "offsetX": {"amplitude": 0.42, "durationMs": 2140, "phase": 0.43},
+            "offsetY": {"amplitude": 1.35, "durationMs": 1620, "phase": 0.74},
+        },
+    }
+
+
+def companion_animation_source_dimensions(animation: dict[str, Any]) -> tuple[int, int]:
+    frames = [frame for frame in animation.get("frames", []) if isinstance(frame, dict)]
+    if not frames:
+        return COMPANION_CANVAS_SIZE, COMPANION_CANVAS_SIZE
+    width = max(int(frame.get("sourceWidth", frame.get("width", COMPANION_CANVAS_SIZE))) for frame in frames)
+    height = max(int(frame.get("sourceHeight", frame.get("height", COMPANION_CANVAS_SIZE))) for frame in frames)
+    return max(1, width), max(1, height)
+
+
+def companion_asset_rig(relative_path: str | None, *, source_width: int, source_height: int) -> dict[str, Any]:
+    default_rig = {
+        "width": max(1, int(source_width)),
+        "height": max(1, int(source_height)),
+        "parts": [],
+        "layers": [],
+        "slotGroups": dict(COMPANION_DEFAULT_SLOT_GROUPS),
+        "motionChannels": companion_default_motion_channels(),
+    }
+    if not relative_path:
+        return default_rig
+
+    target = companion_asset_path(relative_path)
+    sidecar_candidates = [
+        Path(f"{target}.rig.json"),
+        target.with_suffix(".rig.json"),
+    ]
+    sidecar = next((candidate for candidate in sidecar_candidates if candidate.exists() and candidate.is_file()), None)
+    if not sidecar:
+        return default_rig
+
+    try:
+        payload = json.loads(sidecar.read_text("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return default_rig
+
+    def normalize_rect(value: Any, fallback_width: int, fallback_height: int) -> dict[str, int] | None:
+        if not isinstance(value, dict):
+            return None
+        try:
+            x = int(value.get("x", 0))
+            y = int(value.get("y", 0))
+            width = int(value.get("w", value.get("width", fallback_width)))
+            height = int(value.get("h", value.get("height", fallback_height)))
+        except (TypeError, ValueError):
+            return None
+        if width <= 0 or height <= 0:
+            return None
+        return {
+            "x": x,
+            "y": y,
+            "width": width,
+            "height": height,
+        }
+
+    normalized_parts = []
+    for part in payload.get("parts", []):
+        if not isinstance(part, dict):
+            continue
+        source = normalize_rect(part.get("source"), default_rig["width"], default_rig["height"])
+        target_rect = normalize_rect(part.get("target"), default_rig["width"], default_rig["height"])
+        if not source or not target_rect:
+            continue
+        normalized_parts.append(
+            {
+                "key": str(part.get("key") or f"part-{len(normalized_parts) + 1}"),
+                "motionGroup": str(part.get("motionGroup") or "").strip() or None,
+                "source": source,
+                "target": target_rect,
+            }
+        )
+
+    normalized_layers = []
+    for layer in payload.get("layers", []):
+        if not isinstance(layer, dict):
+            continue
+        raw_path = layer.get("relativePath", layer.get("assetPath", layer.get("path")))
+        if not raw_path:
+            continue
+        try:
+            relative_asset_path = normalize_companion_asset_path(str(raw_path))
+            z_index = int(layer.get("zIndex", 20))
+        except (TypeError, ValueError, AppError):
+            continue
+        normalized_layers.append(
+            {
+                "key": str(layer.get("key") or f"layer-{len(normalized_layers) + 1}"),
+                "role": str(layer.get("role") or layer.get("key") or f"base-layer-{len(normalized_layers) + 1}"),
+                "relativePath": relative_asset_path,
+                "motionGroup": str(layer.get("motionGroup") or "").strip() or None,
+                "zIndex": z_index,
+            }
+        )
+
+    motion_channels = companion_default_motion_channels()
+    payload_channels = payload.get("motionChannels")
+    if isinstance(payload_channels, dict):
+        for channel_key, channel in payload_channels.items():
+            if not isinstance(channel, dict):
+                continue
+            normalized_channel: dict[str, Any] = {}
+            for axis_key in ("offsetX", "offsetY"):
+                axis = channel.get(axis_key)
+                if not isinstance(axis, dict):
+                    continue
+                try:
+                    amplitude = float(axis.get("amplitude", 0))
+                    duration_ms = max(1, int(axis.get("durationMs", 1000)))
+                    phase = float(axis.get("phase", 0))
+                except (TypeError, ValueError):
+                    continue
+                normalized_channel[axis_key] = {
+                    "amplitude": amplitude,
+                    "durationMs": duration_ms,
+                    "phase": phase,
+                }
+            if normalized_channel:
+                motion_channels[str(channel_key)] = normalized_channel
+
+    slot_groups = dict(COMPANION_DEFAULT_SLOT_GROUPS)
+    payload_slot_groups = payload.get("slotGroups")
+    if isinstance(payload_slot_groups, dict):
+        for slot_key, group in payload_slot_groups.items():
+            if slot_key in COMPANION_SLOT_ORDER and group:
+                slot_groups[str(slot_key)] = str(group)
+
+    try:
+        rig_width = max(1, int(payload.get("width", default_rig["width"])))
+        rig_height = max(1, int(payload.get("height", default_rig["height"])))
+    except (TypeError, ValueError):
+        rig_width = default_rig["width"]
+        rig_height = default_rig["height"]
+
+    return {
+        "width": rig_width,
+        "height": rig_height,
+        "parts": normalized_parts,
+        "layers": normalized_layers,
+        "slotGroups": slot_groups,
+        "motionChannels": motion_channels,
+    }
+
+
 def resolve_companion_layer_specs(connection: sqlite3.Connection, loadout: dict[str, str | None]) -> list[dict[str, Any]]:
     layers: list[dict[str, Any]] = []
     catalog = companion_catalog_map(connection)
@@ -665,29 +945,61 @@ def resolve_companion_layer_specs(connection: sqlite3.Connection, loadout: dict[
             {
                 "key": "body-back",
                 "role": "body-back",
+                "slot": "body",
                 "relativePath": str(body_item["back_asset_path"]),
                 "zIndex": 10,
             }
         )
 
-    layers.append(
-        {
-            "key": "base",
-            "role": "base",
-            "relativePath": companion_base_asset_path(connection),
-            "zIndex": 20,
-        }
+    base_path = companion_base_asset_path(connection)
+    base_animation = companion_asset_animation(base_path)
+    base_source_width, base_source_height = companion_animation_source_dimensions(base_animation)
+    base_rig = companion_asset_rig(
+        base_path,
+        source_width=base_source_width,
+        source_height=base_source_height,
     )
+    rig_layers = [layer for layer in base_rig.get("layers", []) if isinstance(layer, dict)]
+    if rig_layers:
+        for rig_layer in rig_layers:
+            layers.append(
+                {
+                    "key": str(rig_layer["key"]),
+                    "role": str(rig_layer["role"]),
+                    "slot": None,
+                    "relativePath": str(rig_layer["relativePath"]),
+                    "zIndex": int(rig_layer["zIndex"]),
+                    "motionGroup": rig_layer.get("motionGroup"),
+                }
+            )
+    else:
+        layers.append(
+            {
+                "key": "base",
+                "role": "base",
+                "slot": None,
+                "relativePath": base_path,
+                "zIndex": 20,
+                "motionGroup": None,
+            }
+        )
 
-    for index, slot in enumerate(("neck", "face", "hat"), start=1):
+    slot_z_indices = {
+        "neck": 30,
+        "face": 45,
+        "hat": 55,
+    }
+    for slot in ("neck", "face", "hat"):
         item = catalog.get(loadout.get(slot) or "")
         if item and item["front_asset_path"]:
             layers.append(
                 {
                     "key": f"{slot}-front",
                     "role": f"{slot}-front",
+                    "slot": slot,
                     "relativePath": str(item["front_asset_path"]),
-                    "zIndex": 20 + (index * 10),
+                    "zIndex": slot_z_indices[slot],
+                    "motionGroup": None,
                 }
             )
 
@@ -696,8 +1008,10 @@ def resolve_companion_layer_specs(connection: sqlite3.Connection, loadout: dict[
             {
                 "key": "body-front",
                 "role": "body-front",
+                "slot": "body",
                 "relativePath": str(body_item["front_asset_path"]),
-                "zIndex": 60,
+                "zIndex": 65,
+                "motionGroup": None,
             }
         )
 
@@ -705,28 +1019,69 @@ def resolve_companion_layer_specs(connection: sqlite3.Connection, loadout: dict[
 
 
 def companion_render_manifest(connection: sqlite3.Connection, loadout: dict[str, str | None]) -> dict[str, Any]:
+    base_path = companion_base_asset_path(connection)
+    base_animation = companion_asset_animation(base_path)
+    base_source_width, base_source_height = companion_animation_source_dimensions(base_animation)
+    base_rig = companion_asset_rig(
+        base_path,
+        source_width=base_source_width,
+        source_height=base_source_height,
+    )
+    manifest_width = max(COMPANION_CANVAS_SIZE, int(base_rig["width"]))
+    manifest_height = max(COMPANION_CANVAS_SIZE, int(base_rig["height"]))
     layers = []
     for layer in resolve_companion_layer_specs(connection, loadout):
         src = companion_asset_url(layer["relativePath"])
         if not src:
             continue
+        animation = base_animation if layer["relativePath"] == base_path else companion_asset_animation(layer["relativePath"])
+        source_width, source_height = companion_animation_source_dimensions(animation)
+        manifest_width = max(manifest_width, source_width)
+        manifest_height = max(manifest_height, source_height)
+        slot = layer.get("slot")
+        motion_group = layer.get("motionGroup")
+        if not motion_group and slot:
+            motion_group = base_rig["slotGroups"].get(slot)
+        slices = []
+        if layer["role"] == "base":
+            for part in base_rig["parts"]:
+                source = part["source"]
+                target = part["target"]
+                slices.append(
+                    {
+                        "key": str(part["key"]),
+                        "sourceX": int(source["x"]),
+                        "sourceY": int(source["y"]),
+                        "sourceWidth": int(source["width"]),
+                        "sourceHeight": int(source["height"]),
+                        "targetX": int(target["x"]),
+                        "targetY": int(target["y"]),
+                        "targetWidth": int(target["width"]),
+                        "targetHeight": int(target["height"]),
+                        "motionGroup": part.get("motionGroup"),
+                    }
+                )
         layers.append(
             {
                 "key": layer["key"],
                 "role": layer["role"],
                 "src": src,
                 "zIndex": int(layer["zIndex"]),
-                "animation": companion_asset_animation(layer["relativePath"]),
+                "animation": animation,
+                "slot": slot,
+                "motionGroup": motion_group,
+                "slices": slices,
             }
         )
 
     return {
-        "width": COMPANION_CANVAS_SIZE,
-        "height": COMPANION_CANVAS_SIZE,
+        "width": manifest_width,
+        "height": manifest_height,
         "motion": {
-            "bobAmplitudePx": COMPANION_DEFAULT_BOB_AMPLITUDE_PX,
-            "bobDurationMs": COMPANION_DEFAULT_BOB_DURATION_MS,
             "shadowOpacity": COMPANION_DEFAULT_SHADOW_OPACITY,
+            "rootGroup": "root",
+            "channels": base_rig["motionChannels"],
+            "slotGroups": base_rig["slotGroups"],
         },
         "layers": layers,
     }

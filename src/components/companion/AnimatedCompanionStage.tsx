@@ -4,15 +4,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   CompanionAnimationFrame,
-  CompanionLayerAnimation,
+  CompanionMotionChannel,
+  CompanionMotionWave,
   CompanionRenderLayer,
   CompanionRenderManifest,
+  CompanionRenderSlice,
 } from '@/lib/types';
-
-type LoadedLayer = {
-  image: HTMLImageElement;
-  layer: CompanionRenderLayer;
-};
 
 type AnimatedCompanionStageProps = {
   manifest?: CompanionRenderManifest | null;
@@ -21,42 +18,45 @@ type AnimatedCompanionStageProps = {
   className?: string;
 };
 
-function loadImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new window.Image();
-    image.decoding = 'async';
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`Unable to load stage asset: ${src}`));
-    image.src = src;
-  });
+type StageOffset = {
+  x: number;
+  y: number;
+};
+
+type StagePiece = {
+  key: string;
+  src: string;
+  zIndex: number;
+  motionGroup?: string | null;
+  animation: CompanionRenderLayer['animation'];
+  slice?: CompanionRenderSlice;
+};
+
+function roundPx(value: number) {
+  return Math.round(value);
 }
 
-function resolveFrames(animation: CompanionLayerAnimation): CompanionAnimationFrame[] {
-  if (animation.frames?.length) return animation.frames;
+function currentFrame(layer: StagePiece, elapsedMs: number, reducedMotion: boolean) {
+  const frames = layer.animation.frames?.length
+    ? layer.animation.frames
+    : Array.from({ length: Math.max(1, layer.animation.frameCount) }, (_, index) => ({
+      x: index * layer.animation.frameWidth,
+      y: 0,
+      width: layer.animation.frameWidth,
+      height: layer.animation.frameHeight,
+      durationMs: layer.animation.fps > 0 ? Math.round(1000 / layer.animation.fps) : 1000,
+      offsetX: 0,
+      offsetY: 0,
+      sourceWidth: layer.animation.frameWidth,
+      sourceHeight: layer.animation.frameHeight,
+    }));
 
-  const frameDuration = animation.fps > 0 ? Math.round(1000 / animation.fps) : 1000;
-  return Array.from({ length: Math.max(1, animation.frameCount) }, (_, index) => ({
-    x: index * animation.frameWidth,
-    y: 0,
-    width: animation.frameWidth,
-    height: animation.frameHeight,
-    durationMs: frameDuration,
-    offsetX: 0,
-    offsetY: 0,
-    sourceWidth: animation.frameWidth,
-    sourceHeight: animation.frameHeight,
-  }));
-}
-
-function currentFrame(layer: CompanionRenderLayer, elapsedMs: number, reducedMotion: boolean) {
-  const { animation } = layer;
-  const frames = resolveFrames(animation);
-  if (reducedMotion || animation.mode !== 'spritesheet' || frames.length <= 1) {
+  if (reducedMotion || layer.animation.mode !== 'spritesheet' || frames.length <= 1) {
     return frames[0];
   }
 
   const totalDuration = frames.reduce((sum, frame) => sum + Math.max(1, frame.durationMs), 0);
-  const playbackTime = animation.loop
+  const playbackTime = layer.animation.loop
     ? elapsedMs % totalDuration
     : Math.min(elapsedMs, Math.max(0, totalDuration - 1));
 
@@ -65,46 +65,29 @@ function currentFrame(layer: CompanionRenderLayer, elapsedMs: number, reducedMot
     cursor -= Math.max(1, frame.durationMs);
     if (cursor < 0) return frame;
   }
-
   return frames[frames.length - 1];
 }
 
-function drawLayer(
-  context: CanvasRenderingContext2D,
-  image: HTMLImageElement,
-  layer: CompanionRenderLayer,
-  elapsedMs: number,
-  reducedMotion: boolean,
-  width: number,
-  height: number,
-) {
-  const frame = currentFrame(layer, elapsedMs, reducedMotion);
-  const { animation } = layer;
+function resolveAxisOffset(wave: CompanionMotionWave | undefined, elapsedMs: number, reducedMotion: boolean) {
+  if (reducedMotion || !wave || wave.amplitude === 0 || wave.durationMs <= 0) return 0;
+  const phase = (wave.phase ?? 0) * Math.PI * 2;
+  return Math.sin((elapsedMs / wave.durationMs) * Math.PI * 2 + phase) * wave.amplitude;
+}
 
-  if (!frame || animation.mode !== 'spritesheet' || animation.frameCount <= 1) {
-    context.drawImage(image, 0, 0, image.naturalWidth || width, image.naturalHeight || height, 0, 0, width, height);
-    return;
-  }
+function resolveChannelOffset(channel: CompanionMotionChannel | undefined, elapsedMs: number, reducedMotion: boolean): StageOffset {
+  return {
+    x: resolveAxisOffset(channel?.offsetX, elapsedMs, reducedMotion),
+    y: resolveAxisOffset(channel?.offsetY, elapsedMs, reducedMotion),
+  };
+}
 
-  const sourceWidth = Math.max(1, frame.sourceWidth ?? frame.width);
-  const sourceHeight = Math.max(1, frame.sourceHeight ?? frame.height);
-  const scaleX = width / sourceWidth;
-  const scaleY = height / sourceHeight;
-  const destX = (frame.offsetX ?? 0) * scaleX;
-  const destY = (frame.offsetY ?? 0) * scaleY;
-  const destWidth = frame.width * scaleX;
-  const destHeight = frame.height * scaleY;
-
-  context.drawImage(
-    image,
-    frame.x,
-    frame.y,
-    frame.width,
-    frame.height,
-    destX,
-    destY,
-    destWidth,
-    destHeight,
+function addOffsets(...offsets: Array<StageOffset | undefined>): StageOffset {
+  return offsets.reduce<StageOffset>(
+    (sum, offset) => ({
+      x: sum.x + (offset?.x ?? 0),
+      y: sum.y + (offset?.y ?? 0),
+    }),
+    { x: 0, y: 0 },
   );
 }
 
@@ -114,19 +97,44 @@ export function AnimatedCompanionStage({
   alt,
   className,
 }: AnimatedCompanionStageProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [loadedLayers, setLoadedLayers] = useState<LoadedLayer[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  const pieceRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const shadowRef = useRef<HTMLDivElement | null>(null);
 
-  const layers = useMemo(
-    () => [...(manifest?.layers ?? [])].sort((left, right) => left.zIndex - right.zIndex),
+  const logicalWidth = Math.max(1, manifest?.width || 32);
+  const logicalHeight = Math.max(1, manifest?.height || 32);
+  const stageScale = logicalWidth >= 210 || logicalHeight >= 210 ? 1 : 3;
+  const stageWidth = logicalWidth * stageScale;
+  const stageHeight = logicalHeight * stageScale;
+
+  const pieces = useMemo<StagePiece[]>(
+    () => (manifest?.layers ?? [])
+      .slice()
+      .sort((left, right) => left.zIndex - right.zIndex)
+      .flatMap((layer) => {
+        if (layer.slices?.length) {
+          return layer.slices.map((slice, index) => ({
+            key: `${layer.key}:${slice.key || index}`,
+            src: layer.src,
+            zIndex: layer.zIndex,
+            motionGroup: slice.motionGroup ?? layer.motionGroup,
+            animation: layer.animation,
+            slice,
+          }));
+        }
+        return [{
+          key: layer.key,
+          src: layer.src,
+          zIndex: layer.zIndex,
+          motionGroup: layer.motionGroup,
+          animation: layer.animation,
+        }];
+      }),
     [manifest],
   );
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     const sync = () => setPrefersReducedMotion(mediaQuery.matches);
     sync();
@@ -145,93 +153,149 @@ export function AnimatedCompanionStage({
   }, []);
 
   useEffect(() => {
-    if (!layers.length) {
-      setLoadedLayers(null);
-      setFailed(false);
-      return;
-    }
-
-    let cancelled = false;
-    setLoadedLayers(null);
-    setFailed(false);
-
-    Promise.all(
-      layers.map(async (layer) => ({
-        layer,
-        image: await loadImage(layer.src),
-      })),
-    )
-      .then((nextLayers) => {
-        if (cancelled) return;
-        setLoadedLayers(nextLayers);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setFailed(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [layers]);
-
-  useEffect(() => {
-    if (!manifest || !loadedLayers?.length || failed) return undefined;
-
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext('2d');
-    if (!canvas || !context) return undefined;
-
-    const width = manifest.width || 32;
-    const height = manifest.height || 32;
-    const motion = manifest.motion;
-
-    canvas.width = width;
-    canvas.height = height;
-    context.imageSmoothingEnabled = false;
+    if (!manifest || !pieces.length) return undefined;
 
     let frameId = 0;
     const startTime = performance.now();
+    const rootKey = manifest.motion.rootGroup || 'root';
 
     const render = (timestamp: number) => {
       const elapsedMs = timestamp - startTime;
-      const bobDurationMs = Math.max(600, motion?.bobDurationMs ?? 2200);
-      const bobAmplitude = prefersReducedMotion ? 0 : (motion?.bobAmplitudePx ?? 1.15);
-      const bobOffset = bobAmplitude ? Math.sin((elapsedMs / bobDurationMs) * Math.PI * 2) * bobAmplitude : 0;
-      const bobRatio = bobAmplitude ? bobOffset / bobAmplitude : 0;
-      const shadowOpacity = motion?.shadowOpacity ?? 0.2;
+      const rootOffset = resolveChannelOffset(manifest.motion.channels?.[rootKey], elapsedMs, prefersReducedMotion);
+      const bodyOffset = addOffsets(rootOffset, resolveChannelOffset(manifest.motion.channels?.body, elapsedMs, prefersReducedMotion));
+      const headOffset = addOffsets(rootOffset, resolveChannelOffset(manifest.motion.channels?.head, elapsedMs, prefersReducedMotion));
 
-      context.clearRect(0, 0, width, height);
-      context.fillStyle = `rgba(9, 8, 17, ${Math.max(0.08, shadowOpacity - (bobRatio * 0.05))})`;
-      context.beginPath();
-      context.ellipse(
-        width * 0.5,
-        height - 3,
-        width * (0.25 - (bobRatio * 0.02)),
-        height * (0.05 - (bobRatio * 0.005)),
-        0,
-        0,
-        Math.PI * 2,
-      );
-      context.fill();
+      const resolveGroupOffset = (group: string | null | undefined) => {
+        if (!group || group === rootKey) return rootOffset;
+        if (group === 'body') return bodyOffset;
+        if (group === 'head') return headOffset;
+        return addOffsets(rootOffset, resolveChannelOffset(manifest.motion.channels?.[group], elapsedMs, prefersReducedMotion));
+      };
 
-      context.save();
-      context.translate(0, -bobOffset);
-      loadedLayers.forEach(({ image, layer }) => {
-        drawLayer(context, image, layer, elapsedMs, prefersReducedMotion, width, height);
+      if (shadowRef.current) {
+        const shadowBias = (rootOffset.y + bodyOffset.y) * 0.12;
+        shadowRef.current.style.transform = `translate(${roundPx(rootOffset.x * stageScale)}px, ${roundPx(rootOffset.y * stageScale)}px) scale(${Math.max(0.8, 1 - shadowBias * 0.02)})`;
+        shadowRef.current.style.opacity = `${Math.max(0.12, (manifest.motion.shadowOpacity ?? 0.2) - shadowBias * 0.03)}`;
+      }
+
+      pieces.forEach((piece) => {
+        const node = pieceRefs.current[piece.key];
+        if (!node) return;
+
+        const frame = currentFrame(piece, elapsedMs, prefersReducedMotion);
+        const offset = resolveGroupOffset(piece.motionGroup);
+        const sourceWidth = Math.max(1, frame.sourceWidth ?? frame.width);
+        const sourceHeight = Math.max(1, frame.sourceHeight ?? frame.height);
+        const sheetWidth = Math.max(sourceWidth, piece.animation.sheetWidth ?? sourceWidth);
+        const sheetHeight = Math.max(sourceHeight, piece.animation.sheetHeight ?? sourceHeight);
+
+        let left = (frame.offsetX ?? 0);
+        let top = (frame.offsetY ?? 0);
+        let width = sourceWidth;
+        let height = sourceHeight;
+        let backgroundPositionX = -frame.x + (frame.offsetX ?? 0);
+        let backgroundPositionY = -frame.y + (frame.offsetY ?? 0);
+
+        if (piece.slice) {
+          left = piece.slice.targetX;
+          top = piece.slice.targetY;
+          width = piece.slice.targetWidth;
+          height = piece.slice.targetHeight;
+          backgroundPositionX = -(frame.x + piece.slice.sourceX);
+          backgroundPositionY = -(frame.y + piece.slice.sourceY);
+        }
+
+        node.style.left = `${roundPx(left * stageScale)}px`;
+        node.style.top = `${roundPx(top * stageScale)}px`;
+        node.style.width = `${roundPx(width * stageScale)}px`;
+        node.style.height = `${roundPx(height * stageScale)}px`;
+        node.style.transform = `translate(${roundPx(offset.x * stageScale)}px, ${roundPx(offset.y * stageScale)}px)`;
+        node.style.backgroundPosition = `${roundPx(backgroundPositionX * stageScale)}px ${roundPx(backgroundPositionY * stageScale)}px`;
+        node.style.backgroundSize = `${roundPx(sheetWidth * stageScale)}px ${roundPx(sheetHeight * stageScale)}px`;
       });
-      context.restore();
 
       frameId = window.requestAnimationFrame(render);
     };
 
     frameId = window.requestAnimationFrame(render);
     return () => window.cancelAnimationFrame(frameId);
-  }, [failed, loadedLayers, manifest, prefersReducedMotion]);
+  }, [manifest, pieces, prefersReducedMotion, stageScale]);
 
-  if (!manifest || !layers.length || failed || !loadedLayers?.length) {
-    return <img src={fallbackSrc} alt={alt} className={className} />;
+  if (!manifest || !pieces.length) {
+    return (
+      <div
+        className={className}
+        style={{
+          width: `${stageWidth}px`,
+          height: `${stageHeight}px`,
+          display: 'grid',
+          placeItems: 'center',
+          flex: '0 0 auto',
+        }}
+      >
+        <img
+          src={fallbackSrc}
+          alt={alt}
+          style={{ width: `${stageWidth}px`, height: `${stageHeight}px`, display: 'block', objectFit: 'contain' }}
+        />
+      </div>
+    );
   }
 
-  return <canvas ref={canvasRef} className={className} role="img" aria-label={alt} />;
+  return (
+    <div
+      className={className}
+      style={{
+        width: `${stageWidth}px`,
+        height: `${stageHeight}px`,
+        display: 'grid',
+        placeItems: 'center',
+        overflow: 'visible',
+        flex: '0 0 auto',
+      }}
+    >
+      <div
+        role="img"
+        aria-label={alt}
+        style={{
+          position: 'relative',
+          width: `${stageWidth}px`,
+          height: `${stageHeight}px`,
+          overflow: 'visible',
+        }}
+      >
+        <div
+          ref={shadowRef}
+          style={{
+            position: 'absolute',
+            left: `${logicalWidth * stageScale * 0.28}px`,
+            top: `${logicalHeight * stageScale * 0.88}px`,
+            width: `${logicalWidth * stageScale * 0.44}px`,
+            height: `${logicalHeight * stageScale * 0.08}px`,
+            borderRadius: '999px',
+            background: 'rgba(9, 8, 17, 0.2)',
+            transformOrigin: 'center',
+          }}
+        />
+        {pieces.map((piece) => (
+          <div
+            key={piece.key}
+            ref={(node) => {
+              pieceRefs.current[piece.key] = node;
+            }}
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              zIndex: piece.zIndex,
+              backgroundImage: `url("${piece.src}")`,
+              backgroundRepeat: 'no-repeat',
+              imageRendering: 'pixelated',
+              willChange: 'transform, background-position',
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
