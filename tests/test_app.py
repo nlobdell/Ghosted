@@ -59,6 +59,62 @@ GROUP = {
     "score": 9001,
     "verified": True,
     "updatedAt": "2026-04-02T02:00:00Z",
+    "memberships": [
+        {
+            "playerId": 1,
+            "groupId": 123,
+            "role": "leader",
+            "rankOrder": 1,
+            "createdAt": "2026-04-01T00:00:00Z",
+            "updatedAt": "2026-04-02T00:00:00Z",
+            "player": {
+                "id": 1,
+                "username": "vghosted",
+                "displayName": "vghosted",
+                "type": "regular",
+                "build": "main",
+                "status": "active",
+                "exp": 300000000,
+                "updatedAt": "2026-04-02T00:00:00Z",
+            },
+        },
+        {
+            "playerId": 2,
+            "groupId": 123,
+            "role": "event_captain",
+            "rankOrder": 4,
+            "createdAt": "2026-04-01T00:00:00Z",
+            "updatedAt": "2026-04-02T00:00:00Z",
+            "player": {
+                "id": 2,
+                "username": "GhostedRSN",
+                "displayName": "Ghosted RSN",
+                "type": "regular",
+                "build": "main",
+                "status": "active",
+                "exp": 123456789,
+                "updatedAt": "2026-04-02T00:00:00Z",
+            },
+        },
+        {
+            "playerId": 3,
+            "groupId": 123,
+            "role": "member",
+            "rankOrder": 99,
+            "createdAt": "2026-04-01T00:00:00Z",
+            "updatedAt": "2026-04-02T00:00:00Z",
+            "player": {
+                "id": 3,
+                "username": "newrecruit",
+                "displayName": "New Recruit",
+                "type": "regular",
+                "build": "ironman",
+                "status": "active",
+                "exp": 50000000,
+                "updatedAt": "2026-04-02T00:00:00Z",
+            },
+        },
+    ],
 }
 
 GROUP_STATS = {
@@ -424,6 +480,19 @@ class GhostedAppTests(unittest.TestCase):
         self.assertEqual(handler.status, 200)
         self.assertIn("<svg", handler.payload)
         self.assertIn("data:image/svg+xml;base64", handler.payload)
+
+    @patch("server.wom_cached_json")
+    def test_wom_group_roster_payload_includes_all_members_and_rank_labels(self, wom_cached_json):
+        wom_cached_json.return_value = GROUP
+        payload = server.wom_group_roster_payload(self.connection)
+
+        self.assertEqual(payload["group"]["memberCount"], GROUP["memberCount"])
+        self.assertEqual(len(payload["entries"]), 3)
+        self.assertEqual(payload["entries"][0]["player"]["username"], "vghosted")
+        self.assertEqual(payload["entries"][0]["roleKey"], "leader")
+        self.assertEqual(payload["entries"][0]["rankLabel"], "Leader")
+        self.assertEqual(payload["entries"][1]["rankLabel"], "Event Captain")
+        self.assertEqual(payload["entries"][2]["player"]["build"], "ironman")
 
     @patch("server.wom_cached_json")
     @patch("server.wom_request_json")

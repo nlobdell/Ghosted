@@ -1,0 +1,1622 @@
+{
+  "achiever": {
+    "label": "Achiever",
+    "file": "/symbols/clan-ranks/achiever.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Achiever.png?45aef",
+    "wikiTitle": "File:Clan icon - Achiever.png"
+  },
+  "adamant": {
+    "label": "Adamant",
+    "file": "/symbols/clan-ranks/adamant.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Adamant.png?68cb9",
+    "wikiTitle": "File:Clan icon - Adamant.png"
+  },
+  "adept": {
+    "label": "Adept",
+    "file": "/symbols/clan-ranks/adept.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Adept.png?ceadb",
+    "wikiTitle": "File:Clan icon - Adept.png"
+  },
+  "administrator": {
+    "label": "Administrator",
+    "file": "/symbols/clan-ranks/administrator.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Administrator.png?9dc78",
+    "wikiTitle": "File:Clan icon - Administrator.png"
+  },
+  "admiral": {
+    "label": "Admiral",
+    "file": "/symbols/clan-ranks/admiral.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Admiral.png?ef183",
+    "wikiTitle": "File:Clan icon - Admiral.png"
+  },
+  "adventurer": {
+    "label": "Adventurer",
+    "file": "/symbols/clan-ranks/adventurer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Adventurer.png?3630c",
+    "wikiTitle": "File:Clan icon - Adventurer.png"
+  },
+  "air": {
+    "label": "Air",
+    "file": "/symbols/clan-ranks/air.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Air.png?b0561",
+    "wikiTitle": "File:Clan icon - Air.png"
+  },
+  "anchor": {
+    "label": "Anchor",
+    "file": "/symbols/clan-ranks/anchor.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Anchor.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Anchor.png"
+  },
+  "apothecary": {
+    "label": "Apothecary",
+    "file": "/symbols/clan-ranks/apothecary.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Apothecary.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Apothecary.png"
+  },
+  "archer": {
+    "label": "Archer",
+    "file": "/symbols/clan-ranks/archer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Archer.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Archer.png"
+  },
+  "armadylean": {
+    "label": "Armadylean",
+    "file": "/symbols/clan-ranks/armadylean.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Armadylean.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Armadylean.png"
+  },
+  "artillery": {
+    "label": "Artillery",
+    "file": "/symbols/clan-ranks/artillery.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Artillery.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Artillery.png"
+  },
+  "artisan": {
+    "label": "Artisan",
+    "file": "/symbols/clan-ranks/artisan.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Artisan.png?12a48",
+    "wikiTitle": "File:Clan icon - Artisan.png"
+  },
+  "asgarnian": {
+    "label": "Asgarnian",
+    "file": "/symbols/clan-ranks/asgarnian.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Asgarnian.png?6c963",
+    "wikiTitle": "File:Clan icon - Asgarnian.png"
+  },
+  "assassin": {
+    "label": "Assassin",
+    "file": "/symbols/clan-ranks/assassin.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Assassin.png?53696",
+    "wikiTitle": "File:Clan icon - Assassin.png"
+  },
+  "assistant": {
+    "label": "Assistant",
+    "file": "/symbols/clan-ranks/assistant.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Assistant.png?f8e3e",
+    "wikiTitle": "File:Clan icon - Assistant.png"
+  },
+  "astral": {
+    "label": "Astral",
+    "file": "/symbols/clan-ranks/astral.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Astral.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Astral.png"
+  },
+  "athlete": {
+    "label": "Athlete",
+    "file": "/symbols/clan-ranks/athlete.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Athlete.png?6c963",
+    "wikiTitle": "File:Clan icon - Athlete.png"
+  },
+  "attacker": {
+    "label": "Attacker",
+    "file": "/symbols/clan-ranks/attacker.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Attacker.png?6c963",
+    "wikiTitle": "File:Clan icon - Attacker.png"
+  },
+  "bandit": {
+    "label": "Bandit",
+    "file": "/symbols/clan-ranks/bandit.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Bandit.png?53696",
+    "wikiTitle": "File:Clan icon - Bandit.png"
+  },
+  "bandosian": {
+    "label": "Bandosian",
+    "file": "/symbols/clan-ranks/bandosian.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Bandosian.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Bandosian.png"
+  },
+  "barbarian": {
+    "label": "Barbarian",
+    "file": "/symbols/clan-ranks/barbarian.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Barbarian.png?f92d8",
+    "wikiTitle": "File:Clan icon - Barbarian.png"
+  },
+  "battlemage": {
+    "label": "Battlemage",
+    "file": "/symbols/clan-ranks/battlemage.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Battlemage.png?17ffa",
+    "wikiTitle": "File:Clan icon - Battlemage.png"
+  },
+  "beast": {
+    "label": "Beast",
+    "file": "/symbols/clan-ranks/beast.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Beast.png?53696",
+    "wikiTitle": "File:Clan icon - Beast.png"
+  },
+  "berserker": {
+    "label": "Berserker",
+    "file": "/symbols/clan-ranks/berserker.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Berserker.png?f92d8",
+    "wikiTitle": "File:Clan icon - Berserker.png"
+  },
+  "blisterwood": {
+    "label": "Blisterwood",
+    "file": "/symbols/clan-ranks/blisterwood.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Blisterwood.png?53696",
+    "wikiTitle": "File:Clan icon - Blisterwood.png"
+  },
+  "blood": {
+    "label": "Blood",
+    "file": "/symbols/clan-ranks/blood.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Blood.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Blood.png"
+  },
+  "blue": {
+    "label": "Blue",
+    "file": "/symbols/clan-ranks/blue.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Blue.png?ceadb",
+    "wikiTitle": "File:Clan icon - Blue.png"
+  },
+  "bob": {
+    "label": "Bob",
+    "file": "/symbols/clan-ranks/bob.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Bob.png?53696",
+    "wikiTitle": "File:Clan icon - Bob.png"
+  },
+  "body": {
+    "label": "Body",
+    "file": "/symbols/clan-ranks/body.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Body.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Body.png"
+  },
+  "brassican": {
+    "label": "Brassican",
+    "file": "/symbols/clan-ranks/brassican.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Brassican.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Brassican.png"
+  },
+  "brawler": {
+    "label": "Brawler",
+    "file": "/symbols/clan-ranks/brawler.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Brawler.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Brawler.png"
+  },
+  "brigadier": {
+    "label": "Brigadier",
+    "file": "/symbols/clan-ranks/brigadier.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Brigadier.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Brigadier.png"
+  },
+  "brigand": {
+    "label": "Brigand",
+    "file": "/symbols/clan-ranks/brigand.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Brigand.png?ceadb",
+    "wikiTitle": "File:Clan icon - Brigand.png"
+  },
+  "bronze": {
+    "label": "Bronze",
+    "file": "/symbols/clan-ranks/bronze.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Bronze.png?a6946",
+    "wikiTitle": "File:Clan icon - Bronze.png"
+  },
+  "bruiser": {
+    "label": "Bruiser",
+    "file": "/symbols/clan-ranks/bruiser.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Bruiser.png?6c963",
+    "wikiTitle": "File:Clan icon - Bruiser.png"
+  },
+  "bulwark": {
+    "label": "Bulwark",
+    "file": "/symbols/clan-ranks/bulwark.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Bulwark.png?f92d8",
+    "wikiTitle": "File:Clan icon - Bulwark.png"
+  },
+  "burglar": {
+    "label": "Burglar",
+    "file": "/symbols/clan-ranks/burglar.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Burglar.png?87d1d",
+    "wikiTitle": "File:Clan icon - Burglar.png"
+  },
+  "burnt": {
+    "label": "Burnt",
+    "file": "/symbols/clan-ranks/burnt.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Burnt.png?e2054",
+    "wikiTitle": "File:Clan icon - Burnt.png"
+  },
+  "cadet": {
+    "label": "Cadet",
+    "file": "/symbols/clan-ranks/cadet.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Cadet.png?b0561",
+    "wikiTitle": "File:Clan icon - Cadet.png"
+  },
+  "captain": {
+    "label": "Captain",
+    "file": "/symbols/clan-ranks/captain.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Captain.png?b0561",
+    "wikiTitle": "File:Clan icon - Captain.png"
+  },
+  "carry": {
+    "label": "Carry",
+    "file": "/symbols/clan-ranks/carry.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Carry.png?53696",
+    "wikiTitle": "File:Clan icon - Carry.png"
+  },
+  "champion": {
+    "label": "Champion",
+    "file": "/symbols/clan-ranks/champion.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Champion.png?53696",
+    "wikiTitle": "File:Clan icon - Champion.png"
+  },
+  "chaos": {
+    "label": "Chaos",
+    "file": "/symbols/clan-ranks/chaos.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Chaos.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Chaos.png"
+  },
+  "cleric": {
+    "label": "Cleric",
+    "file": "/symbols/clan-ranks/cleric.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Cleric.png?fca27",
+    "wikiTitle": "File:Clan icon - Cleric.png"
+  },
+  "collector": {
+    "label": "Collector",
+    "file": "/symbols/clan-ranks/collector.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Collector.png?f92d8",
+    "wikiTitle": "File:Clan icon - Collector.png"
+  },
+  "colonel": {
+    "label": "Colonel",
+    "file": "/symbols/clan-ranks/colonel.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Colonel.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Colonel.png"
+  },
+  "commander": {
+    "label": "Commander",
+    "file": "/symbols/clan-ranks/commander.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Commander.png?53696",
+    "wikiTitle": "File:Clan icon - Commander.png"
+  },
+  "competitor": {
+    "label": "Competitor",
+    "file": "/symbols/clan-ranks/competitor.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Competitor.png?6c963",
+    "wikiTitle": "File:Clan icon - Competitor.png"
+  },
+  "completionist": {
+    "label": "Completionist",
+    "file": "/symbols/clan-ranks/completionist.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Completionist.png?5e8ed",
+    "wikiTitle": "File:Clan icon - Completionist.png"
+  },
+  "constructor": {
+    "label": "Constructor",
+    "file": "/symbols/clan-ranks/constructor.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Constructor.png?6c963",
+    "wikiTitle": "File:Clan icon - Constructor.png"
+  },
+  "cook": {
+    "label": "Cook",
+    "file": "/symbols/clan-ranks/cook.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Cook.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Cook.png"
+  },
+  "coordinator": {
+    "label": "Coordinator",
+    "file": "/symbols/clan-ranks/coordinator.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Coordinator.png?f8e3e",
+    "wikiTitle": "File:Clan icon - Coordinator.png"
+  },
+  "corporal": {
+    "label": "Corporal",
+    "file": "/symbols/clan-ranks/corporal.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Corporal.png?b0561",
+    "wikiTitle": "File:Clan icon - Corporal.png"
+  },
+  "cosmic": {
+    "label": "Cosmic",
+    "file": "/symbols/clan-ranks/cosmic.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Cosmic.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Cosmic.png"
+  },
+  "councillor": {
+    "label": "Councillor",
+    "file": "/symbols/clan-ranks/councillor.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Councillor.png?8cf0a",
+    "wikiTitle": "File:Clan icon - Councillor.png"
+  },
+  "crafter": {
+    "label": "Crafter",
+    "file": "/symbols/clan-ranks/crafter.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Crafter.png?6c963",
+    "wikiTitle": "File:Clan icon - Crafter.png"
+  },
+  "crew": {
+    "label": "Crew",
+    "file": "/symbols/clan-ranks/crew.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Crew.png?6c963",
+    "wikiTitle": "File:Clan icon - Crew.png"
+  },
+  "crusader": {
+    "label": "Crusader",
+    "file": "/symbols/clan-ranks/crusader.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Crusader.png?87d1d",
+    "wikiTitle": "File:Clan icon - Crusader.png"
+  },
+  "cutpurse": {
+    "label": "Cutpurse",
+    "file": "/symbols/clan-ranks/cutpurse.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Cutpurse.png?53696",
+    "wikiTitle": "File:Clan icon - Cutpurse.png"
+  },
+  "death": {
+    "label": "Death",
+    "file": "/symbols/clan-ranks/death.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Death.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Death.png"
+  },
+  "defender": {
+    "label": "Defender",
+    "file": "/symbols/clan-ranks/defender.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Defender.png?f92d8",
+    "wikiTitle": "File:Clan icon - Defender.png"
+  },
+  "defiler": {
+    "label": "Defiler",
+    "file": "/symbols/clan-ranks/defiler.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Defiler.png?53696",
+    "wikiTitle": "File:Clan icon - Defiler.png"
+  },
+  "deputy-owner": {
+    "label": "Deputy owner",
+    "file": "/symbols/clan-ranks/deputy-owner.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Deputy_owner.png?b0561",
+    "wikiTitle": "File:Clan icon - Deputy owner.png"
+  },
+  "destroyer": {
+    "label": "Destroyer",
+    "file": "/symbols/clan-ranks/destroyer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Destroyer.png?ceadb",
+    "wikiTitle": "File:Clan icon - Destroyer.png"
+  },
+  "diamond": {
+    "label": "Diamond",
+    "file": "/symbols/clan-ranks/diamond.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Diamond.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Diamond.png"
+  },
+  "diseased": {
+    "label": "Diseased",
+    "file": "/symbols/clan-ranks/diseased.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Diseased.png?b0561",
+    "wikiTitle": "File:Clan icon - Diseased.png"
+  },
+  "doctor": {
+    "label": "Doctor",
+    "file": "/symbols/clan-ranks/doctor.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Doctor.png?45271",
+    "wikiTitle": "File:Clan icon - Doctor.png"
+  },
+  "dogsbody": {
+    "label": "Dogsbody",
+    "file": "/symbols/clan-ranks/dogsbody.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Dogsbody.png?b0561",
+    "wikiTitle": "File:Clan icon - Dogsbody.png"
+  },
+  "dragon": {
+    "label": "Dragon",
+    "file": "/symbols/clan-ranks/dragon.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Dragon.png?5d554",
+    "wikiTitle": "File:Clan icon - Dragon.png"
+  },
+  "dragonstone": {
+    "label": "Dragonstone",
+    "file": "/symbols/clan-ranks/dragonstone.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Dragonstone.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Dragonstone.png"
+  },
+  "druid": {
+    "label": "Druid",
+    "file": "/symbols/clan-ranks/druid.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Druid.png?92040",
+    "wikiTitle": "File:Clan icon - Druid.png"
+  },
+  "duellist": {
+    "label": "Duellist",
+    "file": "/symbols/clan-ranks/duellist.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Duellist.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Duellist.png"
+  },
+  "earth": {
+    "label": "Earth",
+    "file": "/symbols/clan-ranks/earth.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Earth.png?b0561",
+    "wikiTitle": "File:Clan icon - Earth.png"
+  },
+  "elite": {
+    "label": "Elite",
+    "file": "/symbols/clan-ranks/elite.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Elite.png?fb947",
+    "wikiTitle": "File:Clan icon - Elite.png"
+  },
+  "emerald": {
+    "label": "Emerald",
+    "file": "/symbols/clan-ranks/emerald.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Emerald.png?b0561",
+    "wikiTitle": "File:Clan icon - Emerald.png"
+  },
+  "enforcer": {
+    "label": "Enforcer",
+    "file": "/symbols/clan-ranks/enforcer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Enforcer.png?ceadb",
+    "wikiTitle": "File:Clan icon - Enforcer.png"
+  },
+  "epic": {
+    "label": "Epic",
+    "file": "/symbols/clan-ranks/epic.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Epic.png?f3acc",
+    "wikiTitle": "File:Clan icon - Epic.png"
+  },
+  "executive": {
+    "label": "Executive",
+    "file": "/symbols/clan-ranks/executive.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Executive.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Executive.png"
+  },
+  "expert": {
+    "label": "Expert",
+    "file": "/symbols/clan-ranks/expert.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Expert.png?f92d8",
+    "wikiTitle": "File:Clan icon - Expert.png"
+  },
+  "explorer": {
+    "label": "Explorer",
+    "file": "/symbols/clan-ranks/explorer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Explorer.png?3630c",
+    "wikiTitle": "File:Clan icon - Explorer.png"
+  },
+  "farmer": {
+    "label": "Farmer",
+    "file": "/symbols/clan-ranks/farmer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Farmer.png?17ffa",
+    "wikiTitle": "File:Clan icon - Farmer.png"
+  },
+  "feeder": {
+    "label": "Feeder",
+    "file": "/symbols/clan-ranks/feeder.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Feeder.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Feeder.png"
+  },
+  "fighter": {
+    "label": "Fighter",
+    "file": "/symbols/clan-ranks/fighter.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Fighter.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Fighter.png"
+  },
+  "fire": {
+    "label": "Fire",
+    "file": "/symbols/clan-ranks/fire.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Fire.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Fire.png"
+  },
+  "firemaker": {
+    "label": "Firemaker",
+    "file": "/symbols/clan-ranks/firemaker.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Firemaker.png?6c963",
+    "wikiTitle": "File:Clan icon - Firemaker.png"
+  },
+  "firestarter": {
+    "label": "Firestarter",
+    "file": "/symbols/clan-ranks/firestarter.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Firestarter.png?fb947",
+    "wikiTitle": "File:Clan icon - Firestarter.png"
+  },
+  "fisher": {
+    "label": "Fisher",
+    "file": "/symbols/clan-ranks/fisher.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Fisher.png?6c963",
+    "wikiTitle": "File:Clan icon - Fisher.png"
+  },
+  "fletcher": {
+    "label": "Fletcher",
+    "file": "/symbols/clan-ranks/fletcher.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Fletcher.png?6c963",
+    "wikiTitle": "File:Clan icon - Fletcher.png"
+  },
+  "forager": {
+    "label": "Forager",
+    "file": "/symbols/clan-ranks/forager.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Forager.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Forager.png"
+  },
+  "fremennik": {
+    "label": "Fremennik",
+    "file": "/symbols/clan-ranks/fremennik.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Fremennik.png?6c963",
+    "wikiTitle": "File:Clan icon - Fremennik.png"
+  },
+  "gamer": {
+    "label": "Gamer",
+    "file": "/symbols/clan-ranks/gamer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Gamer.png?3630c",
+    "wikiTitle": "File:Clan icon - Gamer.png"
+  },
+  "gatherer": {
+    "label": "Gatherer",
+    "file": "/symbols/clan-ranks/gatherer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Gatherer.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Gatherer.png"
+  },
+  "general": {
+    "label": "General",
+    "file": "/symbols/clan-ranks/general.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_General.png?f7cb3",
+    "wikiTitle": "File:Clan icon - General.png"
+  },
+  "gnome-child": {
+    "label": "Gnome Child",
+    "file": "/symbols/clan-ranks/gnome-child.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Gnome_Child.png?b0561",
+    "wikiTitle": "File:Clan icon - Gnome Child.png"
+  },
+  "gnome-elder": {
+    "label": "Gnome Elder",
+    "file": "/symbols/clan-ranks/gnome-elder.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Gnome_Elder.png?b0561",
+    "wikiTitle": "File:Clan icon - Gnome Elder.png"
+  },
+  "goblin": {
+    "label": "Goblin",
+    "file": "/symbols/clan-ranks/goblin.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Goblin.png?b0561",
+    "wikiTitle": "File:Clan icon - Goblin.png"
+  },
+  "gold": {
+    "label": "Gold",
+    "file": "/symbols/clan-ranks/gold.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Gold.png?f6e6d",
+    "wikiTitle": "File:Clan icon - Gold.png"
+  },
+  "goon": {
+    "label": "Goon",
+    "file": "/symbols/clan-ranks/goon.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Goon.png?f92d8",
+    "wikiTitle": "File:Clan icon - Goon.png"
+  },
+  "green": {
+    "label": "Green",
+    "file": "/symbols/clan-ranks/green.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Green.png?53696",
+    "wikiTitle": "File:Clan icon - Green.png"
+  },
+  "grey": {
+    "label": "Grey",
+    "file": "/symbols/clan-ranks/grey.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Grey.png?53696",
+    "wikiTitle": "File:Clan icon - Grey.png"
+  },
+  "guardian": {
+    "label": "Guardian",
+    "file": "/symbols/clan-ranks/guardian.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Guardian.png?f92d8",
+    "wikiTitle": "File:Clan icon - Guardian.png"
+  },
+  "guest": {
+    "label": "Guest",
+    "file": "/symbols/clan-ranks/guest.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Guest.png?4122f",
+    "wikiTitle": "File:Clan icon - Guest.png"
+  },
+  "guthixian": {
+    "label": "Guthixian",
+    "file": "/symbols/clan-ranks/guthixian.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Guthixian.png?6c963",
+    "wikiTitle": "File:Clan icon - Guthixian.png"
+  },
+  "harpoon": {
+    "label": "Harpoon",
+    "file": "/symbols/clan-ranks/harpoon.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Harpoon.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Harpoon.png"
+  },
+  "healer": {
+    "label": "Healer",
+    "file": "/symbols/clan-ranks/healer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Healer.png?92040",
+    "wikiTitle": "File:Clan icon - Healer.png"
+  },
+  "hellcat": {
+    "label": "Hellcat",
+    "file": "/symbols/clan-ranks/hellcat.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Hellcat.png?b0561",
+    "wikiTitle": "File:Clan icon - Hellcat.png"
+  },
+  "helper": {
+    "label": "Helper",
+    "file": "/symbols/clan-ranks/helper.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Helper.png?939d1",
+    "wikiTitle": "File:Clan icon - Helper.png"
+  },
+  "herbologist": {
+    "label": "Herbologist",
+    "file": "/symbols/clan-ranks/herbologist.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Herbologist.png?6c963",
+    "wikiTitle": "File:Clan icon - Herbologist.png"
+  },
+  "hero": {
+    "label": "Hero",
+    "file": "/symbols/clan-ranks/hero.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Hero.png?f3acc",
+    "wikiTitle": "File:Clan icon - Hero.png"
+  },
+  "hoarder": {
+    "label": "Hoarder",
+    "file": "/symbols/clan-ranks/hoarder.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Hoarder.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Hoarder.png"
+  },
+  "holy": {
+    "label": "Holy",
+    "file": "/symbols/clan-ranks/holy.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Holy.png?17ffa",
+    "wikiTitle": "File:Clan icon - Holy.png"
+  },
+  "hunter": {
+    "label": "Hunter",
+    "file": "/symbols/clan-ranks/hunter.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Hunter.png?6c963",
+    "wikiTitle": "File:Clan icon - Hunter.png"
+  },
+  "ignitor": {
+    "label": "Ignitor",
+    "file": "/symbols/clan-ranks/ignitor.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Ignitor.png?bdf89",
+    "wikiTitle": "File:Clan icon - Ignitor.png"
+  },
+  "illusionist": {
+    "label": "Illusionist",
+    "file": "/symbols/clan-ranks/illusionist.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Illusionist.png?17ffa",
+    "wikiTitle": "File:Clan icon - Illusionist.png"
+  },
+  "imp": {
+    "label": "Imp",
+    "file": "/symbols/clan-ranks/imp.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Imp.png?87d1d",
+    "wikiTitle": "File:Clan icon - Imp.png"
+  },
+  "infantry": {
+    "label": "Infantry",
+    "file": "/symbols/clan-ranks/infantry.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Infantry.png?53696",
+    "wikiTitle": "File:Clan icon - Infantry.png"
+  },
+  "inquisitor": {
+    "label": "Inquisitor",
+    "file": "/symbols/clan-ranks/inquisitor.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Inquisitor.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Inquisitor.png"
+  },
+  "iron": {
+    "label": "Iron",
+    "file": "/symbols/clan-ranks/iron.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Iron.png?5d554",
+    "wikiTitle": "File:Clan icon - Iron.png"
+  },
+  "jade": {
+    "label": "Jade",
+    "file": "/symbols/clan-ranks/jade.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Jade.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Jade.png"
+  },
+  "jmod": {
+    "label": "Jmod",
+    "file": "/symbols/clan-ranks/jmod.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Jmod.png?9dc78",
+    "wikiTitle": "File:Clan icon - Jmod.png"
+  },
+  "justiciar": {
+    "label": "Justiciar",
+    "file": "/symbols/clan-ranks/justiciar.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Justiciar.png?f92d8",
+    "wikiTitle": "File:Clan icon - Justiciar.png"
+  },
+  "kandarin": {
+    "label": "Kandarin",
+    "file": "/symbols/clan-ranks/kandarin.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Kandarin.png?6c963",
+    "wikiTitle": "File:Clan icon - Kandarin.png"
+  },
+  "karamjan": {
+    "label": "Karamjan",
+    "file": "/symbols/clan-ranks/karamjan.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Karamjan.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Karamjan.png"
+  },
+  "kharidian": {
+    "label": "Kharidian",
+    "file": "/symbols/clan-ranks/kharidian.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Kharidian.png?53696",
+    "wikiTitle": "File:Clan icon - Kharidian.png"
+  },
+  "kitten": {
+    "label": "Kitten",
+    "file": "/symbols/clan-ranks/kitten.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Kitten.png?9dc78",
+    "wikiTitle": "File:Clan icon - Kitten.png"
+  },
+  "knight": {
+    "label": "Knight",
+    "file": "/symbols/clan-ranks/knight.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Knight.png?f92d8",
+    "wikiTitle": "File:Clan icon - Knight.png"
+  },
+  "labourer": {
+    "label": "Labourer",
+    "file": "/symbols/clan-ranks/labourer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Labourer.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Labourer.png"
+  },
+  "law": {
+    "label": "Law",
+    "file": "/symbols/clan-ranks/law.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Law.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Law.png"
+  },
+  "leader": {
+    "label": "Leader",
+    "file": "/symbols/clan-ranks/leader.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Leader.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Leader.png"
+  },
+  "learner": {
+    "label": "Learner",
+    "file": "/symbols/clan-ranks/learner.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Learner.png?11797",
+    "wikiTitle": "File:Clan icon - Learner.png"
+  },
+  "legacy": {
+    "label": "Legacy",
+    "file": "/symbols/clan-ranks/legacy.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Legacy.png?1e3e0",
+    "wikiTitle": "File:Clan icon - Legacy.png"
+  },
+  "legend": {
+    "label": "Legend",
+    "file": "/symbols/clan-ranks/legend.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Legend.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Legend.png"
+  },
+  "legionnaire": {
+    "label": "Legionnaire",
+    "file": "/symbols/clan-ranks/legionnaire.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Legionnaire.png?b0561",
+    "wikiTitle": "File:Clan icon - Legionnaire.png"
+  },
+  "lieutenant": {
+    "label": "Lieutenant",
+    "file": "/symbols/clan-ranks/lieutenant.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Lieutenant.png?b0561",
+    "wikiTitle": "File:Clan icon - Lieutenant.png"
+  },
+  "looter": {
+    "label": "Looter",
+    "file": "/symbols/clan-ranks/looter.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Looter.png?53696",
+    "wikiTitle": "File:Clan icon - Looter.png"
+  },
+  "lumberjack": {
+    "label": "Lumberjack",
+    "file": "/symbols/clan-ranks/lumberjack.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Lumberjack.png?6c963",
+    "wikiTitle": "File:Clan icon - Lumberjack.png"
+  },
+  "magic": {
+    "label": "Magic",
+    "file": "/symbols/clan-ranks/magic.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Magic.png?b0561",
+    "wikiTitle": "File:Clan icon - Magic.png"
+  },
+  "magician": {
+    "label": "Magician",
+    "file": "/symbols/clan-ranks/magician.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Magician.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Magician.png"
+  },
+  "major": {
+    "label": "Major",
+    "file": "/symbols/clan-ranks/major.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Major.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Major.png"
+  },
+  "maple": {
+    "label": "Maple",
+    "file": "/symbols/clan-ranks/maple.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Maple.png?b0561",
+    "wikiTitle": "File:Clan icon - Maple.png"
+  },
+  "marshal": {
+    "label": "Marshal",
+    "file": "/symbols/clan-ranks/marshal.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Marshal.png?b0561",
+    "wikiTitle": "File:Clan icon - Marshal.png"
+  },
+  "master": {
+    "label": "Master",
+    "file": "/symbols/clan-ranks/master.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Master.png?b0561",
+    "wikiTitle": "File:Clan icon - Master.png"
+  },
+  "maxed": {
+    "label": "Maxed",
+    "file": "/symbols/clan-ranks/maxed.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Maxed.png?17ffa",
+    "wikiTitle": "File:Clan icon - Maxed.png"
+  },
+  "mediator": {
+    "label": "Mediator",
+    "file": "/symbols/clan-ranks/mediator.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Mediator.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Mediator.png"
+  },
+  "medic": {
+    "label": "Medic",
+    "file": "/symbols/clan-ranks/medic.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Medic.png?6c963",
+    "wikiTitle": "File:Clan icon - Medic.png"
+  },
+  "mentor": {
+    "label": "Mentor",
+    "file": "/symbols/clan-ranks/mentor.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Mentor.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Mentor.png"
+  },
+  "merchant": {
+    "label": "Merchant",
+    "file": "/symbols/clan-ranks/merchant.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Merchant.png?53696",
+    "wikiTitle": "File:Clan icon - Merchant.png"
+  },
+  "mind": {
+    "label": "Mind",
+    "file": "/symbols/clan-ranks/mind.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Mind.png?b0561",
+    "wikiTitle": "File:Clan icon - Mind.png"
+  },
+  "miner": {
+    "label": "Miner",
+    "file": "/symbols/clan-ranks/miner.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Miner.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Miner.png"
+  },
+  "minion": {
+    "label": "Minion",
+    "file": "/symbols/clan-ranks/minion.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Minion.png?b0561",
+    "wikiTitle": "File:Clan icon - Minion.png"
+  },
+  "misthalinian": {
+    "label": "Misthalinian",
+    "file": "/symbols/clan-ranks/misthalinian.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Misthalinian.png?ceadb",
+    "wikiTitle": "File:Clan icon - Misthalinian.png"
+  },
+  "mithril": {
+    "label": "Mithril",
+    "file": "/symbols/clan-ranks/mithril.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Mithril.png?5d554",
+    "wikiTitle": "File:Clan icon - Mithril.png"
+  },
+  "moderator": {
+    "label": "Moderator",
+    "file": "/symbols/clan-ranks/moderator.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Moderator.png?24f62",
+    "wikiTitle": "File:Clan icon - Moderator.png"
+  },
+  "monarch": {
+    "label": "Monarch",
+    "file": "/symbols/clan-ranks/monarch.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Monarch.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Monarch.png"
+  },
+  "morytanian": {
+    "label": "Morytanian",
+    "file": "/symbols/clan-ranks/morytanian.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Morytanian.png?53696",
+    "wikiTitle": "File:Clan icon - Morytanian.png"
+  },
+  "mystic": {
+    "label": "Mystic",
+    "file": "/symbols/clan-ranks/mystic.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Mystic.png?f3acc",
+    "wikiTitle": "File:Clan icon - Mystic.png"
+  },
+  "myth": {
+    "label": "Myth",
+    "file": "/symbols/clan-ranks/myth.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Myth.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Myth.png"
+  },
+  "natural": {
+    "label": "Natural",
+    "file": "/symbols/clan-ranks/natural.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Natural.png?53696",
+    "wikiTitle": "File:Clan icon - Natural.png"
+  },
+  "nature": {
+    "label": "Nature",
+    "file": "/symbols/clan-ranks/nature.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Nature.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Nature.png"
+  },
+  "necromancer": {
+    "label": "Necromancer",
+    "file": "/symbols/clan-ranks/necromancer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Necromancer.png?ceadb",
+    "wikiTitle": "File:Clan icon - Necromancer.png"
+  },
+  "ninja": {
+    "label": "Ninja",
+    "file": "/symbols/clan-ranks/ninja.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Ninja.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Ninja.png"
+  },
+  "noble": {
+    "label": "Noble",
+    "file": "/symbols/clan-ranks/noble.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Noble.png?b0561",
+    "wikiTitle": "File:Clan icon - Noble.png"
+  },
+  "novice": {
+    "label": "Novice",
+    "file": "/symbols/clan-ranks/novice.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Novice.png?b0561",
+    "wikiTitle": "File:Clan icon - Novice.png"
+  },
+  "nurse": {
+    "label": "Nurse",
+    "file": "/symbols/clan-ranks/nurse.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Nurse.png?d4634",
+    "wikiTitle": "File:Clan icon - Nurse.png"
+  },
+  "oak": {
+    "label": "Oak",
+    "file": "/symbols/clan-ranks/oak.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Oak.png?53696",
+    "wikiTitle": "File:Clan icon - Oak.png"
+  },
+  "officer": {
+    "label": "Officer",
+    "file": "/symbols/clan-ranks/officer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Officer.png?b0561",
+    "wikiTitle": "File:Clan icon - Officer.png"
+  },
+  "onyx": {
+    "label": "Onyx",
+    "file": "/symbols/clan-ranks/onyx.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Onyx.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Onyx.png"
+  },
+  "opal": {
+    "label": "Opal",
+    "file": "/symbols/clan-ranks/opal.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Opal.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Opal.png"
+  },
+  "oracle": {
+    "label": "Oracle",
+    "file": "/symbols/clan-ranks/oracle.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Oracle.png?8cf0a",
+    "wikiTitle": "File:Clan icon - Oracle.png"
+  },
+  "orange": {
+    "label": "Orange",
+    "file": "/symbols/clan-ranks/orange.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Orange.png?53696",
+    "wikiTitle": "File:Clan icon - Orange.png"
+  },
+  "owner": {
+    "label": "Owner",
+    "file": "/symbols/clan-ranks/owner.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Owner.png?53696",
+    "wikiTitle": "File:Clan icon - Owner.png"
+  },
+  "page": {
+    "label": "Page",
+    "file": "/symbols/clan-ranks/page.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Page.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Page.png"
+  },
+  "paladin": {
+    "label": "Paladin",
+    "file": "/symbols/clan-ranks/paladin.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Paladin.png?f92d8",
+    "wikiTitle": "File:Clan icon - Paladin.png"
+  },
+  "pawn": {
+    "label": "Pawn",
+    "file": "/symbols/clan-ranks/pawn.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Pawn.png?53696",
+    "wikiTitle": "File:Clan icon - Pawn.png"
+  },
+  "pilgrim": {
+    "label": "Pilgrim",
+    "file": "/symbols/clan-ranks/pilgrim.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Pilgrim.png?07133",
+    "wikiTitle": "File:Clan icon - Pilgrim.png"
+  },
+  "pine": {
+    "label": "Pine",
+    "file": "/symbols/clan-ranks/pine.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Pine.png?53696",
+    "wikiTitle": "File:Clan icon - Pine.png"
+  },
+  "pink": {
+    "label": "Pink",
+    "file": "/symbols/clan-ranks/pink.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Pink.png?17ffa",
+    "wikiTitle": "File:Clan icon - Pink.png"
+  },
+  "prefect": {
+    "label": "Prefect",
+    "file": "/symbols/clan-ranks/prefect.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Prefect.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Prefect.png"
+  },
+  "priest": {
+    "label": "Priest",
+    "file": "/symbols/clan-ranks/priest.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Priest.png?6c963",
+    "wikiTitle": "File:Clan icon - Priest.png"
+  },
+  "private": {
+    "label": "Private",
+    "file": "/symbols/clan-ranks/private.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Private.png?6ade4",
+    "wikiTitle": "File:Clan icon - Private.png"
+  },
+  "prodigy": {
+    "label": "Prodigy",
+    "file": "/symbols/clan-ranks/prodigy.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Prodigy.png?bdf89",
+    "wikiTitle": "File:Clan icon - Prodigy.png"
+  },
+  "proselyte": {
+    "label": "Proselyte",
+    "file": "/symbols/clan-ranks/proselyte.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Proselyte.png?b0561",
+    "wikiTitle": "File:Clan icon - Proselyte.png"
+  },
+  "prospector": {
+    "label": "Prospector",
+    "file": "/symbols/clan-ranks/prospector.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Prospector.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Prospector.png"
+  },
+  "protector": {
+    "label": "Protector",
+    "file": "/symbols/clan-ranks/protector.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Protector.png?f92d8",
+    "wikiTitle": "File:Clan icon - Protector.png"
+  },
+  "pure": {
+    "label": "Pure",
+    "file": "/symbols/clan-ranks/pure.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Pure.png?87d1d",
+    "wikiTitle": "File:Clan icon - Pure.png"
+  },
+  "purple": {
+    "label": "Purple",
+    "file": "/symbols/clan-ranks/purple.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Purple.png?17ffa",
+    "wikiTitle": "File:Clan icon - Purple.png"
+  },
+  "pyromancer": {
+    "label": "Pyromancer",
+    "file": "/symbols/clan-ranks/pyromancer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Pyromancer.png?bdf89",
+    "wikiTitle": "File:Clan icon - Pyromancer.png"
+  },
+  "quester": {
+    "label": "Quester",
+    "file": "/symbols/clan-ranks/quester.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Quester.png?fff9d",
+    "wikiTitle": "File:Clan icon - Quester.png"
+  },
+  "racer": {
+    "label": "Racer",
+    "file": "/symbols/clan-ranks/racer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Racer.png?30e5f",
+    "wikiTitle": "File:Clan icon - Racer.png"
+  },
+  "raider": {
+    "label": "Raider",
+    "file": "/symbols/clan-ranks/raider.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Raider.png?fff9d",
+    "wikiTitle": "File:Clan icon - Raider.png"
+  },
+  "ranger": {
+    "label": "Ranger",
+    "file": "/symbols/clan-ranks/ranger.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Ranger.png?6c963",
+    "wikiTitle": "File:Clan icon - Ranger.png"
+  },
+  "record-chaser": {
+    "label": "Record-chaser",
+    "file": "/symbols/clan-ranks/record-chaser.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Record-chaser.png?14677",
+    "wikiTitle": "File:Clan icon - Record-chaser.png"
+  },
+  "recruit": {
+    "label": "Recruit",
+    "file": "/symbols/clan-ranks/recruit.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Recruit.png?b0561",
+    "wikiTitle": "File:Clan icon - Recruit.png"
+  },
+  "recruiter": {
+    "label": "Recruiter",
+    "file": "/symbols/clan-ranks/recruiter.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Recruiter.png?8cf0a",
+    "wikiTitle": "File:Clan icon - Recruiter.png"
+  },
+  "red-topaz": {
+    "label": "Red Topaz",
+    "file": "/symbols/clan-ranks/red-topaz.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Red_Topaz.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Red Topaz.png"
+  },
+  "red": {
+    "label": "Red",
+    "file": "/symbols/clan-ranks/red.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Red.png?ceadb",
+    "wikiTitle": "File:Clan icon - Red.png"
+  },
+  "rogue": {
+    "label": "Rogue",
+    "file": "/symbols/clan-ranks/rogue.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Rogue.png?ceadb",
+    "wikiTitle": "File:Clan icon - Rogue.png"
+  },
+  "ruby": {
+    "label": "Ruby",
+    "file": "/symbols/clan-ranks/ruby.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Ruby.png?5d554",
+    "wikiTitle": "File:Clan icon - Ruby.png"
+  },
+  "rune": {
+    "label": "Rune",
+    "file": "/symbols/clan-ranks/rune.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Rune.png?5d554",
+    "wikiTitle": "File:Clan icon - Rune.png"
+  },
+  "runecrafter": {
+    "label": "Runecrafter",
+    "file": "/symbols/clan-ranks/runecrafter.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Runecrafter.png?6c963",
+    "wikiTitle": "File:Clan icon - Runecrafter.png"
+  },
+  "sage": {
+    "label": "Sage",
+    "file": "/symbols/clan-ranks/sage.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Sage.png?87d1d",
+    "wikiTitle": "File:Clan icon - Sage.png"
+  },
+  "sapphire": {
+    "label": "Sapphire",
+    "file": "/symbols/clan-ranks/sapphire.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Sapphire.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Sapphire.png"
+  },
+  "saradominist": {
+    "label": "Saradominist",
+    "file": "/symbols/clan-ranks/saradominist.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Saradominist.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Saradominist.png"
+  },
+  "saviour": {
+    "label": "Saviour",
+    "file": "/symbols/clan-ranks/saviour.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Saviour.png?17ffa",
+    "wikiTitle": "File:Clan icon - Saviour.png"
+  },
+  "scavenger": {
+    "label": "Scavenger",
+    "file": "/symbols/clan-ranks/scavenger.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Scavenger.png?6c963",
+    "wikiTitle": "File:Clan icon - Scavenger.png"
+  },
+  "scholar": {
+    "label": "Scholar",
+    "file": "/symbols/clan-ranks/scholar.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Scholar.png?f3acc",
+    "wikiTitle": "File:Clan icon - Scholar.png"
+  },
+  "scourge": {
+    "label": "Scourge",
+    "file": "/symbols/clan-ranks/scourge.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Scourge.png?17ffa",
+    "wikiTitle": "File:Clan icon - Scourge.png"
+  },
+  "scout": {
+    "label": "Scout",
+    "file": "/symbols/clan-ranks/scout.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Scout.png?17ffa",
+    "wikiTitle": "File:Clan icon - Scout.png"
+  },
+  "scribe": {
+    "label": "Scribe",
+    "file": "/symbols/clan-ranks/scribe.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Scribe.png?11797",
+    "wikiTitle": "File:Clan icon - Scribe.png"
+  },
+  "seer": {
+    "label": "Seer",
+    "file": "/symbols/clan-ranks/seer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Seer.png?53696",
+    "wikiTitle": "File:Clan icon - Seer.png"
+  },
+  "senator": {
+    "label": "Senator",
+    "file": "/symbols/clan-ranks/senator.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Senator.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Senator.png"
+  },
+  "sentry": {
+    "label": "Sentry",
+    "file": "/symbols/clan-ranks/sentry.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Sentry.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Sentry.png"
+  },
+  "serenist": {
+    "label": "Serenist",
+    "file": "/symbols/clan-ranks/serenist.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Serenist.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Serenist.png"
+  },
+  "sergeant": {
+    "label": "Sergeant",
+    "file": "/symbols/clan-ranks/sergeant.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Sergeant.png?b0561",
+    "wikiTitle": "File:Clan icon - Sergeant.png"
+  },
+  "shaman": {
+    "label": "Shaman",
+    "file": "/symbols/clan-ranks/shaman.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Shaman.png?fca27",
+    "wikiTitle": "File:Clan icon - Shaman.png"
+  },
+  "sheriff": {
+    "label": "Sheriff",
+    "file": "/symbols/clan-ranks/sheriff.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Sheriff.png?763af",
+    "wikiTitle": "File:Clan icon - Sheriff.png"
+  },
+  "short-green-guy": {
+    "label": "Short Green Guy",
+    "file": "/symbols/clan-ranks/short-green-guy.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Short_Green_Guy.png?b0561",
+    "wikiTitle": "File:Clan icon - Short Green Guy.png"
+  },
+  "skiller": {
+    "label": "Skiller",
+    "file": "/symbols/clan-ranks/skiller.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Skiller.png?6c963",
+    "wikiTitle": "File:Clan icon - Skiller.png"
+  },
+  "skulled": {
+    "label": "Skulled",
+    "file": "/symbols/clan-ranks/skulled.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Skulled.png?53696",
+    "wikiTitle": "File:Clan icon - Skulled.png"
+  },
+  "slayer": {
+    "label": "Slayer",
+    "file": "/symbols/clan-ranks/slayer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Slayer.png?6c963",
+    "wikiTitle": "File:Clan icon - Slayer.png"
+  },
+  "smiter": {
+    "label": "Smiter",
+    "file": "/symbols/clan-ranks/smiter.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Smiter.png?53696",
+    "wikiTitle": "File:Clan icon - Smiter.png"
+  },
+  "smith": {
+    "label": "Smith",
+    "file": "/symbols/clan-ranks/smith.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Smith.png?6c963",
+    "wikiTitle": "File:Clan icon - Smith.png"
+  },
+  "smuggler": {
+    "label": "Smuggler",
+    "file": "/symbols/clan-ranks/smuggler.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Smuggler.png?53696",
+    "wikiTitle": "File:Clan icon - Smuggler.png"
+  },
+  "sniper": {
+    "label": "Sniper",
+    "file": "/symbols/clan-ranks/sniper.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Sniper.png?87d1d",
+    "wikiTitle": "File:Clan icon - Sniper.png"
+  },
+  "soul": {
+    "label": "Soul",
+    "file": "/symbols/clan-ranks/soul.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Soul.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Soul.png"
+  },
+  "specialist": {
+    "label": "Specialist",
+    "file": "/symbols/clan-ranks/specialist.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Specialist.png?e2054",
+    "wikiTitle": "File:Clan icon - Specialist.png"
+  },
+  "speed-runner": {
+    "label": "Speed-Runner",
+    "file": "/symbols/clan-ranks/speed-runner.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Speed-Runner.png?f8e3e",
+    "wikiTitle": "File:Clan icon - Speed-Runner.png"
+  },
+  "spellcaster": {
+    "label": "Spellcaster",
+    "file": "/symbols/clan-ranks/spellcaster.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Spellcaster.png?ceadb",
+    "wikiTitle": "File:Clan icon - Spellcaster.png"
+  },
+  "squire": {
+    "label": "Squire",
+    "file": "/symbols/clan-ranks/squire.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Squire.png?f92d8",
+    "wikiTitle": "File:Clan icon - Squire.png"
+  },
+  "staff": {
+    "label": "Staff",
+    "file": "/symbols/clan-ranks/staff.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Staff.png?f92d8",
+    "wikiTitle": "File:Clan icon - Staff.png"
+  },
+  "steel": {
+    "label": "Steel",
+    "file": "/symbols/clan-ranks/steel.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Steel.png?68cb9",
+    "wikiTitle": "File:Clan icon - Steel.png"
+  },
+  "strider": {
+    "label": "Strider",
+    "file": "/symbols/clan-ranks/strider.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Strider.png?14677",
+    "wikiTitle": "File:Clan icon - Strider.png"
+  },
+  "striker": {
+    "label": "Striker",
+    "file": "/symbols/clan-ranks/striker.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Striker.png?f92d8",
+    "wikiTitle": "File:Clan icon - Striker.png"
+  },
+  "summoner": {
+    "label": "Summoner",
+    "file": "/symbols/clan-ranks/summoner.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Summoner.png?53696",
+    "wikiTitle": "File:Clan icon - Summoner.png"
+  },
+  "superior": {
+    "label": "Superior",
+    "file": "/symbols/clan-ranks/superior.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Superior.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Superior.png"
+  },
+  "supervisor": {
+    "label": "Supervisor",
+    "file": "/symbols/clan-ranks/supervisor.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Supervisor.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Supervisor.png"
+  },
+  "teacher": {
+    "label": "Teacher",
+    "file": "/symbols/clan-ranks/teacher.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Teacher.png?f8e3e",
+    "wikiTitle": "File:Clan icon - Teacher.png"
+  },
+  "templar": {
+    "label": "Templar",
+    "file": "/symbols/clan-ranks/templar.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Templar.png?f92d8",
+    "wikiTitle": "File:Clan icon - Templar.png"
+  },
+  "therapist": {
+    "label": "Therapist",
+    "file": "/symbols/clan-ranks/therapist.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Therapist.png?01a84",
+    "wikiTitle": "File:Clan icon - Therapist.png"
+  },
+  "thief": {
+    "label": "Thief",
+    "file": "/symbols/clan-ranks/thief.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Thief.png?6c963",
+    "wikiTitle": "File:Clan icon - Thief.png"
+  },
+  "tirannian": {
+    "label": "Tirannian",
+    "file": "/symbols/clan-ranks/tirannian.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Tirannian.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Tirannian.png"
+  },
+  "trialist": {
+    "label": "Trialist",
+    "file": "/symbols/clan-ranks/trialist.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Trialist.png?f3acc",
+    "wikiTitle": "File:Clan icon - Trialist.png"
+  },
+  "trickster": {
+    "label": "Trickster",
+    "file": "/symbols/clan-ranks/trickster.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Trickster.png?ceadb",
+    "wikiTitle": "File:Clan icon - Trickster.png"
+  },
+  "tzkal": {
+    "label": "TzKal",
+    "file": "/symbols/clan-ranks/tzkal.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_TzKal.png?1d9cc",
+    "wikiTitle": "File:Clan icon - TzKal.png"
+  },
+  "tztok": {
+    "label": "TzTok",
+    "file": "/symbols/clan-ranks/tztok.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_TzTok.png?17ffa",
+    "wikiTitle": "File:Clan icon - TzTok.png"
+  },
+  "unholy": {
+    "label": "Unholy",
+    "file": "/symbols/clan-ranks/unholy.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Unholy.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Unholy.png"
+  },
+  "vagrant": {
+    "label": "Vagrant",
+    "file": "/symbols/clan-ranks/vagrant.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Vagrant.png?14677",
+    "wikiTitle": "File:Clan icon - Vagrant.png"
+  },
+  "vanguard": {
+    "label": "Vanguard",
+    "file": "/symbols/clan-ranks/vanguard.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Vanguard.png?0f3a8",
+    "wikiTitle": "File:Clan icon - Vanguard.png"
+  },
+  "walker": {
+    "label": "Walker",
+    "file": "/symbols/clan-ranks/walker.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Walker.png?f8e3e",
+    "wikiTitle": "File:Clan icon - Walker.png"
+  },
+  "wanderer": {
+    "label": "Wanderer",
+    "file": "/symbols/clan-ranks/wanderer.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Wanderer.png?07133",
+    "wikiTitle": "File:Clan icon - Wanderer.png"
+  },
+  "warden": {
+    "label": "Warden",
+    "file": "/symbols/clan-ranks/warden.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Warden.png?f92d8",
+    "wikiTitle": "File:Clan icon - Warden.png"
+  },
+  "warlock": {
+    "label": "Warlock",
+    "file": "/symbols/clan-ranks/warlock.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Warlock.png?ceadb",
+    "wikiTitle": "File:Clan icon - Warlock.png"
+  },
+  "warrior": {
+    "label": "Warrior",
+    "file": "/symbols/clan-ranks/warrior.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Warrior.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Warrior.png"
+  },
+  "water": {
+    "label": "Water",
+    "file": "/symbols/clan-ranks/water.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Water.png?b0561",
+    "wikiTitle": "File:Clan icon - Water.png"
+  },
+  "wild": {
+    "label": "Wild",
+    "file": "/symbols/clan-ranks/wild.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Wild.png?6c963",
+    "wikiTitle": "File:Clan icon - Wild.png"
+  },
+  "willow": {
+    "label": "Willow",
+    "file": "/symbols/clan-ranks/willow.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Willow.png?53696",
+    "wikiTitle": "File:Clan icon - Willow.png"
+  },
+  "wily": {
+    "label": "Wily",
+    "file": "/symbols/clan-ranks/wily.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Wily.png?b0561",
+    "wikiTitle": "File:Clan icon - Wily.png"
+  },
+  "wintumber": {
+    "label": "Wintumber",
+    "file": "/symbols/clan-ranks/wintumber.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Wintumber.png?b0561",
+    "wikiTitle": "File:Clan icon - Wintumber.png"
+  },
+  "witch": {
+    "label": "Witch",
+    "file": "/symbols/clan-ranks/witch.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Witch.png?17ffa",
+    "wikiTitle": "File:Clan icon - Witch.png"
+  },
+  "wizard": {
+    "label": "Wizard",
+    "file": "/symbols/clan-ranks/wizard.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Wizard.png?53696",
+    "wikiTitle": "File:Clan icon - Wizard.png"
+  },
+  "worker": {
+    "label": "Worker",
+    "file": "/symbols/clan-ranks/worker.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Worker.png?87d1d",
+    "wikiTitle": "File:Clan icon - Worker.png"
+  },
+  "wrath": {
+    "label": "Wrath",
+    "file": "/symbols/clan-ranks/wrath.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Wrath.png?f7cb3",
+    "wikiTitle": "File:Clan icon - Wrath.png"
+  },
+  "xerician": {
+    "label": "Xerician",
+    "file": "/symbols/clan-ranks/xerician.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Xerician.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Xerician.png"
+  },
+  "yellow": {
+    "label": "Yellow",
+    "file": "/symbols/clan-ranks/yellow.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Yellow.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Yellow.png"
+  },
+  "yew": {
+    "label": "Yew",
+    "file": "/symbols/clan-ranks/yew.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Yew.png?b0561",
+    "wikiTitle": "File:Clan icon - Yew.png"
+  },
+  "zamorakian": {
+    "label": "Zamorakian",
+    "file": "/symbols/clan-ranks/zamorakian.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Zamorakian.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Zamorakian.png"
+  },
+  "zarosian": {
+    "label": "Zarosian",
+    "file": "/symbols/clan-ranks/zarosian.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Zarosian.png?1d9cc",
+    "wikiTitle": "File:Clan icon - Zarosian.png"
+  },
+  "zealot": {
+    "label": "Zealot",
+    "file": "/symbols/clan-ranks/zealot.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Zealot.png?01a84",
+    "wikiTitle": "File:Clan icon - Zealot.png"
+  },
+  "zenyte": {
+    "label": "Zenyte",
+    "file": "/symbols/clan-ranks/zenyte.png",
+    "sourceUrl": "https://oldschool.runescape.wiki/images/Clan_icon_-_Zenyte.png?b0561",
+    "wikiTitle": "File:Clan icon - Zenyte.png"
+  }
+}

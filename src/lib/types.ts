@@ -278,6 +278,26 @@ export interface LeaderboardEntry {
   progress?: { gained: number; start?: number; end?: number };
 }
 
+export interface WomRosterEntry {
+  player: WomPlayer & {
+    status?: string;
+  };
+  rank: number;
+  value?: number;
+  roleKey?: string | null;
+  role: string;
+  rankLabel: string;
+  rankOrder?: number | null;
+  joinedAt?: string | null;
+  updatedAt?: string | null;
+  raw?: Record<string, unknown>;
+}
+
+export interface WomRosterData {
+  group: ClanGroup & { id?: number };
+  entries: WomRosterEntry[];
+}
+
 export interface ClanGroup {
   name: string;
   description?: string;

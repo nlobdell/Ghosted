@@ -1771,6 +1771,67 @@ def normalize_group_gains(entries: list[dict[str, Any]]) -> list[dict[str, Any]]
     return normalized
 
 
+def normalize_group_memberships(group: dict[str, Any]) -> list[dict[str, Any]]:
+    memberships = group.get("memberships")
+    if not isinstance(memberships, list):
+        return []
+
+    normalized: list[dict[str, Any]] = []
+    for membership in memberships:
+        if not isinstance(membership, dict):
+            continue
+        player = membership.get("player") or {}
+        if not isinstance(player, dict):
+            player = {}
+
+        raw_role = (
+            membership.get("rankLabel")
+            or membership.get("roleName")
+            or membership.get("title")
+            or membership.get("rank")
+            or membership.get("role")
+        )
+        rank_label = humanize_identifier(raw_role) or "Member"
+        role_key = str(membership.get("role") or "").strip().lower() or None
+        raw_rank_order = membership.get("rankOrder", membership.get("rankId"))
+        try:
+            rank_order = int(raw_rank_order) if raw_rank_order not in (None, "") else None
+        except (TypeError, ValueError):
+            rank_order = None
+
+        normalized.append(
+            {
+                "player": {
+                    "id": player.get("id"),
+                    "username": player.get("username"),
+                    "displayName": player.get("displayName") or player.get("username"),
+                    "type": player.get("type"),
+                    "build": player.get("build"),
+                    "status": player.get("status"),
+                },
+                "value": player.get("exp"),
+                "roleKey": role_key,
+                "role": rank_label,
+                "rankLabel": rank_label,
+                "rankOrder": rank_order,
+                "joinedAt": membership.get("createdAt"),
+                "updatedAt": membership.get("updatedAt") or player.get("updatedAt"),
+                "raw": membership,
+            }
+        )
+
+    normalized.sort(
+        key=lambda entry: (
+            entry["rankOrder"] if entry.get("rankOrder") is not None else 9999,
+            -int(entry.get("value") or 0),
+            str((entry.get("player") or {}).get("displayName") or (entry.get("player") or {}).get("username") or "").lower(),
+        )
+    )
+    for index, entry in enumerate(normalized, start=1):
+        entry["rank"] = index
+    return normalized
+
+
 def normalize_group_activity(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     normalized: list[dict[str, Any]] = []
     for entry in entries:
@@ -4633,6 +4694,27 @@ def wom_clan_payload(connection: sqlite3.Connection, *, force_refresh: bool = Fa
     }
 
 
+def wom_group_roster_payload(connection: sqlite3.Connection, *, force_refresh: bool = False) -> dict[str, Any]:
+    group_id = require_wom_group_id()
+    group = wom_cached_json(connection, f"/groups/{group_id}", force_refresh=force_refresh)
+    normalized_group = group if isinstance(group, dict) else {}
+    entries = normalize_group_memberships(normalized_group)
+    return {
+        "group": {
+            "id": normalized_group.get("id"),
+            "name": normalized_group.get("name"),
+            "clanChat": normalized_group.get("clanChat"),
+            "description": normalized_group.get("description"),
+            "homeworld": normalized_group.get("homeworld"),
+            "memberCount": normalized_group.get("memberCount") or len(entries),
+            "score": normalized_group.get("score"),
+            "verified": normalized_group.get("verified"),
+            "updatedAt": normalized_group.get("updatedAt"),
+        },
+        "entries": entries,
+    }
+
+
 def wom_group_hiscores_payload(
     connection: sqlite3.Connection,
     *,
@@ -5254,6 +5336,9 @@ class GhostedHandler(BaseHTTPRequestHandler):
         if method == "GET" and path == "/api/wom/gains":
             self.handle_api_wom_gains(connection, parsed)
             return
+        if method == "GET" and path == "/api/wom/roster":
+            self.handle_api_wom_roster(connection)
+            return
         if method == "GET" and path == "/api/wom/me":
             self.handle_api_wom_me(connection)
             return
@@ -5689,6 +5774,9 @@ class GhostedHandler(BaseHTTPRequestHandler):
         period = params.get("period", [DEFAULT_WOM_PERIOD])[0]
         limit = int(params.get("limit", ["10"])[0] or 10)
         self.respond_json(wom_group_gains_payload(connection, metric=metric, period=period, limit=limit))
+
+    def handle_api_wom_roster(self, connection: sqlite3.Connection) -> None:
+        self.respond_json(wom_group_roster_payload(connection))
 
     def handle_api_wom_me(self, connection: sqlite3.Connection) -> None:
         row = self.require_user(connection)
