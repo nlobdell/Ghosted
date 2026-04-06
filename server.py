@@ -248,11 +248,25 @@ def companion_asset_dir() -> Path:
     configured = os.getenv("COMPANION_ASSET_DIR")
     if configured:
         return Path(configured).expanduser()
+    configured_db_path = os.getenv("DATABASE_PATH")
+    if configured_db_path:
+        return Path(configured_db_path).expanduser().parent / "companion-assets"
+    return DB_PATH.parent / "companion-assets"
+
+
+def legacy_companion_asset_dir() -> Path:
     return DB_DIR / "companion-assets"
 
 
 def repo_companion_asset_dir() -> Path:
     return BASE_DIR / "assets" / "companion"
+
+
+def resolve_companion_storage_target(root: Path, relative_parts: list[str]) -> Path:
+    target = (root / Path(*relative_parts)).resolve()
+    if root not in target.parents and target != root:
+        raise AppError("Companion asset not found.", 404)
+    return target
 
 
 def normalize_companion_asset_path(value: str) -> str:
@@ -292,21 +306,28 @@ def companion_asset_path(relative_path: str) -> Path:
     remainder = parts[1:]
     if root_key == "repo":
         root = repo_companion_asset_dir().resolve()
-    else:
-        root = companion_asset_dir().resolve()
-        remainder = parts
+        return resolve_companion_storage_target(root, remainder)
 
-    target = (root / Path(*remainder)).resolve()
-    if root not in target.parents and target != root:
-        raise AppError("Companion asset not found.", 404)
-    return target
+    relative_parts = parts
+    primary_root = companion_asset_dir().resolve()
+    primary_target = resolve_companion_storage_target(primary_root, relative_parts)
+    if primary_target.exists():
+        return primary_target
+
+    legacy_root = legacy_companion_asset_dir().resolve()
+    if legacy_root != primary_root:
+        legacy_target = resolve_companion_storage_target(legacy_root, relative_parts)
+        if legacy_target.exists():
+            return legacy_target
+
+    return primary_target
 
 
 def write_companion_asset_file(relative_path: str, data: bytes) -> str:
     normalized = normalize_companion_asset_path(relative_path)
     if normalized.startswith("repo/"):
         raise AppError("Repo companion assets are read-only.", 400)
-    target = companion_asset_path(normalized)
+    target = resolve_companion_storage_target(companion_asset_dir().resolve(), normalized.split("/"))
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(data)
     return normalized

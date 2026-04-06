@@ -402,6 +402,31 @@ class GhostedAppTests(unittest.TestCase):
         self.assertTrue((self.asset_dir / row["front_asset_path"]).exists())
         self.assertTrue(any(item["slug"] == "moon-hood" for item in library["items"]))
 
+    def test_companion_asset_dir_defaults_beside_database_path(self):
+        with patch.dict(
+            os.environ,
+            {
+                "DATABASE_PATH": "/var/lib/ghosted/ghosted.db",
+                "COMPANION_ASSET_DIR": "",
+            },
+            clear=False,
+        ):
+            self.assertEqual(
+                server.companion_asset_dir(),
+                Path("/var/lib/ghosted/companion-assets"),
+            )
+
+    def test_companion_asset_path_falls_back_to_legacy_repo_storage(self):
+        legacy_file = server.legacy_companion_asset_dir() / "uploads" / "items" / "legacy-test.svg"
+        legacy_file.parent.mkdir(parents=True, exist_ok=True)
+        legacy_file.write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>', encoding="utf-8")
+
+        try:
+            resolved = server.companion_asset_path("uploads/items/legacy-test.svg")
+            self.assertEqual(resolved, legacy_file.resolve())
+        finally:
+            legacy_file.unlink(missing_ok=True)
+
     def test_companion_admin_item_route_accepts_multipart_uploads(self):
         boundary = "ghosted-boundary"
         body = (

@@ -43,6 +43,7 @@ Default `PYTHON_API_URL` is `http://localhost:8000`.
 
 - [`server.py`](./server.py): monolithic HTTP server, auth/session logic, API endpoints, SQLite data operations
 - [`tests`](./tests): backend tests
+- Companion uploads are stored in `COMPANION_ASSET_DIR` or, by default, in a `companion-assets/` sibling directory next to `DATABASE_PATH`
 
 ### Operations
 
