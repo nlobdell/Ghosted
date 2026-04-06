@@ -87,7 +87,8 @@ npm run test:backend
 Current VPS pattern:
 
 - Caddy -> Next.js (`ghosted-web.service`) on `127.0.0.1:3000`
-- Next rewrites `/api/*` and `/auth/*` to Python API (`PYTHON_API_URL`, usually `127.0.0.1:8000`)
+- Next proxies app data requests to the Python API with route handlers under `/api/*`
+- Next owns `/auth/login` and `/api/auth/*`; legacy Python `/auth/discord/*` routes are no longer the primary browser sign-in flow
 - Env file at `/etc/ghosted/ghosted.env`
 
 Typical deploy command sequence:

@@ -1,5 +1,6 @@
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { isDiscordAuthConfigured } from '@/lib/auth/server-config';
 
 function getPublicOrigin(requestUrl: URL, forwardedHeaders: Headers) {
   const configuredOrigin = process.env.AUTH_URL?.trim() || process.env.PUBLIC_BASE_URL?.trim();
@@ -29,7 +30,16 @@ export async function GET(request: Request) {
     return NextResponse.redirect(destination);
   }
 
-  const destination = new URL('/api/auth/signin', origin);
+  if (!isDiscordAuthConfigured()) {
+    return new NextResponse('Discord auth is not configured on this deployment.', {
+      status: 503,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+      },
+    });
+  }
+
+  const destination = new URL('/api/auth/signin/discord', origin);
   destination.searchParams.set('callbackUrl', new URL(nextPath, origin).toString());
   return NextResponse.redirect(destination);
 }

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { HeroSection } from '@/components/home/HeroSection';
 import { SocialProofStrip } from '@/components/home/SocialProofStrip';
 import { NewsPreview } from '@/components/home/NewsPreview';
+import { getConfiguredLoginHref } from '@/lib/auth/server-config';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 import { getServerJSON } from '@/lib/server-api';
 import type { CompanionData, NewsPost, ShellData } from '@/lib/types';
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 
 function getHallHref(shellData: ShellData | null) {
   if (shellData?.authenticated) return '/hall/';
-  return shellData?.auth?.loginHref ?? '/auth/login?next=%2Fhall%2F';
+  return shellData?.auth?.loginHref ?? getConfiguredLoginHref('/hall/') ?? '/';
 }
 
 export default async function HomePage() {

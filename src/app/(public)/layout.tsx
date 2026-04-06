@@ -1,11 +1,12 @@
 import { PublicFooter } from '@/components/nav/PublicFooter';
 import { PublicNav } from '@/components/nav/PublicNav';
+import { getConfiguredLoginHref } from '@/lib/auth/server-config';
 import { getServerJSON } from '@/lib/server-api';
 import type { ShellData } from '@/lib/types';
 
 function getHallHref(shellData: ShellData | null) {
   if (shellData?.authenticated) return '/hall/';
-  return shellData?.auth?.loginHref ?? '/auth/login?next=%2Fhall%2F';
+  return shellData?.auth?.loginHref ?? getConfiguredLoginHref('/hall/') ?? '/';
 }
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {

@@ -54,7 +54,7 @@ Discord application settings must include this redirect URI for browser sign-in:
 
 - `https://your-domain.com/api/auth/callback/discord`
 
-Legacy Python auth routes, if you still use them directly, can keep:
+Only keep this legacy variable if you still invoke Python auth routes directly:
 
 - `DISCORD_REDIRECT_URI=https://your-domain.com/auth/discord/callback`
 
@@ -84,7 +84,8 @@ ghosted.example.com {
 }
 ```
 
-Next.js handles `/api/*` and `/auth/*` rewrites to the Python API using `PYTHON_API_URL` (default `http://localhost:8000`).
+Next.js handles `/api/*` proxying to the Python API using `PYTHON_API_URL` (default `http://localhost:8000`).
+`/auth/login` and `/api/auth/*` stay inside Next/Auth.js.
 
 Do not point Caddy at `127.0.0.1:8000` for the public site. That bypasses the Next.js auth layer and breaks Auth.js routes such as `/auth/login` and `/api/auth/*`.
 
@@ -115,6 +116,8 @@ curl -I https://your-domain.com
 curl -I https://your-domain.com/api/config
 curl -I https://your-domain.com/auth/login?next=/hall/
 curl -I https://your-domain.com/api/auth/signin/discord
+
+If `/api/auth/signin/discord` redirects to `/api/auth/error?error=Configuration`, verify that `AUTH_SECRET`, `AUTH_URL`, `DISCORD_CLIENT_ID`, and `DISCORD_CLIENT_SECRET` are all set for the Next.js service and that the Discord app redirect URI exactly matches `https://your-domain.com/api/auth/callback/discord`.
 ```
 
 ## 9. Backups

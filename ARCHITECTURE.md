@@ -16,16 +16,17 @@ In production, the frontend and backend are separate processes with a proxy boun
 Browser
   -> Caddy (443)
   -> Next.js web (ghosted-web.service, :3000)
-  -> Next rewrites /api/* and /auth/* to Python API (:8000)
+  -> Next route handlers proxy selected /api/* requests to Python API (:8000)
   -> SQLite (/var/lib/ghosted/ghosted.db)
 ```
 
-### Rewrite contract (Next -> Python)
+### Proxy contract (Next -> Python)
 
-Configured in [`next.config.ts`](./next.config.ts):
+Implemented by the Next route handlers and helpers under [`src/app/api`](./src/app/api) and [`src/lib/server`](./src/lib/server):
 
-- `/api/:path*` -> `${PYTHON_API_URL}/api/:path*`
-- `/auth/:path*` -> `${PYTHON_API_URL}/auth/:path*`
+- `/api/:path*` is proxied by route handlers where the Next app still relies on Python-backed data
+- `/auth/login` and `/api/auth/*` stay in Next/Auth.js
+- Legacy Python `/auth/discord/*` endpoints still exist in `server.py`, but they are not the primary public sign-in entrypoint
 
 Default `PYTHON_API_URL` is `http://localhost:8000`.
 
