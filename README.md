@@ -56,7 +56,8 @@ http://localhost:3000/app/companion
 Companion asset storage:
 
 - Hand-authored default Ghostling/base cosmetics live in `assets/companion/defaults/`
-- Uploaded replacement assets live under `data/companion-assets/uploads/`
+- Uploaded companion assets live under `COMPANION_ASSET_DIR/uploads/`
+- If `COMPANION_ASSET_DIR` is unset, uploads default to a `companion-assets/` folder beside `DATABASE_PATH`
 - Admin users can upload a replacement base plus custom cosmetic layers directly from `/app/companion`
 - Raw repo and uploaded files are both served from `/api/companion/assets/...`
 
@@ -90,6 +91,7 @@ Current VPS pattern:
 - Next proxies app data requests to the Python API with route handlers under `/api/*`
 - Next owns `/auth/login` and `/api/auth/*`; legacy Python `/auth/discord/*` routes are no longer the primary browser sign-in flow
 - Env file at `/etc/ghosted/ghosted.env`
+- With `DATABASE_PATH=/var/lib/ghosted/ghosted.db`, uploaded companion assets now default to `/var/lib/ghosted/companion-assets/` unless `COMPANION_ASSET_DIR` is set explicitly
 
 Typical deploy command sequence:
 

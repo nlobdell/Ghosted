@@ -42,6 +42,7 @@ At minimum:
 - `PORT=8000`
 - `PUBLIC_BASE_URL=https://your-domain.com`
 - `DATABASE_PATH=/var/lib/ghosted/ghosted.db`
+- `COMPANION_ASSET_DIR=/var/lib/ghosted/companion-assets`
 - `SESSION_COOKIE_SECURE=true`
 - `PYTHON_API_URL=http://127.0.0.1:8000`
 - `AUTH_SECRET=<long random secret>`
@@ -67,6 +68,8 @@ Run `next start` on `127.0.0.1:3000` from `/opt/ghosted`.
 ### Python API service
 
 Run `python3 /opt/ghosted/server.py` with environment from `/etc/ghosted/ghosted.env`.
+
+Companion uploads should stay outside `/opt/ghosted`; the default runtime target is `/var/lib/ghosted/companion-assets` when `COMPANION_ASSET_DIR` is set as above.
 
 Your host can use names like `ghosted-web.service` and `ghosted-api.service` (or legacy `ghosted.service`) as long as:
 
@@ -115,9 +118,9 @@ sudo systemctl status ghosted-api --no-pager
 curl -I https://your-domain.com
 curl -I https://your-domain.com/api/config
 curl -I https://your-domain.com/auth/login?next=/hall/
-curl -I https://your-domain.com/api/auth/signin/discord
+curl -I https://your-domain.com/api/auth/signin
 
-If `/api/auth/signin/discord` redirects to `/api/auth/error?error=Configuration`, verify that `AUTH_SECRET`, `AUTH_URL`, `DISCORD_CLIENT_ID`, and `DISCORD_CLIENT_SECRET` are all set for the Next.js service and that the Discord app redirect URI exactly matches `https://your-domain.com/api/auth/callback/discord`.
+If `/api/auth/signin` fails to render the Auth.js sign-in page, verify that `AUTH_SECRET`, `AUTH_URL`, `DISCORD_CLIENT_ID`, and `DISCORD_CLIENT_SECRET` are all set for the Next.js service and that the Discord app redirect URI exactly matches `https://your-domain.com/api/auth/callback/discord`.
 ```
 
 ## 9. Backups
