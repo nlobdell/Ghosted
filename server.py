@@ -1300,6 +1300,15 @@ def admin_discord_ids() -> set[str]:
     return {item.strip() for item in raw.split(",") if item.strip()}
 
 
+def resolve_admin_flag(connection: sqlite3.Connection, discord_id: str) -> int:
+    configured_admin_ids = admin_discord_ids()
+    if configured_admin_ids:
+        return 1 if discord_id in configured_admin_ids else 0
+
+    existing = get_user_by_discord_id(connection, discord_id)
+    return 1 if existing and bool(existing["is_admin"]) else 0
+
+
 def discord_request_headers(extra: dict[str, str] | None = None) -> dict[str, str]:
     headers = dict(DISCORD_HTTP_HEADERS)
     headers["User-Agent"] = env_text("DISCORD_USER_AGENT") or headers["User-Agent"]
@@ -3666,7 +3675,7 @@ def create_or_update_user(
     roles = roles or []
     discord_id = str(discord_user["id"])
     now = utc_iso()
-    is_admin = 1 if discord_id in admin_discord_ids() else 0
+    is_admin = resolve_admin_flag(connection, discord_id)
     connection.execute(
         """
         INSERT INTO users (discord_id, username, global_name, avatar_hash, roles_json, is_admin, created_at, updated_at)

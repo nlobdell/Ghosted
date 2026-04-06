@@ -31,6 +31,14 @@ function adminDiscordIds() {
   );
 }
 
+function resolveAdminFlag(existingIsAdmin: boolean) {
+  const configuredAdminIds = adminDiscordIds();
+  if (configuredAdminIds.size === 0) {
+    return existingIsAdmin;
+  }
+  return false;
+}
+
 function discordAvatarUrl(discordId: string, avatarHash?: string | null) {
   if (!avatarHash) return null;
   return `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.png?size=128`;
@@ -146,7 +154,15 @@ export async function upsertLegacyUserFromDiscord(
 ): Promise<UpsertedLegacyUser> {
   const db = getAuthDb();
   const roles = await fetchDiscordRoles(profile.id);
-  const isAdmin = adminDiscordIds().has(profile.id);
+  const configuredAdminIds = adminDiscordIds();
+  const existingUser = db.prepare(`
+    SELECT is_admin
+    FROM users
+    WHERE discord_id = ?
+  `).get(profile.id) as { is_admin: number } | undefined;
+  const isAdmin = configuredAdminIds.size > 0
+    ? configuredAdminIds.has(profile.id)
+    : resolveAdminFlag(Boolean(existingUser?.is_admin));
   const timestamp = nowIso();
 
   db.prepare(`
