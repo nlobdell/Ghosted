@@ -43,6 +43,8 @@
   --section-gap: 1.15rem;
   --surface-padding: 1.35rem;
   --surface-padding-lg: 1.55rem;
+  --hall-sidebar-width: 16rem;
+  --hall-sticky-offset: calc(var(--safe-top) + 1rem);
 }
 
 *,
@@ -266,17 +268,6 @@ textarea:focus-visible,
   padding-top: 1rem;
 }
 
-.app-header__grid {
-  display: grid;
-  grid-template-columns: 16rem minmax(0, 1fr);
-  gap: var(--section-gap);
-  align-items: start;
-}
-
-.app-header__rail {
-  min-height: 1px;
-}
-
 .site-nav {
   position: sticky;
   top: 0;
@@ -302,7 +293,16 @@ textarea:focus-visible,
 }
 
 .nav-shell--public {
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, var(--hall-sidebar-width)) minmax(0, 1fr) auto;
+}
+
+.nav-shell--hall {
+  grid-template-columns: minmax(0, var(--hall-sidebar-width)) minmax(0, 1fr) auto;
+}
+
+.nav-shell--public .nav-links,
+.nav-shell--hall .nav-links {
+  justify-content: flex-start;
 }
 
 .nav-shell::before {
@@ -905,7 +905,7 @@ textarea:focus-visible,
   width: min(var(--spacing-container), calc(100vw - var(--page-gutter) - var(--safe-left) - var(--safe-right)));
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 16rem minmax(0, 1fr);
+  grid-template-columns: var(--hall-sidebar-width) minmax(0, 1fr);
   gap: var(--section-gap);
   padding: 1.3rem 0 calc(4rem + var(--safe-bottom));
 }
@@ -922,10 +922,14 @@ textarea:focus-visible,
 
 .hall-sidebar {
   position: sticky;
-  top: calc(var(--safe-top) + 5rem);
+  top: var(--hall-sticky-offset);
   align-self: start;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--section-gap);
+  width: 100%;
+  max-height: calc(100dvh - var(--hall-sticky-offset) - 1rem);
+  overflow: hidden;
 }
 
 .hall-sidebar__header {
@@ -939,11 +943,19 @@ textarea:focus-visible,
 
 .hall-sidebar__nav {
   display: grid;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  padding-right: 0.12rem;
 }
 
 .hall-sidebar__link {
   display: grid;
+  align-content: start;
   gap: 0.2rem;
+  min-height: 4rem;
   padding: 0.95rem 0;
   border-bottom: 1px solid rgba(191, 179, 255, 0.08);
   text-decoration: none;
@@ -1556,14 +1568,6 @@ select.input-base option {
 }
 
 @media (max-width: 1120px) {
-  .app-header__grid {
-    grid-template-columns: 1fr;
-  }
-
-  .app-header__rail {
-    display: none;
-  }
-
   .nav-utility-links {
     display: none;
   }
@@ -1586,6 +1590,8 @@ select.input-base option {
 
   .hall-sidebar {
     position: static;
+    max-height: none;
+    overflow: visible;
   }
 
   .editorial-grid-three {

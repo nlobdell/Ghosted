@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  AppContext,
   StatStrip,
   Panel,
   AppGrid,
@@ -132,17 +131,6 @@ export default function ProfilePage() {
 
   return (
     <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
-      <AppContext
-        breadcrumbs={[
-          { label: 'Ghosted', href: '/' },
-          { label: 'Hall', href: '/hall/' },
-          { label: 'Profile' },
-        ]}
-        title="Ghosted identity setup"
-        summary="Verify your account identity first, then manage RuneScape linking and synced role access."
-        actions={<Link href="/hall/ghostling/" className="button button--secondary button--small">Ghostling</Link>}
-      />
-
       {error ? <Banner message={error} variant="error" /> : null}
 
       {loading ? (
@@ -159,7 +147,6 @@ export default function ProfilePage() {
               className="profile-identity-panel"
               tier="primary"
               title="Identity"
-              eyebrow="Your account"
               body={(
                 <div className="app-stack">
                   <div className="profile-identity">
@@ -188,11 +175,6 @@ export default function ProfilePage() {
                       ['Clan', wom?.membership?.groupName ?? '-'],
                     ]}
                   />
-
-                  <div className="app-inline-actions">
-                    <Link href="/hall/ghostling/" className="button button--secondary button--small">Open Ghostling studio</Link>
-                  </div>
-
                   {linkResult ? <Banner message={linkResult.message} variant={linkResult.ok ? 'info' : 'error'} /> : null}
 
                   {wom?.linked ? (
@@ -241,7 +223,6 @@ export default function ProfilePage() {
               className="profile-perks-panel"
               tier="meta"
               title="Roles and perks"
-              eyebrow="Discord sync"
               body={(
                 <div className="app-stack">
                   <TagBlock

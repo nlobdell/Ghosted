@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import { HallTopbar } from '@/components/nav/HallTopbar';
 import { HallSidebar } from '@/components/nav/HallSidebar';
-import { getServerJSON } from '@/lib/server-api';
-import type { ShellData } from '@/lib/types';
+import { getHallShellData } from '@/lib/server/hall-data';
 
 export const metadata: Metadata = {
   title: {
@@ -12,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HallLayout({ children }: { children: React.ReactNode }) {
-  const shellData = await getServerJSON<ShellData>('/api/site-shell?next=%2Fhall%2F');
+  const shellData = await getHallShellData('/hall/');
 
   return (
     <div className="app-page app-shell">

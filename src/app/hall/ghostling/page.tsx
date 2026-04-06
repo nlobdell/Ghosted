@@ -4,7 +4,6 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  AppContext,
   AppGrid,
   Banner,
   EmptyState,
@@ -199,19 +198,6 @@ export default function CompanionPage() {
 
   return (
     <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
-      <AppContext
-        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/hall/' }, { label: 'Ghostling' }]}
-        title="Ghostling studio"
-        summary="Equip the Ghostling that now anchors your Ghosted identity, spend from the same shared points loop, and export it anywhere you want the hall to follow."
-        actions={(
-          <>
-            {shell?.user?.isAdmin ? <Link href="/admin/ghostling/" className="button button--secondary button--small">Ghostling admin</Link> : null}
-            <Link href="/hall/rewards/" className="button button--secondary button--small">Rewards</Link>
-            <Link href="/hall/profile/" className="button button--secondary button--small">Profile</Link>
-          </>
-        )}
-      />
-
       {error ? <Banner message={error} variant="error" /> : null}
       {message ? <Banner message={message.text} variant={message.variant} /> : null}
 
@@ -281,7 +267,6 @@ export default function CompanionPage() {
             <Panel
               className={styles.studioPanel}
               tier="primary"
-              eyebrow="Loadout"
               title="Equip your current Ghostling"
               body={(
                 <div className={styles.studioBody}>
@@ -319,7 +304,6 @@ export default function CompanionPage() {
             <Panel
               className={styles.sharePanel}
               tier="meta"
-              eyebrow="Share"
               title="Export for Discord and beyond"
               body={(
                 <div className={styles.shareBody}>
@@ -388,9 +372,8 @@ export default function CompanionPage() {
 
           <section className={styles.shopSection}>
               <SectionHeading
-                eyebrow="Unlockables"
                 title="Ghostling cosmetics"
-                copy="Unlock once, equip whenever you want. Every cosmetic pulls from the same Ghosted points balance you already use for rewards, drops, and the rest of the hall."
+                copy="Unlock once and equip anytime with the same shared points balance."
               />
             <div className={styles.slotGroups}>
               {SLOT_ORDER.map((slot) => {
