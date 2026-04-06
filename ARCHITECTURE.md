@@ -5,10 +5,10 @@
 Ghosted is a split-stack web app:
 
 - **Next.js (React 19 + App Router)** serves the UI on port `3000`.
-- **Python API (`server.py`)** serves auth, rewards, casino, WOM, and admin APIs (typically port `8000`).
+- **Python API (`server.py`)** still serves the remaining unmigrated domains (typically port `8000`).
 - **Caddy** terminates TLS and reverse proxies public traffic to the Next.js web service.
 
-In production, the frontend and backend are separate processes with a proxy boundary between them.
+In production, the frontend and backend are separate processes with a shrinking proxy boundary between them.
 
 ## 2. Runtime Topology
 
@@ -16,15 +16,17 @@ In production, the frontend and backend are separate processes with a proxy boun
 Browser
   -> Caddy (443)
   -> Next.js web (ghosted-web.service, :3000)
-  -> Next route handlers proxy selected /api/* requests to Python API (:8000)
+  -> Native Next route handlers serve migrated /api/* domains
+  -> Next catch-all proxy forwards remaining /api/* domains to Python API (:8000)
   -> SQLite (/var/lib/ghosted/ghosted.db)
 ```
 
-### Proxy contract (Next -> Python)
+### Mixed API contract (Next + Python)
 
 Implemented by the Next route handlers and helpers under [`src/app/api`](./src/app/api) and [`src/lib/server`](./src/lib/server):
 
-- `/api/:path*` is proxied by route handlers where the Next app still relies on Python-backed data
+- Native Next handlers now own `/api/config`, `/api/site-shell`, `/api/me`, `/api/rewards`, `/api/news`, `/api/giveaways`, `/api/hall/dashboard`, and the current admin news/giveaway/operator routes
+- `/api/:path*` is still proxied where the Next app relies on Python-backed data such as companion, casino, and the remaining WOM/profile flows
 - `/auth/login` and `/api/auth/*` stay in Next/Auth.js
 - Legacy Python `/auth/discord/*` endpoints still exist in `server.py`, but they are not the primary public sign-in entrypoint
 
@@ -118,18 +120,16 @@ Key contract:
 Observed stack:
 
 - Caddy serves `ghosted.smirkhub.com` and proxies to `127.0.0.1:3000`
-- `ghosted-web.service` runs `next start`
-- Separate Python API process must be available for `/api` + `/auth` rewrites
+- `ghosted-web.service` runs the standalone Next bundle from `/opt/ghosted/current-web`
+- `ghosted-api.service` runs the remaining Python API from `/opt/ghosted/current-api`
 - Environment/secrets come from `/etc/ghosted/ghosted.env`
+- Releases are assembled under `/opt/ghosted/releases/<timestamp>-<sha>/` and activated through `current-web` / `current-api` symlinks
 
-Typical deploy commands:
+Typical deploy command:
 
-1. `git pull`
-2. `npm install`
-3. `npm run build`
-4. `systemctl restart ghosted-web`
+1. `bash scripts/deploy-release.sh origin/main --auto`
 
-If backend code changed, restart the Python API service as well.
+The deploy script skips `npm ci` when `package-lock.json` is unchanged, always rebuilds the standalone web bundle, and restarts only the web or API service that changed.
 
 ## 9. Editing Guidance
 

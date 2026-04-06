@@ -24,12 +24,13 @@ sudo chown -R ghosted:ghosted /opt/ghosted
 sudo chown -R ghosted:ghosted /var/lib/ghosted
 ```
 
-## 3. Copy code and install dependencies
+## 3. Copy code and prepare the build workspace
 
 ```bash
-sudo rsync -av --delete ./ /opt/ghosted/
-cd /opt/ghosted
-sudo npm install
+sudo mkdir -p /opt/ghosted/releases
+sudo mkdir -p /opt/ghosted/.deploy-state
+sudo rsync -av --delete ./ /opt/ghosted/build/
+sudo chown -R ghosted:ghosted /opt/ghosted
 ```
 
 ## 4. Configure env file
@@ -59,19 +60,28 @@ Only keep this legacy variable if you still invoke Python auth routes directly:
 
 - `DISCORD_REDIRECT_URI=https://your-domain.com/auth/discord/callback`
 
-## 5. Run services
+## 5. Install services
 
 ### Next.js web service
 
-Run `next start` on `127.0.0.1:3000` from `/opt/ghosted`.
+Use [`deploy/ghosted-web.service`](./ghosted-web.service). The service runs the standalone Next bundle from `/opt/ghosted/current-web`.
 
 ### Python API service
 
-Run `python3 /opt/ghosted/server.py` with environment from `/etc/ghosted/ghosted.env`.
+Use [`deploy/ghosted-api.service`](./ghosted-api.service). The service runs `python3 /opt/ghosted/current-api/server.py`.
 
 Companion uploads should stay outside `/opt/ghosted`; the default runtime target is `/var/lib/ghosted/companion-assets` when `COMPANION_ASSET_DIR` is set as above.
 
-Your host can use names like `ghosted-web.service` and `ghosted-api.service` (or legacy `ghosted.service`) as long as:
+Install the units:
+
+```bash
+sudo cp /opt/ghosted/build/deploy/ghosted-web.service /etc/systemd/system/ghosted-web.service
+sudo cp /opt/ghosted/build/deploy/ghosted-api.service /etc/systemd/system/ghosted-api.service
+sudo systemctl daemon-reload
+sudo systemctl enable ghosted-web ghosted-api
+```
+
+Your host can still keep a legacy `ghosted.service` alias if needed, but the release script and docs now assume:
 
 - web is reachable on `3000`
 - API is reachable on `8000`
@@ -87,7 +97,7 @@ ghosted.example.com {
 }
 ```
 
-Next.js handles `/api/*` proxying to the Python API using `PYTHON_API_URL` (default `http://localhost:8000`).
+Next.js now serves the core app APIs directly and still proxies the remaining unmigrated `/api/*` domains to the Python API using `PYTHON_API_URL` (default `http://localhost:8000`).
 `/auth/login` and `/api/auth/*` stay inside Next/Auth.js.
 
 Do not point Caddy at `127.0.0.1:8000` for the public site. That bypasses the Next.js auth layer and breaks Auth.js routes such as `/auth/login` and `/api/auth/*`.
@@ -95,20 +105,16 @@ Do not point Caddy at `127.0.0.1:8000` for the public site. That bypasses the Ne
 ## 7. Deploy updates
 
 ```bash
-cd /opt/ghosted
-git pull --ff-only origin main
-npm install
-npm run build
-sudo systemctl restart ghosted-web
+cd /opt/ghosted/build
+sudo -u ghosted bash scripts/deploy-release.sh origin/main --auto
 ```
 
-If backend logic changed:
+Manual rollback:
 
 ```bash
-sudo systemctl restart ghosted-api
+cd /opt/ghosted/build
+sudo -u ghosted bash scripts/deploy-release.sh rollback --all
 ```
-
-(or restart your legacy Python service name if different)
 
 ## 8. Validate
 
@@ -117,6 +123,8 @@ sudo systemctl status ghosted-web --no-pager
 sudo systemctl status ghosted-api --no-pager
 curl -I https://your-domain.com
 curl -I https://your-domain.com/api/config
+curl -I https://your-domain.com/api/news
+curl -I https://your-domain.com/api/giveaways
 curl -I https://your-domain.com/auth/login?next=/hall/
 curl -I https://your-domain.com/api/auth/signin
 

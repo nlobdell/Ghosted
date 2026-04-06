@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   // Turbopack (default in Next.js 16) handles most static assets natively.
   // Empty config acknowledges the intentional turbopack-only setup.
   turbopack: {},

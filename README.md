@@ -102,6 +102,7 @@ Runtime pid files and logs are written to `data/dev-runtime/`.
 - `npm run lint:fix` - auto-fix safe ESLint issues
 - `npm run test:backend` - run Python backend tests
 - `npm run git:update` - local workflow helper script
+- `scripts/deploy-release.sh` - release-oriented VPS deploy script with lockfile-aware installs, targeted restarts, and rollback support
 
 ## Validation
 
@@ -119,21 +120,26 @@ npm run test:backend
 Current VPS pattern:
 
 - Caddy -> Next.js (`ghosted-web.service`) on `127.0.0.1:3000`
-- Next proxies app data requests to the Python API with route handlers under `/api/*`
+- Next now owns core app routes such as `/api/config`, `/api/site-shell`, `/api/me`, `/api/rewards`, `/api/news`, `/api/giveaways`, `/api/hall/dashboard`, and the current admin news/giveaway/operator routes
+- The catch-all `/api/[...path]` proxy still forwards unmigrated domains such as companion, casino, and the remaining WOM/profile endpoints to the Python API
 - Next owns `/auth/login` and `/api/auth/*`; legacy Python `/auth/discord/*` routes are no longer the primary browser sign-in flow
 - Env file at `/etc/ghosted/ghosted.env`
 - With `DATABASE_PATH=/var/lib/ghosted/ghosted.db`, uploaded companion assets now default to `/var/lib/ghosted/companion-assets/` unless `COMPANION_ASSET_DIR` is set explicitly
+- Production builds now use Next standalone output, and the checked-in service templates target release symlinks under `/opt/ghosted/current-web` and `/opt/ghosted/current-api`
 
-Typical deploy command sequence:
+Recommended deploy command sequence:
 
 ```bash
-git pull
-npm install
-npm run build
-sudo systemctl restart ghosted-web
+bash scripts/deploy-release.sh origin/main --auto
 ```
 
-If backend logic changed, restart the Python API service too.
+Rollback example:
+
+```bash
+bash scripts/deploy-release.sh rollback --all
+```
+
+The release script validates `DATABASE_PATH` and `COMPANION_ASSET_DIR`, skips `npm ci` when `package-lock.json` is unchanged, and only restarts the web or API service when the changed files require it.
 
 ## Additional Docs
 

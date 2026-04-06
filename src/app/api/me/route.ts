@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { withRouteErrorHandling } from '@/lib/server/core';
 import { buildSiteShell } from '@/lib/server/ghosted-api';
+import { withRouteErrorHandling } from '@/lib/server/core';
 
 export const runtime = 'nodejs';
 
