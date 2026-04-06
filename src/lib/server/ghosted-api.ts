@@ -3,9 +3,12 @@ import 'server-only';
 import { auth } from '@/auth';
 import { cookies } from 'next/headers';
 import type { Database } from 'better-sqlite3';
+import { casinoDailyWagerCap, dailyWagerStatus, recentSpins } from '@/lib/server/casino';
+import { buildHallCompanionSummaryPayload } from '@/lib/server/companion';
 import { buildRoleDirectory, buildRuntimeAuthConfig, resolveRole, resolveRoles, type RoleDirectory } from '@/lib/server/discord';
 import { AppError, envFlag, jsonLoad, normalizeLocalPath, parseIso, utcIso, utcNow } from '@/lib/server/core';
 import { getDatabase } from '@/lib/server/database';
+import { getBalance, recentLedger } from '@/lib/server/rewards';
 import {
   DEFAULT_WOM_HISCORE_METRIC,
   hallClanSummaryPayload,
@@ -14,6 +17,8 @@ import {
   womGroupId,
   womLinkPayload,
 } from '@/lib/server/wom';
+
+export { getBalance } from '@/lib/server/rewards';
 
 type UserRow = {
   id: number;
@@ -80,14 +85,6 @@ const SITE_NAV_ITEMS = [
   { key: 'profile', label: 'Profile', href: '/hall/profile/' },
 ];
 
-const COMPANION_SLOT_ORDER = ['hat', 'face', 'neck', 'body'] as const;
-const COMPANION_LOADOUT_COLUMNS = {
-  hat: 'hat_item_slug',
-  face: 'face_item_slug',
-  neck: 'neck_item_slug',
-  body: 'body_item_slug',
-} as const;
-
 function getDb() {
   return getDatabase();
 }
@@ -144,162 +141,6 @@ export function displayName(user: UserRow) {
 function avatarUrl(user: UserRow) {
   if (!user.avatar_hash) return undefined;
   return `https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar_hash}.png?size=128`;
-}
-
-export function getBalance(db: Database, userId: number) {
-  const row = db
-    .prepare('SELECT COALESCE(SUM(amount), 0) AS balance FROM reward_ledger WHERE user_id = ?')
-    .get(userId) as { balance: number };
-  return Number(row.balance ?? 0);
-}
-
-function totalWageredToday(db: Database, userId: number) {
-  const start = utcNow();
-  start.setUTCHours(0, 0, 0, 0);
-  const row = db.prepare(`
-    SELECT COALESCE(SUM(wager), 0) AS total
-    FROM casino_spins
-    WHERE user_id = ? AND created_at >= ?
-  `).get(userId, utcIso(start)) as { total: number };
-  return Number(row.total ?? 0);
-}
-
-function dailyWagerStatus(db: Database, userId: number) {
-  const dailyCapRaw = process.env.DAILY_WAGER_CAP?.trim();
-  const dailyCap = dailyCapRaw ? Number.parseInt(dailyCapRaw, 10) : null;
-  const wagered = totalWageredToday(db, userId);
-  return {
-    dailyWagered: wagered,
-    dailyRemaining: dailyCap === null || !Number.isFinite(dailyCap) ? null : Math.max(0, dailyCap - wagered),
-    dailyCap: dailyCap !== null && Number.isFinite(dailyCap) ? dailyCap : null,
-  };
-}
-
-function normalizeSpinStorage(raw: unknown) {
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-    return raw as Record<string, unknown>;
-  }
-  if (Array.isArray(raw)) {
-    return { symbols: raw, grid: [raw] };
-  }
-  return { symbols: [], grid: [] };
-}
-
-function summarizeSlotOutcome(
-  gameName: string,
-  wager: number,
-  lineWins: Array<Record<string, unknown>>,
-  scatter: Record<string, unknown>,
-  usedFreeSpin: boolean,
-) {
-  const freeSpinsAwarded = Number(scatter.freeSpinsAwarded ?? 0);
-  if (freeSpinsAwarded > 0) {
-    return {
-      type: 'bonus',
-      label: 'Bonus trigger',
-      headline: `${gameName} opened a free-spin round.`,
-      detail: `${Number(scatter.count ?? 0)} scatters awarded ${freeSpinsAwarded} free spins.`,
-    };
-  }
-
-  if (lineWins.length > 0) {
-    const topLine = [...lineWins].sort((left, right) => Number(right.payout ?? 0) - Number(left.payout ?? 0))[0];
-    const count = Number(topLine.count ?? 0);
-    const payout = Number(topLine.payout ?? 0);
-    const isJackpot = count === 5 && payout >= wager * 10;
-    return {
-      type: isJackpot ? 'jackpot' : 'line_win',
-      label: isJackpot ? 'Jackpot' : 'Line hit',
-      headline: `${gameName} paid on line ${Number(topLine.lineIndex ?? 0) + 1}.`,
-      detail: `${count} ${String(topLine.symbol ?? 'symbol')} symbols connected for ${payout} points.`,
-    };
-  }
-
-  if (Number(scatter.count ?? 0) >= 2) {
-    return {
-      type: 'near_miss',
-      label: 'Near miss',
-      headline: `${gameName} almost triggered the feature.`,
-      detail: `${Number(scatter.count ?? 0)} scatters landed. One more would have opened free spins.`,
-    };
-  }
-
-  return {
-    type: usedFreeSpin ? 'free_spin_miss' : 'miss',
-    label: 'No win',
-    headline: `${gameName} came up cold.`,
-    detail: usedFreeSpin ? 'The free spin landed dry this round.' : 'No paylines connected on that spin.',
-  };
-}
-
-function recentLedger(db: Database, userId: number, limit = 25) {
-  const rows = db.prepare(`
-    SELECT id, amount, entry_type, description, metadata_json, created_at
-    FROM reward_ledger
-    WHERE user_id = ?
-    ORDER BY created_at DESC, id DESC
-    LIMIT ?
-  `).all(userId, limit) as Array<{
-    id: number;
-    amount: number;
-    entry_type: string;
-    description: string;
-    metadata_json: string;
-    created_at: string;
-  }>;
-
-  return rows.map((row) => ({
-    id: row.id,
-    amount: row.amount,
-    entryType: row.entry_type,
-    description: row.description,
-    metadata: jsonLoad<Record<string, unknown>>(row.metadata_json, {}),
-    createdAt: row.created_at,
-  }));
-}
-
-function recentSpins(db: Database, userId: number, limit = 5) {
-  const rows = db.prepare(`
-    SELECT casino_spins.*, casino_games.name
-    FROM casino_spins
-    JOIN casino_games ON casino_games.id = casino_spins.game_id
-    WHERE user_id = ?
-    ORDER BY created_at DESC, id DESC
-    LIMIT ?
-  `).all(userId, limit) as Array<{
-    id: number;
-    name: string;
-    wager: number;
-    payout: number;
-    symbols_json: string;
-    created_at: string;
-  }>;
-
-  return rows.map((row) => {
-    const payload = normalizeSpinStorage(jsonLoad(row.symbols_json, {}));
-    const lineWins = Array.isArray(payload.lineWins) ? payload.lineWins as Array<Record<string, unknown>> : [];
-    const scatter = payload.scatter && typeof payload.scatter === 'object'
-      ? payload.scatter as Record<string, unknown>
-      : { count: 0, payout: 0, freeSpinsAwarded: 0 };
-    const usedFreeSpin = Boolean(payload.usedFreeSpin);
-
-    return {
-      id: row.id,
-      game: row.name,
-      wager: row.wager,
-      payout: row.payout,
-      net: Number(row.payout) - Number(row.wager),
-      symbols: Array.isArray(payload.symbols) ? payload.symbols : [],
-      grid: Array.isArray(payload.grid) ? payload.grid : [],
-      lineWins,
-      scatter,
-      usedFreeSpin,
-      freeSpinsAwarded: Number(payload.freeSpinsAwarded ?? 0),
-      freeSpinsRemaining: Number(payload.freeSpinsRemaining ?? 0),
-      createdAt: row.created_at,
-      outcome: summarizeSlotOutcome(row.name, Number(row.wager) || 1, lineWins, scatter, usedFreeSpin),
-    };
-  });
 }
 
 function buildPerks(user: UserRow) {
@@ -379,7 +220,7 @@ export function buildConfigPayload() {
     authConfigured: authConfig.oauthReady,
     guildSyncConfigured: authConfig.guildReady,
     devAuthEnabled: envFlag('ENABLE_DEV_AUTH', false),
-    dailyWagerCap: process.env.DAILY_WAGER_CAP ? Number.parseInt(process.env.DAILY_WAGER_CAP, 10) : null,
+    dailyWagerCap: casinoDailyWagerCap(),
     womConfigured: womGroupId() !== undefined,
     womGroupId: womGroupId() ?? null,
   };
@@ -702,47 +543,6 @@ export async function enterGiveaway(giveawayId: number) {
   };
 }
 
-function ensureUserCompanionLoadout(db: Database, userId: number) {
-  db.prepare(`
-    INSERT OR IGNORE INTO user_companion_loadout (
-      user_id, hat_item_slug, face_item_slug, neck_item_slug, body_item_slug, updated_at
-    )
-    VALUES (?, NULL, NULL, NULL, NULL, ?)
-  `).run(userId, utcIso());
-}
-
-function companionInventorySlugs(db: Database, userId: number) {
-  const rows = db.prepare('SELECT item_slug FROM user_companion_inventory WHERE user_id = ?').all(userId) as Array<{ item_slug: string }>;
-  return new Set(rows.map((row) => String(row.item_slug)));
-}
-
-function companionLoadoutMap(db: Database, userId: number) {
-  ensureUserCompanionLoadout(db, userId);
-  const row = db.prepare('SELECT * FROM user_companion_loadout WHERE user_id = ?').get(userId) as Record<string, string | null> | undefined;
-  return {
-    hat: row?.[COMPANION_LOADOUT_COLUMNS.hat] ?? null,
-    face: row?.[COMPANION_LOADOUT_COLUMNS.face] ?? null,
-    neck: row?.[COMPANION_LOADOUT_COLUMNS.neck] ?? null,
-    body: row?.[COMPANION_LOADOUT_COLUMNS.body] ?? null,
-  };
-}
-
-function hallCompanionSummaryPayload(db: Database, user: UserRow) {
-  const ownedSlugs = companionInventorySlugs(db, user.id);
-  const loadout = companionLoadoutMap(db, user.id);
-  const equippedCount = COMPANION_SLOT_ORDER.filter((slot) => Boolean(loadout[slot])).length;
-  return {
-    user: {
-      displayName: displayName(user),
-      username: user.username,
-    },
-    balance: getBalance(db, user.id),
-    ownedCount: ownedSlugs.size,
-    equippedCount,
-    animatedRenderUrl: `/api/companion/render-animated?user=${user.id}`,
-  };
-}
-
 function hallRewardsSummaryPayload(db: Database, user: UserRow) {
   return {
     balance: getBalance(db, user.id),
@@ -765,7 +565,7 @@ export async function buildHallDashboard() {
       error = error ?? (routeError instanceof Error ? routeError.message : 'Failed to load rewards.');
     }
     try {
-      companion = hallCompanionSummaryPayload(db, currentUser);
+      companion = buildHallCompanionSummaryPayload(db, currentUser);
     } catch (routeError) {
       error = error ?? (routeError instanceof Error ? routeError.message : 'Failed to load Ghostling summary.');
     }

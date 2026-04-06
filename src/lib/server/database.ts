@@ -2,6 +2,8 @@ import 'server-only';
 
 import Database from 'better-sqlite3';
 import path from 'node:path';
+import { seedDefaultCasinoGames } from '@/lib/server/casino';
+import { ensureDefaultCompanionBase, removeLegacyDefaultCompanionAssets } from '@/lib/server/companion-schema';
 
 let database: Database.Database | null = null;
 let schemaReady = false;
@@ -9,7 +11,7 @@ let schemaReady = false;
 function resolveDatabasePath() {
   return process.env.DATABASE_PATH
     ? path.resolve(process.env.DATABASE_PATH)
-    : path.resolve(process.cwd(), 'data', 'ghosted.db');
+    : path.resolve(/*turbopackIgnore: true*/ process.cwd(), 'data', 'ghosted.db');
 }
 
 function tableColumns(db: Database.Database, tableName: string) {
@@ -211,6 +213,9 @@ function ensureSchema(db: Database.Database) {
 
   ensureTableColumn(db, 'companion_catalog', 'front_asset_path', 'TEXT');
   ensureTableColumn(db, 'companion_catalog', 'back_asset_path', 'TEXT');
+  seedDefaultCasinoGames(db);
+  ensureDefaultCompanionBase(db);
+  removeLegacyDefaultCompanionAssets(db);
 }
 
 export function getDatabase() {
@@ -227,4 +232,12 @@ export function getDatabase() {
   }
 
   return database;
+}
+
+export function resetDatabaseForTests() {
+  if (database) {
+    database.close();
+  }
+  database = null;
+  schemaReady = false;
 }

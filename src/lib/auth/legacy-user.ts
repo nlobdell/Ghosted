@@ -1,5 +1,7 @@
+import crypto from 'node:crypto';
 import type { Session } from 'next-auth';
 import { getAuthDb } from '@/lib/auth/db';
+import { envFlag, utcIso, utcNow } from '@/lib/server/core';
 
 type DiscordProfile = {
   id: string;
@@ -22,6 +24,8 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+const LEGACY_SESSION_LIFETIME_DAYS = 14;
+
 function adminDiscordIds() {
   return new Set(
     String(process.env.ADMIN_DISCORD_IDS ?? '')
@@ -42,6 +46,25 @@ function resolveAdminFlag(existingIsAdmin: boolean) {
 function discordAvatarUrl(discordId: string, avatarHash?: string | null) {
   if (!avatarHash) return null;
   return `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.png?size=128`;
+}
+
+function normalizeLegacyUser(row: {
+  id: number;
+  discord_id: string;
+  username: string;
+  global_name: string | null;
+  avatar_hash: string | null;
+  is_admin: number;
+}, roles: string[]): UpsertedLegacyUser {
+  return {
+    id: String(row.id),
+    discordId: row.discord_id,
+    username: row.username,
+    displayName: row.global_name || row.username,
+    avatarUrl: discordAvatarUrl(row.discord_id, row.avatar_hash),
+    isAdmin: Boolean(row.is_admin),
+    roles,
+  };
 }
 
 export async function fetchDiscordRoles(discordId: string) {
@@ -241,14 +264,95 @@ export async function upsertLegacyUserFromDiscord(
     );
   }
 
+  return normalizeLegacyUser(row, roles);
+}
+
+export function upsertLegacyDevUser(input: {
+  discordId: string;
+  username: string;
+  globalName?: string | null;
+  roles: string[];
+  adminRequested: boolean;
+}) {
+  const db = getAuthDb();
+  const timestamp = nowIso();
+  const existingUser = db.prepare(`
+    SELECT is_admin
+    FROM users
+    WHERE discord_id = ?
+  `).get(input.discordId) as { is_admin: number } | undefined;
+  const configuredAdminIds = adminDiscordIds();
+  const isAdmin = configuredAdminIds.size > 0
+    ? configuredAdminIds.has(input.discordId)
+    : resolveAdminFlag(Boolean(existingUser?.is_admin));
+
+  db.prepare(`
+    INSERT INTO users (discord_id, username, global_name, avatar_hash, roles_json, is_admin, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(discord_id) DO UPDATE SET
+      username = excluded.username,
+      global_name = excluded.global_name,
+      avatar_hash = excluded.avatar_hash,
+      roles_json = excluded.roles_json,
+      is_admin = excluded.is_admin,
+      updated_at = excluded.updated_at
+  `).run(
+    input.discordId,
+    input.username,
+    input.globalName ?? null,
+    null,
+    JSON.stringify(input.roles),
+    isAdmin ? 1 : 0,
+    timestamp,
+    timestamp,
+  );
+
+  let row = db.prepare(`
+    SELECT id, discord_id, username, global_name, avatar_hash, is_admin
+    FROM users
+    WHERE discord_id = ?
+  `).get(input.discordId) as {
+    id: number;
+    discord_id: string;
+    username: string;
+    global_name: string | null;
+    avatar_hash: string | null;
+    is_admin: number;
+  };
+
+  if (input.adminRequested && !row.is_admin) {
+    db.prepare(`
+      UPDATE users
+      SET is_admin = 1, updated_at = ?
+      WHERE id = ?
+    `).run(timestamp, row.id);
+
+    row = db.prepare(`
+      SELECT id, discord_id, username, global_name, avatar_hash, is_admin
+      FROM users
+      WHERE id = ?
+    `).get(row.id) as typeof row;
+  }
+
+  ensureUserRewards(db, row.id, input.roles);
+  return normalizeLegacyUser(row, input.roles);
+}
+
+export function createLegacySession(userId: string | number) {
+  const db = getAuthDb();
+  const token = crypto.randomBytes(32).toString('base64url');
+  const expiresAt = new Date(utcNow().getTime() + LEGACY_SESSION_LIFETIME_DAYS * 24 * 60 * 60 * 1000);
+
+  db.prepare(`
+    INSERT INTO sessions (token, user_id, expires_at, created_at)
+    VALUES (?, ?, ?, ?)
+  `).run(token, Number(userId), utcIso(expiresAt), utcIso());
+
   return {
-    id: String(row.id),
-    discordId: row.discord_id,
-    username: row.username,
-    displayName: row.global_name || row.username,
-    avatarUrl: discordAvatarUrl(row.discord_id, row.avatar_hash),
-    isAdmin: Boolean(row.is_admin),
-    roles,
+    token,
+    maxAge: LEGACY_SESSION_LIFETIME_DAYS * 24 * 60 * 60,
+    secure: envFlag('SESSION_COOKIE_SECURE', false),
+    expiresAt,
   };
 }
 

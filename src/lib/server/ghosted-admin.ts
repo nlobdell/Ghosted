@@ -1,9 +1,11 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
+import { recordAudit } from '@/lib/server/audit';
 import { buildRoleDirectory, postWebhook, sortedRoleOptions } from '@/lib/server/discord';
 import { AppError, parseIso, readJsonBody, slugify, utcIso, utcNow } from '@/lib/server/core';
 import { getDatabase } from '@/lib/server/database';
+import { appendRewardLedger } from '@/lib/server/rewards';
 import {
   displayName,
   getBalance,
@@ -14,35 +16,17 @@ import {
   listNewsPosts,
   requireAdminUser,
 } from '@/lib/server/ghosted-api';
-import { countLinkedGameAccounts, hallClanSummaryPayload, invalidateWomCache, womCachedJson, womCompetitionsPayload, womGroupId, womRequestJson } from '@/lib/server/wom';
-
-function audit(
-  actorUserId: number | null,
-  action: string,
-  targetType: string,
-  targetId: string,
-  payload?: Record<string, unknown>,
-) {
-  const db = getDatabase();
-  db.prepare(`
-    INSERT INTO audit_log (actor_user_id, action, target_type, target_id, payload_json, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(actorUserId, action, targetType, targetId, JSON.stringify(payload ?? {}), utcIso());
-}
-
-function appendLedger(
-  userId: number,
-  amount: number,
-  entryType: string,
-  description: string,
-  metadata?: Record<string, unknown>,
-) {
-  const db = getDatabase();
-  db.prepare(`
-    INSERT INTO reward_ledger (user_id, amount, entry_type, description, metadata_json, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(userId, amount, entryType, description, JSON.stringify(metadata ?? {}), utcIso());
-}
+import {
+  DEFAULT_WOM_PERIOD,
+  countLinkedGameAccounts,
+  invalidateWomCache,
+  womCachedJson,
+  womClanPayload,
+  womCompetitionDetailPayload,
+  womCompetitionsPayload,
+  womGroupId,
+  womRequestJson,
+} from '@/lib/server/wom';
 
 export async function adminOverviewPayload() {
   const db = getDatabase();
@@ -127,8 +111,8 @@ export async function grantPoints(request: Request) {
     throw new AppError('Could not find that user.', 404);
   }
 
-  appendLedger(target.id, amount, 'admin_grant', description, { actor_user_id: actor.id });
-  audit(actor.id, 'grant_points', 'user', String(target.id), { amount, description });
+  appendRewardLedger(getDatabase(), target.id, amount, 'admin_grant', description, { actor_user_id: actor.id });
+  recordAudit(actor.id, 'grant_points', 'user', String(target.id), { amount, description });
 
   return {
     userId: target.id,
@@ -185,7 +169,7 @@ export async function createGiveaway(request: Request) {
   );
 
   const giveawayId = Number((db.prepare('SELECT last_insert_rowid()').get() as Record<string, number>)['last_insert_rowid()'] ?? 0);
-  audit(actor.id, 'create_giveaway', 'giveaway', String(giveawayId), payload);
+  recordAudit(actor.id, 'create_giveaway', 'giveaway', String(giveawayId), payload);
   await postWebhook(`New Ghosted giveaway launched: **${title}**`);
 
   return {
@@ -241,7 +225,7 @@ export async function createNewsPost(request: Request) {
   `).run(slug, title, excerpt, body, status, publishedAt, actor.id, createdAt, createdAt);
 
   const postId = Number((db.prepare('SELECT last_insert_rowid()').get() as Record<string, number>)['last_insert_rowid()'] ?? 0);
-  audit(actor.id, 'create_news_post', 'news_post', String(postId), { title, status });
+  recordAudit(actor.id, 'create_news_post', 'news_post', String(postId), { title, status });
 
   return {
     id: postId,
@@ -264,7 +248,7 @@ export async function deleteNewsPost(postId: number) {
   if (!row) throw new AppError('News post not found.', 404);
 
   db.prepare('DELETE FROM news_posts WHERE id = ?').run(postId);
-  audit(actor.id, 'delete_news_post', 'news_post', String(postId), { slug: row.slug, title: row.title });
+  recordAudit(actor.id, 'delete_news_post', 'news_post', String(postId), { slug: row.slug, title: row.title });
   return row;
 }
 
@@ -285,21 +269,13 @@ export async function refreshWomData(request: Request) {
 
   if (scope === 'all') {
     deleted += invalidateWomCache(db);
-    try {
-      refreshed.clan = await hallClanSummaryPayload(db, true);
-    } catch {
-      refreshed.clan = null;
-    }
-    try {
-      refreshed.competitions = await womCompetitionsPayload(db, 12, true);
-    } catch {
-      refreshed.competitions = { competitions: [] };
-    }
+    refreshed.clan = await womClanPayload(db, true);
+    refreshed.competitions = await womCompetitionsPayload(db, 12, true);
   } else if (scope === 'group') {
     const groupId = womGroupId();
     if (groupId === undefined) throw new AppError('Wise Old Man integration is not configured yet.', 503);
     deleted += invalidateWomCache(db, `groups/${groupId}`);
-    refreshed.clan = await hallClanSummaryPayload(db, true);
+    refreshed.clan = await womClanPayload(db, true);
   } else if (scope === 'player') {
     const username = String(payload.username ?? '').trim();
     if (!username) throw new AppError('A Wise Old Man username is required to refresh player data.', 400);
@@ -307,7 +283,7 @@ export async function refreshWomData(request: Request) {
     refreshed.player = {
       player: await womRequestJson(`/players/${encodeURIComponent(username)}`, { method: 'POST' }),
       gains: await womCachedJson(db, `/players/${encodeURIComponent(username)}/gained`, {
-        query: { period: 'week' },
+        query: { period: DEFAULT_WOM_PERIOD },
         forceRefresh: true,
       }),
       achievements: await womCachedJson(db, `/players/${encodeURIComponent(username)}/achievements`, {
@@ -318,15 +294,12 @@ export async function refreshWomData(request: Request) {
     const competitionId = Number(payload.competitionId ?? 0);
     if (!competitionId) throw new AppError('A competitionId is required to refresh competition data.', 400);
     deleted += invalidateWomCache(db, `competitions/${competitionId}`);
-    refreshed.competition = {
-      competition: await womCachedJson(db, `/competitions/${competitionId}`, { forceRefresh: true }),
-      topHistory: await womCachedJson(db, `/competitions/${competitionId}/top-history`, { forceRefresh: true }),
-    };
+    refreshed.competition = await womCompetitionDetailPayload(db, competitionId, true);
   } else {
     throw new AppError('Refresh scope is invalid.', 400);
   }
 
-  audit(actor.id, 'refresh_wom_cache', 'wom_cache', scope, { scope, deleted, payload });
+  recordAudit(actor.id, 'refresh_wom_cache', 'wom_cache', scope, { scope, deleted, payload });
   return NextResponse.json({ deleted, ...refreshed });
 }
 

@@ -19,11 +19,6 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
       - name: Install frontend dependencies
         run: npm ci
 
@@ -43,8 +38,5 @@ jobs:
       - name: Build Next.js app
         run: npm run build
 
-      - name: Compile server
-        run: python -m py_compile server.py
-
-      - name: Run backend tests
-        run: npm run test:backend
+      - name: Run server contract tests
+        run: npm run test:server
