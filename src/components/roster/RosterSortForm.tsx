@@ -3,32 +3,19 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import styles from '@/app/roster/page.module.css';
-
-type RosterSortKey = 'rank' | 'xp' | 'name' | 'clan-rank' | 'build' | 'status';
-type SortDirection = 'asc' | 'desc';
+import {
+  defaultDirectionForRosterSort,
+  type RosterSortKey,
+  ROSTER_DIRECTION_OPTIONS,
+  type SortDirection,
+  ROSTER_SORT_LABELS,
+  ROSTER_SORT_OPTIONS,
+} from '@/lib/roster-sort';
 
 type Props = {
   sortKey: RosterSortKey;
   direction: SortDirection;
 };
-
-const SORT_OPTIONS: Array<{ value: RosterSortKey; label: string }> = [
-  { value: 'rank', label: 'Roster order' },
-  { value: 'xp', label: 'Overall XP' },
-  { value: 'name', label: 'Name' },
-  { value: 'clan-rank', label: 'Clan rank' },
-  { value: 'build', label: 'Build' },
-  { value: 'status', label: 'Status' },
-];
-
-const DIRECTION_OPTIONS: Array<{ value: SortDirection; label: string }> = [
-  { value: 'asc', label: 'Ascending' },
-  { value: 'desc', label: 'Descending' },
-];
-
-function defaultDirectionForSort(sort: RosterSortKey): SortDirection {
-  return sort === 'rank' ? 'desc' : 'asc';
-}
 
 export function RosterSortForm({ sortKey, direction }: Props) {
   const router = useRouter();
@@ -41,7 +28,7 @@ export function RosterSortForm({ sortKey, direction }: Props) {
   function applySelection(nextSort: RosterSortKey, nextDirection: SortDirection) {
     const params = new URLSearchParams();
     if (nextSort !== 'rank') params.set('sort', nextSort);
-    if (nextDirection !== defaultDirectionForSort(nextSort)) params.set('dir', nextDirection);
+    if (nextDirection !== defaultDirectionForRosterSort(nextSort)) params.set('dir', nextDirection);
     const query = params.toString();
     const href = query ? `${pathname}?${query}` : pathname;
     startTransition(() => {
@@ -63,15 +50,15 @@ export function RosterSortForm({ sortKey, direction }: Props) {
               const nextSort = event.target.value as RosterSortKey;
               const nextDirection = directionWasManuallyChanged.current
                 ? selectedDirection
-                : defaultDirectionForSort(nextSort);
+                : defaultDirectionForRosterSort(nextSort);
               setSelectedSort(nextSort);
               setSelectedDirection(nextDirection);
               applySelection(nextSort, nextDirection);
             }}
           >
-            {SORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+            {ROSTER_SORT_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {ROSTER_SORT_LABELS[option]}
               </option>
             ))}
           </select>
@@ -90,9 +77,9 @@ export function RosterSortForm({ sortKey, direction }: Props) {
               applySelection(selectedSort, nextDirection);
             }}
           >
-            {DIRECTION_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+            {ROSTER_DIRECTION_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option === 'asc' ? 'Ascending' : 'Descending'}
               </option>
             ))}
           </select>

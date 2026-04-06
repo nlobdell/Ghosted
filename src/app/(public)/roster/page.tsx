@@ -4,9 +4,16 @@ import Link from 'next/link';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 import { formatMaybeNumber } from '@/lib/api';
 import { clanRankIconPath } from '@/lib/clan-rank-icons';
-import { compareClanRankEntries } from '@/lib/clan-ranks';
+import {
+  normalizeRosterDirection,
+  normalizeRosterSort,
+  ROSTER_DIRECTION_LABELS,
+  ROSTER_SORT_LABELS,
+  rosterHref,
+  sortRosterEntries,
+} from '@/lib/roster-sort';
 import { getServerJSON } from '@/lib/server-api';
-import type { WomRosterData, WomRosterEntry } from '@/lib/types';
+import type { WomRosterData } from '@/lib/types';
 import { RosterSortForm } from '@/components/roster/RosterSortForm';
 import styles from '../../roster/page.module.css';
 
@@ -15,105 +22,9 @@ export const metadata: Metadata = {
 };
 
 const PAGE_SIZE = 25;
-const SORT_OPTIONS = ['rank', 'xp', 'name', 'clan-rank', 'build', 'status'] as const;
-const DIRECTION_OPTIONS = ['asc', 'desc'] as const;
-const SORT_LABELS: Record<(typeof SORT_OPTIONS)[number], string> = {
-  rank: 'Roster order',
-  xp: 'Overall XP',
-  name: 'Name',
-  'clan-rank': 'Clan rank',
-  build: 'Build',
-  status: 'Status',
-};
-const DIRECTION_LABELS: Record<(typeof DIRECTION_OPTIONS)[number], string> = {
-  asc: 'Ascending',
-  desc: 'Descending',
-};
-
-type RosterSortKey = (typeof SORT_OPTIONS)[number];
-type SortDirection = (typeof DIRECTION_OPTIONS)[number];
 
 function clampPage(value: number, max: number) {
   return Math.min(Math.max(1, value), Math.max(1, max));
-}
-
-function normalizeSort(value?: string): RosterSortKey {
-  return SORT_OPTIONS.includes(value as RosterSortKey) ? (value as RosterSortKey) : 'rank';
-}
-
-function defaultDirectionForSort(sortKey: RosterSortKey): SortDirection {
-  return sortKey === 'rank' ? 'desc' : 'asc';
-}
-
-function normalizeDirection(value: string | undefined, sortKey: RosterSortKey): SortDirection {
-  return DIRECTION_OPTIONS.includes(value as SortDirection) ? (value as SortDirection) : defaultDirectionForSort(sortKey);
-}
-
-function compareText(left: string | null | undefined, right: string | null | undefined) {
-  return String(left ?? '').localeCompare(String(right ?? ''), undefined, { sensitivity: 'base' });
-}
-
-function compareName(
-  left: string | null | undefined,
-  right: string | null | undefined,
-  direction: SortDirection,
-) {
-  return direction === 'desc' ? compareText(left, right) : compareText(right, left);
-}
-
-function sortRoster(entries: WomRosterEntry[], sortKey: RosterSortKey, direction: SortDirection) {
-  const multiplier = direction === 'asc' ? 1 : -1;
-  return [...entries].sort((left, right) => {
-    let value = 0;
-    let applyMultiplier = true;
-
-    switch (sortKey) {
-      case 'xp':
-        value = Number(left.value ?? 0) - Number(right.value ?? 0);
-        break;
-      case 'name':
-        value = compareName(
-          left.player.displayName ?? left.player.username,
-          right.player.displayName ?? right.player.username,
-          direction,
-        );
-        applyMultiplier = false;
-        break;
-      case 'clan-rank':
-        value = -compareClanRankEntries(left, right);
-        break;
-      case 'build':
-        value = compareText(right.player.build, left.player.build);
-        break;
-      case 'status':
-        value = compareText(right.player.status, left.player.status);
-        break;
-      case 'rank':
-      default:
-        value = Number(right.rank ?? 0) - Number(left.rank ?? 0);
-        break;
-    }
-
-    if (value === 0) {
-      value = Number(left.rank ?? 0) - Number(right.rank ?? 0);
-    }
-
-    if (value === 0) {
-      value = compareText(left.player.username, right.player.username);
-    }
-
-    return applyMultiplier ? value * multiplier : value;
-  });
-}
-
-function rosterHref(page: number, sortKey: RosterSortKey, direction: SortDirection) {
-  const params = new URLSearchParams();
-  const defaultDirection = defaultDirectionForSort(sortKey);
-  if (page > 1) params.set('page', String(page));
-  if (sortKey !== 'rank') params.set('sort', sortKey);
-  if (direction !== defaultDirection) params.set('dir', direction);
-  const query = params.toString();
-  return query ? `/roster/?${query}` : '/roster/';
 }
 
 export default async function RosterPage({
@@ -123,12 +34,12 @@ export default async function RosterPage({
 }) {
   const params = await searchParams;
   const rosterPayload = await getServerJSON<WomRosterData>('/api/wom/roster');
-  const sortKey = normalizeSort(params.sort);
-  const direction = normalizeDirection(params.dir, sortKey);
-  const allMembers = sortRoster(rosterPayload?.entries ?? [], sortKey, direction);
+  const sortKey = normalizeRosterSort(params.sort);
+  const direction = normalizeRosterDirection(params.dir, sortKey);
+  const allMembers = sortRosterEntries(rosterPayload?.entries ?? [], sortKey, direction);
   const memberCount = rosterPayload?.group.memberCount ?? allMembers.length;
-  const sortLabel = SORT_LABELS[sortKey];
-  const directionLabel = DIRECTION_LABELS[direction];
+  const sortLabel = ROSTER_SORT_LABELS[sortKey];
+  const directionLabel = ROSTER_DIRECTION_LABELS[direction];
   const totalPages = Math.max(1, Math.ceil(allMembers.length / PAGE_SIZE));
   const requestedPage = Number(params.page ?? '1');
   const currentPage = clampPage(Number.isFinite(requestedPage) ? requestedPage : 1, totalPages);
