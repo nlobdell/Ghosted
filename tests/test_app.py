@@ -489,6 +489,19 @@ class GhostedAppTests(unittest.TestCase):
         self.assertEqual(handler.status, 302)
         self.assertEqual(handler.response_headers.get("Location"), "/admin/")
 
+    def test_create_or_update_user_preserves_existing_admin_when_env_list_is_empty(self):
+        self.connection.execute("UPDATE users SET is_admin = 1 WHERE id = ?", (self.user["id"],))
+        self.connection.commit()
+
+        with patch.dict(os.environ, {"ADMIN_DISCORD_IDS": ""}, clear=False):
+            row = server.create_or_update_user(
+                self.connection,
+                {"id": "test-user", "username": "tester", "global_name": "Tester", "avatar": None},
+                [],
+            )
+
+        self.assertEqual(row["is_admin"], 1)
+
     def test_companion_equip_requires_owned_item(self):
         self.create_test_companion_item()
         with self.assertRaises(server.AppError) as exc:
