@@ -8,6 +8,11 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:stack": "powershell -ExecutionPolicy Bypass -File scripts/dev-stack.ps1 start",
+    "dev:stack:stop": "powershell -ExecutionPolicy Bypass -File scripts/dev-stack.ps1 stop",
+    "dev:stack:restart": "powershell -ExecutionPolicy Bypass -File scripts/dev-stack.ps1 restart",
+    "dev:stack:status": "powershell -ExecutionPolicy Bypass -File scripts/dev-stack.ps1 status",
+    "dev:stack:logs": "powershell -ExecutionPolicy Bypass -File scripts/dev-stack.ps1 logs",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",

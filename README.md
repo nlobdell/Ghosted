@@ -61,9 +61,40 @@ Companion asset storage:
 - Admin users can upload a replacement base plus custom cosmetic layers directly from `/app/companion`
 - Raw repo and uploaded files are both served from `/api/companion/assets/...`
 
+### Dev Stack Helper
+
+If you want one command to manage both local processes:
+
+```powershell
+npm run dev:stack
+```
+
+Available Windows shortcuts:
+
+- `npm run dev:stack` - start the Python API and Next.js dev server in the background
+- `npm run dev:stack:restart` - restart both processes
+- `npm run dev:stack:stop` - stop both processes
+- `npm run dev:stack:status` - show whether each process is running
+- `npm run dev:stack:logs` - tail the local dev logs
+
+If you prefer bash:
+
+```bash
+./scripts/dev-stack.sh start
+./scripts/dev-stack.sh restart
+./scripts/dev-stack.sh stop
+```
+
+Runtime pid files and logs are written to `data/dev-runtime/`.
+
 ## Scripts
 
 - `npm run dev` - start Next.js in development mode
+- `npm run dev:stack` - start both local dev processes in the background
+- `npm run dev:stack:restart` - restart both local dev processes
+- `npm run dev:stack:stop` - stop both local dev processes
+- `npm run dev:stack:status` - show local dev process status
+- `npm run dev:stack:logs` - tail local dev logs
 - `npm run build` - production build
 - `npm run start` - run built Next.js app
 - `npm run typecheck` - run TypeScript checks
