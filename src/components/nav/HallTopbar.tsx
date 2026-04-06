@@ -6,7 +6,8 @@ import type { ShellData } from '@/lib/types';
 export function HallTopbar({ shellData }: { shellData?: ShellData | null }) {
   return (
     <header className="app-header">
-      <div className="container">
+      <div className="container app-header__grid">
+        <div className="app-header__rail" aria-hidden="true" />
         <div className="nav-shell">
           <div className="nav-slot nav-slot--brand">
             <Link href="/hall/" className="nav-brand">
