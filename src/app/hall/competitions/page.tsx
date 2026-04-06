@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  AppContext,
   StatStrip,
   Panel,
   MetricGrid,
@@ -52,17 +51,6 @@ export default function CompetitionsPage() {
 
   return (
     <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
-      <AppContext
-        breadcrumbs={[
-          { label: 'Ghosted', href: '/' },
-          { label: 'Hall', href: '/hall/' },
-          { label: 'Competitions' },
-        ]}
-        title="Competition board"
-        summary="Start with the active timeline, then drill into featured details and leaderboard context."
-        actions={<Link href="/hall/clan/" className="button button--secondary button--small">Clan</Link>}
-      />
-
       {error ? <Banner message={error} variant="error" /> : null}
 
       {loading ? (
@@ -92,7 +80,6 @@ export default function CompetitionsPage() {
                 <Panel
                   className="comp-timeline"
                   tier="primary"
-                  eyebrow="Timeline"
                   title="Live and upcoming events"
                   chip={`${ongoing.length} live`}
                   body={<CompetitionList entries={competitions} />}
@@ -101,7 +88,6 @@ export default function CompetitionsPage() {
                   <Panel
                     className="comp-featured"
                     tier="primary"
-                    eyebrow="Featured"
                     title={featured?.title ?? 'Featured competition'}
                     body={
                       featured ? (
@@ -123,7 +109,6 @@ export default function CompetitionsPage() {
                   <Panel
                     className="comp-leaders"
                     tier="meta"
-                    eyebrow="Leaders"
                     title="Featured leaderboard"
                     body={
                       featuredParticipants && featuredParticipants.length > 0 ? (

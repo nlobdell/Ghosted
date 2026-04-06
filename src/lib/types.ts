@@ -80,6 +80,13 @@ export interface RewardsData {
   spins: SpinRecord[];
 }
 
+export interface HallRewardsSummary {
+  balance: number;
+  dailyRemaining: number;
+  dailyCap: number | null;
+  entries: LedgerEntry[];
+}
+
 export type CompanionSlotKey = 'hat' | 'face' | 'neck' | 'body';
 
 export interface CompanionAnimationFrame {
@@ -205,6 +212,17 @@ export interface CompanionData {
     animatedCardUrl: string;
   };
   baseAssetUrl?: string | null;
+}
+
+export interface HallCompanionSummary {
+  user: {
+    displayName: string;
+    username: string;
+  };
+  balance: number;
+  ownedCount: number;
+  equippedCount: number;
+  animatedRenderUrl: string;
 }
 
 export interface CompanionAdminAssetItem {
@@ -410,4 +428,24 @@ export interface NewsPost {
   createdAt: string;
   updatedAt: string;
   authorDisplayName: string;
+}
+
+export interface HallGiveawaySummary {
+  activeCount: number;
+}
+
+export interface HallClanSummary {
+  name?: string | null;
+  memberCount?: number | null;
+}
+
+export interface HallDashboardData {
+  authenticated: boolean;
+  error?: string | null;
+  rewards: HallRewardsSummary | null;
+  companion: HallCompanionSummary | null;
+  giveaways: HallGiveawaySummary;
+  clan: HallClanSummary | null;
+  competitions: Competition[];
+  hiscores: LeaderboardEntry[];
 }

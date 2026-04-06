@@ -2,7 +2,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
-  AppContext,
   StatStrip,
   Highlight,
   Panel,
@@ -92,18 +91,6 @@ export default function RewardsPage() {
 
   return (
     <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
-      <AppContext
-        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/hall/' }, { label: 'Rewards' }]}
-        title="Rewards and drops"
-        summary="Confirm available balance first, then spend on active drops, then review ledger history."
-        actions={(
-          <>
-            <Link href="/hall/ghostling/" className="button button--secondary button--small">Ghostling</Link>
-            <Link href="/hall/casino/" className="button button--secondary button--small">Casino</Link>
-          </>
-        )}
-      />
-
       {error ? <Banner message={error} variant="error" /> : null}
       {resultMsg ? <Banner message={resultMsg.text} variant={resultMsg.variant} /> : null}
 
@@ -129,20 +116,12 @@ export default function RewardsPage() {
 
           <Highlight
             className="rewards-balance"
-            eyebrow="Economy"
             title={formatPointsFull(rewards.balance)}
             copy={
               rewards.dailyCap !== null
-                ? `${formatPointsFull(rewards.dailyRemaining)} remaining today out of ${formatPointsFull(rewards.dailyCap)}.`
+                ? `${formatPointsFull(rewards.dailyRemaining)} left today of ${formatPointsFull(rewards.dailyCap)}.`
                 : 'No daily spending cap is active on your account.'
             }
-            actions={(
-              <>
-                <Link href="/hall/ghostling/" className="button button--secondary button--small">Ghostling</Link>
-                <Link href="/hall/casino/" className="button button--secondary button--small">Casino</Link>
-                <Link href="/hall/profile/" className="button button--secondary button--small">Profile</Link>
-              </>
-            )}
             stage={{
               label: 'Drop signal',
               primary: activeDrops.length > 0 ? `${activeDrops.length} active drops` : 'No active drops',
@@ -161,7 +140,6 @@ export default function RewardsPage() {
                   className="rewards-drop"
                   tier="primary"
                   key={item.id}
-                  eyebrow="Active drop"
                   title={item.title}
                   chip={item.status}
                   body={(
@@ -195,7 +173,6 @@ export default function RewardsPage() {
             <Panel
               className="rewards-archive"
               tier="meta"
-              eyebrow="Archive"
               title={activeDrops.length > 0 ? 'Upcoming and closed' : 'All drops'}
               chip={`${giveaways.length} total`}
               body={(
@@ -218,7 +195,6 @@ export default function RewardsPage() {
             <Panel
               className="rewards-empty"
               tier="meta"
-              eyebrow="Drops"
               title="No giveaways yet"
               body={<EmptyState message="No Ghosted drops are published yet. Check Discord for announcements." />}
             />
@@ -227,7 +203,6 @@ export default function RewardsPage() {
           <Panel
             className="rewards-ledger"
             tier="meta"
-            eyebrow="History"
             title="Points ledger"
             chip={`${rewards.entries.length} entries`}
             body={

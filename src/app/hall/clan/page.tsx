@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  AppContext,
   StatStrip,
   Highlight,
   Panel,
@@ -74,10 +73,6 @@ export default function ClanPage() {
   if (!womConfigured) {
     return (
       <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
-        <AppContext
-          breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/hall/' }, { label: 'Clan' }]}
-          title="Ghosted clan"
-        />
         <EmptyState
           message="Wise Old Man integration is not configured. Set up WOM to load verified Ghosted group data."
           action={<Link href="/hall/" className="button button--secondary button--small">Back to Hall</Link>}
@@ -101,13 +96,6 @@ export default function ClanPage() {
 
   return (
     <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
-      <AppContext
-        breadcrumbs={[{ label: 'Ghosted', href: '/' }, { label: 'Hall', href: '/hall/' }, { label: 'Clan' }]}
-        title="Clan board"
-        summary="Track roster health first, then top performers, then recent activity."
-        actions={<Link href="/hall/competitions/" className="button button--secondary button--small">Competitions</Link>}
-      />
-
       {error ? <Banner message={error} variant="error" /> : null}
 
       {loading ? (
@@ -116,10 +104,8 @@ export default function ClanPage() {
         <>
           <Highlight
             className="clan-spotlight"
-            eyebrow="Roster signal"
             title={clan.group.name}
-            copy="Use this board to monitor roster health, active competition pressure, and the members setting the pace."
-            actions={<Link href="/hall/competitions/" className="button button--secondary button--small">View competitions</Link>}
+            copy="Roster health, live competition pressure, and the members setting the pace."
             stage={
               topLeader
                 ? {
@@ -155,8 +141,7 @@ export default function ClanPage() {
             <Panel
               className="clan-roster"
               tier="primary"
-              eyebrow="Roster health"
-              title={clan.group.name}
+              title="Roster health"
               body={(
                 <div className="app-stack">
                   <p className="app-panel-note">
@@ -187,7 +172,6 @@ export default function ClanPage() {
             <Panel
               className="clan-leaders"
               tier="primary"
-              eyebrow="Top performers"
               title="Overall leaders"
               body={(
                 <LeaderboardTable
@@ -203,7 +187,6 @@ export default function ClanPage() {
             <Panel
               className="clan-events"
               tier="primary"
-              eyebrow="Event watch"
               title={ongoing.length > 0 ? `${ongoing.length} competitions live` : `${upcoming.length} competitions upcoming`}
               body={(
                 <div className="app-stack">
@@ -222,7 +205,6 @@ export default function ClanPage() {
             <Panel
               className="clan-gains"
               tier="primary"
-              eyebrow="Progression"
               title="Weekly gains"
               body={(
                 <LeaderboardTable
@@ -238,7 +220,6 @@ export default function ClanPage() {
             <Panel
               className="clan-history"
               tier="meta"
-              eyebrow="History"
               title="Recent achievements"
               body={(
                 <Feed
@@ -253,7 +234,6 @@ export default function ClanPage() {
             <Panel
               className="clan-activity"
               tier="meta"
-              eyebrow="Activity"
               title="Recent clan activity"
               body={(
                 <Feed

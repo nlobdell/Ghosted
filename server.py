@@ -4629,6 +4629,106 @@ def site_shell_payload(
     }
 
 
+def hall_rewards_summary_payload(connection: sqlite3.Connection, user_row: sqlite3.Row) -> dict[str, Any]:
+    wager = daily_wager_status(connection, int(user_row["id"]))
+    return {
+        "balance": get_balance(connection, int(user_row["id"])),
+        "entries": recent_ledger(connection, int(user_row["id"])),
+        **wager,
+    }
+
+
+def hall_companion_summary_payload(connection: sqlite3.Connection, user_row: sqlite3.Row) -> dict[str, Any]:
+    user_id = int(user_row["id"])
+    owned_slugs = companion_inventory_slugs(connection, user_id)
+    loadout = companion_loadout_map(connection, user_id)
+    equipped_count = sum(1 for slot in COMPANION_SLOT_ORDER if loadout.get(slot))
+    return {
+        "user": {
+            "displayName": display_name(user_row),
+            "username": user_row["username"],
+        },
+        "balance": get_balance(connection, user_id),
+        "ownedCount": len(owned_slugs),
+        "equippedCount": equipped_count,
+        "animatedRenderUrl": f"/api/companion/render-animated?user={user_id}",
+    }
+
+
+def hall_giveaway_summary_payload(
+    connection: sqlite3.Connection,
+    user_row: sqlite3.Row | None,
+    *,
+    base_url: str | None = None,
+) -> dict[str, Any]:
+    role_directory = build_role_directory(build_auth_config(base_url))
+    giveaways = list_giveaways(connection, user_row, role_directory=role_directory)
+    return {
+        "activeCount": sum(1 for item in giveaways if str(item.get("status") or "") == "active"),
+    }
+
+
+def hall_clan_summary_payload(connection: sqlite3.Connection, *, force_refresh: bool = False) -> dict[str, Any]:
+    group_id = require_wom_group_id()
+    group = wom_cached_json(connection, f"/groups/{group_id}", force_refresh=force_refresh)
+    return {
+        "name": group.get("name"),
+        "memberCount": group.get("memberCount"),
+    }
+
+
+def hall_dashboard_payload(
+    connection: sqlite3.Connection,
+    user_row: sqlite3.Row | None,
+    *,
+    base_url: str | None = None,
+) -> dict[str, Any]:
+    error: str | None = None
+    rewards = None
+    companion = None
+
+    if user_row:
+        try:
+            rewards = hall_rewards_summary_payload(connection, user_row)
+        except AppError as exc:
+            error = error or str(exc)
+        try:
+            companion = hall_companion_summary_payload(connection, user_row)
+        except AppError as exc:
+            error = error or str(exc)
+
+    try:
+        giveaways = hall_giveaway_summary_payload(connection, user_row, base_url=base_url)
+    except AppError:
+        giveaways = {"activeCount": 0}
+
+    try:
+        clan = hall_clan_summary_payload(connection)
+    except AppError:
+        clan = None
+
+    try:
+        competitions = wom_competitions_payload(connection, limit=6).get("competitions") or []
+    except AppError:
+        competitions = []
+
+    try:
+        hiscores = wom_group_hiscores_payload(connection, metric=DEFAULT_WOM_HISCORE_METRIC, limit=3).get("entries") or []
+    except AppError:
+        hiscores = []
+
+    return {
+        "authenticated": bool(user_row),
+        "error": error,
+        "rewards": rewards,
+        "companion": companion,
+        "giveaways": giveaways,
+        "clan": clan,
+        "competitions": competitions,
+        "hiscores": hiscores,
+    }
+
+
 def wom_clan_payload(connection: sqlite3.Connection, *, force_refresh: bool = False) -> dict[str, Any]:
     group_id = require_wom_group_id()
     group = wom_cached_json(connection, f"/groups/{group_id}", force_refresh=force_refresh)
@@ -5324,6 +5424,9 @@ class GhostedHandler(BaseHTTPRequestHandler):
         if method == "GET" and path == "/api/site-shell":
             self.handle_api_site_shell(connection, parsed)
             return
+        if method == "GET" and path == "/api/hall/dashboard":
+            self.handle_api_hall_dashboard(connection)
+            return
         if method == "GET" and path == "/api/me":
             self.handle_api_me(connection, parsed)
             return
@@ -5526,6 +5629,10 @@ class GhostedHandler(BaseHTTPRequestHandler):
         next_path = params.get("next", ["/"])[0] or "/"
         row = self.current_user(connection)
         self.respond_json(site_shell_payload(connection, row, base_url=self.base_url(), next_path=next_path))
+
+    def handle_api_hall_dashboard(self, connection: sqlite3.Connection) -> None:
+        row = self.current_user(connection)
+        self.respond_json(hall_dashboard_payload(connection, row, base_url=self.base_url()))
 
     def handle_api_me(self, connection: sqlite3.Connection, parsed: Any) -> None:
         params = parse_qs(parsed.query)

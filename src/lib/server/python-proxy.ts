@@ -1,3 +1,4 @@
+import { headers as nextHeaders } from 'next/headers';
 import { auth } from '@/auth';
 
 const PYTHON_API_URL = (process.env.PYTHON_API_URL ?? 'http://localhost:8000').replace(/\/+$/, '');
@@ -12,14 +13,20 @@ function filteredHeaders(source: Headers) {
   return headers;
 }
 
-export async function buildPythonProxyRequest(request: Request, pathWithQuery: string) {
+async function buildPythonRequestHeaders({
+  accept,
+  contentType,
+  cookie,
+}: {
+  accept?: string | null;
+  contentType?: string | null;
+  cookie?: string | null;
+}) {
   const session = await auth();
   const headers = new Headers();
-  headers.set('Accept', request.headers.get('accept') ?? '*/*');
+  headers.set('Accept', accept ?? '*/*');
 
-  const contentType = request.headers.get('content-type');
   if (contentType) headers.set('Content-Type', contentType);
-  const cookie = request.headers.get('cookie');
   if (cookie) {
     headers.set('Cookie', cookie);
   }
@@ -35,6 +42,16 @@ export async function buildPythonProxyRequest(request: Request, pathWithQuery: s
       headers.set('X-Ghosted-User-Discord-Id', discordId);
     }
   }
+
+  return headers;
+}
+
+export async function buildPythonProxyRequest(request: Request, pathWithQuery: string) {
+  const headers = await buildPythonRequestHeaders({
+    accept: request.headers.get('accept'),
+    contentType: request.headers.get('content-type'),
+    cookie: request.headers.get('cookie'),
+  });
 
   const method = request.method.toUpperCase();
   const body = method === 'GET' || method === 'HEAD' ? undefined : await request.arrayBuffer();
@@ -54,4 +71,27 @@ export async function proxyPythonRequest(request: Request, pathWithQuery: string
     status: response.status,
     headers: filteredHeaders(response.headers),
   });
+}
+
+export async function getPythonJSON<T>(pathWithQuery: string): Promise<{
+  ok: boolean;
+  status: number;
+  data: T | null;
+}> {
+  const headerStore = await nextHeaders();
+  const response = await fetch(`${PYTHON_API_URL}${pathWithQuery}`, {
+    method: 'GET',
+    headers: await buildPythonRequestHeaders({
+      accept: 'application/json',
+      cookie: headerStore.get('cookie'),
+    }),
+    redirect: 'manual',
+    cache: 'no-store',
+  });
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    data: await response.json().catch(() => null) as T | null,
+  };
 }
