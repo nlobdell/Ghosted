@@ -1,14 +1,10 @@
 import 'server-only';
+import { isDiscordAuthConfigured } from '@/lib/auth/config';
+
+export { isDiscordAuthConfigured } from '@/lib/auth/config';
 
 function normalizeNextPath(nextPath: string) {
   return nextPath.startsWith('/') ? nextPath : '/hall/';
-}
-
-export function isDiscordAuthConfigured() {
-  return Boolean(
-    process.env.DISCORD_CLIENT_ID?.trim()
-    && process.env.DISCORD_CLIENT_SECRET?.trim(),
-  );
 }
 
 export function getConfiguredLoginHref(nextPath: string) {

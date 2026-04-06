@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth';
 import Discord from 'next-auth/providers/discord';
 import { enrichSessionUser, getLegacyUserById, upsertLegacyUserFromDiscord } from '@/lib/auth/legacy-user';
-import { isDiscordAuthConfigured } from '@/lib/auth/server-config';
+import { getAuthSecret, isDiscordAuthConfigured } from '@/lib/auth/config';
 
 type DiscordIdentityProfile = {
   id: string;
@@ -11,7 +11,7 @@ type DiscordIdentityProfile = {
 };
 
 export const { handlers, auth } = NextAuth({
-  secret: process.env.AUTH_SECRET,
+  secret: getAuthSecret(),
   // This app runs behind Caddy on a VPS, so Auth.js needs to trust forwarded host headers in production.
   trustHost: true,
   session: {

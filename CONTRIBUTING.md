@@ -52,7 +52,7 @@ npm run git:update:autostash
 npm run lint
 npm run typecheck
 npm run build
-npm run test:backend
+npm run test:server
 ```
 
 - Ensure CI checks pass.

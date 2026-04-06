@@ -2,13 +2,13 @@
 
 ## 1. System Overview
 
-Ghosted is a split-stack web app:
+Ghosted is now a single-service Next.js web app:
 
-- **Next.js (React 19 + App Router)** serves the UI on port `3000`.
-- **Python API (`server.py`)** still serves the remaining unmigrated domains (typically port `8000`).
-- **Caddy** terminates TLS and reverse proxies public traffic to the Next.js web service.
+- **Next.js (React 19 + App Router)** serves the UI and all `/api/*` routes on port `3000`
+- **SQLite** stores users, sessions, rewards, giveaways, WOM cache, casino history, and companion state
+- **Caddy** terminates TLS and reverse proxies public traffic to the Next.js web service
 
-In production, the frontend and backend are separate processes with a shrinking proxy boundary between them.
+There is no separate Python API process anymore.
 
 ## 2. Runtime Topology
 
@@ -16,134 +16,129 @@ In production, the frontend and backend are separate processes with a shrinking 
 Browser
   -> Caddy (443)
   -> Next.js web (ghosted-web.service, :3000)
-  -> Native Next route handlers serve migrated /api/* domains
-  -> Next catch-all proxy forwards remaining /api/* domains to Python API (:8000)
   -> SQLite (/var/lib/ghosted/ghosted.db)
+  -> Companion asset storage (/var/lib/ghosted/companion-assets)
 ```
-
-### Mixed API contract (Next + Python)
-
-Implemented by the Next route handlers and helpers under [`src/app/api`](./src/app/api) and [`src/lib/server`](./src/lib/server):
-
-- Native Next handlers now own `/api/config`, `/api/site-shell`, `/api/me`, `/api/rewards`, `/api/news`, `/api/giveaways`, `/api/hall/dashboard`, and the current admin news/giveaway/operator routes
-- `/api/:path*` is still proxied where the Next app relies on Python-backed data such as companion, casino, and the remaining WOM/profile flows
-- `/auth/login` and `/api/auth/*` stay in Next/Auth.js
-- Legacy Python `/auth/discord/*` endpoints still exist in `server.py`, but they are not the primary public sign-in entrypoint
-
-Default `PYTHON_API_URL` is `http://localhost:8000`.
 
 ## 3. Repository Shape
 
-### Frontend (Next.js)
+### App and APIs
 
-- [`src/app`](./src/app): route tree and layouts
-- [`src/components`](./src/components): nav, auth widget, shared app UI primitives
-- [`src/lib`](./src/lib): API helpers, shared types, navigation config
-- [`src/casino`](./src/casino): casino runtime modules (Pixi renderer + assets)
-
-### Backend
-
-- [`server.py`](./server.py): monolithic HTTP server, auth/session logic, API endpoints, SQLite data operations
-- [`tests`](./tests): backend tests
-- Companion uploads are stored in `COMPANION_ASSET_DIR` or, by default, in a `companion-assets/` sibling directory next to `DATABASE_PATH`
+- [`src/app`](./src/app): route tree, layouts, and route handlers
+- [`src/components`](./src/components): shared UI
+- [`src/lib`](./src/lib): server helpers, auth bridge, domain modules, shared types
+- [`src/casino`](./src/casino): casino runtime modules and Pixi renderer
 
 ### Operations
 
-- [`deploy`](./deploy): deploy reference files and VPS notes
-- [`scripts`](./scripts): workflow scripts (including git update helper)
+- [`deploy`](./deploy): service files, env example, and VPS notes
+- [`scripts`](./scripts): deploy helper, local dev process helpers, and workflow scripts
+- Companion uploads live in `COMPANION_ASSET_DIR` or, by default, beside `DATABASE_PATH`
 
 ## 4. Route Architecture
 
 ### Public
 
-- `/` - app-forward landing surface
-- `/news/`, `/news/:slug` - public clan news feed and post detail
+- `/`
+- `/news/`
+- `/news/:slug`
 
 ### Member app
 
-- `/app/` - member command center
-- `/app/community/`, `/app/clan/`, `/app/competitions/`
-- `/app/rewards/`, `/app/giveaways/`, `/app/profile/`
-- `/app/casino/`
+- `/hall/`
+- `/hall/clan/`
+- `/hall/competitions/`
+- `/hall/rewards/`
+- `/hall/profile/`
+- `/hall/casino/`
+- `/hall/ghostling/`
 
 ### Admin
 
 - `/admin/`
 
-All pages rely on the same design system in [`src/app/globals.css`](./src/app/globals.css) and shared primitives in [`src/components/app/AppUI.tsx`](./src/components/app/AppUI.tsx).
+## 5. API Domains
 
-## 5. Data and API Boundaries
+Implemented by route handlers under [`src/app/api`](./src/app/api) and shared server modules under [`src/lib/server`](./src/lib/server):
 
-### Frontend API helpers
-
-- General app helpers: [`src/lib/api.ts`](./src/lib/api.ts)
-- Casino-specific helpers: [`src/casino/game/api.ts`](./src/casino/game/api.ts)
-
-### Core API domains in `server.py`
-
-- `/api/config`, `/api/site-shell`, `/api/me`
+- `/api/config`
+- `/api/site-shell`
+- `/api/me`
 - `/api/wom/*`
+- `/api/profile/wom-link`
 - `/api/rewards`
-- `/api/profile/wom-link` (`POST` link, `DELETE` unlink)
-- `/api/casino/games`, `/api/casino/spin`
-- `/api/giveaways`, `/api/giveaways/:id/enter`
-- `/api/news`, `/api/news/:slug`
+- `/api/news`
+- `/api/news/:slug`
+- `/api/giveaways`
+- `/api/giveaways/:id/enter`
+- `/api/hall/dashboard`
+- `/api/casino/games`
+- `/api/casino/spin`
+- `/api/companion`
+- `/api/companion/purchase`
+- `/api/companion/equip`
+- `/api/companion/admin/*`
+- `/api/companion/assets/*`
+- `/api/companion/render`
+- `/api/companion/render-animated`
 - `/api/admin/*`
-- `/auth/*`
+- `/api/auth/*`
+- `/auth/login`
+- `/auth/logout`
+- `/auth/dev-login`
 
-## 6. Design and UI Architecture
+## 6. Domain Modules
 
-The current UI architecture is intentionally unified:
+Shared backend logic is organized by domain:
 
-- **Single visual language** for both public and member surfaces
-- **Centralized navigation config** in [`src/lib/navigation.ts`](./src/lib/navigation.ts)
-- **Reusable surface primitives** (`AppContext`, `Panel`, `StatStrip`, `Highlight`, etc.)
-- **Shared theme tokens** in `globals.css` (`--color-*`, `--font-*`, spacing/radius/shadow tokens)
+- [`src/lib/server/ghosted-api.ts`](./src/lib/server/ghosted-api.ts): site shell, current-user helpers, hall dashboard, giveaways, and news reads
+- [`src/lib/server/ghosted-admin.ts`](./src/lib/server/ghosted-admin.ts): admin news, giveaways, rewards, and WOM refresh flows
+- [`src/lib/server/wom.ts`](./src/lib/server/wom.ts): Wise Old Man API, caching, clan payloads, roster, competitions, and link state
+- [`src/lib/server/casino.ts`](./src/lib/server/casino.ts): games, spins, cooldowns, wager caps, and bonus state
+- [`src/lib/server/rewards.ts`](./src/lib/server/rewards.ts): balance and ledger writes
+- [`src/lib/server/companion.ts`](./src/lib/server/companion.ts): Ghostling state, purchases, loadouts, and admin mutations
+- [`src/lib/server/companion-storage.ts`](./src/lib/server/companion-storage.ts): asset-path normalization, storage roots, uploads, repo asset lookup, rig/animation metadata
+- [`src/lib/server/companion-render.ts`](./src/lib/server/companion-render.ts): static and animated SVG render output plus public preview resolution
 
-This keeps app pages functional while making iterative visual edits fast.
+## 7. Auth and Sessions
 
-## 7. Casino Architecture
+- Primary browser auth uses Auth.js with Discord
+- `getCurrentUser()` first checks the Auth.js session, then falls back to the legacy `ghosted_session` cookie stored in SQLite
+- `/auth/dev-login` stays available only when `ENABLE_DEV_AUTH=true` and still creates the legacy session row/cookie for local and VPS debugging
 
-- Main container: [`CasinoGame.tsx`](./src/components/app/CasinoGame.tsx)
-- Renderer: [`SlotRenderer.ts`](./src/casino/game/renderers/SlotRenderer.ts)
-- Assets: [`assets.ts`](./src/casino/game/assets.ts) + `src/casino/assets`
-- Styling: [`src/casino/style.css`](./src/casino/style.css)
+## 8. Deployment Architecture
 
-Key contract:
+Observed production stack:
 
-- API state lives in React component state.
-- Pixi renderer owns canvas lifecycle and spin animation.
-- Casino styling layers on top of global app styling for visual coherence.
-
-## 8. Deployment Architecture (Current VPS Pattern)
-
-Observed stack:
-
-- Caddy serves `ghosted.smirkhub.com` and proxies to `127.0.0.1:3000`
+- Caddy serves the public domain and proxies to `127.0.0.1:3000`
 - `ghosted-web.service` runs the standalone Next bundle from `/opt/ghosted/current-web`
-- `ghosted-api.service` runs the remaining Python API from `/opt/ghosted/current-api`
-- Environment/secrets come from `/etc/ghosted/ghosted.env`
-- Releases are assembled under `/opt/ghosted/releases/<timestamp>-<sha>/` and activated through `current-web` / `current-api` symlinks
+- Environment and secrets come from `/etc/ghosted/ghosted.env`
+- Releases are assembled under `/opt/ghosted/releases/<timestamp>-<sha>/` and activated through the `current-web` symlink
 
 Typical deploy command:
 
-1. `bash scripts/deploy-release.sh origin/main --auto`
+1. `bash scripts/deploy-release.sh origin/main`
 
-The deploy script skips `npm ci` when `package-lock.json` is unchanged, always rebuilds the standalone web bundle, and restarts only the web or API service that changed.
+Typical rollback command:
+
+1. `bash scripts/deploy-release.sh rollback`
+
+The deploy script reuses `node_modules` when `package-lock.json` is unchanged, always rebuilds the standalone bundle, copies `public/` and `assets/companion/` into the release, and restarts only `ghosted-web.service`.
 
 ## 9. Editing Guidance
 
 ### Where to edit
 
-- New/changed page layout: `src/app/**/page.tsx`
-- Shared app components: `src/components/app/AppUI.tsx`
-- Navigation and route labels: `src/lib/navigation.ts`
+- New or changed page layout: `src/app/**/page.tsx`
+- Route handlers: `src/app/api/**/route.ts`
+- Shared app components: `src/components/**`
 - Theme and spacing: `src/app/globals.css`
-- Casino behavior: `src/components/app/CasinoGame.tsx` + `src/casino/game/*`
+- Domain logic: `src/lib/server/**`
+- Casino behavior: `src/components/ui/CasinoGame.tsx` and `src/casino/game/*`
 
 ### Principles
 
-- Keep public and app surfaces in the same design system.
-- Prefer shared primitives over per-page custom markup.
-- Avoid inline styles; use reusable CSS classes and tokens.
-- Keep API route strings aligned with `server.py` dispatch paths.
+- Keep public and app surfaces in the same design system
+- Prefer shared primitives over page-specific one-offs
+- Keep API contracts aligned with the existing frontend callsites
+- Keep runtime-owned filesystem paths outside the release bundle except for repo assets intentionally copied into the standalone release

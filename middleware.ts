@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { getAuthSecret } from '@/lib/auth/config';
 
 async function readAuthToken(request: NextRequest) {
-  const secret = process.env.AUTH_SECRET;
+  const secret = getAuthSecret();
   if (!secret) return null;
 
   return (
