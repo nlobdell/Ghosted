@@ -17,7 +17,7 @@ export default async function HallLayout({ children }: { children: React.ReactNo
     <div className="app-page app-shell">
       <HallTopbar shellData={shellData} />
       <div className="hall-layout">
-        <HallSidebar />
+        <HallSidebar includeAdmin={Boolean(shellData?.user?.isAdmin)} />
         <div className="hall-main">
           {children}
         </div>
