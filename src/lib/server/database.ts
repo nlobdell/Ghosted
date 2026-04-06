@@ -183,6 +183,7 @@ function ensureSchema(db: Database.Database) {
       description TEXT NOT NULL,
       front_asset_path TEXT,
       back_asset_path TEXT,
+      render_metadata_json TEXT,
       active INTEGER NOT NULL DEFAULT 1,
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL
@@ -214,6 +215,7 @@ function ensureSchema(db: Database.Database) {
 
   ensureTableColumn(db, 'companion_catalog', 'front_asset_path', 'TEXT');
   ensureTableColumn(db, 'companion_catalog', 'back_asset_path', 'TEXT');
+  ensureTableColumn(db, 'companion_catalog', 'render_metadata_json', 'TEXT');
   ensureTableColumn(db, 'companion_settings', 'base_head_asset_path', 'TEXT');
   seedDefaultCasinoGames(db);
   ensureDefaultCompanionBase(db);

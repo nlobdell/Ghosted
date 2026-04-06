@@ -5,10 +5,13 @@ import path from 'node:path';
 import type { Database } from 'better-sqlite3';
 import type {
   CompanionAnimationFrame,
+  CompanionItemRenderMetadata,
   CompanionLayerAnimation,
   CompanionMotionChannel,
   CompanionRepoImportCandidate,
   CompanionRenderManifest,
+  CompanionRenderPoint,
+  CompanionRenderRect,
   CompanionRenderSlice,
   CompanionSlotKey,
 } from '@/lib/types';
@@ -60,12 +63,14 @@ const COMPANION_DEFAULT_SLOT_GROUPS: Partial<Record<CompanionSlotKey, string>> =
   body: 'body',
 };
 
-type Rect = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+export const COMPANION_DEFAULT_SLOT_ANCHORS: Partial<Record<CompanionSlotKey, CompanionRenderPoint>> = {
+  hat: { x: 105, y: 72 },
+  face: { x: 105, y: 97 },
+  neck: { x: 105, y: 137 },
+  body: { x: 105, y: 164 },
 };
+
+type Rect = CompanionRenderRect;
 
 type CompanionRigPart = {
   key: string;
@@ -88,6 +93,7 @@ export type CompanionRig = {
   parts: CompanionRigPart[];
   layers: CompanionRigLayer[];
   slotGroups: Partial<Record<CompanionSlotKey, string>>;
+  slotAnchors: Partial<Record<CompanionSlotKey, CompanionRenderPoint>>;
   motionChannels: Record<string, CompanionMotionChannel>;
 };
 
@@ -136,6 +142,7 @@ type CompanionCatalogRow = {
   description: string;
   front_asset_path: string | null;
   back_asset_path: string | null;
+  render_metadata_json: string | null;
   active: number;
   sort_order: number;
   created_at: string;
@@ -191,6 +198,48 @@ function normalizeRect(value: unknown, fallbackWidth: number, fallbackHeight: nu
     y: Math.trunc(y),
     width: Math.trunc(width),
     height: Math.trunc(height),
+  };
+}
+
+function normalizePoint(value: unknown): CompanionRenderPoint | null {
+  if (!value || typeof value !== 'object') return null;
+  const shape = value as Record<string, unknown>;
+  const x = Number(shape.x ?? 0);
+  const y = Number(shape.y ?? 0);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return {
+    x: Math.trunc(x),
+    y: Math.trunc(y),
+  };
+}
+
+function pointWithinRect(point: CompanionRenderPoint, rect: Rect) {
+  return point.x >= rect.x
+    && point.y >= rect.y
+    && point.x < rect.x + rect.width
+    && point.y < rect.y + rect.height;
+}
+
+function rectWithinRect(rect: Rect, bounds: Rect) {
+  return rect.x >= bounds.x
+    && rect.y >= bounds.y
+    && rect.x + rect.width <= bounds.x + bounds.width
+    && rect.y + rect.height <= bounds.y + bounds.height;
+}
+
+function canonicalizeRect(rect: Rect): CompanionRenderRect {
+  return {
+    x: Math.trunc(rect.x),
+    y: Math.trunc(rect.y),
+    width: Math.trunc(rect.width),
+    height: Math.trunc(rect.height),
+  };
+}
+
+function canonicalizePoint(point: CompanionRenderPoint): CompanionRenderPoint {
+  return {
+    x: Math.trunc(point.x),
+    y: Math.trunc(point.y),
   };
 }
 
@@ -345,6 +394,189 @@ type CompanionRigAssetState = {
   rig: CompanionRig;
 };
 
+type CompanionItemRenderMetadataValidationOptions = {
+  expectedSlot?: CompanionSlotKey | null;
+  frontAssetPresent?: boolean;
+  backAssetPresent?: boolean;
+};
+
+type CompanionItemRenderMetadataValidationResult = {
+  metadata: CompanionItemRenderMetadata | null;
+  errors: string[];
+};
+
+function validateCompanionItemRenderMetadataObject(
+  value: unknown,
+  options: CompanionItemRenderMetadataValidationOptions = {},
+): CompanionItemRenderMetadataValidationResult {
+  if (!value || typeof value !== 'object') {
+    return { metadata: null, errors: ['Ghostling metadata must be a JSON object.'] };
+  }
+
+  const shape = value as Record<string, unknown>;
+  const errors: string[] = [];
+
+  if (shape.kind !== 'ghostling-cosmetic') {
+    errors.push('Ghostling metadata kind must be "ghostling-cosmetic".');
+  }
+  if (Number(shape.schemaVersion ?? 0) !== 1) {
+    errors.push('Ghostling metadata schemaVersion must be 1.');
+  }
+
+  const rawSlot = String(shape.slot ?? '').trim().toLowerCase();
+  if (!COMPANION_SLOT_ORDER.includes(rawSlot as CompanionSlotKey)) {
+    errors.push('Ghostling metadata must declare a valid slot.');
+  }
+  if (options.expectedSlot && rawSlot && rawSlot !== options.expectedSlot) {
+    errors.push(`Ghostling metadata slot "${rawSlot}" does not match the selected "${options.expectedSlot}" slot.`);
+  }
+
+  const canvasShape = shape.canvas && typeof shape.canvas === 'object' ? shape.canvas as Record<string, unknown> : {};
+  const canvasWidth = Number(canvasShape.width ?? 0);
+  const canvasHeight = Number(canvasShape.height ?? 0);
+  if (!Number.isFinite(canvasWidth) || !Number.isFinite(canvasHeight) || canvasWidth <= 0 || canvasHeight <= 0) {
+    errors.push('Ghostling metadata canvas must include positive width and height.');
+  }
+
+  const canvasRect: Rect | null = Number.isFinite(canvasWidth) && Number.isFinite(canvasHeight) && canvasWidth > 0 && canvasHeight > 0
+    ? { x: 0, y: 0, width: Math.trunc(canvasWidth), height: Math.trunc(canvasHeight) }
+    : null;
+  const baseRect = normalizeRect(shape.baseRect, 0, 0);
+  if (!baseRect) {
+    errors.push('Ghostling metadata baseRect must include valid x, y, width, and height values.');
+  } else if (!canvasRect || !rectWithinRect(baseRect, canvasRect)) {
+    errors.push('Ghostling metadata baseRect must stay inside the declared canvas.');
+  }
+
+  const mount = normalizePoint(shape.mount);
+  if (!mount) {
+    errors.push('Ghostling metadata mount must include valid x and y coordinates.');
+  } else if (!canvasRect || !pointWithinRect(mount, canvasRect)) {
+    errors.push('Ghostling metadata mount must stay inside the declared canvas.');
+  }
+
+  const piecesShape = shape.pieces && typeof shape.pieces === 'object' ? shape.pieces as Record<string, unknown> : {};
+  const frontPieceShape = piecesShape.front && typeof piecesShape.front === 'object' ? piecesShape.front as Record<string, unknown> : null;
+  const backPieceShape = piecesShape.back && typeof piecesShape.back === 'object' ? piecesShape.back as Record<string, unknown> : null;
+  const frontDocRect = frontPieceShape ? normalizeRect(frontPieceShape.docRect, 0, 0) : null;
+  const backDocRect = backPieceShape ? normalizeRect(backPieceShape.docRect, 0, 0) : null;
+
+  if (frontPieceShape && !frontDocRect) {
+    errors.push('Ghostling metadata front piece must include a valid docRect.');
+  } else if (frontDocRect && (!canvasRect || !rectWithinRect(frontDocRect, canvasRect))) {
+    errors.push('Ghostling metadata front piece docRect must stay inside the declared canvas.');
+  }
+  if (backPieceShape && !backDocRect) {
+    errors.push('Ghostling metadata back piece must include a valid docRect.');
+  } else if (backDocRect && (!canvasRect || !rectWithinRect(backDocRect, canvasRect))) {
+    errors.push('Ghostling metadata back piece docRect must stay inside the declared canvas.');
+  }
+
+  if (frontDocRect && options.frontAssetPresent === false) {
+    errors.push('Ghostling metadata cannot declare a front piece without a matching front asset.');
+  }
+  if (backDocRect && options.backAssetPresent === false) {
+    errors.push('Ghostling metadata cannot declare a back piece without a matching back asset.');
+  }
+
+  if (errors.length > 0 || !canvasRect || !baseRect || !mount || !COMPANION_SLOT_ORDER.includes(rawSlot as CompanionSlotKey)) {
+    return { metadata: null, errors };
+  }
+
+  const metadata: CompanionItemRenderMetadata = {
+    kind: 'ghostling-cosmetic',
+    schemaVersion: 1,
+    slot: rawSlot as CompanionSlotKey,
+    canvas: {
+      width: canvasRect.width,
+      height: canvasRect.height,
+    },
+    baseRect: canonicalizeRect(baseRect),
+    mount: canonicalizePoint(mount),
+    pieces: {},
+  };
+
+  if (frontDocRect) {
+    metadata.pieces.front = { docRect: canonicalizeRect(frontDocRect) };
+  }
+  if (backDocRect) {
+    metadata.pieces.back = { docRect: canonicalizeRect(backDocRect) };
+  }
+
+  return {
+    metadata,
+    errors,
+  };
+}
+
+export function parseCompanionItemRenderMetadata(
+  raw: string | null | undefined,
+  options: CompanionItemRenderMetadataValidationOptions = {},
+) {
+  const value = String(raw ?? '').trim();
+  if (!value) return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new AppError('Ghostling metadata must be valid JSON.', 400);
+  }
+
+  const result = validateCompanionItemRenderMetadataObject(parsed, options);
+  if (result.errors.length > 0 || !result.metadata) {
+    throw new AppError(result.errors[0] ?? 'Ghostling metadata was invalid.', 400);
+  }
+  return result.metadata;
+}
+
+function tryParseCompanionItemRenderMetadata(
+  raw: string | null | undefined,
+  options: CompanionItemRenderMetadataValidationOptions = {},
+) {
+  const value = String(raw ?? '').trim();
+  if (!value) {
+    return {
+      metadata: null,
+      errors: [],
+    } satisfies CompanionItemRenderMetadataValidationResult;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return validateCompanionItemRenderMetadataObject(parsed, options);
+  } catch {
+    return {
+      metadata: null,
+      errors: ['Ghostling metadata must be valid JSON.'],
+    } satisfies CompanionItemRenderMetadataValidationResult;
+  }
+}
+
+export function companionStoredItemRenderMetadata(
+  value: string | null | undefined,
+  slot: CompanionSlotKey,
+  frontAssetPath: string | null | undefined,
+  backAssetPath: string | null | undefined,
+) {
+  return tryParseCompanionItemRenderMetadata(value, {
+    expectedSlot: slot,
+    frontAssetPresent: Boolean(frontAssetPath),
+    backAssetPresent: Boolean(backAssetPath),
+  }).metadata;
+}
+
+function companionItemRenderMetadataFromRow(
+  row: Pick<CompanionCatalogRow, 'render_metadata_json' | 'slot_key' | 'front_asset_path' | 'back_asset_path'>,
+) {
+  return companionStoredItemRenderMetadata(
+    row.render_metadata_json,
+    row.slot_key,
+    row.front_asset_path,
+    row.back_asset_path,
+  );
+}
+
 function companionRigAssetState(relativePath: string) {
   const animation = companionAssetAnimation(relativePath);
   const [sourceWidth, sourceHeight] = companionAnimationSourceDimensions(animation);
@@ -475,7 +707,7 @@ export function companionBaseHeadAssetPath(db: Database) {
 
 function companionCatalogRows(db: Database) {
   return db.prepare(`
-    SELECT slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, active, sort_order, created_at
+    SELECT slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, render_metadata_json, active, sort_order, created_at
     FROM companion_catalog
     ORDER BY slot_key ASC, sort_order ASC, name ASC
   `).all() as CompanionCatalogRow[];
@@ -792,6 +1024,7 @@ export function companionAssetRig(
     parts: [],
     layers: [],
     slotGroups: { ...COMPANION_DEFAULT_SLOT_GROUPS },
+    slotAnchors: { ...COMPANION_DEFAULT_SLOT_ANCHORS },
     motionChannels: defaultMotionChannels(),
   };
 
@@ -881,6 +1114,17 @@ export function companionAssetRig(
     }
   }
 
+  const slotAnchors: Partial<Record<CompanionSlotKey, CompanionRenderPoint>> = { ...COMPANION_DEFAULT_SLOT_ANCHORS };
+  if (payload.slotAnchors && typeof payload.slotAnchors === 'object') {
+    for (const [slotKey, point] of Object.entries(payload.slotAnchors as Record<string, unknown>)) {
+      if (!COMPANION_SLOT_ORDER.includes(slotKey as CompanionSlotKey)) continue;
+      const normalizedPoint = normalizePoint(point);
+      if (normalizedPoint) {
+        slotAnchors[slotKey as CompanionSlotKey] = normalizedPoint;
+      }
+    }
+  }
+
   const width = Number(payload.width ?? fallback.width);
   const height = Number(payload.height ?? fallback.height);
   return {
@@ -889,7 +1133,220 @@ export function companionAssetRig(
     parts,
     layers,
     slotGroups,
+    slotAnchors,
     motionChannels,
+  };
+}
+
+type CompanionResolvedScene = {
+  width: number;
+  height: number;
+  layers: CompanionManifestLayer[];
+  baseConfig: CompanionBaseConfig;
+};
+
+function fullLayerSlice(
+  relativePath: string,
+  key: string,
+  targetRect: Rect = {
+    x: 0,
+    y: 0,
+    width: COMPANION_CANVAS_SIZE,
+    height: COMPANION_CANVAS_SIZE,
+  },
+  motionGroup: string | null = null,
+): CompanionRenderSlice {
+  const animation = companionAssetAnimation(relativePath);
+  const [sourceWidth, sourceHeight] = companionAnimationSourceDimensions(animation);
+  return {
+    key,
+    sourceX: 0,
+    sourceY: 0,
+    sourceWidth,
+    sourceHeight,
+    targetX: targetRect.x,
+    targetY: targetRect.y,
+    targetWidth: targetRect.width,
+    targetHeight: targetRect.height,
+    motionGroup,
+  };
+}
+
+function resolveSlotAnchor(
+  rig: CompanionRig,
+  slot: CompanionSlotKey,
+  metadata: CompanionItemRenderMetadata,
+) {
+  const slotAnchor = rig.slotAnchors[slot] ?? COMPANION_DEFAULT_SLOT_ANCHORS[slot] ?? { x: rig.width / 2, y: rig.height / 2 };
+  return {
+    x: metadata.baseRect.x + ((slotAnchor.x / Math.max(1, rig.width)) * metadata.baseRect.width),
+    y: metadata.baseRect.y + ((slotAnchor.y / Math.max(1, rig.height)) * metadata.baseRect.height),
+  };
+}
+
+function normalizeDocRectToCompanionCanvas(docRect: Rect, metadata: CompanionItemRenderMetadata) {
+  return {
+    x: ((docRect.x - metadata.baseRect.x) / Math.max(1, metadata.baseRect.width)) * COMPANION_CANVAS_SIZE,
+    y: ((docRect.y - metadata.baseRect.y) / Math.max(1, metadata.baseRect.height)) * COMPANION_CANVAS_SIZE,
+    width: (docRect.width / Math.max(1, metadata.baseRect.width)) * COMPANION_CANVAS_SIZE,
+    height: (docRect.height / Math.max(1, metadata.baseRect.height)) * COMPANION_CANVAS_SIZE,
+  } satisfies Rect;
+}
+
+function metadataLayerSlices(
+  row: CompanionCatalogRow,
+  side: 'front' | 'back',
+  slot: CompanionSlotKey,
+  rig: CompanionRig,
+): CompanionRenderSlice[] {
+  const metadata = companionItemRenderMetadataFromRow(row);
+  if (!metadata) return [];
+
+  const piece = side === 'front' ? metadata.pieces.front : metadata.pieces.back;
+  if (!piece) return [];
+
+  const slotAnchorDoc = resolveSlotAnchor(rig, slot, metadata);
+  const targetDocRect = {
+    x: piece.docRect.x + (slotAnchorDoc.x - metadata.mount.x),
+    y: piece.docRect.y + (slotAnchorDoc.y - metadata.mount.y),
+    width: piece.docRect.width,
+    height: piece.docRect.height,
+  } satisfies Rect;
+  const normalizedTarget = normalizeDocRectToCompanionCanvas(targetDocRect, metadata);
+  const slotMotionGroup = rig.slotGroups[slot] ?? null;
+
+  return [{
+    key: `${row.slug}-${side}`,
+    sourceX: 0,
+    sourceY: 0,
+    sourceWidth: piece.docRect.width,
+    sourceHeight: piece.docRect.height,
+    targetX: normalizedTarget.x,
+    targetY: normalizedTarget.y,
+    targetWidth: normalizedTarget.width,
+    targetHeight: normalizedTarget.height,
+    motionGroup: slotMotionGroup,
+  }];
+}
+
+function sceneBoundsFromLayers(layers: CompanionManifestLayer[]) {
+  let minX = 0;
+  let minY = 0;
+  let maxX = COMPANION_CANVAS_SIZE;
+  let maxY = COMPANION_CANVAS_SIZE;
+
+  for (const layer of layers) {
+    for (const slice of layer.slices) {
+      minX = Math.min(minX, slice.targetX);
+      minY = Math.min(minY, slice.targetY);
+      maxX = Math.max(maxX, slice.targetX + slice.targetWidth);
+      maxY = Math.max(maxY, slice.targetY + slice.targetHeight);
+    }
+  }
+
+  return {
+    minX,
+    minY,
+    width: Math.max(1, maxX - minX),
+    height: Math.max(1, maxY - minY),
+  };
+}
+
+function normalizeSceneLayers(layers: CompanionManifestLayer[]) {
+  const bounds = sceneBoundsFromLayers(layers);
+  if (bounds.minX === 0 && bounds.minY === 0) {
+    return {
+      width: bounds.width,
+      height: bounds.height,
+      layers,
+    };
+  }
+
+  return {
+    width: bounds.width,
+    height: bounds.height,
+    layers: layers.map((layer) => ({
+      ...layer,
+      slices: layer.slices.map((slice) => ({
+        ...slice,
+        targetX: slice.targetX - bounds.minX,
+        targetY: slice.targetY - bounds.minY,
+      })),
+    })),
+  };
+}
+
+function companionItemLayer(
+  row: CompanionCatalogRow,
+  side: 'front' | 'back',
+  zIndex: number,
+  baseConfig: CompanionBaseConfig,
+): CompanionManifestLayer | null {
+  const relativePath = side === 'front' ? row.front_asset_path : row.back_asset_path;
+  if (!relativePath) return null;
+
+  const metadataSlices = metadataLayerSlices(row, side, row.slot_key, baseConfig.rig);
+  return {
+    key: `${row.slot_key}-${side}`,
+    role: `${row.slot_key}-${side}`,
+    slot: row.slot_key,
+    relativePath,
+    zIndex,
+    motionGroup: null,
+    slices: metadataSlices.length
+      ? metadataSlices
+      : [fullLayerSlice(relativePath, `${row.slug}-${side}`, undefined, baseConfig.rig.slotGroups[row.slot_key] ?? null)],
+  };
+}
+
+export function resolveCompanionLayerScene(
+  db: Database,
+  loadout: Record<CompanionSlotKey, string | null>,
+): CompanionResolvedScene {
+  const layers: CompanionManifestLayer[] = [];
+  const catalog = new Map(companionCatalogRows(db).map((row) => [row.slug, row]));
+  const baseConfig = resolveCompanionBaseConfig(db);
+
+  const slotZIndices: Record<CompanionSlotKey, { front: number; back: number }> = {
+    hat: { back: 34, front: 55 },
+    face: { back: 34, front: 45 },
+    neck: { back: 28, front: 30 },
+    body: { back: 10, front: 65 },
+  };
+
+  for (const slot of COMPANION_SLOT_ORDER) {
+    const itemSlug = loadout[slot];
+    const item = itemSlug ? catalog.get(itemSlug) : undefined;
+    if (!item) continue;
+    const backLayer = companionItemLayer(item, 'back', slotZIndices[slot].back, baseConfig);
+    if (backLayer) layers.push(backLayer);
+  }
+
+  layers.push(...baseConfig.layers.map((layer) => ({
+    ...layer,
+    slices: layer.slices.length
+      ? layer.slices.map((slice) => ({ ...slice }))
+      : [fullLayerSlice(layer.relativePath, layer.key, undefined, layer.motionGroup)],
+  })));
+
+  for (const slot of COMPANION_SLOT_ORDER) {
+    const itemSlug = loadout[slot];
+    const item = itemSlug ? catalog.get(itemSlug) : undefined;
+    if (!item) continue;
+    const frontLayer = companionItemLayer(item, 'front', slotZIndices[slot].front, baseConfig);
+    if (frontLayer) layers.push(frontLayer);
+  }
+
+  const orderedLayers = layers
+    .filter((layer) => Boolean(layer.relativePath) && layer.slices.length > 0)
+    .sort((left, right) => left.zIndex - right.zIndex || left.key.localeCompare(right.key));
+  const normalizedScene = normalizeSceneLayers(orderedLayers);
+
+  return {
+    width: normalizedScene.width,
+    height: normalizedScene.height,
+    layers: normalizedScene.layers,
+    baseConfig,
   };
 }
 
@@ -897,73 +1354,22 @@ export function resolveCompanionLayerSpecs(
   db: Database,
   loadout: Record<CompanionSlotKey, string | null>,
 ): CompanionManifestLayer[] {
-  const layers: CompanionManifestLayer[] = [];
-  const catalog = new Map(companionCatalogRows(db).map((row) => [row.slug, row]));
-  const baseConfig = resolveCompanionBaseConfig(db);
-  const bodySlug = loadout.body;
-  const bodyItem = bodySlug ? catalog.get(bodySlug) : undefined;
-  if (bodyItem?.back_asset_path) {
-    layers.push({
-      key: 'body-back',
-      role: 'body-back',
-      slot: 'body',
-      relativePath: bodyItem.back_asset_path,
-      zIndex: 10,
-      motionGroup: null,
-      slices: [],
-    });
-  }
-
-  layers.push(...baseConfig.layers.map((layer) => ({ ...layer, slices: [...layer.slices] })));
-
-  const slotZIndices: Record<'neck' | 'face' | 'hat', number> = {
-    neck: 30,
-    face: 45,
-    hat: 55,
-  };
-  for (const slot of ['neck', 'face', 'hat'] as const) {
-    const item = loadout[slot] ? catalog.get(loadout[slot] as string) : undefined;
-    if (item?.front_asset_path) {
-      layers.push({
-        key: `${slot}-front`,
-        role: `${slot}-front`,
-        slot,
-        relativePath: item.front_asset_path,
-        zIndex: slotZIndices[slot],
-        motionGroup: null,
-        slices: [],
-      });
-    }
-  }
-
-  if (bodyItem?.front_asset_path) {
-    layers.push({
-      key: 'body-front',
-      role: 'body-front',
-      slot: 'body',
-      relativePath: bodyItem.front_asset_path,
-      zIndex: 65,
-      motionGroup: null,
-      slices: [],
-    });
-  }
-
-  return layers.sort((left, right) => left.zIndex - right.zIndex || left.key.localeCompare(right.key));
+  return resolveCompanionLayerScene(db, loadout).layers;
 }
 
 export function companionRenderManifest(
   db: Database,
   loadout: Record<CompanionSlotKey, string | null>,
 ) {
-  const baseConfig = resolveCompanionBaseConfig(db);
+  const scene = resolveCompanionLayerScene(db, loadout);
 
-  const layers = resolveCompanionLayerSpecs(db, loadout)
+  const layers = scene.layers
     .map((layer) => {
       const src = companionAssetUrl(layer.relativePath);
       if (!src) return null;
 
-      const animation = layer.relativePath === baseConfig.bodyAssetPath ? baseConfig.animation : companionAssetAnimation(layer.relativePath);
-      const motionGroup = layer.motionGroup || (layer.slot ? baseConfig.rig.slotGroups[layer.slot] ?? null : null);
+      const animation = layer.relativePath === scene.baseConfig.bodyAssetPath ? scene.baseConfig.animation : companionAssetAnimation(layer.relativePath);
+      const motionGroup = layer.motionGroup || (layer.slot ? scene.baseConfig.rig.slotGroups[layer.slot] ?? null : null);
 
       return {
         key: layer.key,
@@ -979,13 +1385,13 @@ export function companionRenderManifest(
     .filter((layer): layer is NonNullable<typeof layer> => Boolean(layer));
 
   return {
-    width: COMPANION_CANVAS_SIZE,
-    height: COMPANION_CANVAS_SIZE,
+    width: scene.width,
+    height: scene.height,
     motion: {
       shadowOpacity: COMPANION_DEFAULT_SHADOW_OPACITY,
       rootGroup: 'root',
-      channels: baseConfig.rig.motionChannels,
-      slotGroups: baseConfig.rig.slotGroups,
+      channels: scene.baseConfig.rig.motionChannels,
+      slotGroups: scene.baseConfig.rig.slotGroups,
     },
     layers,
   } satisfies CompanionRenderManifest;
@@ -1048,6 +1454,7 @@ export function repoCompanionImportCandidates(db: Database): CompanionRepoImport
 
   for (const entry of fs.readdirSync(itemsRoot, { withFileTypes: true })) {
     if (!entry.isFile()) continue;
+    if (entry.name.endsWith('.ghostling.json')) continue;
     const extension = path.extname(entry.name).toLowerCase();
     if (!(extension in COMPANION_ALLOWED_ASSET_MIME_TYPES)) continue;
 
@@ -1071,10 +1478,13 @@ export function repoCompanionImportCandidates(db: Database): CompanionRepoImport
       suggestedRarity: null,
       suggestedCost: null,
       suggestedDescription: null,
-      frontAssetPath: '',
+      frontAssetPath: null,
       frontAssetUrl: null,
       backAssetPath: null,
       backAssetUrl: null,
+      renderMetadataPath: null,
+      renderMetadata: null,
+      renderMetadataErrors: [],
     };
 
     if (layer === 'front') {
@@ -1087,7 +1497,40 @@ export function repoCompanionImportCandidates(db: Database): CompanionRepoImport
     candidatesBySlug.set(slug, candidate);
   }
 
+  for (const entry of fs.readdirSync(itemsRoot, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.ghostling.json')) continue;
+    const baseName = entry.name.slice(0, -'.ghostling.json'.length);
+    const slug = slugify(baseName);
+    const relativePath = `repo/defaults/items/${entry.name}`;
+    const candidate = candidatesBySlug.get(slug) ?? {
+      slug,
+      name: humanizeIdentifier(slug),
+      suggestedSlot: null,
+      suggestedRarity: null,
+      suggestedCost: null,
+      suggestedDescription: null,
+      frontAssetPath: null,
+      frontAssetUrl: null,
+      backAssetPath: null,
+      backAssetUrl: null,
+      renderMetadataPath: null,
+      renderMetadata: null,
+      renderMetadataErrors: [],
+    };
+
+    const metadataResult = tryParseCompanionItemRenderMetadata(fs.readFileSync(path.join(itemsRoot, entry.name), 'utf8'), {
+      expectedSlot: candidate.suggestedSlot ?? undefined,
+      frontAssetPresent: Boolean(candidate.frontAssetPath),
+      backAssetPresent: Boolean(candidate.backAssetPath),
+    });
+    candidate.renderMetadataPath = relativePath;
+    candidate.renderMetadata = metadataResult.metadata;
+    candidate.renderMetadataErrors = metadataResult.errors;
+    candidate.suggestedSlot = metadataResult.metadata?.slot ?? candidate.suggestedSlot;
+    candidatesBySlug.set(slug, candidate);
+  }
+
   return [...candidatesBySlug.values()]
-    .filter((candidate) => !existingSlugs.has(candidate.slug) && Boolean(candidate.frontAssetPath))
+    .filter((candidate) => !existingSlugs.has(candidate.slug) && Boolean(candidate.frontAssetPath || candidate.backAssetPath))
     .sort((left, right) => left.name.localeCompare(right.name));
 }
