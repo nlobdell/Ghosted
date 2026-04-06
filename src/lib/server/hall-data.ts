@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { cache } from 'react';
+import { getConfiguredLoginHref } from '@/lib/auth/server-config';
 import { getPythonJSON } from '@/lib/server/python-proxy';
 import type { HallDashboardData, ShellData } from '@/lib/types';
 
@@ -9,15 +10,13 @@ function normalizeHallPath(nextPath: string) {
 }
 
 function withNextLoginHref(shellData: ShellData, nextPath: string): ShellData {
-  const loginHref = process.env.ENABLE_DEV_AUTH === 'true'
-    ? `/auth/dev-login?next=${encodeURIComponent(nextPath)}`
-    : `/auth/login?next=${encodeURIComponent(nextPath)}`;
+  const loginHref = getConfiguredLoginHref(nextPath);
 
   return {
     ...shellData,
     auth: {
       ...shellData.auth,
-      canSignIn: true,
+      canSignIn: Boolean(loginHref),
       loginHref,
     },
   };

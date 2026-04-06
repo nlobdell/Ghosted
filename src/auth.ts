@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import Discord from 'next-auth/providers/discord';
 import { enrichSessionUser, getLegacyUserById, upsertLegacyUserFromDiscord } from '@/lib/auth/legacy-user';
+import { isDiscordAuthConfigured } from '@/lib/auth/server-config';
 
 type DiscordIdentityProfile = {
   id: string;
@@ -16,31 +17,33 @@ export const { handlers, auth } = NextAuth({
   session: {
     strategy: 'jwt',
   },
-  providers: [
-    Discord({
-      clientId: process.env.DISCORD_CLIENT_ID ?? '',
-      clientSecret: process.env.DISCORD_CLIENT_SECRET ?? '',
-      authorization: {
-        params: {
-          scope: 'identify',
+  providers: isDiscordAuthConfigured()
+    ? [
+      Discord({
+        clientId: process.env.DISCORD_CLIENT_ID!.trim(),
+        clientSecret: process.env.DISCORD_CLIENT_SECRET!.trim(),
+        authorization: {
+          params: {
+            scope: 'identify',
+          },
         },
-      },
-      profile(profile) {
-        const discordProfile = profile as DiscordIdentityProfile;
-        return {
-          id: String(discordProfile.id),
-          name: discordProfile.global_name || discordProfile.username,
-          image: discordProfile.avatar
-            ? `https://cdn.discordapp.com/avatars/${discordProfile.id}/${discordProfile.avatar}.png?size=128`
-            : null,
-          discordId: String(discordProfile.id),
-          username: String(discordProfile.username ?? 'ghosted-member'),
-          displayName: String(discordProfile.global_name || discordProfile.username || 'Ghosted member'),
-          avatarHash: discordProfile.avatar ? String(discordProfile.avatar) : null,
-        };
-      },
-    }),
-  ],
+        profile(profile) {
+          const discordProfile = profile as DiscordIdentityProfile;
+          return {
+            id: String(discordProfile.id),
+            name: discordProfile.global_name || discordProfile.username,
+            image: discordProfile.avatar
+              ? `https://cdn.discordapp.com/avatars/${discordProfile.id}/${discordProfile.avatar}.png?size=128`
+              : null,
+            discordId: String(discordProfile.id),
+            username: String(discordProfile.username ?? 'ghosted-member'),
+            displayName: String(discordProfile.global_name || discordProfile.username || 'Ghosted member'),
+            avatarHash: discordProfile.avatar ? String(discordProfile.avatar) : null,
+          };
+        },
+      }),
+    ]
+    : [],
   callbacks: {
     async signIn({ profile, account }) {
       const discordProfile = profile as DiscordIdentityProfile | undefined;

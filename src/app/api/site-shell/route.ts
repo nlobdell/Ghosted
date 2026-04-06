@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { getConfiguredLoginHref } from '@/lib/auth/server-config';
 import { buildPythonProxyRequest } from '@/lib/server/python-proxy';
 
 export const runtime = 'nodejs';
@@ -7,7 +8,7 @@ export const runtime = 'nodejs';
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const nextPath = url.searchParams.get('next') ?? '/';
-  const devAuthEnabled = process.env.ENABLE_DEV_AUTH === 'true';
+  const loginHref = getConfiguredLoginHref(nextPath);
   const pythonResponse = await buildPythonProxyRequest(request, `/api/site-shell?next=${encodeURIComponent(nextPath)}`);
   const payload = await pythonResponse.json().catch(() => null) as Record<string, unknown> | null;
   const session = await auth();
@@ -17,10 +18,8 @@ export async function GET(request: Request) {
       {
         authenticated: Boolean(session?.user),
         auth: {
-          canSignIn: true,
-          loginHref: devAuthEnabled
-            ? `/auth/dev-login?next=${encodeURIComponent(nextPath)}`
-            : `/auth/login?next=${encodeURIComponent(nextPath)}`,
+          canSignIn: Boolean(loginHref),
+          loginHref,
         },
       },
       { status: pythonResponse.status || 200 },
@@ -31,10 +30,8 @@ export async function GET(request: Request) {
     ...payload,
     auth: {
       ...(typeof payload.auth === 'object' && payload.auth ? payload.auth : {}),
-      canSignIn: true,
-      loginHref: devAuthEnabled
-        ? `/auth/dev-login?next=${encodeURIComponent(nextPath)}`
-        : `/auth/login?next=${encodeURIComponent(nextPath)}`,
+      canSignIn: Boolean(loginHref),
+      loginHref,
     },
   };
 
