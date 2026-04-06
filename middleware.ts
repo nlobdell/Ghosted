@@ -38,15 +38,10 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const isAdmin = Boolean(token && 'isAdmin' in token && token.isAdmin);
-  if (pathname.startsWith('/admin') && !isAdmin && !legacyDevAdmin) {
-    if (!token?.sub && !legacyDevSession) {
-      const loginUrl = new URL(devAuthEnabled ? '/auth/dev-login' : '/auth/login', request.nextUrl.origin);
-      loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
-      return NextResponse.redirect(loginUrl);
-    }
-
-    return NextResponse.redirect(new URL('/hall/', request.nextUrl.origin));
+  if (pathname.startsWith('/admin') && !token?.sub && !legacyDevSession && !legacyDevAdmin) {
+    const loginUrl = new URL(devAuthEnabled ? '/auth/dev-login' : '/auth/login', request.nextUrl.origin);
+    loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
