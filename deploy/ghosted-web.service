@@ -1,18 +1,18 @@
 [Unit]
-Description=Ghosted Legacy Python API
+Description=Ghosted Next.js Web App
 After=network.target
 
 [Service]
 Type=simple
 User=ghosted
 Group=ghosted
-WorkingDirectory=/opt/ghosted
+WorkingDirectory=/opt/ghosted/current-web
 EnvironmentFile=/etc/ghosted/ghosted.env
-ExecStart=/usr/bin/python3 /opt/ghosted/server.py
+ExecStart=/usr/bin/node /opt/ghosted/current-web/server.js
 Restart=always
 RestartSec=5
 
-# Keep the writable runtime state outside the repo checkout.
+# Keep runtime state outside the release bundle.
 ReadWritePaths=/var/lib/ghosted
 
 [Install]

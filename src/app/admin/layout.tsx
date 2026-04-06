@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { auth } from '@/auth';
 import { HallTopbar } from '@/components/nav/HallTopbar';
 import { HallSidebar } from '@/components/nav/HallSidebar';
+import { getCurrentUser } from '@/lib/server/ghosted-api';
 import { getServerJSON } from '@/lib/server-api';
 import type { ShellData } from '@/lib/types';
 
@@ -11,9 +11,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  const isAdmin = Boolean(session?.user && 'isAdmin' in session.user && session.user.isAdmin);
-  if (!isAdmin) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser?.is_admin) {
     redirect('/hall/');
   }
 
