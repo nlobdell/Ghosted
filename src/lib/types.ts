@@ -223,6 +223,7 @@ export interface HallCompanionSummary {
   ownedCount: number;
   equippedCount: number;
   animatedRenderUrl: string;
+  renderManifest: CompanionRenderManifest;
 }
 
 export interface CompanionAdminAssetItem {
@@ -260,7 +261,12 @@ export interface CompanionAdminData {
   base: {
     assetPath: string;
     assetUrl?: string | null;
+    bodyAssetPath: string;
+    bodyAssetUrl?: string | null;
+    headAssetPath?: string | null;
+    headAssetUrl?: string | null;
     previewUrl: string;
+    renderManifest: CompanionRenderManifest;
   };
   items: CompanionAdminAssetItem[];
   repoCandidates: CompanionRepoImportCandidate[];

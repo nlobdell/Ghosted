@@ -32,6 +32,13 @@ type StagePiece = {
   slice?: CompanionRenderSlice;
 };
 
+const SHADOW_WIDTH_RATIO = 17 / 32;
+const SHADOW_HEIGHT_RATIO = 4.8 / 32;
+const SHADOW_LEFT_RATIO = 7.5 / 32;
+const SHADOW_TOP_RATIO = 26.6 / 32;
+const SHADOW_MIN_SCALE_X = 7.9 / 8.5;
+const DEFAULT_LOGICAL_STAGE_SIZE = 32;
+
 function roundPx(value: number) {
   return Math.round(value);
 }
@@ -91,13 +98,6 @@ function addOffsets(...offsets: Array<StageOffset | undefined>): StageOffset {
   );
 }
 
-function pullOffsets(primary: StageOffset, secondary: StageOffset, influence: number): StageOffset {
-  return {
-    x: primary.x + ((secondary.x - primary.x) * influence),
-    y: primary.y + ((secondary.y - primary.y) * influence),
-  };
-}
-
 export function AnimatedCompanionStage({
   manifest,
   fallbackSrc,
@@ -109,9 +109,11 @@ export function AnimatedCompanionStage({
   const pieceRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const shadowRef = useRef<HTMLDivElement | null>(null);
 
-  const logicalWidth = Math.max(1, manifest?.width || 32);
-  const logicalHeight = Math.max(1, manifest?.height || 32);
-  const stageScale = Math.max(1, targetSize / Math.max(logicalWidth, logicalHeight));
+  const logicalWidth = Math.max(1, manifest?.width || DEFAULT_LOGICAL_STAGE_SIZE);
+  const logicalHeight = Math.max(1, manifest?.height || DEFAULT_LOGICAL_STAGE_SIZE);
+  // Keep the rendered sprite on an integer scale so individual pixels do not
+  // get unevenly sliced when the requested preview size is not a clean multiple.
+  const stageScale = Math.max(1, Math.floor(targetSize / Math.max(logicalWidth, logicalHeight)) || 1);
   const stageWidth = logicalWidth * stageScale;
   const stageHeight = logicalHeight * stageScale;
 
@@ -172,22 +174,25 @@ export function AnimatedCompanionStage({
       const rootOffset = resolveChannelOffset(manifest.motion.channels?.[rootKey], elapsedMs, prefersReducedMotion);
       const bodyLocal = resolveChannelOffset(manifest.motion.channels?.body, elapsedMs, prefersReducedMotion);
       const headLocal = resolveChannelOffset(manifest.motion.channels?.head, elapsedMs, prefersReducedMotion);
-      const bodyCoupled = pullOffsets(bodyLocal, headLocal, 0.12);
-      const headCoupled = pullOffsets(headLocal, bodyLocal, 0.34);
-      const bodyOffset = addOffsets(rootOffset, bodyCoupled);
-      const headOffset = addOffsets(rootOffset, headCoupled);
+      const bodyOffset = addOffsets(rootOffset, bodyLocal);
+      const headOffset = addOffsets(bodyOffset, headLocal);
 
       const resolveGroupOffset = (group: string | null | undefined) => {
-        if (!group || group === rootKey) return rootOffset;
+        if (!group || group === rootKey || group === 'root') return rootOffset;
         if (group === 'body') return bodyOffset;
         if (group === 'head') return headOffset;
         return addOffsets(rootOffset, resolveChannelOffset(manifest.motion.channels?.[group], elapsedMs, prefersReducedMotion));
       };
 
       if (shadowRef.current) {
-        const shadowBias = bodyOffset.y * 0.12;
-        shadowRef.current.style.transform = `translate(${roundPx(rootOffset.x * stageScale)}px, ${roundPx(rootOffset.y * stageScale)}px) scale(${Math.max(0.8, 1 - shadowBias * 0.02)})`;
-        shadowRef.current.style.opacity = `${Math.max(0.12, (manifest.motion.shadowOpacity ?? 0.2) - shadowBias * 0.03)}`;
+        const shadowDurationMs = Math.max(1, Math.trunc(manifest.motion.channels?.body?.offsetY?.durationMs ?? 2860));
+        const shadowProgress = prefersReducedMotion ? 1 : (Math.cos((elapsedMs / shadowDurationMs) * Math.PI * 2) + 1) / 2;
+        const shadowScaleX = SHADOW_MIN_SCALE_X + ((1 - SHADOW_MIN_SCALE_X) * shadowProgress);
+        const shadowOpacityLow = (manifest.motion.shadowOpacity ?? 0.2) + 0.02;
+        const shadowOpacityHigh = (manifest.motion.shadowOpacity ?? 0.2) + 0.12;
+        const shadowOpacity = shadowOpacityLow + ((shadowOpacityHigh - shadowOpacityLow) * shadowProgress);
+        shadowRef.current.style.transform = `scaleX(${shadowScaleX.toFixed(4)})`;
+        shadowRef.current.style.opacity = shadowOpacity.toFixed(3);
       }
 
       pieces.forEach((piece) => {
@@ -201,29 +206,38 @@ export function AnimatedCompanionStage({
         const sheetWidth = Math.max(sourceWidth, piece.animation.sheetWidth ?? sourceWidth);
         const sheetHeight = Math.max(sourceHeight, piece.animation.sheetHeight ?? sourceHeight);
 
-        let left = (frame.offsetX ?? 0);
-        let top = (frame.offsetY ?? 0);
-        let width = sourceWidth;
-        let height = sourceHeight;
-        let backgroundPositionX = -frame.x + (frame.offsetX ?? 0);
-        let backgroundPositionY = -frame.y + (frame.offsetY ?? 0);
+        let left = 0;
+        let top = 0;
+        let width = logicalWidth;
+        let height = logicalHeight;
+        let backgroundScaleX = logicalWidth / sourceWidth;
+        let backgroundScaleY = logicalHeight / sourceHeight;
+        let backgroundPositionX = (-frame.x + (frame.offsetX ?? 0)) * backgroundScaleX;
+        let backgroundPositionY = (-frame.y + (frame.offsetY ?? 0)) * backgroundScaleY;
 
         if (piece.slice) {
           left = piece.slice.targetX;
           top = piece.slice.targetY;
           width = piece.slice.targetWidth;
           height = piece.slice.targetHeight;
-          backgroundPositionX = -(frame.x + piece.slice.sourceX);
-          backgroundPositionY = -(frame.y + piece.slice.sourceY);
+          backgroundScaleX = width / Math.max(1, piece.slice.sourceWidth);
+          backgroundScaleY = height / Math.max(1, piece.slice.sourceHeight);
+          backgroundPositionX = -(frame.x + piece.slice.sourceX) * backgroundScaleX;
+          backgroundPositionY = -(frame.y + piece.slice.sourceY) * backgroundScaleY;
+        } else {
+          left = (frame.offsetX ?? 0) * backgroundScaleX;
+          top = (frame.offsetY ?? 0) * backgroundScaleY;
+          width = sourceWidth * backgroundScaleX;
+          height = sourceHeight * backgroundScaleY;
         }
 
         node.style.left = `${roundPx(left * stageScale)}px`;
         node.style.top = `${roundPx(top * stageScale)}px`;
         node.style.width = `${roundPx(width * stageScale)}px`;
         node.style.height = `${roundPx(height * stageScale)}px`;
-        node.style.transform = `translate(${roundPx(offset.x * stageScale)}px, ${roundPx(offset.y * stageScale)}px)`;
+        node.style.transform = `translate3d(${roundPx(offset.x * stageScale)}px, ${roundPx(offset.y * stageScale)}px, 0)`;
         node.style.backgroundPosition = `${roundPx(backgroundPositionX * stageScale)}px ${roundPx(backgroundPositionY * stageScale)}px`;
-        node.style.backgroundSize = `${roundPx(sheetWidth * stageScale)}px ${roundPx(sheetHeight * stageScale)}px`;
+        node.style.backgroundSize = `${roundPx(sheetWidth * backgroundScaleX * stageScale)}px ${roundPx(sheetHeight * backgroundScaleY * stageScale)}px`;
       });
 
       frameId = window.requestAnimationFrame(render);
@@ -231,15 +245,15 @@ export function AnimatedCompanionStage({
 
     frameId = window.requestAnimationFrame(render);
     return () => window.cancelAnimationFrame(frameId);
-  }, [manifest, pieces, prefersReducedMotion, stageScale]);
+  }, [logicalHeight, logicalWidth, manifest, pieces, prefersReducedMotion, stageScale]);
 
   if (!manifest || !pieces.length) {
     return (
       <div
         className={className}
         style={{
-          width: `${stageWidth}px`,
-          height: `${stageHeight}px`,
+          width: `${targetSize}px`,
+          height: `${targetSize}px`,
           display: 'grid',
           placeItems: 'center',
           flex: '0 0 auto',
@@ -258,8 +272,8 @@ export function AnimatedCompanionStage({
     <div
       className={className}
       style={{
-        width: `${stageWidth}px`,
-        height: `${stageHeight}px`,
+        width: `${targetSize}px`,
+        height: `${targetSize}px`,
         display: 'grid',
         placeItems: 'center',
         overflow: 'visible',
@@ -280,13 +294,14 @@ export function AnimatedCompanionStage({
           ref={shadowRef}
           style={{
             position: 'absolute',
-            left: `${logicalWidth * stageScale * 0.28}px`,
-            top: `${logicalHeight * stageScale * 0.88}px`,
-            width: `${logicalWidth * stageScale * 0.44}px`,
-            height: `${logicalHeight * stageScale * 0.08}px`,
+            left: `${logicalWidth * stageScale * SHADOW_LEFT_RATIO}px`,
+            top: `${logicalHeight * stageScale * SHADOW_TOP_RATIO}px`,
+            width: `${logicalWidth * stageScale * SHADOW_WIDTH_RATIO}px`,
+            height: `${logicalHeight * stageScale * SHADOW_HEIGHT_RATIO}px`,
             borderRadius: '999px',
             background: 'rgba(9, 8, 17, 0.2)',
             transformOrigin: 'center',
+            willChange: 'transform, opacity',
           }}
         />
         {pieces.map((piece) => (

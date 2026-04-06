@@ -8,13 +8,21 @@ import type {
   CompanionLayerAnimation,
   CompanionMotionChannel,
   CompanionRepoImportCandidate,
+  CompanionRenderManifest,
   CompanionRenderSlice,
   CompanionSlotKey,
 } from '@/lib/types';
 import { AppError, envText, humanizeIdentifier, slugify } from '@/lib/server/core';
-import { COMPANION_DEFAULT_BASE_ASSET_PATH, ensureDefaultCompanionBase } from '@/lib/server/companion-schema';
+import {
+  COMPANION_DEFAULT_BASE_ASSET_PATH,
+  COMPANION_DEFAULT_BASE_HEAD_ASSET_PATH,
+  ensureDefaultCompanionBase,
+} from '@/lib/server/companion-schema';
 
-export { COMPANION_DEFAULT_BASE_ASSET_PATH } from '@/lib/server/companion-schema';
+export {
+  COMPANION_DEFAULT_BASE_ASSET_PATH,
+  COMPANION_DEFAULT_BASE_HEAD_ASSET_PATH,
+} from '@/lib/server/companion-schema';
 
 export const COMPANION_SLOT_ORDER = ['hat', 'face', 'neck', 'body'] as const satisfies readonly CompanionSlotKey[];
 
@@ -99,6 +107,20 @@ export type CompanionManifestLayer = {
   slices: CompanionRenderSlice[];
 };
 
+export type CompanionBaseConfig = {
+  bodyAssetPath: string;
+  bodyAssetUrl: string | null;
+  headAssetPath: string | null;
+  headAssetUrl: string | null;
+  previewAssetPath: string;
+  previewAssetUrl: string | null;
+  renderUrl: string;
+  animatedRenderUrl: string;
+  rig: CompanionRig;
+  animation: CompanionAnimation;
+  layers: CompanionManifestLayer[];
+};
+
 export type UploadedCompanionAsset = {
   filename: string;
   contentType: string;
@@ -117,6 +139,11 @@ type CompanionCatalogRow = {
   active: number;
   sort_order: number;
   created_at: string;
+};
+
+type CompanionSettingsRow = {
+  base_asset_path: string | null;
+  base_head_asset_path: string | null;
 };
 
 function defaultDatabasePath() {
@@ -289,13 +316,97 @@ export function companionAssetDataUri(relativePath: string | null | undefined) {
   return `data:${companionAssetMimeType(relativePath)};base64,${encoded}`;
 }
 
-export function companionBaseAssetPath(db: Database) {
+function companionSettingsRow(db: Database) {
   ensureDefaultCompanionBase(db);
-  const row = db.prepare(`
-    SELECT base_asset_path
+  return db.prepare(`
+    SELECT base_asset_path, base_head_asset_path
     FROM companion_settings
     WHERE singleton_key = 'default'
-  `).get() as { base_asset_path: string | null } | undefined;
+  `).get() as CompanionSettingsRow | undefined;
+}
+
+function resolveConfiguredCompanionAssetPath(
+  value: string | null | undefined,
+  fallbackPath: string | null,
+) {
+  const candidate = String(value ?? '').trim();
+  if (candidate) {
+    try {
+      if (fileExists(companionAssetPath(candidate))) return candidate;
+    } catch {
+      // Fall through to the fallback path.
+    }
+  }
+  return fallbackPath;
+}
+
+type CompanionRigAssetState = {
+  animation: CompanionAnimation;
+  rig: CompanionRig;
+};
+
+function companionRigAssetState(relativePath: string) {
+  const animation = companionAssetAnimation(relativePath);
+  const [sourceWidth, sourceHeight] = companionAnimationSourceDimensions(animation);
+  return {
+    animation,
+    rig: companionAssetRig(relativePath, sourceWidth, sourceHeight),
+  } satisfies CompanionRigAssetState;
+}
+
+function companionBaseLayerKind(
+  layer: Pick<CompanionRigLayer, 'key' | 'role' | 'relativePath'>,
+  bodyAssetPath: string,
+  headAssetPath: string | null,
+): 'body' | 'head' | null {
+  const label = `${layer.key} ${layer.role} ${path.parse(layer.relativePath).name}`.toLowerCase();
+  if (label.includes('head') || (headAssetPath && layer.relativePath === headAssetPath) || layer.relativePath === COMPANION_DEFAULT_BASE_HEAD_ASSET_PATH) {
+    return 'head';
+  }
+  if (label.includes('body') || layer.relativePath === bodyAssetPath || layer.relativePath === COMPANION_DEFAULT_BASE_ASSET_PATH) {
+    return 'body';
+  }
+  return null;
+}
+
+function companionRigLayerToManifestLayer(
+  layer: CompanionRigLayer,
+  relativePath: string,
+) {
+  return {
+    key: layer.key,
+    role: layer.role,
+    slot: null,
+    relativePath,
+    zIndex: layer.zIndex,
+    motionGroup: layer.motionGroup,
+    slices: [],
+  } satisfies CompanionManifestLayer;
+}
+
+function fallbackBaseRigLayer(
+  kind: 'body' | 'head',
+  fallbackRig: CompanionRig,
+  relativePath: string,
+) {
+  const fallbackLayer = fallbackRig.layers.find((layer) => companionBaseLayerKind(layer, COMPANION_DEFAULT_BASE_ASSET_PATH, COMPANION_DEFAULT_BASE_HEAD_ASSET_PATH) === kind);
+  if (fallbackLayer) {
+    return companionRigLayerToManifestLayer(fallbackLayer, relativePath);
+  }
+
+  return {
+    key: kind === 'body' ? 'base-body' : 'base-head',
+    role: kind === 'body' ? 'base-body' : 'base-head',
+    slot: null,
+    relativePath,
+    zIndex: kind === 'body' ? 20 : 35,
+    motionGroup: kind,
+    slices: [],
+  } satisfies CompanionManifestLayer;
+}
+
+export function companionBaseAssetPath(db: Database) {
+  const row = companionSettingsRow(db);
   const value = String(row?.base_asset_path ?? '').trim();
   if (value) {
     try {
@@ -305,6 +416,61 @@ export function companionBaseAssetPath(db: Database) {
     }
   }
   return COMPANION_DEFAULT_BASE_ASSET_PATH;
+}
+
+export function resolveCompanionBaseConfig(db: Database): CompanionBaseConfig {
+  const row = companionSettingsRow(db);
+  const bodyAssetPath = resolveConfiguredCompanionAssetPath(row?.base_asset_path, COMPANION_DEFAULT_BASE_ASSET_PATH) ?? COMPANION_DEFAULT_BASE_ASSET_PATH;
+  const explicitHeadAssetPath = resolveConfiguredCompanionAssetPath(row?.base_head_asset_path, null);
+  const currentBase = companionRigAssetState(bodyAssetPath);
+  const fallbackBase = companionRigAssetState(COMPANION_DEFAULT_BASE_ASSET_PATH);
+  const rigSource = currentBase.rig.layers.length > 0 ? currentBase : fallbackBase;
+  const sourceLayers = rigSource.rig.layers.length > 0 ? rigSource.rig.layers : fallbackBase.rig.layers;
+  const resolvedLayers = sourceLayers.map((layer) => {
+    const kind = companionBaseLayerKind(layer, bodyAssetPath, explicitHeadAssetPath);
+    if (kind === 'body') {
+      return companionRigLayerToManifestLayer(layer, bodyAssetPath);
+    }
+    if (kind === 'head') {
+      return companionRigLayerToManifestLayer(layer, explicitHeadAssetPath ?? layer.relativePath);
+    }
+    return companionRigLayerToManifestLayer(layer, layer.relativePath);
+  });
+
+  if (!resolvedLayers.some((layer) => companionBaseLayerKind(layer, bodyAssetPath, explicitHeadAssetPath) === 'body')) {
+    resolvedLayers.push(fallbackBaseRigLayer('body', fallbackBase.rig, bodyAssetPath));
+  }
+
+  const fallbackHeadAssetPath = explicitHeadAssetPath
+    ?? fallbackBase.rig.layers.find((layer) => companionBaseLayerKind(layer, COMPANION_DEFAULT_BASE_ASSET_PATH, COMPANION_DEFAULT_BASE_HEAD_ASSET_PATH) === 'head')?.relativePath
+    ?? COMPANION_DEFAULT_BASE_HEAD_ASSET_PATH;
+  if (
+    fallbackHeadAssetPath
+    && !resolvedLayers.some((layer) => companionBaseLayerKind(layer, bodyAssetPath, explicitHeadAssetPath) === 'head')
+  ) {
+    resolvedLayers.push(fallbackBaseRigLayer('head', fallbackBase.rig, fallbackHeadAssetPath));
+  }
+
+  resolvedLayers.sort((left, right) => left.zIndex - right.zIndex || left.key.localeCompare(right.key));
+  const headAssetPath = resolvedLayers.find((layer) => companionBaseLayerKind(layer, bodyAssetPath, explicitHeadAssetPath) === 'head')?.relativePath ?? null;
+
+  return {
+    bodyAssetPath,
+    bodyAssetUrl: companionAssetUrl(bodyAssetPath),
+    headAssetPath,
+    headAssetUrl: companionAssetUrl(headAssetPath),
+    previewAssetPath: bodyAssetPath,
+    previewAssetUrl: companionAssetUrl(bodyAssetPath),
+    renderUrl: '/api/companion/render?base=1',
+    animatedRenderUrl: '/api/companion/render-animated?base=1',
+    rig: rigSource.rig,
+    animation: currentBase.animation,
+    layers: resolvedLayers,
+  };
+}
+
+export function companionBaseHeadAssetPath(db: Database) {
+  return resolveCompanionBaseConfig(db).headAssetPath;
 }
 
 function companionCatalogRows(db: Database) {
@@ -733,6 +899,7 @@ export function resolveCompanionLayerSpecs(
 ): CompanionManifestLayer[] {
   const layers: CompanionManifestLayer[] = [];
   const catalog = new Map(companionCatalogRows(db).map((row) => [row.slug, row]));
+  const baseConfig = resolveCompanionBaseConfig(db);
   const bodySlug = loadout.body;
   const bodyItem = bodySlug ? catalog.get(bodySlug) : undefined;
   if (bodyItem?.back_asset_path) {
@@ -747,34 +914,7 @@ export function resolveCompanionLayerSpecs(
     });
   }
 
-  const basePath = companionBaseAssetPath(db);
-  const baseAnimation = basePath ? companionAssetAnimation(basePath) : defaultCompanionAnimation(COMPANION_CANVAS_SIZE, COMPANION_CANVAS_SIZE);
-  const [baseSourceWidth, baseSourceHeight] = companionAnimationSourceDimensions(baseAnimation);
-  const baseRig = companionAssetRig(basePath, baseSourceWidth, baseSourceHeight);
-
-  if (baseRig.layers.length) {
-    for (const rigLayer of baseRig.layers) {
-      layers.push({
-        key: rigLayer.key,
-        role: rigLayer.role,
-        slot: null,
-        relativePath: rigLayer.relativePath,
-        zIndex: rigLayer.zIndex,
-        motionGroup: rigLayer.motionGroup,
-        slices: [],
-      });
-    }
-  } else if (basePath) {
-    layers.push({
-      key: 'base',
-      role: 'base',
-      slot: null,
-      relativePath: basePath,
-      zIndex: 20,
-      motionGroup: null,
-      slices: [],
-    });
-  }
+  layers.push(...baseConfig.layers.map((layer) => ({ ...layer, slices: [...layer.slices] })));
 
   const slotZIndices: Record<'neck' | 'face' | 'hat', number> = {
     neck: 30,
@@ -808,45 +948,22 @@ export function resolveCompanionLayerSpecs(
     });
   }
 
-  return layers;
+  return layers.sort((left, right) => left.zIndex - right.zIndex || left.key.localeCompare(right.key));
 }
 
 export function companionRenderManifest(
   db: Database,
   loadout: Record<CompanionSlotKey, string | null>,
 ) {
-  const basePath = companionBaseAssetPath(db);
-  const baseAnimation = basePath ? companionAssetAnimation(basePath) : defaultCompanionAnimation(COMPANION_CANVAS_SIZE, COMPANION_CANVAS_SIZE);
-  const [baseSourceWidth, baseSourceHeight] = companionAnimationSourceDimensions(baseAnimation);
-  const baseRig = companionAssetRig(basePath, baseSourceWidth, baseSourceHeight);
-  let manifestWidth = Math.max(COMPANION_CANVAS_SIZE, baseRig.width);
-  let manifestHeight = Math.max(COMPANION_CANVAS_SIZE, baseRig.height);
+  const baseConfig = resolveCompanionBaseConfig(db);
 
   const layers = resolveCompanionLayerSpecs(db, loadout)
     .map((layer) => {
       const src = companionAssetUrl(layer.relativePath);
       if (!src) return null;
 
-      const animation = layer.relativePath === basePath ? baseAnimation : companionAssetAnimation(layer.relativePath);
-      const [sourceWidth, sourceHeight] = companionAnimationSourceDimensions(animation);
-      manifestWidth = Math.max(manifestWidth, sourceWidth);
-      manifestHeight = Math.max(manifestHeight, sourceHeight);
-      const motionGroup = layer.motionGroup || (layer.slot ? baseRig.slotGroups[layer.slot] ?? null : null);
-
-      const slices = layer.role === 'base'
-        ? baseRig.parts.map((part) => ({
-          key: part.key,
-          sourceX: part.source.x,
-          sourceY: part.source.y,
-          sourceWidth: part.source.width,
-          sourceHeight: part.source.height,
-          targetX: part.target.x,
-          targetY: part.target.y,
-          targetWidth: part.target.width,
-          targetHeight: part.target.height,
-          motionGroup: part.motionGroup,
-        }))
-        : [];
+      const animation = layer.relativePath === baseConfig.bodyAssetPath ? baseConfig.animation : companionAssetAnimation(layer.relativePath);
+      const motionGroup = layer.motionGroup || (layer.slot ? baseConfig.rig.slotGroups[layer.slot] ?? null : null);
 
       return {
         key: layer.key,
@@ -856,22 +973,22 @@ export function companionRenderManifest(
         animation,
         slot: layer.slot,
         motionGroup,
-        slices,
+        slices: layer.slices,
       };
     })
     .filter((layer): layer is NonNullable<typeof layer> => Boolean(layer));
 
   return {
-    width: manifestWidth,
-    height: manifestHeight,
+    width: COMPANION_CANVAS_SIZE,
+    height: COMPANION_CANVAS_SIZE,
     motion: {
       shadowOpacity: COMPANION_DEFAULT_SHADOW_OPACITY,
       rootGroup: 'root',
-      channels: baseRig.motionChannels,
-      slotGroups: baseRig.slotGroups,
+      channels: baseConfig.rig.motionChannels,
+      slotGroups: baseConfig.rig.slotGroups,
     },
     layers,
-  };
+  } satisfies CompanionRenderManifest;
 }
 
 export async function readMultipartFormData(request: Request) {

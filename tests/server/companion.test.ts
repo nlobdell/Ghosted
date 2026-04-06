@@ -4,6 +4,7 @@ import type { ServerTestContext } from './test-utils';
 import { addRewardLedgerEntry, cleanupServerTestEnvironment, insertUser, setupServerTestEnvironment } from './test-utils';
 import {
   buildCompanionPayload,
+  buildHallCompanionSummaryPayload,
   createCompanionItem,
   equipCompanionItem,
   purchaseCompanionItem,
@@ -47,18 +48,26 @@ describe('companion server module', () => {
   it('starts with a default base asset and no seeded cosmetics', () => {
     const userId = insertUser(context.db);
     const payload = buildCompanionPayload(context.db, getUser(context, userId));
+    const hallSummary = buildHallCompanionSummaryPayload(context.db, getUser(context, userId));
     const baseRow = context.db.prepare(`
-      SELECT base_asset_path
+      SELECT base_asset_path, base_head_asset_path
       FROM companion_settings
       WHERE singleton_key = 'default'
-    `).get() as { base_asset_path: string };
+    `).get() as { base_asset_path: string; base_head_asset_path: string | null };
     const countRow = context.db.prepare('SELECT COUNT(*) AS count FROM companion_catalog').get() as { count: number };
 
     expect(baseRow.base_asset_path).toBe(COMPANION_DEFAULT_BASE_ASSET_PATH);
+    expect(baseRow.base_head_asset_path).toBeNull();
     expect(countRow.count).toBe(0);
     expect(payload.items).toEqual([]);
     expect(payload.baseAssetUrl).toContain('ghostling-base-body.png');
+    expect(payload.renderManifest.width).toBe(32);
+    expect(payload.renderManifest.height).toBe(32);
     expect(payload.renderManifest.layers[0]?.src).toContain('ghostling-base-body.png');
+    expect(payload.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
+    expect(hallSummary.renderManifest.width).toBe(32);
+    expect(hallSummary.renderManifest.height).toBe(32);
+    expect(hallSummary.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
   });
 
   it('purchases a cosmetic, deducts points, and auto-equips the first unlocked slot item', () => {

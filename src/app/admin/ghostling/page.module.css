@@ -5,6 +5,8 @@
 
 .scoreboard,
 .scoreboard :global(.app-summary-grid__secondary),
+.basePanelBody,
+.basePreview,
 .slotGroups,
 .slotGroup,
 .libraryGrid,
@@ -30,6 +32,26 @@
 .adminPanel,
 .librarySection {
   min-height: 100%;
+}
+
+.basePanelBody {
+  grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr);
+  align-items: start;
+}
+
+.basePreview {
+  min-height: 15rem;
+  padding: 1rem;
+  border-radius: 1.2rem;
+  border: 1px solid rgba(191, 179, 255, 0.1);
+  background:
+    radial-gradient(circle at 50% 55%, rgba(184, 168, 255, 0.2), transparent 24%),
+    linear-gradient(180deg, rgba(8, 7, 14, 0.94), rgba(14, 12, 22, 0.96));
+}
+
+.basePreviewStage {
+  justify-self: center;
+  max-width: 100%;
 }
 
 .assetMetaBlock,
@@ -157,6 +179,7 @@
 @media (max-width: 1120px) {
   .scoreboard,
   .scoreboard :global(.app-summary-grid__secondary),
+  .basePanelBody,
   .importGrid,
   .libraryGrid,
   .importAssets {

@@ -157,6 +157,11 @@ describe('companion route handlers', () => {
 
     expect(successResponse.status).toBe(200);
     expect(successPayload.base.assetPath).toContain('ghostling-base-body.png');
+    expect(successPayload.base.bodyAssetPath).toContain('ghostling-base-body.png');
+    expect(successPayload.base.headAssetPath).toContain('ghostling-base-head.png');
+    expect(successPayload.base.renderManifest.width).toBe(32);
+    expect(successPayload.base.renderManifest.height).toBe(32);
+    expect(successPayload.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
 
     const memberId = insertUser(context.db, { username: 'member', globalName: 'Member' });
     authMock.mockResolvedValue({ user: { id: String(memberId) } });
@@ -168,11 +173,11 @@ describe('companion route handlers', () => {
     expect(forbiddenPayload).toEqual({ error: 'You do not have access to admin tools.' });
   });
 
-  it('accepts multipart base uploads and returns the updated envelope', async () => {
+  it('accepts multipart body-only base uploads and preserves the layered head fallback', async () => {
     const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
     authMock.mockResolvedValue({ user: { id: String(adminId) } });
     const formData = new FormData();
-    formData.set('asset', svgFile('ghostling-base.svg', '#22cc88'));
+    formData.set('bodyAsset', svgFile('ghostling-base-body.svg', '#22cc88'));
 
     const response = await postCompanionAdminBaseRoute(new Request('http://localhost/api/companion/admin/base', {
       method: 'POST',
@@ -184,7 +189,41 @@ describe('companion route handlers', () => {
     expect(payload.ok).toBe(true);
     expect(payload.message).toBe('Companion base updated.');
     expect(payload.library.base.assetPath).toContain('uploads/base/');
+    expect(payload.library.base.bodyAssetPath).toContain('uploads/base/');
+    expect(payload.library.base.headAssetPath).toContain('ghostling-base-head.png');
+    expect(payload.library.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
     expect(payload.companion.baseAssetUrl).toContain('uploads/base/');
+  });
+
+  it('accepts optional head overrides and still supports the legacy base asset field name', async () => {
+    const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    authMock.mockResolvedValue({ user: { id: String(adminId) } });
+
+    const legacyFormData = new FormData();
+    legacyFormData.set('asset', svgFile('legacy-ghostling-base.svg', '#22cc88'));
+    const legacyResponse = await postCompanionAdminBaseRoute(new Request('http://localhost/api/companion/admin/base', {
+      method: 'POST',
+      body: legacyFormData,
+    }));
+    const legacyPayload = await legacyResponse.json();
+
+    expect(legacyResponse.status).toBe(201);
+    expect(legacyPayload.library.base.bodyAssetPath).toContain('uploads/base/');
+
+    const layeredFormData = new FormData();
+    layeredFormData.set('bodyAsset', svgFile('ghostling-base-body.svg', '#3366ff'));
+    layeredFormData.set('headAsset', svgFile('ghostling-base-head.svg', '#ff66aa'));
+    const layeredResponse = await postCompanionAdminBaseRoute(new Request('http://localhost/api/companion/admin/base', {
+      method: 'POST',
+      body: layeredFormData,
+    }));
+    const layeredPayload = await layeredResponse.json();
+
+    expect(layeredResponse.status).toBe(201);
+    expect(layeredPayload.library.base.bodyAssetPath).toContain('uploads/base/');
+    expect(layeredPayload.library.base.headAssetPath).toContain('uploads/base/');
+    expect(layeredPayload.library.base.headAssetUrl).toContain('uploads/base/');
+    expect(layeredPayload.library.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('uploads/base/'))).toBe(true);
   });
 
   it('creates a custom companion item from multipart uploads', async () => {

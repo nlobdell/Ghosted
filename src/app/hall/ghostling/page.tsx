@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- Companion preview assets are generated at runtime and not routed through next/image yet. */
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { AnimatedCompanionStage } from '@/components/companion/AnimatedCompanionStage';
 import {
   AppGrid,
   Banner,
@@ -239,10 +240,12 @@ export default function CompanionPage() {
             </div>
             <div className={styles.heroStage}>
               <div className={styles.avatarFrame}>
-                <img
-                  src={companion.animatedRenderUrl}
+                <AnimatedCompanionStage
+                  manifest={companion.renderManifest}
+                  fallbackSrc={companion.animatedRenderUrl}
                   alt={`${companion.user.displayName}'s Ghostling`}
                   className={styles.avatarImage}
+                  targetSize={240}
                 />
               </div>
               <div className={styles.stageMeta}>
@@ -271,10 +274,12 @@ export default function CompanionPage() {
               body={(
                 <div className={styles.studioBody}>
                   <div className={styles.previewSurface}>
-                    <img
-                      src={companion.animatedRenderUrl}
+                    <AnimatedCompanionStage
+                      manifest={companion.renderManifest}
+                      fallbackSrc={companion.animatedRenderUrl}
                       alt="Equipped Ghostling preview"
                       className={styles.previewImage}
+                      targetSize={272}
                     />
                   </div>
                   <div className={styles.slotList}>
