@@ -207,12 +207,14 @@ function ensureSchema(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS companion_settings (
       singleton_key TEXT PRIMARY KEY,
       base_asset_path TEXT NOT NULL,
+      base_head_asset_path TEXT,
       updated_at TEXT NOT NULL
     );
   `);
 
   ensureTableColumn(db, 'companion_catalog', 'front_asset_path', 'TEXT');
   ensureTableColumn(db, 'companion_catalog', 'back_asset_path', 'TEXT');
+  ensureTableColumn(db, 'companion_settings', 'base_head_asset_path', 'TEXT');
   seedDefaultCasinoGames(db);
   ensureDefaultCompanionBase(db);
   removeLegacyDefaultCompanionAssets(db);

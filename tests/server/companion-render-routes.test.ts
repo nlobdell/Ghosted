@@ -15,6 +15,7 @@ vi.mock('next/headers', () => ({
 }));
 
 import { GET as getCompanionAssetRoute } from '@/app/api/companion/assets/[...path]/route';
+import { POST as postCompanionAdminBaseRoute } from '@/app/api/companion/admin/base/route';
 import { GET as getCompanionAnimatedRenderRoute } from '@/app/api/companion/render-animated/route';
 import { GET as getCompanionRenderRoute } from '@/app/api/companion/render/route';
 import { GET as getDevLoginRoute } from '@/app/auth/dev-login/route';
@@ -127,6 +128,61 @@ describe('companion render and dev-login routes', () => {
     expect(response.headers.get('content-type')).toBe('image/svg+xml; charset=utf-8');
     expect(payload).toContain('<svg');
     expect(payload).toContain('data:image/svg+xml;base64');
+  });
+
+  it('preserves the layered head fallback for body-only base uploads across static and animated renders', async () => {
+    const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    authMock.mockResolvedValue({ user: { id: String(adminId) } });
+
+    const formData = new FormData();
+    formData.set('bodyAsset', new File([svgBuffer('#22cc88')], 'ghostling-base-body.svg', { type: 'image/svg+xml' }));
+
+    const uploadResponse = await postCompanionAdminBaseRoute(new Request('http://localhost/api/companion/admin/base', {
+      method: 'POST',
+      body: formData,
+    }));
+    expect(uploadResponse.status).toBe(201);
+
+    authMock.mockResolvedValue(null);
+    const staticResponse = await getCompanionRenderRoute(new Request('http://localhost/api/companion/render?base=1'));
+    const staticPayload = await staticResponse.text();
+    expect(staticResponse.status).toBe(200);
+    expect(staticPayload).toContain('data:image/svg+xml;base64');
+    expect(staticPayload).toContain('data:image/png;base64');
+
+    const animatedResponse = await getCompanionAnimatedRenderRoute(new Request('http://localhost/api/companion/render-animated?base=1'));
+    const animatedPayload = await animatedResponse.text();
+    expect(animatedResponse.status).toBe(200);
+    expect(animatedPayload).toContain('data:image/svg+xml;base64');
+    expect(animatedPayload).toContain('data:image/png;base64');
+  });
+
+  it('uses explicit head overrides instead of the default head fallback when both base layers are uploaded', async () => {
+    const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    authMock.mockResolvedValue({ user: { id: String(adminId) } });
+
+    const formData = new FormData();
+    formData.set('bodyAsset', new File([svgBuffer('#3366ff')], 'ghostling-base-body.svg', { type: 'image/svg+xml' }));
+    formData.set('headAsset', new File([svgBuffer('#ff66aa')], 'ghostling-base-head.svg', { type: 'image/svg+xml' }));
+
+    const uploadResponse = await postCompanionAdminBaseRoute(new Request('http://localhost/api/companion/admin/base', {
+      method: 'POST',
+      body: formData,
+    }));
+    expect(uploadResponse.status).toBe(201);
+
+    authMock.mockResolvedValue(null);
+    const staticResponse = await getCompanionRenderRoute(new Request('http://localhost/api/companion/render?base=1'));
+    const staticPayload = await staticResponse.text();
+    expect(staticResponse.status).toBe(200);
+    expect(staticPayload.match(/data:image\/svg\+xml;base64/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(staticPayload).not.toContain('data:image/png;base64');
+
+    const animatedResponse = await getCompanionAnimatedRenderRoute(new Request('http://localhost/api/companion/render-animated?base=1'));
+    const animatedPayload = await animatedResponse.text();
+    expect(animatedResponse.status).toBe(200);
+    expect(animatedPayload.match(/data:image\/svg\+xml;base64/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(animatedPayload).not.toContain('data:image/png;base64');
   });
 
   it('renders companion SVGs by both internal user id and Discord id', async () => {

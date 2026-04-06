@@ -17,13 +17,13 @@ import {
   COMPANION_SLOT_ORDER,
   companionAssetPath,
   companionAssetUrl,
-  companionBaseAssetPath,
   companionRenderManifest,
   companionAssetDir,
   normalizeCompanionAssetPath,
   readMultipartFormData,
   repoCompanionAssetDir,
   repoCompanionImportCandidates,
+  resolveCompanionBaseConfig,
   storeUploadedCompanionAsset,
   uploadedCompanionAssetFromFormData,
   type UploadedCompanionAsset,
@@ -71,6 +71,10 @@ type RepoCompanionImportInput = {
 
 function companionDisplayName(user: CompanionUserRow) {
   return user.global_name || user.username;
+}
+
+function emptyCompanionLoadout() {
+  return Object.fromEntries(COMPANION_SLOT_ORDER.map((slot) => [slot, null])) as Record<CompanionSlotKey, string | null>;
 }
 
 export function ensureUserCompanionLoadout(db: Database, userId: number) {
@@ -195,6 +199,7 @@ export function buildCompanionPayload(db: Database, user: CompanionUserRow): Com
   const catalogRows = companionCatalogRows(db, false);
   const ownedSlugs = companionInventorySlugs(db, user.id);
   const loadout = companionLoadoutMap(db, user.id);
+  const baseConfig = resolveCompanionBaseConfig(db);
   const visibleRows = visibleCompanionCatalogRows(catalogRows, ownedSlugs, loadout);
   const equippedCount = COMPANION_SLOT_ORDER.filter((slot) => Boolean(loadout[slot])).length;
   const animatedRenderUrl = `/api/companion/render-animated?user=${user.id}`;
@@ -228,7 +233,7 @@ export function buildCompanionPayload(db: Database, user: CompanionUserRow): Com
       cardUrl: `/api/companion/render?user=${user.id}&card=1`,
       animatedCardUrl,
     },
-    baseAssetUrl: companionAssetUrl(companionBaseAssetPath(db)),
+    baseAssetUrl: baseConfig.bodyAssetUrl,
   };
 }
 
@@ -236,6 +241,7 @@ export function buildHallCompanionSummaryPayload(db: Database, user: CompanionUs
   const ownedSlugs = companionInventorySlugs(db, user.id);
   const loadout = companionLoadoutMap(db, user.id);
   const equippedCount = COMPANION_SLOT_ORDER.filter((slot) => Boolean(loadout[slot])).length;
+  const animatedRenderUrl = `/api/companion/render-animated?user=${user.id}`;
 
   return {
     user: {
@@ -245,21 +251,27 @@ export function buildHallCompanionSummaryPayload(db: Database, user: CompanionUs
     balance: getBalance(db, user.id),
     ownedCount: ownedSlugs.size,
     equippedCount,
-    animatedRenderUrl: `/api/companion/render-animated?user=${user.id}`,
+    animatedRenderUrl,
+    renderManifest: companionRenderManifest(db, loadout),
   };
 }
 
 export function buildCompanionAdminPayload(db: Database): CompanionAdminData {
-  const basePath = companionBaseAssetPath(db);
+  const baseConfig = resolveCompanionBaseConfig(db);
   const rows = companionCatalogRows(db, false);
 
   return {
     storageRoot: companionAssetDir(),
     defaultAssetRoot: repoCompanionAssetDir(),
     base: {
-      assetPath: basePath,
-      assetUrl: companionAssetUrl(basePath),
-      previewUrl: '/api/companion/render-animated',
+      assetPath: baseConfig.bodyAssetPath,
+      assetUrl: baseConfig.bodyAssetUrl,
+      bodyAssetPath: baseConfig.bodyAssetPath,
+      bodyAssetUrl: baseConfig.bodyAssetUrl,
+      headAssetPath: baseConfig.headAssetPath,
+      headAssetUrl: baseConfig.headAssetUrl,
+      previewUrl: baseConfig.animatedRenderUrl,
+      renderManifest: companionRenderManifest(db, emptyCompanionLoadout()),
     },
     items: rows.map((row) => ({
       slug: row.slug,
@@ -439,17 +451,31 @@ export function reorderCompanionItem(
   return buildCompanionAdminPayload(db);
 }
 
-export function uploadCompanionBaseAsset(db: Database, actor: CompanionUserRow, asset: UploadedCompanionAsset) {
-  const assetPath = storeUploadedCompanionAsset(asset, { group: 'base', stem: 'ghostling-base' });
+export function uploadCompanionBaseAsset(
+  db: Database,
+  actor: CompanionUserRow,
+  assets: {
+    bodyAsset: UploadedCompanionAsset;
+    headAsset?: UploadedCompanionAsset | null;
+  },
+) {
+  const bodyAssetPath = storeUploadedCompanionAsset(assets.bodyAsset, { group: 'base', stem: 'ghostling-base-body' });
+  const headAssetPath = assets.headAsset?.data.length
+    ? storeUploadedCompanionAsset(assets.headAsset, { group: 'base', stem: 'ghostling-base-head' })
+    : null;
   db.prepare(`
-    INSERT INTO companion_settings (singleton_key, base_asset_path, updated_at)
-    VALUES ('default', ?, ?)
+    INSERT INTO companion_settings (singleton_key, base_asset_path, base_head_asset_path, updated_at)
+    VALUES ('default', ?, ?, ?)
     ON CONFLICT(singleton_key) DO UPDATE SET
       base_asset_path = excluded.base_asset_path,
+      base_head_asset_path = COALESCE(excluded.base_head_asset_path, companion_settings.base_head_asset_path),
       updated_at = excluded.updated_at
-  `).run(assetPath, utcIso());
+  `).run(bodyAssetPath, headAssetPath, utcIso());
 
-  recordAudit(actor.id, 'upload_companion_base_asset', 'companion_settings', 'default', { assetPath });
+  recordAudit(actor.id, 'upload_companion_base_asset', 'companion_settings', 'default', {
+    bodyAssetPath,
+    headAssetPath,
+  });
   return buildCompanionAdminPayload(db);
 }
 
@@ -660,11 +686,15 @@ function companionFileExists(relativePath: string) {
 
 export async function parseBaseUploadRequest(request: Request) {
   const formData = await readMultipartFormData(request);
-  const asset = await uploadedCompanionAssetFromFormData(formData, 'asset');
-  if (!asset) {
-    throw new AppError('Upload a base asset file first.', 400);
+  const bodyAsset = await uploadedCompanionAssetFromFormData(formData, 'bodyAsset')
+    ?? await uploadedCompanionAssetFromFormData(formData, 'asset');
+  if (!bodyAsset) {
+    throw new AppError('Upload a Ghostling body asset file first.', 400);
   }
-  return asset;
+  return {
+    bodyAsset,
+    headAsset: await uploadedCompanionAssetFromFormData(formData, 'headAsset'),
+  };
 }
 
 export async function parseCreateCompanionItemRequest(request: Request) {

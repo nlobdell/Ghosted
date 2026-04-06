@@ -13,12 +13,14 @@ export const GET = withRouteErrorHandling(async (request: Request) => {
   const url = new URL(request.url);
   const userRef = String(url.searchParams.get('user') ?? '').trim();
   const previewSlug = String(url.searchParams.get('preview') ?? '').trim();
+  const baseOnly = boolSearchParam(url.searchParams.get('base'));
   const markup = renderRequestedCompanionSvg(getDatabase(), {
     animated: false,
     userRef,
     previewSlug,
     card: boolSearchParam(url.searchParams.get('card')),
-    currentUser: userRef ? null : await getCurrentUser(),
+    baseOnly,
+    currentUser: userRef || baseOnly ? null : await getCurrentUser(),
   });
 
   return new Response(markup, {

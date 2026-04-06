@@ -4,6 +4,7 @@ import type { Database } from 'better-sqlite3';
 import { utcIso } from '@/lib/server/core';
 
 export const COMPANION_DEFAULT_BASE_ASSET_PATH = 'repo/defaults/base/ghostling-base-body.png';
+export const COMPANION_DEFAULT_BASE_HEAD_ASSET_PATH = 'repo/defaults/base/ghostling-base-head.png';
 
 const COMPANION_LEGACY_BASE_ASSET_PATHS = new Set([
   'repo/defaults/base/ghostling-base-body.png',
@@ -13,10 +14,10 @@ const COMPANION_LEGACY_BASE_ASSET_PATHS = new Set([
 
 export function ensureDefaultCompanionBase(db: Database) {
   const row = db.prepare(`
-    SELECT base_asset_path
+    SELECT base_asset_path, base_head_asset_path
     FROM companion_settings
     WHERE singleton_key = 'default'
-  `).get() as { base_asset_path: string | null } | undefined;
+  `).get() as { base_asset_path: string | null; base_head_asset_path: string | null } | undefined;
 
   if (row) {
     const current = String(row.base_asset_path ?? '').trim();
@@ -31,8 +32,8 @@ export function ensureDefaultCompanionBase(db: Database) {
   }
 
   db.prepare(`
-    INSERT INTO companion_settings (singleton_key, base_asset_path, updated_at)
-    VALUES ('default', ?, ?)
+    INSERT INTO companion_settings (singleton_key, base_asset_path, base_head_asset_path, updated_at)
+    VALUES ('default', ?, NULL, ?)
   `).run(COMPANION_DEFAULT_BASE_ASSET_PATH, utcIso());
 }
 

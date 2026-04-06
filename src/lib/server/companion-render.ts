@@ -13,12 +13,10 @@ import {
   COMPANION_DEFAULT_SHADOW_OPACITY,
   COMPANION_SLOT_LABELS,
   COMPANION_SLOT_ORDER,
-  companionAnimationSourceDimensions,
+  resolveCompanionBaseConfig,
+  resolveCompanionLayerSpecs,
   companionAssetAnimation,
   companionAssetDataUri,
-  companionAssetRig,
-  companionBaseAssetPath,
-  resolveCompanionLayerSpecs,
 } from '@/lib/server/companion-storage';
 
 type CompanionLoadout = Record<CompanionSlotKey, string | null>;
@@ -285,6 +283,7 @@ export function resolveCompanionRenderRequest(
   options: {
     userRef: string;
     previewSlug: string;
+    baseOnly?: boolean;
     currentUser?: CompanionUserRow | null;
   },
 ) {
@@ -294,7 +293,9 @@ export function resolveCompanionRenderRequest(
   let display = 'Ghosted Ghostling';
   let subtitle = 'Preview';
 
-  if (options.userRef) {
+  if (options.baseOnly) {
+    subtitle = 'Ghostling vault';
+  } else if (options.userRef) {
     const row = getRenderOwnerByUserRef(db, options.userRef);
     if (!row) {
       throw new AppError('Companion owner not found.', 404);
@@ -383,10 +384,7 @@ export function renderAnimatedCompanionSvg(
     card?: boolean;
   },
 ) {
-  const basePath = companionBaseAssetPath(db);
-  const baseAnimation = companionAssetAnimation(basePath);
-  const [baseSourceWidth, baseSourceHeight] = companionAnimationSourceDimensions(baseAnimation);
-  const baseRig = companionAssetRig(basePath, baseSourceWidth, baseSourceHeight);
+  const baseConfig = resolveCompanionBaseConfig(db);
 
   const layerDefs: string[] = [];
   const groupedMarkup: Record<string, string[]> = { root: [], body: [], head: [] };
@@ -394,7 +392,7 @@ export function renderAnimatedCompanionSvg(
     const [defs, markup] = companionAnimatedLayerMarkup(layer.relativePath, String(layer.key));
     if (defs) layerDefs.push(defs);
     if (markup) {
-      const motionGroup = layer.motionGroup || (layer.slot ? baseRig.slotGroups[layer.slot] ?? null : null);
+      const motionGroup = layer.motionGroup || (layer.slot ? baseConfig.rig.slotGroups[layer.slot] ?? null : null);
       const groupKey = String(motionGroup || 'root');
       groupedMarkup[groupKey] ??= [];
       groupedMarkup[groupKey]!.push(markup);
@@ -412,7 +410,7 @@ export function renderAnimatedCompanionSvg(
     });
   }
 
-  const motionChannels = baseRig.motionChannels;
+  const motionChannels = baseConfig.rig.motionChannels;
   const headMarkup = companionSvgMotionGroupMarkup('head', (groupedMarkup.head ?? []).join(''), motionChannels.head);
   const bodyMarkup = companionSvgMotionGroupMarkup(
     'body',
@@ -481,12 +479,14 @@ export function renderRequestedCompanionSvg(
     userRef: string;
     previewSlug: string;
     card: boolean;
+    baseOnly?: boolean;
     currentUser?: CompanionUserRow | null;
   },
 ) {
   const { loadout, display, subtitle } = resolveCompanionRenderRequest(db, {
     userRef: options.userRef,
     previewSlug: options.previewSlug,
+    baseOnly: options.baseOnly,
     currentUser: options.currentUser,
   });
 

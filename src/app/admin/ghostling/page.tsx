@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- Ghostling asset previews are stored and rendered dynamically. */
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { AnimatedCompanionStage } from '@/components/companion/AnimatedCompanionStage';
 import {
   AppContext,
   AppGrid,
@@ -280,31 +281,54 @@ export default function GhostlingAdminPage() {
               className={styles.adminPanel}
               tier="primary"
               eyebrow="Base asset"
-              title="Replace the current ghost base"
+              title="Refresh the layered Ghostling base"
               body={(
-                <form onSubmit={handleBaseUpload} className="app-form">
-                  <div className={styles.assetMetaBlock}>
-                    <strong>User uploads</strong>
-                    <span>{library.storageRoot}</span>
+                <div className={styles.basePanelBody}>
+                  <div className={styles.basePreview}>
+                    <AnimatedCompanionStage
+                      manifest={library.base.renderManifest}
+                      fallbackSrc={library.base.previewUrl}
+                      alt="Ghostling base preview"
+                      className={styles.basePreviewStage}
+                      targetSize={224}
+                    />
                   </div>
-                  <div className={styles.assetMetaBlock}>
-                    <strong>Current base file</strong>
-                    <span>{library.base.assetPath || 'No base uploaded yet'}</span>
-                  </div>
-                  <FormField label="Base image">
-                    <input name="asset" type="file" accept={ASSET_ACCEPT} className="input-base" required />
-                  </FormField>
-                  <div className="app-inline-actions">
-                    <button className="button" type="submit" disabled={pendingKey === 'base'}>
-                      {pendingKey === 'base' ? 'Uploading...' : 'Upload base'}
-                    </button>
-                    {library.base.assetUrl ? (
-                      <a href={library.base.assetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
-                        Open raw file
-                      </a>
-                    ) : null}
-                  </div>
-                </form>
+                  <form onSubmit={handleBaseUpload} className="app-form">
+                    <div className={styles.assetMetaBlock}>
+                      <strong>User uploads</strong>
+                      <span>{library.storageRoot}</span>
+                    </div>
+                    <div className={styles.assetMetaBlock}>
+                      <strong>Current body file</strong>
+                      <span>{library.base.bodyAssetPath || 'No body uploaded yet'}</span>
+                    </div>
+                    <div className={styles.assetMetaBlock}>
+                      <strong>Current head file</strong>
+                      <span>{library.base.headAssetPath || 'Using the default layered head fallback'}</span>
+                    </div>
+                    <FormField label="Body image">
+                      <input name="bodyAsset" type="file" accept={ASSET_ACCEPT} className="input-base" required />
+                    </FormField>
+                    <FormField label="Head image (optional override)">
+                      <input name="headAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
+                    </FormField>
+                    <div className="app-inline-actions">
+                      <button className="button" type="submit" disabled={pendingKey === 'base'}>
+                        {pendingKey === 'base' ? 'Uploading...' : 'Upload layered base'}
+                      </button>
+                      {library.base.bodyAssetUrl ? (
+                        <a href={library.base.bodyAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                          Open body file
+                        </a>
+                      ) : null}
+                      {library.base.headAssetUrl ? (
+                        <a href={library.base.headAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                          Open head file
+                        </a>
+                      ) : null}
+                    </div>
+                  </form>
+                </div>
               )}
             />
 

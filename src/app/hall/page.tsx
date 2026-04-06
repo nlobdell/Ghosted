@@ -1,5 +1,5 @@
-/* eslint-disable @next/next/no-img-element -- Ghostling preview uses the animated SVG endpoint directly for motion parity across the site. */
 import Link from 'next/link';
+import { AnimatedCompanionStage } from '@/components/companion/AnimatedCompanionStage';
 import {
   StatStrip,
   Panel,
@@ -91,10 +91,12 @@ export default async function DashboardPage() {
 
         <aside className={styles.spotlightStage}>
           <div className={styles.stageFrame}>
-            <img
-              src={companion?.animatedRenderUrl ?? '/api/companion/render-animated'}
+            <AnimatedCompanionStage
+              manifest={companion?.renderManifest}
+              fallbackSrc={companion?.animatedRenderUrl ?? '/api/companion/render-animated'}
               alt={ghostlingReady && companion ? `${companion.user.displayName}'s Ghostling` : 'Ghosted Ghostling preview'}
               className={styles.stageImage}
+              targetSize={232}
             />
           </div>
           <div className={styles.stageMeta}>
