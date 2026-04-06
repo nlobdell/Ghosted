@@ -137,6 +137,36 @@ export interface CompanionRenderSlice {
   motionGroup?: string | null;
 }
 
+export interface CompanionRenderPoint {
+  x: number;
+  y: number;
+}
+
+export interface CompanionRenderRect extends CompanionRenderPoint {
+  width: number;
+  height: number;
+}
+
+export interface CompanionItemRenderPieceMetadata {
+  docRect: CompanionRenderRect;
+}
+
+export interface CompanionItemRenderMetadata {
+  kind: 'ghostling-cosmetic';
+  schemaVersion: 1;
+  slot: CompanionSlotKey;
+  canvas: {
+    width: number;
+    height: number;
+  };
+  baseRect: CompanionRenderRect;
+  mount: CompanionRenderPoint;
+  pieces: {
+    front?: CompanionItemRenderPieceMetadata;
+    back?: CompanionItemRenderPieceMetadata;
+  };
+}
+
 export interface CompanionRenderLayer {
   key: string;
   role: string;
@@ -174,6 +204,7 @@ export interface CompanionItem {
   previewUrl: string;
   frontAssetUrl?: string | null;
   backAssetUrl?: string | null;
+  renderMetadata?: CompanionItemRenderMetadata | null;
 }
 
 export interface CompanionSlotState {
@@ -239,6 +270,7 @@ export interface CompanionAdminAssetItem {
   frontAssetUrl?: string | null;
   backAssetPath?: string | null;
   backAssetUrl?: string | null;
+  renderMetadata?: CompanionItemRenderMetadata | null;
   previewUrl: string;
 }
 
@@ -249,10 +281,13 @@ export interface CompanionRepoImportCandidate {
   suggestedRarity?: string | null;
   suggestedCost?: number | null;
   suggestedDescription?: string | null;
-  frontAssetPath: string;
+  frontAssetPath?: string | null;
   frontAssetUrl?: string | null;
   backAssetPath?: string | null;
   backAssetUrl?: string | null;
+  renderMetadataPath?: string | null;
+  renderMetadata?: CompanionItemRenderMetadata | null;
+  renderMetadataErrors?: string[];
 }
 
 export interface CompanionAdminData {

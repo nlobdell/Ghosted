@@ -53,7 +53,7 @@ function toGhostlingError(text: string) {
 function createImportDrafts(candidates: CompanionRepoImportCandidate[]): RepoImportDraft[] {
   return candidates.map((candidate) => ({
     ...candidate,
-    selected: true,
+    selected: !(candidate.renderMetadataErrors?.length),
     slot: candidate.suggestedSlot ?? 'hat',
     rarity: candidate.suggestedRarity ?? 'common',
     cost: String(candidate.suggestedCost ?? 0),
@@ -204,6 +204,7 @@ export default function GhostlingAdminPage() {
         active: draft.active,
         frontAssetPath: draft.frontAssetPath,
         backAssetPath: draft.backAssetPath,
+        renderMetadataPath: draft.renderMetadataPath,
       }));
 
     if (!selectedItems.length) {
@@ -369,12 +370,15 @@ export default function GhostlingAdminPage() {
                     <FormField label="Cost">
                       <input name="cost" type="number" min="0" defaultValue="120" className="input-base" required />
                     </FormField>
-                    <FormField label="Front asset">
-                      <input name="frontAsset" type="file" accept={ASSET_ACCEPT} className="input-base" required />
+                    <FormField label="Front asset (optional)">
+                      <input name="frontAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
                     </FormField>
                   </div>
                   <FormField label="Back asset (optional)">
                     <input name="backAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
+                  </FormField>
+                  <FormField label="Metadata sidecar (optional)">
+                    <input name="metadata" type="file" accept=".json,application/json,text/json" className="input-base" />
                   </FormField>
                   <FormField label="Description">
                     <textarea name="description" rows={3} className="input-base" placeholder="Short flavor text for the unlock card." />
@@ -412,6 +416,9 @@ export default function GhostlingAdminPage() {
                       <input name="backAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
                     </FormField>
                   </div>
+                  <FormField label="Metadata sidecar">
+                    <input name="metadata" type="file" accept=".json,application/json,text/json" className="input-base" />
+                  </FormField>
                   <button className="button" type="submit" disabled={pendingKey === 'replace'}>
                     {pendingKey === 'replace' ? 'Replacing...' : 'Replace asset files'}
                   </button>
@@ -437,7 +444,7 @@ export default function GhostlingAdminPage() {
                           />
                           <span>{draft.name}</span>
                         </label>
-                        <span className="app-chip">{draft.frontAssetPath}</span>
+                        <span className="app-chip">{draft.frontAssetPath ?? draft.backAssetPath ?? 'No asset path'}</span>
                       </div>
                       <div className={styles.importGrid}>
                         <FormField label="Name" className={styles.compactField}>
@@ -511,8 +518,13 @@ export default function GhostlingAdminPage() {
                       <div className={styles.importAssets}>
                         {draft.frontAssetUrl ? <img src={draft.frontAssetUrl} alt={`${draft.name} front asset`} className={styles.importPreview} /> : null}
                         <div className={styles.assetMetaList}>
-                          <span>{draft.frontAssetPath}</span>
+                          <span>{draft.frontAssetPath ?? 'No front asset'}</span>
                           {draft.backAssetPath ? <span>{draft.backAssetPath}</span> : null}
+                          {draft.renderMetadataPath ? <span>{draft.renderMetadataPath}</span> : null}
+                          {draft.renderMetadata ? <span>Anchor metadata ready</span> : null}
+                          {(draft.renderMetadataErrors ?? []).map((error) => (
+                            <span key={`${draft.slug}:${error}`} className={styles.importErrorText}>{error}</span>
+                          ))}
                         </div>
                       </div>
                     </article>
@@ -563,6 +575,7 @@ export default function GhostlingAdminPage() {
                             <div className={styles.assetMetaList}>
                               <span>{item.frontAssetPath ?? 'No front asset'}</span>
                               {item.backAssetPath ? <span>{item.backAssetPath}</span> : null}
+                              {item.renderMetadata ? <span>Anchor metadata attached</span> : <span>Legacy full-canvas placement</span>}
                             </div>
                             <div className="app-inline-actions">
                               <button

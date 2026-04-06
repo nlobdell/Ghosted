@@ -20,12 +20,29 @@ import { GET as getCompanionAnimatedRenderRoute } from '@/app/api/companion/rend
 import { GET as getCompanionRenderRoute } from '@/app/api/companion/render/route';
 import { GET as getDevLoginRoute } from '@/app/auth/dev-login/route';
 import { createCompanionItem } from '@/lib/server/companion';
+import { companionRenderManifest } from '@/lib/server/companion-storage';
 
 function svgBuffer(fill = '#7c5cff') {
   return Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" fill="${fill}"/></svg>`,
     'utf8',
   );
+}
+
+function ghostlingMetadata() {
+  return JSON.stringify({
+    kind: 'ghostling-cosmetic',
+    schemaVersion: 1,
+    slot: 'hat',
+    canvas: { width: 210, height: 260 },
+    baseRect: { x: 0, y: 21, width: 210, height: 210 },
+    mount: { x: 105, y: 140 },
+    pieces: {
+      front: {
+        docRect: { x: 96, y: 10, width: 16, height: 12 },
+      },
+    },
+  });
 }
 
 function getUser(context: ServerTestContext, userId: number) {
@@ -209,6 +226,56 @@ describe('companion render and dev-login routes', () => {
     const byDiscordPayload = await byDiscordResponse.text();
     expect(byDiscordResponse.status).toBe(200);
     expect(byDiscordPayload).toContain('<svg');
+  });
+
+  it('keeps manifest, static SVG, and animated SVG bounds aligned for metadata-positioned cosmetics', async () => {
+    const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    const userId = insertUser(context.db, { discordId: 'anchor-member', username: 'member', globalName: 'Member' });
+    authMock.mockResolvedValue({ user: { id: String(userId) } });
+
+    createCompanionItem(context.db, getUser(context, adminId), {
+      name: 'Sky Crown',
+      slot: 'hat',
+      rarity: 'common',
+      cost: 0,
+      description: '',
+      metadataJson: ghostlingMetadata(),
+      frontAsset: {
+        filename: 'sky-crown-front.svg',
+        contentType: 'image/svg+xml',
+        data: svgBuffer('#66d9ff'),
+      },
+    });
+
+    context.db.prepare(`
+      INSERT INTO user_companion_inventory (user_id, item_slug, unlocked_at)
+      VALUES (?, 'sky-crown', datetime('now'))
+    `).run(userId);
+    context.db.prepare(`
+      INSERT INTO user_companion_loadout (user_id, hat_item_slug, face_item_slug, neck_item_slug, body_item_slug, updated_at)
+      VALUES (?, 'sky-crown', NULL, NULL, NULL, datetime('now'))
+      ON CONFLICT(user_id) DO UPDATE SET hat_item_slug = 'sky-crown', updated_at = datetime('now')
+    `).run(userId);
+
+    const manifest = companionRenderManifest(context.db, {
+      hat: 'sky-crown',
+      face: null,
+      neck: null,
+      body: null,
+    });
+
+    expect(manifest.height).toBeGreaterThan(32);
+    expect(manifest.layers.find((layer) => layer.key === 'hat-front')?.slices?.[0]?.targetY ?? -1).toBeGreaterThanOrEqual(0);
+
+    const staticResponse = await getCompanionRenderRoute(new Request(`http://localhost/api/companion/render?user=${userId}`));
+    const staticPayload = await staticResponse.text();
+    expect(staticResponse.status).toBe(200);
+    expect(staticPayload).toContain(`viewBox="0 0 ${manifest.width} ${manifest.height}"`);
+
+    const animatedResponse = await getCompanionAnimatedRenderRoute(new Request(`http://localhost/api/companion/render-animated?user=${userId}`));
+    const animatedPayload = await animatedResponse.text();
+    expect(animatedResponse.status).toBe(200);
+    expect(animatedPayload).toContain(`viewBox="0 0 ${manifest.width} ${manifest.height}"`);
   });
 
   it('renders animated card variants and preserves 404 behavior for missing previews', async () => {

@@ -81,6 +81,10 @@
   word-break: break-word;
 }
 
+.importErrorText {
+  color: #ffb0bd;
+}
+
 .importRow {
   gap: 0.85rem;
 }

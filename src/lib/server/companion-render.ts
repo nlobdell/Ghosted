@@ -13,8 +13,7 @@ import {
   COMPANION_DEFAULT_SHADOW_OPACITY,
   COMPANION_SLOT_LABELS,
   COMPANION_SLOT_ORDER,
-  resolveCompanionBaseConfig,
-  resolveCompanionLayerSpecs,
+  resolveCompanionLayerScene,
   companionAssetAnimation,
   companionAssetDataUri,
 } from '@/lib/server/companion-storage';
@@ -110,51 +109,86 @@ function companionSvgMotionGroupMarkup(
   return `<g id="ghostling-${escapeXml(groupKey)}">${xAnimation}${yAnimation}${markup}</g>`;
 }
 
-function companionLayerImage(relativePath: string | null | undefined) {
+function companionAnimationFrames(relativePath: string | null | undefined) {
+  const animation = companionAssetAnimation(relativePath);
+  const frames = Array.isArray(animation.frames) ? animation.frames : [];
+  return {
+    animation,
+    frames: frames.length
+      ? frames
+      : [{
+        x: 0,
+        y: 0,
+        width: animation.frameWidth || COMPANION_CANVAS_SIZE,
+        height: animation.frameHeight || COMPANION_CANVAS_SIZE,
+        durationMs: 1000,
+        offsetX: 0,
+        offsetY: 0,
+        sourceWidth: animation.frameWidth || COMPANION_CANVAS_SIZE,
+        sourceHeight: animation.frameHeight || COMPANION_CANVAS_SIZE,
+      }],
+  };
+}
+
+function companionStaticSliceMarkup(
+  relativePath: string | null | undefined,
+  slice: {
+    sourceX: number;
+    sourceY: number;
+    sourceWidth: number;
+    sourceHeight: number;
+    targetX: number;
+    targetY: number;
+    targetWidth: number;
+    targetHeight: number;
+  },
+) {
   const dataUri = companionAssetDataUri(relativePath);
   if (!dataUri) return '';
 
-  const animation = companionAssetAnimation(relativePath);
-  const frames = Array.isArray(animation.frames) ? animation.frames : [];
-  if (animation.mode === 'spritesheet' && frames.length > 0) {
-    const frame = frames[0]!;
-    const sourceWidth = Math.max(1, Math.trunc(frame.sourceWidth ?? frame.width ?? COMPANION_CANVAS_SIZE));
-    const sourceHeight = Math.max(1, Math.trunc(frame.sourceHeight ?? frame.height ?? COMPANION_CANVAS_SIZE));
-    const offsetX = Math.trunc(frame.offsetX ?? 0);
-    const offsetY = Math.trunc(frame.offsetY ?? 0);
-    const frameX = Math.trunc(frame.x ?? 0);
-    const frameY = Math.trunc(frame.y ?? 0);
-    const sheetWidth = Math.max(sourceWidth, Math.trunc(animation.sheetWidth ?? sourceWidth));
-    const sheetHeight = Math.max(sourceHeight, Math.trunc(animation.sheetHeight ?? sourceHeight));
-    return (
-      `<svg x="0" y="0" width="${COMPANION_CANVAS_SIZE}" height="${COMPANION_CANVAS_SIZE}" `
-      + `viewBox="0 0 ${sourceWidth} ${sourceHeight}" preserveAspectRatio="none">`
-      + `<image href="${dataUri}" x="${offsetX - frameX}" y="${offsetY - frameY}" `
-      + `width="${sheetWidth}" height="${sheetHeight}" preserveAspectRatio="none" />`
-      + '</svg>'
-    );
-  }
+  const { animation, frames } = companionAnimationFrames(relativePath);
+  const frame = frames[0]!;
+  const sourceWidth = Math.max(1, Math.trunc(slice.sourceWidth));
+  const sourceHeight = Math.max(1, Math.trunc(slice.sourceHeight));
+  const sheetWidth = Math.max(sourceWidth, Math.trunc(animation.sheetWidth ?? sourceWidth));
+  const sheetHeight = Math.max(sourceHeight, Math.trunc(animation.sheetHeight ?? sourceHeight));
+  const imageX = (frame.offsetX ?? 0) - frame.x - slice.sourceX;
+  const imageY = (frame.offsetY ?? 0) - frame.y - slice.sourceY;
 
-  return `<image href="${dataUri}" x="0" y="0" width="${COMPANION_CANVAS_SIZE}" height="${COMPANION_CANVAS_SIZE}" preserveAspectRatio="none" />`;
+  return (
+    `<svg x="${slice.targetX}" y="${slice.targetY}" width="${slice.targetWidth}" height="${slice.targetHeight}" `
+    + `viewBox="0 0 ${sourceWidth} ${sourceHeight}" preserveAspectRatio="none">`
+    + `<image href="${dataUri}" x="${imageX}" y="${imageY}" width="${sheetWidth}" height="${sheetHeight}" preserveAspectRatio="none" />`
+    + '</svg>'
+  );
 }
 
-function companionAnimatedLayerMarkup(relativePath: string | null | undefined, layerId: string): [string, string] {
+function companionAnimatedSliceMarkup(
+  relativePath: string | null | undefined,
+  slice: {
+    sourceX: number;
+    sourceY: number;
+    sourceWidth: number;
+    sourceHeight: number;
+    targetX: number;
+    targetY: number;
+    targetWidth: number;
+    targetHeight: number;
+  },
+): string {
   const dataUri = companionAssetDataUri(relativePath);
-  if (!dataUri) return ['', ''];
+  if (!dataUri) return '';
 
-  const animation = companionAssetAnimation(relativePath);
-  const frames = Array.isArray(animation.frames) ? animation.frames : [];
+  const { animation, frames } = companionAnimationFrames(relativePath);
+  const sourceWidth = Math.max(1, Math.trunc(slice.sourceWidth));
+  const sourceHeight = Math.max(1, Math.trunc(slice.sourceHeight));
+
   if (animation.mode !== 'spritesheet' || animation.frameCount <= 1 || frames.length <= 1) {
-    return ['', `<image href="${dataUri}" x="0" y="0" width="${COMPANION_CANVAS_SIZE}" height="${COMPANION_CANVAS_SIZE}" preserveAspectRatio="none" />`];
+    return companionStaticSliceMarkup(relativePath, slice);
   }
 
-  const clipId = `clip-${layerId}`;
-  const frameSourceWidth = Math.max(...frames.map((frame) => Math.trunc(frame.sourceWidth ?? COMPANION_CANVAS_SIZE)));
-  const frameSourceHeight = Math.max(...frames.map((frame) => Math.trunc(frame.sourceHeight ?? COMPANION_CANVAS_SIZE)));
-  const scaleX = COMPANION_CANVAS_SIZE / Math.max(1, frameSourceWidth);
-  const scaleY = COMPANION_CANVAS_SIZE / Math.max(1, frameSourceHeight);
-  const sheetWidth = Math.max(Math.trunc(animation.sheetWidth ?? frameSourceWidth), frameSourceWidth) * scaleX;
-  const sheetHeight = Math.max(Math.trunc(animation.sheetHeight ?? frameSourceHeight), frameSourceHeight) * scaleY;
+  const sheetWidth = Math.max(sourceWidth, Math.trunc(animation.sheetWidth ?? sourceWidth));
+  const sheetHeight = Math.max(sourceHeight, Math.trunc(animation.sheetHeight ?? sourceHeight));
   const totalDurationMs = Math.max(1, frames.reduce((sum, frame) => sum + Math.max(1, Math.trunc(frame.durationMs ?? 100)), 0));
 
   let elapsedMs = 0;
@@ -163,8 +197,8 @@ function companionAnimatedLayerMarkup(relativePath: string | null | undefined, l
   const yValues: string[] = [];
   for (const frame of frames) {
     keyTimes.push((elapsedMs / totalDurationMs).toFixed(4));
-    xValues.push(String((Math.trunc(frame.offsetX ?? 0) - Math.trunc(frame.x ?? 0)) * scaleX));
-    yValues.push(String((Math.trunc(frame.offsetY ?? 0) - Math.trunc(frame.y ?? 0)) * scaleY));
+    xValues.push(String((Math.trunc(frame.offsetX ?? 0) - Math.trunc(frame.x ?? 0) - Math.trunc(slice.sourceX ?? 0))));
+    yValues.push(String((Math.trunc(frame.offsetY ?? 0) - Math.trunc(frame.y ?? 0) - Math.trunc(slice.sourceY ?? 0))));
     elapsedMs += Math.max(1, Math.trunc(frame.durationMs ?? 100));
   }
 
@@ -174,16 +208,15 @@ function companionAnimatedLayerMarkup(relativePath: string | null | undefined, l
   const duration = Math.max(totalDurationMs / 1000, 0.1);
   const repeatCount = animation.loop ? 'indefinite' : '1';
 
-  const defs = `<clipPath id="${clipId}"><rect x="0" y="0" width="${COMPANION_CANVAS_SIZE}" height="${COMPANION_CANVAS_SIZE}" /></clipPath>`;
-  const markup = (
-    `<g clip-path="url(#${clipId})">`
-    + `<image href="${dataUri}" x="${xValues[0]}" y="${yValues[0]}" width="${sheetWidth.toFixed(4)}" height="${sheetHeight.toFixed(4)}" preserveAspectRatio="none">`
+  return (
+    `<svg x="${slice.targetX}" y="${slice.targetY}" width="${slice.targetWidth}" height="${slice.targetHeight}" `
+    + `viewBox="0 0 ${sourceWidth} ${sourceHeight}" preserveAspectRatio="none">`
+    + `<image href="${dataUri}" x="${xValues[0]}" y="${yValues[0]}" width="${sheetWidth}" height="${sheetHeight}" preserveAspectRatio="none">`
     + `<animate attributeName="x" values="${xValues.join(';')}" keyTimes="${keyTimes.join(';')}" dur="${duration.toFixed(3)}s" repeatCount="${repeatCount}" calcMode="discrete" />`
     + `<animate attributeName="y" values="${yValues.join(';')}" keyTimes="${keyTimes.join(';')}" dur="${duration.toFixed(3)}s" repeatCount="${repeatCount}" calcMode="discrete" />`
     + '</image>'
-    + '</g>'
+    + '</svg>'
   );
-  return [defs, markup];
 }
 
 function renderEmptyCompanionSvg(options: {
@@ -252,9 +285,15 @@ function renderEmptyCompanionSvg(options: {
 }
 
 function resolveCompanionLayers(db: Database, loadout: CompanionLoadout) {
-  return resolveCompanionLayerSpecs(db, loadout)
-    .map((layer) => companionLayerImage(layer.relativePath))
-    .filter(Boolean);
+  const scene = resolveCompanionLayerScene(db, loadout);
+  const markup = scene.layers
+    .flatMap((layer) => layer.slices.map((slice) => companionStaticSliceMarkup(layer.relativePath, slice)))
+    .filter(Boolean)
+    .join('');
+  return {
+    scene,
+    markup,
+  };
 }
 
 function userDisplayName(user: CompanionRenderUserRow) {
@@ -336,8 +375,8 @@ export function renderCompanionSvg(
     card?: boolean;
   },
 ) {
-  const layers = resolveCompanionLayers(db, loadout).join('');
-  if (!layers.trim()) {
+  const { scene, markup } = resolveCompanionLayers(db, loadout);
+  if (!markup.trim()) {
     return renderEmptyCompanionSvg({
       displayName: options.displayName,
       subtitle: options.subtitle,
@@ -347,14 +386,15 @@ export function renderCompanionSvg(
   }
 
   if (options.card) {
+    const cardScale = 4.8 * (COMPANION_CANVAS_SIZE / Math.max(scene.width, scene.height));
     return (
       '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320" shape-rendering="crispEdges" style="image-rendering:pixelated">'
       + '<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0b0a11" /><stop offset="100%" stop-color="#1b1730" /></linearGradient></defs>'
       + '<rect width="480" height="320" rx="28" fill="url(#bg)" />'
       + '<rect x="24" y="24" width="190" height="272" rx="22" fill="#090b11" stroke="#2b3552" />'
       + '<rect x="40" y="40" width="158" height="240" rx="18" fill="#0e1320" />'
-      + '<g transform="translate(47 53) scale(4.8)">'
-      + layers
+      + `<g transform="translate(47 53) scale(${cardScale.toFixed(4)})">`
+      + markup
       + '</g>'
       + '<text x="244" y="106" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14" letter-spacing="2">GHOSTED GHOSTLING</text>'
       + renderCompanionCardCopy({
@@ -369,8 +409,8 @@ export function renderCompanionSvg(
   }
 
   return (
-    '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 32 32" shape-rendering="crispEdges" style="image-rendering:pixelated">'
-    + layers
+    `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 ${scene.width} ${scene.height}" shape-rendering="crispEdges" style="image-rendering:pixelated">`
+    + markup
     + '</svg>'
   );
 }
@@ -384,22 +424,22 @@ export function renderAnimatedCompanionSvg(
     card?: boolean;
   },
 ) {
-  const baseConfig = resolveCompanionBaseConfig(db);
+  const scene = resolveCompanionLayerScene(db, loadout);
+  const baseConfig = scene.baseConfig;
 
-  const layerDefs: string[] = [];
   const groupedMarkup: Record<string, string[]> = { root: [], body: [], head: [] };
-  for (const layer of resolveCompanionLayerSpecs(db, loadout)) {
-    const [defs, markup] = companionAnimatedLayerMarkup(layer.relativePath, String(layer.key));
-    if (defs) layerDefs.push(defs);
-    if (markup) {
-      const motionGroup = layer.motionGroup || (layer.slot ? baseConfig.rig.slotGroups[layer.slot] ?? null : null);
-      const groupKey = String(motionGroup || 'root');
-      groupedMarkup[groupKey] ??= [];
-      groupedMarkup[groupKey]!.push(markup);
+  for (const layer of scene.layers) {
+    for (const slice of layer.slices) {
+      const markup = companionAnimatedSliceMarkup(layer.relativePath, slice);
+      if (markup) {
+        const motionGroup = slice.motionGroup || layer.motionGroup || (layer.slot ? baseConfig.rig.slotGroups[layer.slot] ?? null : null);
+        const groupKey = String(motionGroup || 'root');
+        groupedMarkup[groupKey] ??= [];
+        groupedMarkup[groupKey]!.push(markup);
+      }
     }
   }
 
-  const defs = layerDefs.join('');
   const hasLayers = Object.values(groupedMarkup).some((markups) => markups.length > 0);
   if (!hasLayers) {
     return renderEmptyCompanionSvg({
@@ -430,10 +470,10 @@ export function renderAnimatedCompanionSvg(
   const shadowDuration = `${(shadowDurationMs / 1000).toFixed(3)}s`;
 
   if (options.card) {
+    const cardScale = 4.8 * (COMPANION_CANVAS_SIZE / Math.max(scene.width, scene.height));
     return (
       '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320" shape-rendering="crispEdges" style="image-rendering:pixelated">'
       + '<defs>'
-      + defs
       + '<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0b0a11" /><stop offset="100%" stop-color="#1b1730" /></linearGradient>'
       + '</defs>'
       + '<rect width="480" height="320" rx="28" fill="url(#bg)" />'
@@ -443,7 +483,7 @@ export function renderAnimatedCompanionSvg(
       + `<animate attributeName="rx" values="44;40;44" dur="${shadowDuration}" repeatCount="indefinite" />`
       + `<animate attributeName="opacity" values="0.34;0.24;0.34" dur="${shadowDuration}" repeatCount="indefinite" />`
       + '</ellipse>'
-      + '<g transform="translate(47 53) scale(4.8)">'
+      + `<g transform="translate(47 53) scale(${cardScale.toFixed(4)})">`
       + layers
       + '</g>'
       + '<text x="244" y="106" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="14" letter-spacing="2">GHOSTED GHOSTLING</text>'
@@ -458,13 +498,13 @@ export function renderAnimatedCompanionSvg(
     );
   }
 
+  const shadowRx = scene.width * 0.265625;
+  const shadowRy = scene.height * 0.075;
+  const shadowMinRx = shadowRx * (7.9 / 8.5);
   return (
-    '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 32 32" shape-rendering="crispEdges" style="image-rendering:pixelated">'
-    + '<defs>'
-    + defs
-    + '</defs>'
-    + `<ellipse cx="16" cy="29" rx="8.5" ry="2.4" fill="rgba(10, 8, 18, ${COMPANION_DEFAULT_SHADOW_OPACITY + 0.12})">`
-    + `<animate attributeName="rx" values="8.5;7.9;8.5" dur="${shadowDuration}" repeatCount="indefinite" />`
+    `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 ${scene.width} ${scene.height}" shape-rendering="crispEdges" style="image-rendering:pixelated">`
+    + `<ellipse cx="${scene.width / 2}" cy="${scene.height - 3}" rx="${shadowRx}" ry="${shadowRy}" fill="rgba(10, 8, 18, ${COMPANION_DEFAULT_SHADOW_OPACITY + 0.12})">`
+    + `<animate attributeName="rx" values="${shadowRx};${shadowMinRx};${shadowRx}" dur="${shadowDuration}" repeatCount="indefinite" />`
     + `<animate attributeName="opacity" values="${(COMPANION_DEFAULT_SHADOW_OPACITY + 0.12).toFixed(2)};${(COMPANION_DEFAULT_SHADOW_OPACITY + 0.02).toFixed(2)};${(COMPANION_DEFAULT_SHADOW_OPACITY + 0.12).toFixed(2)}" dur="${shadowDuration}" repeatCount="indefinite" />`
     + '</ellipse>'
     + layers

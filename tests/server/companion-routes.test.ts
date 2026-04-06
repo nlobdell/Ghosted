@@ -47,6 +47,37 @@ function svgFile(filename: string, fill = '#7c5cff') {
   return new File([svgBuffer(fill)], filename, { type: 'image/svg+xml' });
 }
 
+function ghostlingMetadata(
+  slot: 'hat' | 'face' | 'neck' | 'body',
+  overrides: Partial<{
+    canvas: { width: number; height: number };
+    baseRect: { x: number; y: number; width: number; height: number };
+    mount: { x: number; y: number };
+    pieces: {
+      front?: { docRect: { x: number; y: number; width: number; height: number } };
+      back?: { docRect: { x: number; y: number; width: number; height: number } };
+    };
+  }> = {},
+) {
+  return {
+    kind: 'ghostling-cosmetic',
+    schemaVersion: 1,
+    slot,
+    canvas: overrides.canvas ?? { width: 210, height: 260 },
+    baseRect: overrides.baseRect ?? { x: 0, y: 21, width: 210, height: 210 },
+    mount: overrides.mount ?? { x: 105, y: 90 },
+    pieces: overrides.pieces ?? {
+      front: {
+        docRect: { x: 100, y: 30, width: 12, height: 10 },
+      },
+    },
+  };
+}
+
+function metadataFile(filename: string, metadata: Record<string, unknown>) {
+  return new File([JSON.stringify(metadata)], filename, { type: 'application/json' });
+}
+
 function seedCompanionItem(
   context: ServerTestContext,
   actorId: number,
@@ -253,6 +284,95 @@ describe('companion route handlers', () => {
     });
   });
 
+  it('stores valid anchor metadata and rejects invalid metadata uploads', async () => {
+    const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    authMock.mockResolvedValue({ user: { id: String(adminId) } });
+
+    const slotMismatch = new FormData();
+    slotMismatch.set('name', 'Mismatch Hood');
+    slotMismatch.set('slot', 'hat');
+    slotMismatch.set('rarity', 'rare');
+    slotMismatch.set('cost', '120');
+    slotMismatch.set('frontAsset', svgFile('mismatch-hood-front.svg'));
+    slotMismatch.set('metadata', metadataFile('mismatch-hood.ghostling.json', ghostlingMetadata('face')));
+
+    const slotMismatchResponse = await postCompanionAdminItemsRoute(new Request('http://localhost/api/companion/admin/items', {
+      method: 'POST',
+      body: slotMismatch,
+    }));
+    const slotMismatchPayload = await slotMismatchResponse.json();
+
+    expect(slotMismatchResponse.status).toBe(400);
+    expect(slotMismatchPayload.error).toContain('selected "hat" slot');
+
+    const missingBack = new FormData();
+    missingBack.set('name', 'Missing Back');
+    missingBack.set('slot', 'hat');
+    missingBack.set('rarity', 'rare');
+    missingBack.set('cost', '120');
+    missingBack.set('frontAsset', svgFile('missing-back-front.svg'));
+    missingBack.set('metadata', metadataFile('missing-back.ghostling.json', ghostlingMetadata('hat', {
+      pieces: {
+        front: { docRect: { x: 100, y: 30, width: 12, height: 10 } },
+        back: { docRect: { x: 94, y: 26, width: 16, height: 12 } },
+      },
+    })));
+
+    const missingBackResponse = await postCompanionAdminItemsRoute(new Request('http://localhost/api/companion/admin/items', {
+      method: 'POST',
+      body: missingBack,
+    }));
+    const missingBackPayload = await missingBackResponse.json();
+
+    expect(missingBackResponse.status).toBe(400);
+    expect(missingBackPayload.error).toContain('back piece');
+
+    const outOfBoundsMount = new FormData();
+    outOfBoundsMount.set('name', 'Out Of Bounds');
+    outOfBoundsMount.set('slot', 'hat');
+    outOfBoundsMount.set('rarity', 'rare');
+    outOfBoundsMount.set('cost', '120');
+    outOfBoundsMount.set('frontAsset', svgFile('out-of-bounds-front.svg'));
+    outOfBoundsMount.set('metadata', metadataFile('out-of-bounds.ghostling.json', ghostlingMetadata('hat', {
+      mount: { x: 999, y: 90 },
+    })));
+
+    const outOfBoundsResponse = await postCompanionAdminItemsRoute(new Request('http://localhost/api/companion/admin/items', {
+      method: 'POST',
+      body: outOfBoundsMount,
+    }));
+    const outOfBoundsPayload = await outOfBoundsResponse.json();
+
+    expect(outOfBoundsResponse.status).toBe(400);
+    expect(outOfBoundsPayload.error).toContain('mount');
+
+    const validFormData = new FormData();
+    validFormData.set('name', 'Anchor Hood');
+    validFormData.set('slot', 'hat');
+    validFormData.set('rarity', 'rare');
+    validFormData.set('cost', '120');
+    validFormData.set('frontAsset', svgFile('anchor-hood-front.svg'));
+    validFormData.set('metadata', metadataFile('anchor-hood.ghostling.json', ghostlingMetadata('hat')));
+
+    const response = await postCompanionAdminItemsRoute(new Request('http://localhost/api/companion/admin/items', {
+      method: 'POST',
+      body: validFormData,
+    }));
+    const payload = await response.json();
+    const storedRow = context.db.prepare(`
+      SELECT render_metadata_json
+      FROM companion_catalog
+      WHERE slug = 'anchor-hood'
+    `).get() as { render_metadata_json: string | null };
+
+    expect(response.status).toBe(201);
+    expect(payload.library.items[0].renderMetadata).toMatchObject({
+      slot: 'hat',
+      mount: { x: 105, y: 90 },
+    });
+    expect(storedRow.render_metadata_json).toContain('"kind":"ghostling-cosmetic"');
+  });
+
   it('replaces assets, toggles visibility, and reorders companion cosmetics', async () => {
     const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
     authMock.mockResolvedValue({ user: { id: String(adminId) } });
@@ -333,5 +453,85 @@ describe('companion route handlers', () => {
       slot: 'hat',
       frontAssetPath: `repo/defaults/items/${assetName}`,
     });
+  });
+
+  it('exposes repo sidecar metadata and imports it into the catalog', async () => {
+    const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    authMock.mockResolvedValue({ user: { id: String(adminId) } });
+    const repoItemsDir = path.join(process.cwd(), 'assets', 'companion', 'defaults', 'items');
+    fs.mkdirSync(repoItemsDir, { recursive: true });
+    const assetName = 'route-anchor-front.svg';
+    const assetPath = path.join(repoItemsDir, assetName);
+    const metadataName = assetName.replace(/-front\.svg$/, '.ghostling.json');
+    const metadataPath = path.join(repoItemsDir, metadataName);
+    repoFixturePaths.push(assetPath, metadataPath);
+    fs.writeFileSync(assetPath, svgBuffer('#88c0ff'));
+    fs.writeFileSync(metadataPath, JSON.stringify(ghostlingMetadata('hat')));
+
+    const libraryResponse = await getCompanionAdminLibraryRoute();
+    const libraryPayload = await libraryResponse.json();
+    const candidate = libraryPayload.repoCandidates.find((item: { slug: string }) => item.slug === 'route-anchor');
+
+    expect(libraryResponse.status).toBe(200);
+    expect(candidate).toMatchObject({
+      slug: 'route-anchor',
+      renderMetadataPath: `repo/defaults/items/${metadataName}`,
+      renderMetadata: { slot: 'hat' },
+    });
+    expect(candidate.renderMetadataErrors).toEqual([]);
+
+    const importResponse = await postCompanionAdminImportRepoRoute(new Request('http://localhost/api/companion/admin/items/import-repo', {
+      method: 'POST',
+      body: JSON.stringify({
+        items: [{
+          slug: 'route-anchor',
+          name: 'Route Anchor',
+          slot: 'hat',
+          rarity: 'rare',
+          cost: 90,
+          description: 'Imported with metadata.',
+          frontAssetPath: `repo/defaults/items/${assetName}`,
+          renderMetadataPath: `repo/defaults/items/${metadataName}`,
+        }],
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const importPayload = await importResponse.json();
+    const storedRow = context.db.prepare(`
+      SELECT render_metadata_json
+      FROM companion_catalog
+      WHERE slug = 'route-anchor'
+    `).get() as { render_metadata_json: string | null };
+
+    expect(importResponse.status).toBe(201);
+    expect(importPayload.library.items.find((item: { slug: string }) => item.slug === 'route-anchor')).toMatchObject({
+      slug: 'route-anchor',
+      renderMetadata: { slot: 'hat' },
+    });
+    expect(storedRow.render_metadata_json).toContain('"schemaVersion":1');
+  });
+
+  it('surfaces invalid repo sidecar metadata in the admin library payload', async () => {
+    const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    authMock.mockResolvedValue({ user: { id: String(adminId) } });
+    const repoItemsDir = path.join(process.cwd(), 'assets', 'companion', 'defaults', 'items');
+    fs.mkdirSync(repoItemsDir, { recursive: true });
+    const assetName = 'broken-anchor-front.svg';
+    const assetPath = path.join(repoItemsDir, assetName);
+    const metadataName = assetName.replace(/-front\.svg$/, '.ghostling.json');
+    const metadataPath = path.join(repoItemsDir, metadataName);
+    repoFixturePaths.push(assetPath, metadataPath);
+    fs.writeFileSync(assetPath, svgBuffer('#ff7799'));
+    fs.writeFileSync(metadataPath, JSON.stringify(ghostlingMetadata('hat', {
+      mount: { x: 999, y: 90 },
+    })));
+
+    const response = await getCompanionAdminLibraryRoute();
+    const payload = await response.json();
+    const candidate = payload.repoCandidates.find((item: { slug: string }) => item.slug === 'broken-anchor');
+
+    expect(response.status).toBe(200);
+    expect(candidate.renderMetadata).toBeNull();
+    expect(candidate.renderMetadataErrors[0]).toContain('mount');
   });
 });

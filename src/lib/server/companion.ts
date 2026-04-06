@@ -1,6 +1,7 @@
 import 'server-only';
 
 import fs from 'node:fs';
+import path from 'node:path';
 import type { Database } from 'better-sqlite3';
 import type {
   CompanionAdminData,
@@ -19,7 +20,9 @@ import {
   companionAssetUrl,
   companionRenderManifest,
   companionAssetDir,
+  companionStoredItemRenderMetadata,
   normalizeCompanionAssetPath,
+  parseCompanionItemRenderMetadata,
   readMultipartFormData,
   repoCompanionAssetDir,
   repoCompanionImportCandidates,
@@ -45,6 +48,7 @@ type CompanionCatalogRow = {
   description: string;
   front_asset_path: string | null;
   back_asset_path: string | null;
+  render_metadata_json: string | null;
   active: number;
   sort_order: number;
   created_at: string;
@@ -65,8 +69,9 @@ type RepoCompanionImportInput = {
   cost?: number | string;
   description?: string;
   active?: boolean;
-  frontAssetPath?: string;
+  frontAssetPath?: string | null;
   backAssetPath?: string | null;
+  renderMetadataPath?: string | null;
 };
 
 function companionDisplayName(user: CompanionUserRow) {
@@ -98,7 +103,7 @@ export function companionInventorySlugs(db: Database, userId: number) {
 export function companionCatalogRows(db: Database, activeOnly = true) {
   const visibility = activeOnly ? 'WHERE active = 1' : '';
   return db.prepare(`
-    SELECT slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, active, sort_order, created_at
+    SELECT slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, render_metadata_json, active, sort_order, created_at
     FROM companion_catalog
     ${visibility}
     ORDER BY slot_key ASC, sort_order ASC, name ASC
@@ -192,6 +197,12 @@ function companionItemPayload(
     previewUrl: `/api/companion/render-animated?preview=${encodeURIComponent(row.slug)}`,
     frontAssetUrl: companionAssetUrl(row.front_asset_path),
     backAssetUrl: companionAssetUrl(row.back_asset_path),
+    renderMetadata: companionStoredItemRenderMetadata(
+      row.render_metadata_json,
+      row.slot_key,
+      row.front_asset_path,
+      row.back_asset_path,
+    ),
   };
 }
 
@@ -286,6 +297,12 @@ export function buildCompanionAdminPayload(db: Database): CompanionAdminData {
       frontAssetUrl: companionAssetUrl(row.front_asset_path),
       backAssetPath: row.back_asset_path,
       backAssetUrl: companionAssetUrl(row.back_asset_path),
+      renderMetadata: companionStoredItemRenderMetadata(
+        row.render_metadata_json,
+        row.slot_key,
+        row.front_asset_path,
+        row.back_asset_path,
+      ),
       previewUrl: `/api/companion/render-animated?preview=${encodeURIComponent(row.slug)}`,
     })),
     repoCandidates: repoCompanionImportCandidates(db),
@@ -304,6 +321,79 @@ function normalizeCompanionRarity(rarity: string) {
     throw new AppError('Choose a rarity of common, rare, epic, or legendary.', 400);
   }
   return normalized;
+}
+
+function normalizeCompanionItemMetadataJson(
+  metadataJson: string | null | undefined,
+  options: {
+    slot: CompanionSlotKey;
+    frontAssetPresent: boolean;
+    backAssetPresent: boolean;
+  },
+) {
+  const metadata = parseCompanionItemRenderMetadata(metadataJson, {
+    expectedSlot: options.slot,
+    frontAssetPresent: options.frontAssetPresent,
+    backAssetPresent: options.backAssetPresent,
+  });
+  return metadata ? JSON.stringify(metadata) : null;
+}
+
+async function metadataTextFromFormData(formData: FormData, fieldName = 'metadata') {
+  const entry = formData.get(fieldName);
+  if (entry == null) return null;
+  if (entry instanceof File) {
+    const text = (await entry.text()).trim();
+    return text || null;
+  }
+  const value = String(entry ?? '').trim();
+  return value || null;
+}
+
+function repoMetadataPathForItemAssets(
+  frontAssetPath: string | null | undefined,
+  backAssetPath: string | null | undefined,
+  explicitPath?: string | null,
+) {
+  const rawExplicitPath = String(explicitPath ?? '').trim();
+  if (rawExplicitPath) {
+    const metadataPath = normalizeCompanionAssetPath(rawExplicitPath);
+    if (!metadataPath.startsWith('repo/defaults/items/') || !metadataPath.endsWith('.ghostling.json')) {
+      throw new AppError('Repo metadata files must live in repo/defaults/items and end with .ghostling.json.', 400);
+    }
+    if (!companionFileExists(metadataPath)) {
+      throw new AppError('Repo Ghostling metadata file could not be found.', 404);
+    }
+    return metadataPath;
+  }
+
+  const anchorAssetPath = String(frontAssetPath || backAssetPath || '').trim();
+  if (!anchorAssetPath) return null;
+  const normalizedAssetPath = normalizeCompanionAssetPath(anchorAssetPath);
+  const assetName = path.basename(normalizedAssetPath);
+  const title = path.parse(assetName).name.replace(/-(front|back)$/i, '');
+  const metadataPath = `repo/defaults/items/${title}.ghostling.json`;
+  return companionFileExists(metadataPath) ? metadataPath : null;
+}
+
+function repoMetadataJsonForImport(
+  slot: CompanionSlotKey,
+  frontAssetPath: string | null | undefined,
+  backAssetPath: string | null | undefined,
+  explicitPath?: string | null,
+) {
+  const metadataPath = repoMetadataPathForItemAssets(frontAssetPath, backAssetPath, explicitPath);
+  if (!metadataPath) return { metadataPath: null, metadataJson: null };
+
+  const metadataJson = fs.readFileSync(companionAssetPath(metadataPath), 'utf8');
+  return {
+    metadataPath,
+    metadataJson: normalizeCompanionItemMetadataJson(metadataJson, {
+      slot,
+      frontAssetPresent: Boolean(frontAssetPath),
+      backAssetPresent: Boolean(backAssetPath),
+    }),
+  };
 }
 
 export function purchaseCompanionItem(db: Database, user: CompanionUserRow, slug: string) {
@@ -489,7 +579,8 @@ export function createCompanionItem(
     rarity: string;
     cost: number;
     description: string;
-    frontAsset: UploadedCompanionAsset;
+    metadataJson?: string | null;
+    frontAsset?: UploadedCompanionAsset | null;
     backAsset?: UploadedCompanionAsset | null;
   },
 ) {
@@ -516,15 +607,26 @@ export function createCompanionItem(
     throw new AppError('Companion cosmetic cost cannot be negative.', 400);
   }
 
-  const frontAssetPath = storeUploadedCompanionAsset(input.frontAsset, { group: 'items', stem: `${normalizedSlug}-front` });
+  if (!input.frontAsset && !input.backAsset) {
+    throw new AppError('Upload at least one front or back asset image for new cosmetics.', 400);
+  }
+
+  const frontAssetPath = input.frontAsset?.data.length
+    ? storeUploadedCompanionAsset(input.frontAsset, { group: 'items', stem: `${normalizedSlug}-front` })
+    : null;
   const backAssetPath = input.backAsset?.data.length
     ? storeUploadedCompanionAsset(input.backAsset, { group: 'items', stem: `${normalizedSlug}-back` })
     : null;
+  const renderMetadataJson = normalizeCompanionItemMetadataJson(input.metadataJson, {
+    slot: normalizedSlot as CompanionSlotKey,
+    frontAssetPresent: Boolean(frontAssetPath),
+    backAssetPresent: Boolean(backAssetPath),
+  });
   db.prepare(`
     INSERT INTO companion_catalog (
-      slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, active, sort_order, created_at
+      slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, render_metadata_json, active, sort_order, created_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
   `).run(
     normalizedSlug,
     normalizedName,
@@ -534,6 +636,7 @@ export function createCompanionItem(
     String(input.description ?? '').trim() || 'Custom uploaded companion cosmetic.',
     frontAssetPath,
     backAssetPath,
+    renderMetadataJson,
     nextCompanionSortOrder(db, normalizedSlot as CompanionSlotKey),
     utcIso(),
   );
@@ -542,6 +645,7 @@ export function createCompanionItem(
     slot: normalizedSlot,
     frontAssetPath,
     backAssetPath,
+    renderMetadataJson,
   });
   return buildCompanionAdminPayload(db);
 }
@@ -553,14 +657,15 @@ export function replaceCompanionItemAssets(
   assets: {
     frontAsset?: UploadedCompanionAsset | null;
     backAsset?: UploadedCompanionAsset | null;
+    metadataJson?: string | null;
   },
 ) {
   const item = companionCatalogAnyRow(db, slug);
   if (!item) {
     throw new AppError('That companion cosmetic does not exist.', 404);
   }
-  if (!assets.frontAsset && !assets.backAsset) {
-    throw new AppError('Upload at least one asset file to replace.', 400);
+  if (!assets.frontAsset && !assets.backAsset && !assets.metadataJson) {
+    throw new AppError('Upload at least one asset file or metadata sidecar to replace.', 400);
   }
 
   const nextFrontAssetPath = assets.frontAsset?.data.length
@@ -569,16 +674,24 @@ export function replaceCompanionItemAssets(
   const nextBackAssetPath = assets.backAsset?.data.length
     ? storeUploadedCompanionAsset(assets.backAsset, { group: 'items', stem: `${slug}-back` })
     : item.back_asset_path;
+  const renderMetadataJson = assets.metadataJson
+    ? normalizeCompanionItemMetadataJson(assets.metadataJson, {
+      slot: item.slot_key,
+      frontAssetPresent: Boolean(nextFrontAssetPath),
+      backAssetPresent: Boolean(nextBackAssetPath),
+    })
+    : (assets.frontAsset || assets.backAsset ? null : item.render_metadata_json);
 
   db.prepare(`
     UPDATE companion_catalog
-    SET front_asset_path = ?, back_asset_path = ?
+    SET front_asset_path = ?, back_asset_path = ?, render_metadata_json = ?
     WHERE slug = ?
-  `).run(nextFrontAssetPath, nextBackAssetPath, slug);
+  `).run(nextFrontAssetPath, nextBackAssetPath, renderMetadataJson, slug);
 
   recordAudit(actor.id, 'replace_companion_item_assets', 'companion_catalog', slug, {
     frontAssetPath: nextFrontAssetPath,
     backAssetPath: nextBackAssetPath,
+    renderMetadataJson,
   });
   return buildCompanionAdminPayload(db);
 }
@@ -625,12 +738,16 @@ export function importRepoCompanionItems(
       throw new AppError('Companion cosmetic cost cannot be negative.', 400);
     }
 
-    const frontAssetPath = normalizeCompanionAssetPath(String(rawItem.frontAssetPath ?? ''));
-    if (!frontAssetPath.startsWith('repo/defaults/items/')) {
-      throw new AppError('Repo imports must use assets from repo/defaults/items.', 400);
-    }
-    if (!companionFileExists(frontAssetPath)) {
-      throw new AppError('Repo front asset file could not be found.', 404);
+    const rawFrontAssetPath = String(rawItem.frontAssetPath ?? '').trim();
+    let frontAssetPath: string | null = null;
+    if (rawFrontAssetPath) {
+      frontAssetPath = normalizeCompanionAssetPath(rawFrontAssetPath);
+      if (!frontAssetPath.startsWith('repo/defaults/items/')) {
+        throw new AppError('Repo imports must use assets from repo/defaults/items.', 400);
+      }
+      if (!companionFileExists(frontAssetPath)) {
+        throw new AppError('Repo front asset file could not be found.', 404);
+      }
     }
 
     const rawBackAssetPath = String(rawItem.backAssetPath ?? '').trim();
@@ -644,6 +761,16 @@ export function importRepoCompanionItems(
         throw new AppError('Repo back asset file could not be found.', 404);
       }
     }
+    if (!frontAssetPath && !backAssetPath) {
+      throw new AppError('Repo imports need at least one front or back asset file.', 400);
+    }
+
+    const { metadataJson: renderMetadataJson } = repoMetadataJsonForImport(
+      normalizedSlot as CompanionSlotKey,
+      frontAssetPath,
+      backAssetPath,
+      rawItem.renderMetadataPath,
+    );
 
     const slotKey = normalizedSlot as CompanionSlotKey;
     const sortOrder = queuedSortOrders.get(slotKey) ?? nextCompanionSortOrder(db, slotKey);
@@ -651,9 +778,9 @@ export function importRepoCompanionItems(
 
     db.prepare(`
       INSERT INTO companion_catalog (
-        slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, active, sort_order, created_at
+        slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, render_metadata_json, active, sort_order, created_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       normalizedSlug,
       normalizedName,
@@ -663,6 +790,7 @@ export function importRepoCompanionItems(
       String(rawItem.description ?? '').trim() || 'Imported repo Ghostling cosmetic.',
       frontAssetPath,
       backAssetPath,
+      renderMetadataJson,
       rawItem.active === false ? 0 : 1,
       sortOrder,
       utcIso(),
@@ -706,8 +834,9 @@ export async function parseCreateCompanionItemRequest(request: Request) {
   }
 
   const frontAsset = await uploadedCompanionAssetFromFormData(formData, 'frontAsset');
-  if (!frontAsset) {
-    throw new AppError('A front asset image is required for new cosmetics.', 400);
+  const backAsset = await uploadedCompanionAssetFromFormData(formData, 'backAsset');
+  if (!frontAsset && !backAsset) {
+    throw new AppError('Upload at least one front or back asset image for new cosmetics.', 400);
   }
 
   return {
@@ -718,7 +847,8 @@ export async function parseCreateCompanionItemRequest(request: Request) {
     description: String(formData.get('description') ?? '').trim(),
     cost,
     frontAsset,
-    backAsset: await uploadedCompanionAssetFromFormData(formData, 'backAsset'),
+    backAsset,
+    metadataJson: await metadataTextFromFormData(formData),
   };
 }
 
@@ -733,5 +863,6 @@ export async function parseReplaceCompanionAssetsRequest(request: Request) {
     slug,
     frontAsset: await uploadedCompanionAssetFromFormData(formData, 'frontAsset'),
     backAsset: await uploadedCompanionAssetFromFormData(formData, 'backAsset'),
+    metadataJson: await metadataTextFromFormData(formData),
   };
 }
