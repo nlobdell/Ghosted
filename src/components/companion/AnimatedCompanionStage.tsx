@@ -111,9 +111,10 @@ export function AnimatedCompanionStage({
 
   const logicalWidth = Math.max(1, manifest?.width || DEFAULT_LOGICAL_STAGE_SIZE);
   const logicalHeight = Math.max(1, manifest?.height || DEFAULT_LOGICAL_STAGE_SIZE);
-  // Keep the rendered sprite on an integer scale so individual pixels do not
-  // get unevenly sliced when the requested preview size is not a clean multiple.
-  const stageScale = Math.max(1, Math.floor(targetSize / Math.max(logicalWidth, logicalHeight)) || 1);
+  // Treat targetSize as the desired stage width and keep the sprite on an
+  // integer scale so the live preview stays crisp even when accessories make
+  // the stage taller than it is wide.
+  const stageScale = Math.max(1, Math.floor(targetSize / logicalWidth) || 1);
   const stageWidth = logicalWidth * stageScale;
   const stageHeight = logicalHeight * stageScale;
 
@@ -252,8 +253,8 @@ export function AnimatedCompanionStage({
       <div
         className={className}
         style={{
-          width: `${targetSize}px`,
-          height: `${targetSize}px`,
+          width: `${stageWidth}px`,
+          height: `${stageHeight}px`,
           display: 'grid',
           placeItems: 'center',
           flex: '0 0 auto',
@@ -272,8 +273,8 @@ export function AnimatedCompanionStage({
     <div
       className={className}
       style={{
-        width: `${targetSize}px`,
-        height: `${targetSize}px`,
+        width: `${stageWidth}px`,
+        height: `${stageHeight}px`,
         display: 'grid',
         placeItems: 'center',
         overflow: 'visible',

@@ -44,6 +44,7 @@ export const COMPANION_LOADOUT_COLUMNS: Record<CompanionSlotKey, string> = {
 };
 
 export const COMPANION_CANVAS_SIZE = 32;
+export const COMPANION_STAGE_CANVAS_SIZE = 70;
 export const COMPANION_MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 export const COMPANION_DEFAULT_SHADOW_OPACITY = 0.2;
 
@@ -1145,29 +1146,51 @@ type CompanionResolvedScene = {
   baseConfig: CompanionBaseConfig;
 };
 
+type CompanionSceneCanvas = {
+  width: number;
+  height: number;
+  roundToPixels?: boolean;
+};
+
+function roundRectToPixels(rect: Rect) {
+  return {
+    x: Math.round(rect.x),
+    y: Math.round(rect.y),
+    width: Math.max(1, Math.round(rect.width)),
+    height: Math.max(1, Math.round(rect.height)),
+  } satisfies Rect;
+}
+
 function fullLayerSlice(
   relativePath: string,
   key: string,
-  targetRect: Rect = {
-    x: 0,
-    y: 0,
+  targetRect: Rect | undefined,
+  motionGroup: string | null = null,
+  canvas: CompanionSceneCanvas = {
     width: COMPANION_CANVAS_SIZE,
     height: COMPANION_CANVAS_SIZE,
+    roundToPixels: false,
   },
-  motionGroup: string | null = null,
 ): CompanionRenderSlice {
   const animation = companionAssetAnimation(relativePath);
   const [sourceWidth, sourceHeight] = companionAnimationSourceDimensions(animation);
+  const resolvedTarget = targetRect ?? {
+    x: 0,
+    y: 0,
+    width: canvas.width,
+    height: canvas.height,
+  } satisfies Rect;
+  const normalizedTarget = canvas.roundToPixels ? roundRectToPixels(resolvedTarget) : resolvedTarget;
   return {
     key,
     sourceX: 0,
     sourceY: 0,
     sourceWidth,
     sourceHeight,
-    targetX: targetRect.x,
-    targetY: targetRect.y,
-    targetWidth: targetRect.width,
-    targetHeight: targetRect.height,
+    targetX: normalizedTarget.x,
+    targetY: normalizedTarget.y,
+    targetWidth: normalizedTarget.width,
+    targetHeight: normalizedTarget.height,
     motionGroup,
   };
 }
@@ -1184,13 +1207,18 @@ function resolveSlotAnchor(
   };
 }
 
-function normalizeDocRectToCompanionCanvas(docRect: Rect, metadata: CompanionItemRenderMetadata) {
-  return {
-    x: ((docRect.x - metadata.baseRect.x) / Math.max(1, metadata.baseRect.width)) * COMPANION_CANVAS_SIZE,
-    y: ((docRect.y - metadata.baseRect.y) / Math.max(1, metadata.baseRect.height)) * COMPANION_CANVAS_SIZE,
-    width: (docRect.width / Math.max(1, metadata.baseRect.width)) * COMPANION_CANVAS_SIZE,
-    height: (docRect.height / Math.max(1, metadata.baseRect.height)) * COMPANION_CANVAS_SIZE,
+function normalizeDocRectToCanvas(
+  docRect: Rect,
+  metadata: CompanionItemRenderMetadata,
+  canvas: CompanionSceneCanvas,
+) {
+  const normalized = {
+    x: ((docRect.x - metadata.baseRect.x) / Math.max(1, metadata.baseRect.width)) * canvas.width,
+    y: ((docRect.y - metadata.baseRect.y) / Math.max(1, metadata.baseRect.height)) * canvas.height,
+    width: (docRect.width / Math.max(1, metadata.baseRect.width)) * canvas.width,
+    height: (docRect.height / Math.max(1, metadata.baseRect.height)) * canvas.height,
   } satisfies Rect;
+  return canvas.roundToPixels ? roundRectToPixels(normalized) : normalized;
 }
 
 function metadataLayerSlices(
@@ -1198,6 +1226,7 @@ function metadataLayerSlices(
   side: 'front' | 'back',
   slot: CompanionSlotKey,
   rig: CompanionRig,
+  canvas: CompanionSceneCanvas,
 ): CompanionRenderSlice[] {
   const metadata = companionItemRenderMetadataFromRow(row);
   if (!metadata) return [];
@@ -1212,7 +1241,7 @@ function metadataLayerSlices(
     width: piece.docRect.width,
     height: piece.docRect.height,
   } satisfies Rect;
-  const normalizedTarget = normalizeDocRectToCompanionCanvas(targetDocRect, metadata);
+  const normalizedTarget = normalizeDocRectToCanvas(targetDocRect, metadata, canvas);
   const slotMotionGroup = rig.slotGroups[slot] ?? null;
 
   return [{
@@ -1229,11 +1258,11 @@ function metadataLayerSlices(
   }];
 }
 
-function sceneBoundsFromLayers(layers: CompanionManifestLayer[]) {
+function sceneBoundsFromLayers(layers: CompanionManifestLayer[], canvas: CompanionSceneCanvas) {
   let minX = 0;
   let minY = 0;
-  let maxX = COMPANION_CANVAS_SIZE;
-  let maxY = COMPANION_CANVAS_SIZE;
+  let maxX = canvas.width;
+  let maxY = canvas.height;
 
   for (const layer of layers) {
     for (const slice of layer.slices) {
@@ -1252,8 +1281,8 @@ function sceneBoundsFromLayers(layers: CompanionManifestLayer[]) {
   };
 }
 
-function normalizeSceneLayers(layers: CompanionManifestLayer[]) {
-  const bounds = sceneBoundsFromLayers(layers);
+function normalizeSceneLayers(layers: CompanionManifestLayer[], canvas: CompanionSceneCanvas) {
+  const bounds = sceneBoundsFromLayers(layers, canvas);
   if (bounds.minX === 0 && bounds.minY === 0) {
     return {
       width: bounds.width,
@@ -1281,11 +1310,12 @@ function companionItemLayer(
   side: 'front' | 'back',
   zIndex: number,
   baseConfig: CompanionBaseConfig,
+  canvas: CompanionSceneCanvas,
 ): CompanionManifestLayer | null {
   const relativePath = side === 'front' ? row.front_asset_path : row.back_asset_path;
   if (!relativePath) return null;
 
-  const metadataSlices = metadataLayerSlices(row, side, row.slot_key, baseConfig.rig);
+  const metadataSlices = metadataLayerSlices(row, side, row.slot_key, baseConfig.rig, canvas);
   return {
     key: `${row.slot_key}-${side}`,
     role: `${row.slot_key}-${side}`,
@@ -1295,13 +1325,18 @@ function companionItemLayer(
     motionGroup: null,
     slices: metadataSlices.length
       ? metadataSlices
-      : [fullLayerSlice(relativePath, `${row.slug}-${side}`, undefined, baseConfig.rig.slotGroups[row.slot_key] ?? null)],
+      : [fullLayerSlice(relativePath, `${row.slug}-${side}`, undefined, baseConfig.rig.slotGroups[row.slot_key] ?? null, canvas)],
   };
 }
 
 export function resolveCompanionLayerScene(
   db: Database,
   loadout: Record<CompanionSlotKey, string | null>,
+  canvas: CompanionSceneCanvas = {
+    width: COMPANION_CANVAS_SIZE,
+    height: COMPANION_CANVAS_SIZE,
+    roundToPixels: false,
+  },
 ): CompanionResolvedScene {
   const layers: CompanionManifestLayer[] = [];
   const catalog = new Map(companionCatalogRows(db).map((row) => [row.slug, row]));
@@ -1318,7 +1353,7 @@ export function resolveCompanionLayerScene(
     const itemSlug = loadout[slot];
     const item = itemSlug ? catalog.get(itemSlug) : undefined;
     if (!item) continue;
-    const backLayer = companionItemLayer(item, 'back', slotZIndices[slot].back, baseConfig);
+    const backLayer = companionItemLayer(item, 'back', slotZIndices[slot].back, baseConfig, canvas);
     if (backLayer) layers.push(backLayer);
   }
 
@@ -1326,21 +1361,21 @@ export function resolveCompanionLayerScene(
     ...layer,
     slices: layer.slices.length
       ? layer.slices.map((slice) => ({ ...slice }))
-      : [fullLayerSlice(layer.relativePath, layer.key, undefined, layer.motionGroup)],
+      : [fullLayerSlice(layer.relativePath, layer.key, undefined, layer.motionGroup, canvas)],
   })));
 
   for (const slot of COMPANION_SLOT_ORDER) {
     const itemSlug = loadout[slot];
     const item = itemSlug ? catalog.get(itemSlug) : undefined;
     if (!item) continue;
-    const frontLayer = companionItemLayer(item, 'front', slotZIndices[slot].front, baseConfig);
+    const frontLayer = companionItemLayer(item, 'front', slotZIndices[slot].front, baseConfig, canvas);
     if (frontLayer) layers.push(frontLayer);
   }
 
   const orderedLayers = layers
     .filter((layer) => Boolean(layer.relativePath) && layer.slices.length > 0)
     .sort((left, right) => left.zIndex - right.zIndex || left.key.localeCompare(right.key));
-  const normalizedScene = normalizeSceneLayers(orderedLayers);
+  const normalizedScene = normalizeSceneLayers(orderedLayers, canvas);
 
   return {
     width: normalizedScene.width,
@@ -1361,7 +1396,11 @@ export function companionRenderManifest(
   db: Database,
   loadout: Record<CompanionSlotKey, string | null>,
 ) {
-  const scene = resolveCompanionLayerScene(db, loadout);
+  const scene = resolveCompanionLayerScene(db, loadout, {
+    width: COMPANION_STAGE_CANVAS_SIZE,
+    height: COMPANION_STAGE_CANVAS_SIZE,
+    roundToPixels: true,
+  });
 
   const layers = scene.layers
     .map((layer) => {

@@ -270,12 +270,24 @@ describe('companion render and dev-login routes', () => {
     const staticResponse = await getCompanionRenderRoute(new Request(`http://localhost/api/companion/render?user=${userId}`));
     const staticPayload = await staticResponse.text();
     expect(staticResponse.status).toBe(200);
-    expect(staticPayload).toContain(`viewBox="0 0 ${manifest.width} ${manifest.height}"`);
+    const staticViewBox = /viewBox="0 0 ([0-9.]+) ([0-9.]+)"/.exec(staticPayload);
+    expect(staticViewBox).not.toBeNull();
+    const staticWidth = Number(staticViewBox?.[1] ?? 0);
+    const staticHeight = Number(staticViewBox?.[2] ?? 0);
+    expect(staticWidth).toBeGreaterThan(0);
+    expect(staticHeight).toBeGreaterThan(32);
+    expect(manifest.width / staticWidth).toBeCloseTo(manifest.height / staticHeight, 1);
 
     const animatedResponse = await getCompanionAnimatedRenderRoute(new Request(`http://localhost/api/companion/render-animated?user=${userId}`));
     const animatedPayload = await animatedResponse.text();
     expect(animatedResponse.status).toBe(200);
-    expect(animatedPayload).toContain(`viewBox="0 0 ${manifest.width} ${manifest.height}"`);
+    const animatedViewBox = /viewBox="0 0 ([0-9.]+) ([0-9.]+)"/.exec(animatedPayload);
+    expect(animatedViewBox).not.toBeNull();
+    const animatedWidth = Number(animatedViewBox?.[1] ?? 0);
+    const animatedHeight = Number(animatedViewBox?.[2] ?? 0);
+    expect(animatedWidth).toBeGreaterThan(0);
+    expect(animatedHeight).toBeGreaterThan(32);
+    expect(manifest.width / animatedWidth).toBeCloseTo(manifest.height / animatedHeight, 1);
   });
 
   it('renders animated card variants and preserves 404 behavior for missing previews', async () => {

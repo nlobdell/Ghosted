@@ -61,12 +61,12 @@ describe('companion server module', () => {
     expect(countRow.count).toBe(0);
     expect(payload.items).toEqual([]);
     expect(payload.baseAssetUrl).toContain('ghostling-base-body.png');
-    expect(payload.renderManifest.width).toBe(32);
-    expect(payload.renderManifest.height).toBe(32);
+    expect(payload.renderManifest.width).toBe(70);
+    expect(payload.renderManifest.height).toBe(70);
     expect(payload.renderManifest.layers[0]?.src).toContain('ghostling-base-body.png');
     expect(payload.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
-    expect(hallSummary.renderManifest.width).toBe(32);
-    expect(hallSummary.renderManifest.height).toBe(32);
+    expect(hallSummary.renderManifest.width).toBe(70);
+    expect(hallSummary.renderManifest.height).toBe(70);
     expect(hallSummary.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
   });
 
