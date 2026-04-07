@@ -33,6 +33,8 @@ sudo rsync -av --delete ./ /opt/ghosted/build/
 sudo chown -R ghosted:ghosted /opt/ghosted
 ```
 
+Using a dedicated checkout at `/opt/ghosted/build` is recommended, but not required. The release script can run from any Git checkout on the server. If your repo already lives at `/opt/ghosted`, you can run the script from there instead of creating `/opt/ghosted/build`.
+
 ## 4. Configure env file
 
 Use `/etc/ghosted/ghosted.env` for the Next.js runtime.
@@ -68,6 +70,8 @@ sudo systemctl daemon-reload
 sudo systemctl enable ghosted-web
 ```
 
+If your checkout lives at `/opt/ghosted` instead of `/opt/ghosted/build`, copy the unit from `/opt/ghosted/deploy/ghosted-web.service` instead.
+
 If you want to run `scripts/deploy-release.sh` as the `ghosted` user, grant it passwordless access to inspect and restart just this service:
 
 ```bash
@@ -93,16 +97,34 @@ Do not point Caddy at any other backend process. The Next.js app now owns the pu
 
 ## 7. Deploy updates
 
+From a dedicated build checkout:
+
 ```bash
 cd /opt/ghosted/build
-sudo -u ghosted -H bash -lc 'cd /opt/ghosted/build && ./scripts/deploy-release.sh origin/main'
+sudo -u ghosted -H bash -lc 'cd /opt/ghosted/build && bash ./scripts/deploy-release.sh origin/main'
+```
+
+From a repo that already lives at `/opt/ghosted`:
+
+```bash
+cd /opt/ghosted
+sudo -u ghosted -H bash -lc 'cd /opt/ghosted && bash ./scripts/deploy-release.sh origin/main'
 ```
 
 Manual rollback:
 
+From a dedicated build checkout:
+
 ```bash
 cd /opt/ghosted/build
-sudo -u ghosted -H bash -lc 'cd /opt/ghosted/build && ./scripts/deploy-release.sh rollback'
+sudo -u ghosted -H bash -lc 'cd /opt/ghosted/build && bash ./scripts/deploy-release.sh rollback'
+```
+
+From a repo that already lives at `/opt/ghosted`:
+
+```bash
+cd /opt/ghosted
+sudo -u ghosted -H bash -lc 'cd /opt/ghosted && bash ./scripts/deploy-release.sh rollback'
 ```
 
 The release script now:
