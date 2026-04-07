@@ -16,7 +16,14 @@ The canonical architecture reference is [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 - Next.js 16, React 19, TypeScript
 - Better SQLite3
 - Pixi.js for the casino renderer
+- Vitest for server tests
 - Caddy + systemd for VPS hosting
+
+## Build and Test Tooling
+
+- `Next.js 16` is the canonical app runtime and build tool for this repository.
+- `Vitest` is the dedicated test runner for server modules and route contracts.
+- Legacy HTML under `legacy/` is archived reference material and is not part of the supported build or deploy path.
 
 ## Requirements
 
@@ -108,6 +115,10 @@ Runtime pid files and logs are written to `data/dev-runtime/`.
 - `npm run test:server` - run Vitest coverage for server modules and route contracts
 - `npm run git:update` - local workflow helper script
 - `scripts/deploy-release.sh` - release-oriented VPS deploy script with lockfile-aware installs and rollback support
+
+Legacy note:
+
+- `legacy/` is preserved for reference only. Do not treat it as an active app surface or a separate build target.
 
 ## Validation
 
