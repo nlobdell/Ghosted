@@ -16,8 +16,21 @@ export async function getJSON<T = unknown>(url: string, options?: RequestInit): 
     headers,
     ...options,
   });
-  const payload = await res.json().catch(() => ({})) as { error?: string } & T;
-  if (!res.ok) throw new Error((payload as { error?: string }).error ?? `Request failed: ${url}`);
+  const raw = await res.text();
+  let payload = {} as { error?: string } & T;
+  if (raw) {
+    try {
+      payload = JSON.parse(raw) as { error?: string } & T;
+    } catch {
+      payload = {} as { error?: string } & T;
+    }
+  }
+  if (!res.ok) {
+    const fallback = raw
+      ? raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220)
+      : `Request failed (${res.status}): ${url}`;
+    throw new Error((payload as { error?: string }).error ?? fallback ?? `Request failed (${res.status}): ${url}`);
+  }
   return payload as T;
 }
 

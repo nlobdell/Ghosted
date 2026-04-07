@@ -418,6 +418,48 @@ describe('companion route handlers', () => {
     expect(hatItems.map((item: { slug: string }) => item.slug)).toEqual(['silver-crown', 'moon-hood']);
   });
 
+  it('preserves existing anchor metadata when replacing art without a new metadata sidecar', async () => {
+    const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    authMock.mockResolvedValue({ user: { id: String(adminId) } });
+
+    const createData = new FormData();
+    createData.set('name', 'Anchor Crown');
+    createData.set('slot', 'hat');
+    createData.set('rarity', 'rare');
+    createData.set('cost', '120');
+    createData.set('frontAsset', svgFile('anchor-crown-front.svg', '#88c0ff'));
+    createData.set('metadata', metadataFile('anchor-crown.ghostling.json', ghostlingMetadata('hat')));
+
+    const createResponse = await postCompanionAdminItemsRoute(new Request('http://localhost/api/companion/admin/items', {
+      method: 'POST',
+      body: createData,
+    }));
+    expect(createResponse.status).toBe(201);
+
+    const replaceData = new FormData();
+    replaceData.set('slug', 'anchor-crown');
+    replaceData.set('frontAsset', svgFile('anchor-crown-front-v2.svg', '#ff66aa'));
+
+    const replaceResponse = await postCompanionAdminReplaceAssetsRoute(new Request('http://localhost/api/companion/admin/items/replace-assets', {
+      method: 'POST',
+      body: replaceData,
+    }));
+    const replacePayload = await replaceResponse.json();
+    const replacedItem = replacePayload.library.items.find((item: { slug: string }) => item.slug === 'anchor-crown');
+    const storedRow = context.db.prepare(`
+      SELECT render_metadata_json
+      FROM companion_catalog
+      WHERE slug = 'anchor-crown'
+    `).get() as { render_metadata_json: string | null };
+
+    expect(replaceResponse.status).toBe(200);
+    expect(replacedItem.renderMetadata).toMatchObject({
+      slot: 'hat',
+      mount: { x: 105, y: 90 },
+    });
+    expect(storedRow.render_metadata_json).toContain('"kind":"ghostling-cosmetic"');
+  });
+
   it('imports repo cosmetics and preserves the expected success envelope', async () => {
     const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
     authMock.mockResolvedValue({ user: { id: String(adminId) } });

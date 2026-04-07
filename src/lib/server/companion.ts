@@ -680,7 +680,7 @@ export function replaceCompanionItemAssets(
       frontAssetPresent: Boolean(nextFrontAssetPath),
       backAssetPresent: Boolean(nextBackAssetPath),
     })
-    : (assets.frontAsset || assets.backAsset ? null : item.render_metadata_json);
+    : item.render_metadata_json;
 
   db.prepare(`
     UPDATE companion_catalog

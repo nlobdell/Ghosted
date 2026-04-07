@@ -68,6 +68,16 @@ sudo systemctl daemon-reload
 sudo systemctl enable ghosted-web
 ```
 
+If you want to run `scripts/deploy-release.sh` as the `ghosted` user, grant it passwordless access to inspect and restart just this service:
+
+```bash
+SYSTEMCTL_BIN="$(command -v systemctl)"
+printf 'ghosted ALL=NOPASSWD:%s cat ghosted-web,%s restart ghosted-web,%s is-active ghosted-web\n' \
+  "$SYSTEMCTL_BIN" "$SYSTEMCTL_BIN" "$SYSTEMCTL_BIN" \
+  | sudo tee /etc/sudoers.d/ghosted-web >/dev/null
+sudo chmod 440 /etc/sudoers.d/ghosted-web
+```
+
 ## 6. Configure Caddy
 
 Example:
@@ -85,20 +95,28 @@ Do not point Caddy at any other backend process. The Next.js app now owns the pu
 
 ```bash
 cd /opt/ghosted/build
-sudo -u ghosted bash scripts/deploy-release.sh origin/main
+sudo -u ghosted -H bash -lc 'cd /opt/ghosted/build && ./scripts/deploy-release.sh origin/main'
 ```
 
 Manual rollback:
 
 ```bash
 cd /opt/ghosted/build
-sudo -u ghosted bash scripts/deploy-release.sh rollback
+sudo -u ghosted -H bash -lc 'cd /opt/ghosted/build && ./scripts/deploy-release.sh rollback'
 ```
+
+The release script now:
+
+- verifies that the installed `ghosted-web` service is the standalone `/opt/ghosted/current-web/server.js` unit
+- rebuilds dependencies when `package-lock.json` changes or the Node runtime/ABI changes
+- restarts the service and waits for `http://127.0.0.1:3000/api/config` to pass a health check
+- automatically rolls back to the previous release if the new one fails to come up
 
 ## 8. Validate
 
 ```bash
 sudo systemctl status ghosted-web --no-pager
+curl --fail http://127.0.0.1:3000/api/config
 curl -I https://your-domain.com
 curl -I https://your-domain.com/api/config
 curl -I https://your-domain.com/api/news
@@ -109,6 +127,8 @@ curl -I https://your-domain.com/api/auth/signin
 ```
 
 If `/api/auth/signin` fails to render the Auth.js sign-in page, verify that `AUTH_SECRET`, `AUTH_URL`, `DISCORD_CLIENT_ID`, and `DISCORD_CLIENT_SECRET` are all set for the web service and that the Discord app redirect URI exactly matches `https://your-domain.com/api/auth/callback/discord`.
+
+If a manual `npm run build` behaves differently from the release script, make sure you loaded `/etc/ghosted/ghosted.env` first. Builds without that env file can fall back to `./data/ghosted.db` instead of `DATABASE_PATH=/var/lib/ghosted/ghosted.db`.
 
 ## 9. Backups
 

@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   title: { template: '%s | Ghosted Admin', default: 'Admin' },
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const currentUser = await getCurrentUser();
   if (!currentUser?.is_admin) {
