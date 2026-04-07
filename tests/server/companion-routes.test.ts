@@ -190,8 +190,8 @@ describe('companion route handlers', () => {
     expect(successPayload.base.assetPath).toContain('ghostling-base-body.png');
     expect(successPayload.base.bodyAssetPath).toContain('ghostling-base-body.png');
     expect(successPayload.base.headAssetPath).toContain('ghostling-base-head.png');
-    expect(successPayload.base.renderManifest.width).toBe(32);
-    expect(successPayload.base.renderManifest.height).toBe(32);
+    expect(successPayload.base.renderManifest.width).toBe(70);
+    expect(successPayload.base.renderManifest.height).toBe(70);
     expect(successPayload.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
 
     const memberId = insertUser(context.db, { username: 'member', globalName: 'Member' });

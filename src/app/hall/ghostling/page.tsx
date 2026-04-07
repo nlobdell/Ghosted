@@ -239,13 +239,17 @@ export default function CompanionPage() {
               </div>
             </div>
             <div className={styles.heroStage}>
+              <div className={styles.heroStageLabel}>
+                <span>Live animated render</span>
+                <span>{companion.equippedCount}/4 slots equipped</span>
+              </div>
               <div className={styles.avatarFrame}>
                 <AnimatedCompanionStage
                   manifest={companion.renderManifest}
                   fallbackSrc={companion.animatedRenderUrl}
                   alt={`${companion.user.displayName}'s Ghostling`}
                   className={styles.avatarImage}
-                  targetSize={240}
+                  targetSize={304}
                 />
               </div>
               <div className={styles.stageMeta}>
@@ -266,42 +270,57 @@ export default function CompanionPage() {
             ]}
           />
 
-          <AppGrid>
+          <AppGrid className={styles.studioGrid}>
             <Panel
               className={styles.studioPanel}
               tier="primary"
               title="Equip your current Ghostling"
               body={(
                 <div className={styles.studioBody}>
-                  <div className={styles.previewSurface}>
-                    <AnimatedCompanionStage
-                      manifest={companion.renderManifest}
-                      fallbackSrc={companion.animatedRenderUrl}
-                      alt="Equipped Ghostling preview"
-                      className={styles.previewImage}
-                      targetSize={272}
-                    />
+                  <div className={styles.previewColumn}>
+                    <div className={styles.previewIntro}>
+                      <p className="kicker">Live preview</p>
+                      <div className={styles.previewHeading}>
+                        <strong>{companion.user.displayName}&apos;s equipped loadout</strong>
+                        <span>Swap owned pieces on the right and this stage updates immediately.</span>
+                      </div>
+                    </div>
+                    <div className={styles.previewSurface}>
+                      <AnimatedCompanionStage
+                        manifest={companion.renderManifest}
+                        fallbackSrc={companion.animatedRenderUrl}
+                        alt="Equipped Ghostling preview"
+                        className={styles.previewImage}
+                        targetSize={352}
+                      />
+                    </div>
                   </div>
-                  <div className={styles.slotList}>
-                    {companion.slots.map((slot) => (
-                      <label key={slot.key} className={styles.slotField}>
-                        <span>{slot.label}</span>
-                        <select
-                          className="input-base"
-                          value={slot.equippedSlug ?? ''}
-                          disabled={pendingKey === `equip:${slot.key}`}
-                          onChange={(event) => void handleEquip(slot.key, event.target.value)}
-                        >
-                          <option value="">Nothing equipped</option>
-                          {slot.ownedOptions.map((option) => (
-                            <option key={option.slug} value={option.slug}>
-                              {option.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ))}
-                  </div>
+                  <aside className={styles.controlRail}>
+                    <div className={styles.controlIntro}>
+                      <strong>Loadout controls</strong>
+                      <span>Pick from your owned cosmetics for each slot and keep the stage focused while you tune the look.</span>
+                    </div>
+                    <div className={styles.slotList}>
+                      {companion.slots.map((slot) => (
+                        <label key={slot.key} className={styles.slotField}>
+                          <span>{slot.label}</span>
+                          <select
+                            className="input-base"
+                            value={slot.equippedSlug ?? ''}
+                            disabled={pendingKey === `equip:${slot.key}`}
+                            onChange={(event) => void handleEquip(slot.key, event.target.value)}
+                          >
+                            <option value="">Nothing equipped</option>
+                            {slot.ownedOptions.map((option) => (
+                              <option key={option.slug} value={option.slug}>
+                                {option.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                  </aside>
                 </div>
               )}
             />
