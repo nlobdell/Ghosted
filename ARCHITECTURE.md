@@ -7,8 +7,10 @@ Ghosted is now a single-service Next.js web app:
 - **Next.js (React 19 + App Router)** serves the UI and all `/api/*` routes on port `3000`
 - **SQLite** stores users, sessions, rewards, giveaways, WOM cache, casino history, and companion state
 - **Caddy** terminates TLS and reverse proxies public traffic to the Next.js web service
+- **Vitest** covers server modules and route contracts as the repository test runner
 
 There is no separate Python API process anymore.
+There is also no separate supported casino build pipeline; archived HTML under `legacy/` is reference-only.
 
 ## 2. Runtime Topology
 
@@ -34,6 +36,7 @@ Browser
 - [`deploy`](./deploy): service files, env example, and VPS notes
 - [`scripts`](./scripts): deploy helper, local dev process helpers, and workflow scripts
 - Companion uploads live in `COMPANION_ASSET_DIR` or, by default, beside `DATABASE_PATH`
+- [`legacy`](./legacy): archived pre-Next reference assets, not part of the live build or deploy path
 
 ## 4. Route Architecture
 
