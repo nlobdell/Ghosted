@@ -1,6 +1,5 @@
 .page,
 .storyGrid,
-.storySignal,
 .leadership,
 .leadershipIntro {
   display: grid;
@@ -12,38 +11,26 @@
 }
 
 .storyGrid {
-  grid-template-columns: minmax(0, 1.04fr) minmax(19rem, 0.96fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .storyCopy {
   display: grid;
   gap: 1rem;
-  max-width: 44rem;
 }
 
-.storySignal {
-  padding: 1rem;
-  border: 1px solid rgba(191, 179, 255, 0.08);
-  border-radius: 1.25rem;
-  background: rgba(255, 255, 255, 0.015);
-  align-content: start;
+.storyTitle {
+  font-size: clamp(3.1rem, 5.1vw, 5rem);
+  line-height: 0.9;
 }
 
-.storySignal :global(.app-chip) {
-  justify-self: start;
-}
-
-.signalNote {
-  margin: 0;
-  color: var(--color-text-muted);
-  line-height: 1.68;
-  max-width: 34ch;
+.leadershipTitle {
+  line-height: 0.94;
 }
 
 .leadershipIntro {
-  max-width: 50rem;
 }
 
 .card {
@@ -53,7 +40,8 @@
 }
 
 @media (max-width: 860px) {
-  .storyGrid {
-    grid-template-columns: 1fr;
+  .storyTitle,
+  .leadershipTitle {
+    max-width: none;
   }
 }
