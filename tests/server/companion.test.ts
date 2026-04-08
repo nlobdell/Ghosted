@@ -63,10 +63,20 @@ describe('companion server module', () => {
     expect(payload.baseAssetUrl).toContain('ghostling-base-body.png');
     expect(payload.renderManifest.width).toBe(70);
     expect(payload.renderManifest.height).toBe(70);
-    expect(payload.renderManifest.layers[0]?.src).toContain('ghostling-base-body.png');
+    expect(payload.renderManifest.layers.map((layer) => layer.role)).toEqual([
+      'base-right-hand',
+      'base-body',
+      'base-left-hand',
+      'base-head',
+    ]);
+    expect(payload.renderManifest.layers[0]?.src).toContain('ghostling-base-right-hand.png');
+    expect(payload.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-left-hand.png'))).toBe(true);
+    expect(payload.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-body.png'))).toBe(true);
     expect(payload.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
     expect(hallSummary.renderManifest.width).toBe(70);
     expect(hallSummary.renderManifest.height).toBe(70);
+    expect(hallSummary.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-right-hand.png'))).toBe(true);
+    expect(hallSummary.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-left-hand.png'))).toBe(true);
     expect(hallSummary.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
   });
 
