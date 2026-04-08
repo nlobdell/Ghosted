@@ -50,6 +50,7 @@ Local env files:
   - `ENABLE_DEV_AUTH=true` to enable `/auth/dev-login`
   - `AUTH_SECRET` is optional locally; if unset, development uses a built-in fallback secret
   - `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` for real Discord sign-in
+  - `DISCORD_REDIRECT_URI` if you want Discord OAuth to use one fixed registered callback URI
   - `DISCORD_GUILD_ID` and `DISCORD_BOT_TOKEN` for live Discord role sync
   - `WOM_GROUP_ID` for clan/WOM endpoints
   - `DATABASE_PATH` and `COMPANION_ASSET_DIR` if you want to override the local defaults

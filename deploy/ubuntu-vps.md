@@ -51,6 +51,7 @@ At minimum:
 - `AUTH_URL=https://your-domain.com`
 - `DISCORD_CLIENT_ID=<discord app client id>`
 - `DISCORD_CLIENT_SECRET=<discord app client secret>`
+- `DISCORD_REDIRECT_URI=https://your-domain.com/api/auth/callback/discord`
 
 Discord application settings must include this redirect URI for browser sign-in:
 
