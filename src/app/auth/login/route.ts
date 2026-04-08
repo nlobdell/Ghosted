@@ -1,9 +1,12 @@
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { isDiscordAuthConfigured } from '@/lib/auth/server-config';
+import { getDiscordRedirectUri, isDiscordAuthConfigured } from '@/lib/auth/server-config';
+import { normalizeLocalPath } from '@/lib/server/core';
 
 function getPublicOrigin(requestUrl: URL, forwardedHeaders: Headers) {
-  const configuredOrigin = process.env.AUTH_URL?.trim() || process.env.PUBLIC_BASE_URL?.trim();
+  const configuredOrigin = process.env.AUTH_URL?.trim()
+    || process.env.PUBLIC_BASE_URL?.trim()
+    || getDiscordRedirectUri()?.origin;
   if (configuredOrigin) {
     return configuredOrigin.replace(/\/+$/, '');
   }
@@ -22,7 +25,7 @@ export async function GET(request: Request) {
   const devAuthEnabled = process.env.ENABLE_DEV_AUTH === 'true';
   const headerStore = await headers();
   const origin = getPublicOrigin(url, headerStore);
-  const nextPath = url.searchParams.get('next') ?? '/hall/';
+  const nextPath = normalizeLocalPath(url.searchParams.get('next') ?? '/hall/');
 
   if (devAuthEnabled) {
     const destination = new URL('/auth/dev-login', origin);
@@ -39,7 +42,7 @@ export async function GET(request: Request) {
     });
   }
 
-  const destination = new URL('/api/auth/signin', origin);
-  destination.searchParams.set('callbackUrl', new URL(nextPath, origin).toString());
+  const destination = new URL('/api/auth/signin/discord', origin);
+  destination.searchParams.set('callbackUrl', nextPath);
   return NextResponse.redirect(destination);
 }

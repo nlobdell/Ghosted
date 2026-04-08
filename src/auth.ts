@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth';
 import Discord from 'next-auth/providers/discord';
 import { enrichSessionUser, getLegacyUserById, upsertLegacyUserFromDiscord } from '@/lib/auth/legacy-user';
-import { getAuthSecret, isDiscordAuthConfigured } from '@/lib/auth/config';
+import { getAuthSecret, getDiscordRedirectProxyUrl, isDiscordAuthConfigured } from '@/lib/auth/config';
 
 type DiscordIdentityProfile = {
   id: string;
@@ -22,6 +22,7 @@ export const { handlers, auth } = NextAuth({
       Discord({
         clientId: process.env.DISCORD_CLIENT_ID!.trim(),
         clientSecret: process.env.DISCORD_CLIENT_SECRET!.trim(),
+        redirectProxyUrl: getDiscordRedirectProxyUrl(),
         authorization: {
           params: {
             scope: 'identify',

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getAuthSecret } from '@/lib/auth/config';
+import { getAuthSecret, getDiscordRedirectProxyUrl } from '@/lib/auth/config';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -25,5 +25,19 @@ describe('getAuthSecret', () => {
     vi.stubEnv('AUTH_SECRET', '');
 
     expect(getAuthSecret()).toBeUndefined();
+  });
+});
+
+describe('getDiscordRedirectProxyUrl', () => {
+  it('derives the Auth.js redirect proxy base from the registered Discord callback', () => {
+    vi.stubEnv('DISCORD_REDIRECT_URI', 'https://ghosted.smirkhub.com/api/auth/callback/discord');
+
+    expect(getDiscordRedirectProxyUrl()).toBe('https://ghosted.smirkhub.com/api/auth');
+  });
+
+  it('ignores callback env values that are not Discord callback paths', () => {
+    vi.stubEnv('DISCORD_REDIRECT_URI', 'https://ghosted.smirkhub.com/oauth/discord');
+
+    expect(getDiscordRedirectProxyUrl()).toBeUndefined();
   });
 });
