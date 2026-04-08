@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     });
   }
 
-  const destination = new URL('/api/auth/signin/discord', origin);
+  const destination = new URL('/api/auth/signin', origin);
   destination.searchParams.set('callbackUrl', nextPath);
   return NextResponse.redirect(destination);
 }

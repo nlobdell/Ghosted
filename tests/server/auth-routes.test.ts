@@ -21,7 +21,7 @@ describe('auth login route', () => {
     vi.restoreAllMocks();
   });
 
-  it('redirects straight to the Discord provider endpoint on the configured public origin', async () => {
+  it('redirects to the supported Auth.js sign-in entrypoint on the configured public origin', async () => {
     vi.stubEnv('ENABLE_DEV_AUTH', 'false');
     vi.stubEnv('DISCORD_CLIENT_ID', 'discord-client-id');
     vi.stubEnv('DISCORD_CLIENT_SECRET', 'discord-client-secret');
@@ -33,7 +33,7 @@ describe('auth login route', () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe(
-      'https://ghosted.smirkhub.com/api/auth/signin/discord?callbackUrl=%2Fhall%2Fprofile%2F',
+      'https://ghosted.smirkhub.com/api/auth/signin?callbackUrl=%2Fhall%2Fprofile%2F',
     );
   });
 
@@ -48,7 +48,7 @@ describe('auth login route', () => {
     );
 
     expect(response.headers.get('location')).toBe(
-      'https://ghosted.smirkhub.com/api/auth/signin/discord?callbackUrl=%2F',
+      'https://ghosted.smirkhub.com/api/auth/signin?callbackUrl=%2F',
     );
   });
 });
