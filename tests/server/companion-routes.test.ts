@@ -192,6 +192,14 @@ describe('companion route handlers', () => {
     expect(successPayload.base.headAssetPath).toContain('ghostling-base-head.png');
     expect(successPayload.base.renderManifest.width).toBe(70);
     expect(successPayload.base.renderManifest.height).toBe(70);
+    expect(successPayload.base.renderManifest.layers.map((layer: { role: string }) => layer.role)).toEqual([
+      'base-right-hand',
+      'base-body',
+      'base-left-hand',
+      'base-head',
+    ]);
+    expect(successPayload.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('ghostling-base-right-hand.png'))).toBe(true);
+    expect(successPayload.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('ghostling-base-left-hand.png'))).toBe(true);
     expect(successPayload.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
 
     const memberId = insertUser(context.db, { username: 'member', globalName: 'Member' });
@@ -222,6 +230,8 @@ describe('companion route handlers', () => {
     expect(payload.library.base.assetPath).toContain('uploads/base/');
     expect(payload.library.base.bodyAssetPath).toContain('uploads/base/');
     expect(payload.library.base.headAssetPath).toContain('ghostling-base-head.png');
+    expect(payload.library.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('ghostling-base-right-hand.png'))).toBe(true);
+    expect(payload.library.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('ghostling-base-left-hand.png'))).toBe(true);
     expect(payload.library.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
     expect(payload.companion.baseAssetUrl).toContain('uploads/base/');
   });
@@ -255,6 +265,8 @@ describe('companion route handlers', () => {
     expect(layeredPayload.library.base.headAssetPath).toContain('uploads/base/');
     expect(layeredPayload.library.base.headAssetUrl).toContain('uploads/base/');
     expect(layeredPayload.library.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('uploads/base/'))).toBe(true);
+    expect(layeredPayload.library.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('ghostling-base-right-hand.png'))).toBe(true);
+    expect(layeredPayload.library.base.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('ghostling-base-left-hand.png'))).toBe(true);
   });
 
   it('creates a custom companion item from multipart uploads', async () => {

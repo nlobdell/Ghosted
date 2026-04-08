@@ -165,13 +165,13 @@ describe('companion render and dev-login routes', () => {
     const staticPayload = await staticResponse.text();
     expect(staticResponse.status).toBe(200);
     expect(staticPayload).toContain('data:image/svg+xml;base64');
-    expect(staticPayload).toContain('data:image/png;base64');
+    expect(staticPayload.match(/data:image\/png;base64/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
 
     const animatedResponse = await getCompanionAnimatedRenderRoute(new Request('http://localhost/api/companion/render-animated?base=1'));
     const animatedPayload = await animatedResponse.text();
     expect(animatedResponse.status).toBe(200);
     expect(animatedPayload).toContain('data:image/svg+xml;base64');
-    expect(animatedPayload).toContain('data:image/png;base64');
+    expect(animatedPayload.match(/data:image\/png;base64/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
   });
 
   it('uses explicit head overrides instead of the default head fallback when both base layers are uploaded', async () => {
@@ -193,13 +193,13 @@ describe('companion render and dev-login routes', () => {
     const staticPayload = await staticResponse.text();
     expect(staticResponse.status).toBe(200);
     expect(staticPayload.match(/data:image\/svg\+xml;base64/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
-    expect(staticPayload).not.toContain('data:image/png;base64');
+    expect(staticPayload.match(/data:image\/png;base64/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
 
     const animatedResponse = await getCompanionAnimatedRenderRoute(new Request('http://localhost/api/companion/render-animated?base=1'));
     const animatedPayload = await animatedResponse.text();
     expect(animatedResponse.status).toBe(200);
     expect(animatedPayload.match(/data:image\/svg\+xml;base64/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
-    expect(animatedPayload).not.toContain('data:image/png;base64');
+    expect(animatedPayload.match(/data:image\/png;base64/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
   });
 
   it('renders companion SVGs by both internal user id and Discord id', async () => {

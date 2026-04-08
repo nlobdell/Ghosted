@@ -3,11 +3,25 @@
   "height": 210,
   "layers": [
     {
+      "key": "base-right-hand",
+      "role": "base-right-hand",
+      "relativePath": "repo/defaults/base/ghostling-base-right-hand.png",
+      "motionGroup": "body",
+      "zIndex": 15
+    },
+    {
       "key": "base-body",
       "role": "base-body",
       "relativePath": "repo/defaults/base/ghostling-base-body.png",
       "motionGroup": "body",
       "zIndex": 20
+    },
+    {
+      "key": "base-left-hand",
+      "role": "base-left-hand",
+      "relativePath": "repo/defaults/base/ghostling-base-left-hand.png",
+      "motionGroup": "body",
+      "zIndex": 30
     },
     {
       "key": "base-head",
