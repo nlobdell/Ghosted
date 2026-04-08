@@ -5,10 +5,10 @@
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(23rem, 0.98fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
   gap: clamp(1.2rem, 2vw, 1.7rem);
-  min-height: clamp(24rem, 54svh, 34rem);
+  min-height: clamp(18rem, 36svh, 24rem);
   padding: clamp(1.35rem, 2vw, 1.9rem);
   border: 1px solid rgba(191, 179, 255, 0.12);
   border-radius: 1.85rem;
@@ -18,66 +18,51 @@
 }
 
 .heroCopy,
-.heroStage,
+.heroActions,
 .studioBody,
 .previewColumn,
 .shareBody,
 .slotList,
 .shareList,
 .shopSection,
-.adminSection,
 .slotGroups,
 .slotGroup,
 .itemGrid,
 .itemCard,
-.itemCopy,
-.libraryGrid,
-.libraryCard,
-.libraryCopy,
-.assetMetaList {
+.itemCopy {
   display: grid;
   gap: 1rem;
 }
 
 .heroCopy {
-  align-content: center;
+  align-content: start;
   gap: 1rem;
-  max-width: 42rem;
 }
 
 .heroTitle {
-  font-size: clamp(2.9rem, 5vw, 4.8rem);
-  line-height: 0.86;
+  font-size: clamp(2.65rem, 4.2vw, 4.25rem);
+  line-height: 0.9;
 }
 
 .heroText {
   margin: 0;
-  max-width: 58ch;
   color: var(--color-text-muted);
   line-height: 1.76;
 }
 
-.heroStage,
-.avatarFrame,
-.cardPreview,
+.heroActions {
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  gap: 0.75rem;
+  align-items: start;
+}
+
 .previewSurface,
-.itemPreview,
-.libraryPreview {
+.cardPreview,
+.itemPreview {
   display: grid;
   place-items: center;
 }
 
-.heroStage {
-  gap: 1rem;
-  align-content: stretch;
-  padding: clamp(1rem, 1.8vw, 1.35rem);
-  border-radius: 1.6rem;
-  background:
-    linear-gradient(180deg, rgba(10, 9, 16, 0.78), rgba(14, 12, 21, 0.74));
-  border: 1px solid rgba(191, 179, 255, 0.1);
-}
-
-.heroStageLabel,
 .shareActions {
   display: inline-flex;
   align-items: center;
@@ -89,19 +74,8 @@
   justify-content: flex-end;
 }
 
-.heroStageLabel {
-  justify-content: space-between;
-  color: var(--color-text-soft);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.avatarFrame,
 .previewSurface,
-.itemPreview,
-.libraryPreview {
+.itemPreview {
   width: 100%;
   min-height: 15rem;
   padding: 1rem;
@@ -110,19 +84,10 @@
   background:
     radial-gradient(circle at 50% 55%, rgba(184, 168, 255, 0.2), transparent 24%),
     linear-gradient(180deg, rgba(8, 7, 14, 0.94), rgba(14, 12, 22, 0.96));
-}
-
-.avatarFrame {
-  min-height: clamp(19rem, 34vw, 24rem);
-  padding: clamp(1.15rem, 2.2vw, 1.75rem);
-}
-
-.previewSurface {
   min-height: clamp(25rem, 52vw, 34rem);
   padding: clamp(1.35rem, 2.6vw, 2.2rem);
 }
 
-.avatarImage,
 .previewImage {
   display: grid;
   place-items: center;
@@ -132,7 +97,7 @@
 }
 
 .itemPreviewImage,
-.libraryPreviewImage {
+.itemPreviewImage {
   width: auto;
   height: auto;
   display: block;
@@ -143,21 +108,11 @@
   image-rendering: pixelated;
 }
 
-.stageMeta {
-  display: grid;
-  justify-items: center;
-  gap: 0.12rem;
-  color: var(--color-text-muted);
-}
-
-.stageMeta strong,
 .shareRow strong,
 .slotField span,
 .itemHeader strong,
 .itemFooter span,
-.itemState,
-.assetMetaBlock strong,
-.libraryHeader strong {
+.itemState {
   color: var(--color-text-strong);
 }
 
@@ -167,8 +122,18 @@
   gap: 1rem;
 }
 
+.scoreboard :global(.app-stat--lead),
+.scoreboard :global(.app-stat--secondary) {
+  background: rgba(14, 12, 23, 0.72);
+}
+
+.studioSection {
+  display: grid;
+  gap: var(--section-gap);
+}
+
 .studioGrid {
-  grid-template-columns: minmax(0, 1.52fr) minmax(18rem, 0.68fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(20rem, 0.8fr);
   align-items: start;
 }
 
@@ -177,13 +142,16 @@
   min-height: 100%;
 }
 
+.sharePanel {
+  background: rgba(13, 11, 22, 0.74);
+}
+
 .studioBody {
   grid-template-columns: 1fr;
   align-items: stretch;
-  gap: var(--section-gap);
+  gap: 1rem;
 }
 
-.previewColumn,
 .previewIntro,
 .previewHeading,
 .controlRail,
@@ -193,6 +161,7 @@
 
 .previewColumn {
   gap: 1rem;
+  min-width: 0;
 }
 
 .previewIntro,
@@ -206,6 +175,7 @@
 .controlIntro strong {
   color: var(--color-text-strong);
   font-size: clamp(1.05rem, 1.4vw, 1.26rem);
+  line-height: 1.2;
 }
 
 .previewHeading span,
@@ -233,6 +203,7 @@
 .slotField {
   display: grid;
   gap: 0.45rem;
+  min-width: 0;
 }
 
 .slotField :global(.input-base) {
@@ -269,6 +240,12 @@
   gap: 0.7rem;
 }
 
+.sharePrelude {
+  margin: 0;
+  color: var(--color-text-soft);
+  line-height: 1.66;
+}
+
 .shareRow {
   display: flex;
   align-items: center;
@@ -285,13 +262,11 @@
 .shareRow div {
   display: grid;
   gap: 0.16rem;
+  min-width: 0;
 }
 
 .shareRow span,
 .slotHeading span,
-.assetMetaBlock span,
-.assetMetaList span,
-.libraryCopy p,
 .itemCopy p {
   color: var(--color-text-muted);
 }
@@ -301,8 +276,7 @@
   word-break: break-all;
 }
 
-.slotGroups,
-.adminSection {
+.slotGroups {
   gap: var(--section-gap);
 }
 
@@ -315,12 +289,12 @@
 
 .slotHeading,
 .itemHeader,
-.itemFooter,
-.libraryHeader {
+.itemFooter {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .itemChips {
@@ -338,25 +312,24 @@
 
 .itemGrid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
 }
 
-.itemCard,
-.libraryCard {
+.itemCard {
   padding: calc(var(--surface-padding) - 0.1rem);
   border-radius: 1.15rem;
   border: 1px solid rgba(191, 179, 255, 0.1);
   background: rgba(18, 15, 29, 0.8);
+  align-content: start;
 }
 
-.itemPreview,
-.libraryPreview {
+.itemPreview {
   min-height: 0;
   aspect-ratio: 1;
   overflow: hidden;
 }
 
-.itemCopy p,
-.libraryCopy p {
+.itemCopy p {
   margin: 0;
   line-height: 1.62;
 }
@@ -364,37 +337,6 @@
 .itemState {
   font-size: 0.8rem;
   color: #ddceff;
-}
-
-.assetMetaBlock {
-  display: grid;
-  gap: 0.22rem;
-  padding: 0.9rem 0.96rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(191, 179, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.assetMetaBlock span,
-.assetMetaList span {
-  font-size: 0.8rem;
-  word-break: break-word;
-}
-
-.adminPanel {
-  min-height: 100%;
-}
-
-.libraryGrid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.libraryPreviewImage {
-  width: min(8rem, 100%);
-}
-
-.assetMetaList {
-  gap: 0.3rem;
 }
 
 @media (max-width: 1280px) {
@@ -409,7 +351,7 @@
 
 @media (max-width: 1120px) {
   .hero,
-  .libraryGrid,
+  .heroActions,
   .scoreboard,
   .scoreboard :global(.app-summary-grid__secondary) {
     grid-template-columns: 1fr;
@@ -427,12 +369,10 @@
     min-height: 0;
   }
 
-  .heroStageLabel,
   .shareRow,
   .slotHeading,
   .itemHeader,
-  .itemFooter,
-  .libraryHeader {
+  .itemFooter {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -445,11 +385,8 @@
     grid-template-columns: 1fr;
   }
 
-  .avatarFrame {
-    min-height: 16rem;
-  }
-
   .previewSurface {
     min-height: 21rem;
   }
+
 }

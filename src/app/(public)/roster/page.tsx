@@ -44,36 +44,60 @@ export default async function RosterPage({
   const requestedPage = Number(params.page ?? '1');
   const currentPage = clampPage(Number.isFinite(requestedPage) ? requestedPage : 1, totalPages);
   const pageMembers = allMembers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const leadMember = allMembers[0] ?? null;
 
   return (
     <main id="main-content" className={`page-shell editorial-page ${styles.page}`}>
       <section className={`editorial-surface editorial-stack ${styles.header}`}>
-        <p className="kicker">Public roster</p>
-        <h1>Ghosted member directory</h1>
-        <p className="editorial-copy">
-          A public snapshot of the Ghosted clan pulse, anchored by Wise Old Man data and arranged as a fast-scanning
-          member grid before you ever enter the Hall.
-        </p>
-        <div className="app-inline-actions">
-          <Link href="/hall/clan/" className="button">Open Hall clan view</Link>
-          <a href={GHOSTED_CONTENT.links.discord} className="button button--secondary" target="_blank" rel="noopener noreferrer">
-            Join Discord
-          </a>
+        <div className={styles.headerGrid}>
+          <div className={styles.headerCopy}>
+            <p className="kicker">Public roster</p>
+            <h1>Read Ghosted through the public roster before you step inside the Hall.</h1>
+            <p className="editorial-copy">
+              This roster shows Wise Old Man-verified membership, visible rank order, and who is carrying Ghosted right now.
+            </p>
+            <div className="app-inline-actions">
+              <Link href="/hall/clan/" className="button">Open clan health in the Hall</Link>
+              <a href={GHOSTED_CONTENT.links.discord} className="button button--secondary" target="_blank" rel="noopener noreferrer">
+                Join Discord
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 
       <section className={styles.filters}>
         <div className={styles.filtersSummary}>
+          <p className="kicker">Roster view</p>
+          <h2>Sort the roster without losing the clan pulse.</h2>
           <div className={styles.filterChipRow}>
-            <span className="app-chip">Verified group {GHOSTED_CONTENT.wom.groupId}</span>
             <span className="app-chip">{memberCount} clan members</span>
             <span className="app-chip">Showing {allMembers.length} public roster entries</span>
           </div>
           <span className={`app-chip ${styles.activeSortChip}`}>
-            Sorted by {sortLabel} in {directionLabel.toLowerCase()} order
+            Sorted by {sortLabel} in {directionLabel.toLowerCase()} order | page {currentPage} of {totalPages}
           </span>
         </div>
-        <RosterSortForm sortKey={sortKey} direction={direction} />
+        <div className={styles.filterTools}>
+          <aside className={styles.pulsePanel} aria-label="Roster summary">
+            <span className="app-chip">Wise Old Man group {GHOSTED_CONTENT.wom.groupId}</span>
+            <div className={styles.pulseList}>
+              <div className={styles.pulseRow}>
+                <span>Lead visible</span>
+                <strong>{leadMember?.player.displayName || leadMember?.player.username || 'Ghosted member'}</strong>
+              </div>
+              <div className={styles.pulseRow}>
+                <span>Tracked members</span>
+                <strong>{memberCount}</strong>
+              </div>
+              <div className={styles.pulseRow}>
+                <span>Home world</span>
+                <strong>{GHOSTED_CONTENT.wom.homeworld}</strong>
+              </div>
+            </div>
+          </aside>
+          <RosterSortForm sortKey={sortKey} direction={direction} />
+        </div>
       </section>
 
       <section className={styles.grid}>

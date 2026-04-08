@@ -331,10 +331,17 @@ export interface WomPlayer {
 export interface LeaderboardEntry {
   player: WomPlayer;
   rank?: number;
+  metric?: string;
   value?: number;
+  displayValue?: number;
   gained?: number;
+  valueKind?: 'level' | 'kills' | 'score' | 'computed' | 'gained';
+  experience?: number;
+  level?: number;
+  score?: number;
   raw?: Record<string, unknown>;
   progress?: { gained: number; start?: number; end?: number };
+  updatedAt?: string;
 }
 
 export interface WomRosterEntry {
@@ -394,6 +401,11 @@ export interface ClanData {
     period?: string;
     entries: LeaderboardEntry[];
   };
+  skillOfTheWeek?: {
+    competition: Competition;
+    mode: 'active' | 'latest_finished';
+    standings: LeaderboardEntry[];
+  } | null;
   recentAchievements: AchievementItem[];
   recentActivity: ActivityItem[];
 }
@@ -435,12 +447,18 @@ export interface WomMeData {
 export interface Competition {
   id: number;
   title: string;
+  displayTitle?: string;
   metric: string;
   type: string;
   status: string;
   startsAt?: string;
   endsAt?: string;
+  groupId?: number;
+  score?: number;
+  participantCount?: number;
+  series?: 'skill_of_the_week' | 'competition';
   participants?: LeaderboardEntry[];
+  raw?: Record<string, unknown>;
 }
 
 export interface WomEntriesResponse {

@@ -8,6 +8,7 @@ const DEFAULT_WOM_API_BASE = 'https://api.wiseoldman.net/v2';
 const DEFAULT_WOM_CACHE_TTL_SECONDS = 900;
 export const DEFAULT_WOM_PERIOD = 'week';
 export const DEFAULT_WOM_HISCORE_METRIC = 'overall';
+const SKILL_OF_THE_WEEK_PATTERN = /\b(skill of the week|sotw)\b/i;
 
 type GameAccountRow = {
   id: number;
@@ -43,6 +44,11 @@ function asArrayOfRecords(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is Record<string, unknown> => Boolean(entry && typeof entry === 'object'))
     : [];
+}
+
+function asNumber(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number.parseFloat(String(value ?? ''));
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function playerSummary(player: unknown) {
@@ -339,10 +345,27 @@ function normalizeWomMembership(groupId: number | undefined, memberships: Array<
   return null;
 }
 
-function normalizeGroupHiscores(entries: Array<Record<string, unknown>>) {
+function normalizeGroupHiscores(
+  entries: Array<Record<string, unknown>>,
+  metric = DEFAULT_WOM_HISCORE_METRIC,
+) {
   return entries.map((entry, index) => {
     const player = asRecord(entry.player);
     const data = asRecord(entry.data);
+    const level = asNumber(data.level);
+    const experience = asNumber(data.experience);
+    const kills = asNumber(data.kills);
+    const score = asNumber(data.score);
+    const computedValue = asNumber(data.value);
+    const valueKind = level !== undefined
+      ? 'level'
+      : kills !== undefined
+        ? 'kills'
+        : score !== undefined
+          ? 'score'
+          : 'computed';
+    const displayValue = level ?? kills ?? score ?? computedValue ?? 0;
+
     return {
       rank: Number(data.rank ?? index + 1),
       player: {
@@ -350,16 +373,29 @@ function normalizeGroupHiscores(entries: Array<Record<string, unknown>>) {
         username: String(player.username ?? ''),
         displayName: String(player.displayName ?? player.username ?? ''),
       },
-      value: data.experience ?? data.kills ?? data.score ?? data.value ?? 0,
+      value: displayValue,
+      displayValue,
+      metric,
+      valueKind,
+      experience,
+      level,
+      score,
       raw: data,
     };
   });
 }
 
-function normalizeGroupGains(entries: Array<Record<string, unknown>>) {
+function normalizeGroupGains(
+  entries: Array<Record<string, unknown>>,
+  metric = DEFAULT_WOM_HISCORE_METRIC,
+) {
   return entries.map((entry, index) => {
     const player = asRecord(entry.player);
     const data = asRecord(entry.data);
+    const gained = asNumber(data.gained ?? entry.gained) ?? 0;
+    const start = asNumber(data.start ?? entry.start);
+    const end = asNumber(data.end ?? entry.end);
+
     return {
       rank: index + 1,
       player: {
@@ -367,7 +403,16 @@ function normalizeGroupGains(entries: Array<Record<string, unknown>>) {
         username: String(player.username ?? ''),
         displayName: String(player.displayName ?? player.username ?? ''),
       },
-      gained: data.gained ?? entry.gained ?? 0,
+      value: gained,
+      displayValue: gained,
+      gained,
+      metric,
+      valueKind: 'gained',
+      progress: {
+        start,
+        end,
+        gained,
+      },
       raw: entry,
     };
   });
@@ -447,6 +492,68 @@ function normalizeAchievements(entries: Array<Record<string, unknown>>) {
   }));
 }
 
+function competitionSeries(entry: Record<string, unknown>) {
+  const title = String(entry.title ?? '').trim();
+  if (!SKILL_OF_THE_WEEK_PATTERN.test(title)) {
+    return {
+      series: 'competition' as const,
+      displayTitle: title || 'Competition',
+    };
+  }
+
+  const titleWithoutSeries = title
+    .replace(SKILL_OF_THE_WEEK_PATTERN, '')
+    .replace(/[-:]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const metricLabel = humanizeIdentifier(entry.metric);
+  const baseLabel = metricLabel || humanizeIdentifier(titleWithoutSeries) || 'Skill';
+
+  return {
+    series: 'skill_of_the_week' as const,
+    displayTitle: `${baseLabel} Skill of the Week`,
+  };
+}
+
+function competitionSortTimestamp(entry: {
+  startsAt?: string;
+  endsAt?: string;
+}) {
+  return parseIso(entry.endsAt ?? entry.startsAt ?? null)?.getTime() ?? 0;
+}
+
+function selectSkillOfTheWeekCompetition<T extends {
+  series?: string;
+  status?: string;
+  startsAt?: string;
+  endsAt?: string;
+}>(competitions: T[]) {
+  const skillOfTheWeekCompetitions = competitions.filter((competition) => competition.series === 'skill_of_the_week');
+  if (!skillOfTheWeekCompetitions.length) return null;
+
+  const active = [...skillOfTheWeekCompetitions]
+    .filter((competition) => competition.status === 'ongoing')
+    .sort((left, right) => competitionSortTimestamp(right) - competitionSortTimestamp(left));
+  if (active[0]) {
+    return {
+      competition: active[0],
+      mode: 'active' as const,
+    };
+  }
+
+  const finished = [...skillOfTheWeekCompetitions]
+    .filter((competition) => competition.status === 'finished')
+    .sort((left, right) => competitionSortTimestamp(right) - competitionSortTimestamp(left));
+  if (finished[0]) {
+    return {
+      competition: finished[0],
+      mode: 'latest_finished' as const,
+    };
+  }
+
+  return null;
+}
+
 export function competitionStatus(startsAt?: string | null, endsAt?: string | null, now = utcNow()) {
   const starts = parseIso(startsAt);
   const ends = parseIso(endsAt);
@@ -456,40 +563,90 @@ export function competitionStatus(startsAt?: string | null, endsAt?: string | nu
 }
 
 function normalizeCompetitionItem(entry: Record<string, unknown>) {
+  const title = String(entry.title ?? '');
+  const { series, displayTitle } = competitionSeries(entry);
+  const participants = asArrayOfRecords(entry.participations ?? entry.participants);
+
   return {
     id: Number(entry.id ?? 0),
-    title: String(entry.title ?? ''),
+    title,
+    displayTitle,
     metric: String(entry.metric ?? ''),
     type: String(entry.type ?? ''),
     startsAt: typeof entry.startsAt === 'string' ? entry.startsAt : undefined,
     endsAt: typeof entry.endsAt === 'string' ? entry.endsAt : undefined,
-    groupId: typeof entry.groupId === 'number' ? entry.groupId : undefined,
-    score: typeof entry.score === 'number' ? entry.score : undefined,
+    groupId: asNumber(entry.groupId),
+    score: asNumber(entry.score),
     status: competitionStatus(
       typeof entry.startsAt === 'string' ? entry.startsAt : undefined,
       typeof entry.endsAt === 'string' ? entry.endsAt : undefined,
     ),
-    participantCount: Array.isArray(entry.participants) ? entry.participants.length : 0,
+    participantCount: asNumber(entry.participantCount) ?? participants.length,
+    series,
     raw: entry,
   };
 }
 
-function normalizeCompetitionParticipants(entries: Array<Record<string, unknown>>) {
-  return entries.map((entry, index) => {
+function normalizeCompetitionParticipants(
+  entries: Array<Record<string, unknown>>,
+  metric?: string,
+) {
+  const normalized = entries.map((entry) => {
     const player = asRecord(entry.player);
     const progress = asRecord(entry.progress);
+    const levels = asRecord(entry.levels);
+    const gained = asNumber(progress.gained ?? entry.gained) ?? 0;
+
     return {
-      rank: Number(entry.rank ?? index + 1),
+      rank: asNumber(entry.rank),
       player: playerSummary(player),
+      metric,
+      value: gained,
+      displayValue: gained,
+      gained,
+      valueKind: 'gained' as const,
       progress: {
-        start: progress.start,
-        end: progress.end,
-        gained: progress.gained ?? entry.gained ?? 0,
+        start: asNumber(progress.start ?? entry.start),
+        end: asNumber(progress.end ?? entry.end),
+        gained,
       },
-      updatedAt: entry.updatedAt ?? player.updatedAt,
+      updatedAt: typeof (entry.updatedAt ?? player.updatedAt) === 'string'
+        ? String(entry.updatedAt ?? player.updatedAt)
+        : undefined,
+      rawLevelsGained: asNumber(levels.gained),
       raw: entry,
     };
   });
+
+  normalized.sort((left, right) => {
+    if (left.rank !== undefined && right.rank !== undefined && left.rank !== right.rank) {
+      return left.rank - right.rank;
+    }
+    if (left.rank !== undefined && right.rank === undefined) return -1;
+    if (left.rank === undefined && right.rank !== undefined) return 1;
+
+    const gainedDifference = (right.progress?.gained ?? 0) - (left.progress?.gained ?? 0);
+    if (gainedDifference !== 0) return gainedDifference;
+
+    const levelsDifference = (right.rawLevelsGained ?? 0) - (left.rawLevelsGained ?? 0);
+    if (levelsDifference !== 0) return levelsDifference;
+
+    return String(left.player.displayName ?? left.player.username ?? '')
+      .localeCompare(String(right.player.displayName ?? right.player.username ?? ''), undefined, { sensitivity: 'base' });
+  });
+
+  return normalized.map((entry, index) => ({
+    rank: entry.rank ?? index + 1,
+    player: entry.player,
+    metric: entry.metric,
+    value: entry.value,
+    displayValue: entry.displayValue,
+    gained: entry.gained,
+    valueKind: entry.valueKind,
+    progress: entry.progress,
+    updatedAt: entry.updatedAt,
+    raw: entry.raw,
+  }));
 }
 
 function normalizeCompetitionHistory(entries: Array<Record<string, unknown>>) {
@@ -597,7 +754,7 @@ export async function hallClanSummaryPayload(db: Database, forceRefresh = false)
 
 export async function womClanPayload(db: Database, forceRefresh = false) {
   const groupId = requireWomGroupId();
-  const [groupValue, statisticsValue, achievementsValue, activityValue, hiscoresValue, gainsValue] = await Promise.all([
+  const [groupValue, statisticsValue, achievementsValue, activityValue, hiscoresValue, gainsValue, competitionsValue] = await Promise.all([
     womCachedJson(db, `/groups/${groupId}`, { forceRefresh }),
     womCachedJson(db, `/groups/${groupId}/statistics`, { forceRefresh }),
     womCachedJson(db, `/groups/${groupId}/achievements`, {
@@ -616,10 +773,43 @@ export async function womClanPayload(db: Database, forceRefresh = false) {
       query: { metric: DEFAULT_WOM_HISCORE_METRIC, period: DEFAULT_WOM_PERIOD, limit: 5 },
       forceRefresh,
     }),
+    womCachedJson(db, `/groups/${groupId}/competitions`, {
+      query: { limit: 25 },
+      forceRefresh,
+    }),
   ]);
 
   const group = asRecord(groupValue);
   const statistics = asRecord(statisticsValue);
+  const competitions = asArrayOfRecords(competitionsValue).map(normalizeCompetitionItem);
+  const skillOfTheWeekSelection = selectSkillOfTheWeekCompetition(competitions);
+  let skillOfTheWeek: {
+    competition: Record<string, unknown>;
+    mode: 'active' | 'latest_finished';
+    standings: ReturnType<typeof normalizeCompetitionParticipants>;
+  } | null = null;
+
+  if (skillOfTheWeekSelection) {
+    const competitionValue = asRecord(await womCachedJson(
+      db,
+      `/competitions/${Number(skillOfTheWeekSelection.competition.id ?? 0)}`,
+      { forceRefresh },
+    ));
+    const participantsValue = competitionValue.participations ?? competitionValue.participants;
+    const standings = normalizeCompetitionParticipants(
+      asArrayOfRecords(participantsValue),
+      String(competitionValue.metric ?? skillOfTheWeekSelection.competition.metric ?? ''),
+    );
+
+    skillOfTheWeek = {
+      competition: {
+        ...normalizeCompetitionItem(competitionValue),
+        participants: standings,
+      },
+      mode: skillOfTheWeekSelection.mode,
+      standings,
+    };
+  }
 
   return {
     group: {
@@ -646,13 +836,14 @@ export async function womClanPayload(db: Database, forceRefresh = false) {
     linkCoverage: groupLinkCoverage(db, group),
     featuredHiscores: {
       metric: DEFAULT_WOM_HISCORE_METRIC,
-      entries: normalizeGroupHiscores(asArrayOfRecords(hiscoresValue)),
+      entries: normalizeGroupHiscores(asArrayOfRecords(hiscoresValue), DEFAULT_WOM_HISCORE_METRIC),
     },
     featuredGains: {
       metric: DEFAULT_WOM_HISCORE_METRIC,
       period: DEFAULT_WOM_PERIOD,
-      entries: normalizeGroupGains(asArrayOfRecords(gainsValue)),
+      entries: normalizeGroupGains(asArrayOfRecords(gainsValue), DEFAULT_WOM_HISCORE_METRIC),
     },
+    skillOfTheWeek,
     recentAchievements: normalizeAchievements(asArrayOfRecords(achievementsValue)),
     recentActivity: normalizeGroupActivity(asArrayOfRecords(activityValue)),
   };
@@ -693,7 +884,7 @@ export async function womGroupHiscoresPayload(
 
   return {
     metric: metric || DEFAULT_WOM_HISCORE_METRIC,
-    entries: normalizeGroupHiscores(asArrayOfRecords(entries)),
+    entries: normalizeGroupHiscores(asArrayOfRecords(entries), metric || DEFAULT_WOM_HISCORE_METRIC),
   };
 }
 
@@ -713,7 +904,7 @@ export async function womGroupGainsPayload(
   return {
     metric: metric || DEFAULT_WOM_HISCORE_METRIC,
     period: period || DEFAULT_WOM_PERIOD,
-    entries: normalizeGroupGains(asArrayOfRecords(entries)),
+    entries: normalizeGroupGains(asArrayOfRecords(entries), metric || DEFAULT_WOM_HISCORE_METRIC),
   };
 }
 
@@ -781,10 +972,16 @@ export async function womCompetitionDetailPayload(db: Database, competitionId: n
   ]);
 
   const competition = asRecord(competitionValue);
+  const participantsValue = competition.participations ?? competition.participants;
+  const participants = normalizeCompetitionParticipants(
+    asArrayOfRecords(participantsValue),
+    String(competition.metric ?? ''),
+  );
+
   return {
     competition: {
       ...normalizeCompetitionItem(competition),
-      participants: normalizeCompetitionParticipants(asArrayOfRecords(competition.participants)),
+      participants,
     },
     topHistory: normalizeCompetitionHistory(asArrayOfRecords(topHistoryValue)),
   };

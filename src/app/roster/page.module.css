@@ -1,24 +1,79 @@
 .page {}
 
-.header {}
+.header,
+.headerGrid,
+.headerCopy,
+.filterTools,
+.pulsePanel,
+.pulseList,
+.filtersSummary {
+  display: grid;
+  gap: 1rem;
+}
+
+.headerGrid {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.headerCopy,
+.filtersSummary {
+  max-width: none;
+}
+
+.pulsePanel {
+  padding: 1rem;
+  border: 1px solid rgba(191, 179, 255, 0.08);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.pulseList {
+  gap: 0.7rem;
+}
+
+.pulseRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.pulseRow span {
+  color: var(--color-text-soft);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.pulseRow strong {
+  color: var(--color-text-strong);
+}
 
 .filters {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(18rem, auto);
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.96fr);
   align-items: start;
   gap: 1.1rem 1.25rem;
   padding: var(--surface-padding);
   border: 1px solid rgba(191, 179, 255, 0.12);
   border-radius: 1.6rem;
   background:
-    radial-gradient(circle at top left, rgba(184, 168, 255, 0.1), transparent 34%),
-    linear-gradient(180deg, rgba(16, 13, 25, 0.88), rgba(11, 10, 18, 0.74));
+    linear-gradient(180deg, rgba(15, 13, 23, 0.78), rgba(10, 9, 17, 0.68));
 }
 
 .filtersSummary {
-  display: grid;
   gap: 0.85rem;
   min-width: 0;
+  max-width: 46rem;
+}
+
+.filterTools {
+  align-content: start;
+  justify-self: end;
+  width: min(100%, 30rem);
+  gap: 0.9rem;
 }
 
 .filterChipRow {
@@ -30,15 +85,14 @@
 
 .sortForm {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: end;
-  justify-self: end;
   gap: 0.9rem;
-  width: min(100%, 34rem);
+  width: 100%;
   padding: 0.95rem 1rem;
-  border: 1px solid rgba(191, 179, 255, 0.12);
+  border: 1px solid rgba(191, 179, 255, 0.1);
   border-radius: 1.3rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.015);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
@@ -75,7 +129,11 @@
   text-transform: uppercase;
 }
 
-.grid {}
+.sortHint {
+  color: var(--color-text-soft);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
 
 .card,
 .stats,
@@ -92,6 +150,7 @@
 .card {
   gap: 0.55rem;
   padding: 1rem 0.95rem;
+  align-content: start;
 }
 
 .card p {
@@ -115,7 +174,7 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -168,7 +227,7 @@
 
 .stats div {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.28rem;
   min-width: 0;
 }
 
@@ -182,17 +241,11 @@
 .stats strong {
   color: var(--color-text-strong);
   font-size: 0.94rem;
+  line-height: 1.25;
 }
 
 @media (max-width: 1200px) {
-  .grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .filters {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
+  .filterTools,
   .sortForm {
     width: 100%;
     justify-self: stretch;
@@ -200,12 +253,16 @@
 }
 
 @media (max-width: 980px) {
-  .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .headerGrid {
+    grid-template-columns: 1fr;
   }
 
-  .sortForm {
-    grid-template-columns: minmax(0, 1fr);
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .sortActions {

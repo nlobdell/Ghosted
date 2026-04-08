@@ -24,26 +24,31 @@ export default async function NewsDetailPage({
 
   return (
     <main id="main-content" className={`page-shell editorial-page ${styles.newsShell}`}>
-        {!payload ? <Banner message="This update is unavailable right now." variant="error" /> : null}
+        {!payload ? <Banner message="This dispatch is unavailable right now." variant="error" /> : null}
 
         {post ? (
           <section className={styles.newsArticleShell}>
-            <aside className={styles.newsArticleMeta}>
-              <Link href="/news/" className="button button--secondary button--small">Back to news</Link>
-              <p className={styles.newsDetail__meta}>{formatDate(post.publishedAt ?? post.createdAt)}</p>
-              <p className={styles.newsDetail__meta}>by {post.authorDisplayName}</p>
-            </aside>
             <article className={styles.newsDetail}>
-              <p className={styles.newsDetail__eyebrow}>Clan dispatch</p>
+              <div className={styles.newsDetail__topbar}>
+                <Link href="/news/" className="button button--secondary button--small">Back to dispatches</Link>
+                <div className={styles.newsArticleMeta}>
+                  <p className={styles.newsDetail__meta}>{formatDate(post.publishedAt ?? post.createdAt)}</p>
+                  <p className={styles.newsDetail__meta}>by {post.authorDisplayName}</p>
+                </div>
+              </div>
+              <p className={styles.newsDetail__eyebrow}>Dispatch</p>
               <h1 className={styles.newsDetail__title}>{post.title}</h1>
               <p className={styles.newsDetail__excerpt}>{post.excerpt}</p>
               <div className={styles.newsDetail__body}>{renderParagraphs(post.body)}</div>
+              <div className={styles.newsDetail__footer}>
+                <Link href="/news/" className="button button--secondary button--small">Back to dispatches</Link>
+              </div>
             </article>
           </section>
         ) : (
           <EmptyState
-            message="This update no longer exists."
-            action={<Link href="/news/" className="button button--secondary button--small">Back to news</Link>}
+            message="This dispatch no longer exists."
+            action={<Link href="/news/" className="button button--secondary button--small">Back to dispatches</Link>}
           />
         )}
     </main>

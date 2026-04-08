@@ -3,29 +3,102 @@
   --workspace-page-accent: rgba(162, 133, 244, 0.34);
 }
 
-.page :global(.app-grid-two) {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.workbenchLayout,
+.workbenchPrimary,
+.workbenchSecondary,
+.workbenchSection,
+.workbenchVault,
+.workbenchSectionHeader,
+.consequenceSection {
+  display: grid;
   gap: 1rem;
 }
 
-.page :global(.admin-grant),
-.page :global(.admin-create),
-.page :global(.admin-news-create),
-.page :global(.admin-ghostling) {
+.workbenchLayout {
+  grid-template-columns: minmax(0, 1.08fr) minmax(19rem, 0.92fr);
+  align-items: start;
+  gap: 1.15rem;
+}
+
+.workbenchPrimary,
+.workbenchSecondary {
+  align-content: start;
+}
+
+.workbenchSection,
+.workbenchVault,
+.consequenceSection {
+  min-width: 0;
+  padding: 1.1rem 1.15rem;
+  border: 1px solid rgba(191, 179, 255, 0.1);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.workbenchSectionHeader {
+  align-content: start;
+  gap: 0.4rem;
+}
+
+.workbenchSectionHeader p,
+.workbenchVault p {
+  margin: 0;
+  max-width: 58ch;
+  color: var(--color-text-muted);
+  line-height: 1.65;
+}
+
+.workbenchVault {
+  align-content: start;
+  gap: 0.8rem;
+}
+
+.workbenchVault :global(.button) {
+  justify-self: start;
+}
+
+.consequenceSection :global(.app-metric-grid) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 0.9rem;
+}
+
+.secondaryGrid,
+.auditGrid,
+.page :global(.app-grid-two) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 1.1rem;
+}
+
+.page :global(.app-context__summary) {
+  max-width: 58ch;
+}
+
+.page :global(.admin-workbench) {
   border-left: 4px solid rgba(166, 131, 255, 0.5);
   background: rgba(19, 16, 32, 0.93);
 }
 
-.page :global(.admin-news-list),
 .page :global(.admin-sync),
-.page :global(.admin-health),
-.page :global(.admin-users),
-.page :global(.admin-giveaways) {
+.page :global(.admin-health) {
   background: rgba(14, 12, 22, 0.82);
 }
 
+.page :global(.admin-users),
+.page :global(.admin-giveaways),
+.page :global(.admin-news-list) {
+  background: rgba(11, 10, 18, 0.74);
+}
+
+.page :global(.admin-highlight) {
+  border-left: 4px solid rgba(166, 131, 255, 0.24);
+  background: rgba(16, 14, 27, 0.82);
+}
+
 .page :global(.admin-scoreboard) {
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  align-items: stretch;
   gap: 1rem;
 }
 
@@ -34,23 +107,55 @@
   gap: 0.9rem;
 }
 
-.page :global(.admin-highlight) {
-  background: rgba(19, 15, 31, 0.93);
-}
-
 .page :global(.admin-highlight .highlight-copy) {
-  max-width: 42rem;
+  max-width: 46rem;
 }
 
-.page :global(.admin-actions .app-form) {
-  gap: 1rem;
+.page :global(.admin-scoreboard .app-stat--lead),
+.page :global(.admin-scoreboard .app-stat--secondary) {
+  background: rgba(14, 12, 22, 0.74);
 }
 
-.page :global(.architecture-map) {
-  background: rgba(13, 11, 21, 0.84);
+.page :global(.admin-workbench .app-form),
+.page :global(.admin-news-list .app-feed),
+.page :global(.admin-users .app-table),
+.page :global(.admin-giveaways .app-table) {
+  min-width: 0;
+}
+
+.page :global(.admin-workbench .app-form) {
+  gap: 1.05rem;
+}
+
+.page :global(.app-form-field label) {
+  line-height: 1.4;
+}
+
+.page :global(.app-inline-actions) {
+  row-gap: 0.55rem;
+}
+
+.page :global(.admin-news-list .app-feed__item) {
+  gap: 0.6rem;
+}
+
+.page :global(.admin-news-list .app-feed__meta) {
+  max-width: none;
+  line-height: 1.62;
+}
+
+.page :global(.admin-users .app-table th),
+.page :global(.admin-users .app-table td),
+.page :global(.admin-giveaways .app-table th),
+.page :global(.admin-giveaways .app-table td) {
+  padding-top: 0.95rem;
+  padding-bottom: 0.95rem;
 }
 
 @media (max-width: 1100px) {
+  .workbenchLayout,
+  .secondaryGrid,
+  .auditGrid,
   .page :global(.app-grid-two),
   .page :global(.admin-scoreboard),
   .page :global(.admin-highlight) {
@@ -59,6 +164,7 @@
 }
 
 @media (max-width: 760px) {
+  .consequenceSection :global(.app-metric-grid),
   .page :global(.admin-scoreboard .app-summary-grid__secondary) {
     grid-template-columns: 1fr;
   }

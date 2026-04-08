@@ -3,14 +3,15 @@
   --workspace-page-accent: rgba(184, 147, 255, 0.34);
 }
 
-.page :global(.rewards-scoreboard) {
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+.activeSurface,
+.dropList,
+.dropCopy,
+.dropAction,
+.dropMeta,
+.archiveList,
+.archiveCopy {
+  display: grid;
   gap: 1rem;
-}
-
-.page :global(.rewards-scoreboard .app-summary-grid__secondary) {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.9rem;
 }
 
 .page :global(.rewards-balance) {
@@ -27,6 +28,15 @@
   gap: 1rem;
 }
 
+.lowerGrid {
+  grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr);
+}
+
+.page :global(.rewards-active) {
+  background: rgba(18, 15, 30, 0.92);
+  border-left: 4px solid rgba(184, 147, 255, 0.46);
+}
+
 .page :global(.rewards-drop) {
   background: rgba(18, 15, 30, 0.9);
 }
@@ -37,21 +47,102 @@
 }
 
 .page :global(.rewards-archive),
-.page :global(.rewards-empty),
 .page :global(.rewards-ledger) {
   background: rgba(14, 12, 22, 0.82);
 }
 
+.dropCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(191, 179, 255, 0.08);
+}
+
+.dropCard:first-child {
+  padding-top: 0;
+}
+
+.dropCard:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.dropHeader,
+.archiveHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.dropHeader strong,
+.archiveHeader strong {
+  color: var(--color-text-strong);
+}
+
+.dropDescription {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.68;
+  max-width: 62ch;
+}
+
+.dropMeta {
+  grid-template-columns: repeat(3, minmax(0, max-content));
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.dropMeta span,
+.archiveCopy span,
+.archiveDate {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.dropAction {
+  align-content: center;
+  justify-items: end;
+  gap: 0.55rem;
+  min-width: 12rem;
+  text-align: right;
+}
+
+.archiveList {
+  gap: 0.75rem;
+}
+
+.archiveRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  align-items: start;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(191, 179, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
 @media (max-width: 1080px) {
-  .page :global(.rewards-scoreboard),
-  .page :global(.app-grid-two) {
+  .page :global(.app-grid-two),
+  .lowerGrid,
+  .dropCard,
+  .archiveRow {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 760px) {
-  .page :global(.rewards-scoreboard .app-summary-grid__secondary),
-  .page :global(.rewards-drop .app-metric-grid) {
+  .page :global(.rewards-drop .app-metric-grid),
+  .dropMeta {
     grid-template-columns: 1fr;
+  }
+
+  .dropAction {
+    justify-items: start;
+    min-width: 0;
+    text-align: left;
   }
 }

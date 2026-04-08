@@ -213,50 +213,145 @@ export default function CompanionPage() {
         <>
           <section className={styles.hero}>
             <div className={styles.heroCopy}>
-              <p className="kicker">Hall center</p>
-              <h2 className={styles.heroTitle}>Your Ghostling is now the front door to Ghosted.</h2>
+              <p className="kicker">Ghostling studio</p>
+              <h1 className={styles.heroTitle}>Set the live Ghostling that represents you in the Hall.</h1>
               <p className={styles.heroText}>
-                Equip the live loadout, unlock cosmetics with the points you already earn, and keep a share-ready version of your Ghostling ready for Discord, bios, and anywhere else the hall shows up.
+                Pick the Ghostling that carries your name in the Hall. Equip your loadout first, then download share files once it looks right.
               </p>
-              <div className="app-inline-actions">
-                <button className="button button--secondary button--small" type="button" onClick={() => void downloadPng(companion.share.avatarUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-avatar.png`, 'Avatar PNG', 512, 512)}>
-                  Download avatar PNG
-                </button>
-                <button className="button button--secondary button--small" type="button" onClick={() => void downloadSvg(companion.share.animatedAvatarUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-avatar-animated.svg`, 'Animated avatar SVG')}>
-                  Download animated avatar
-                </button>
-                <button className="button button--secondary button--small" type="button" onClick={() => void downloadPng(companion.share.cardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-card.png`, 'Share card PNG', 480, 320)}>
-                  Download card PNG
-                </button>
-                <button className="button button--secondary button--small" type="button" onClick={() => void downloadSvg(companion.share.animatedCardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-card-animated.svg`, 'Animated card SVG')}>
-                  Download animated card
-                </button>
-                {companion.baseAssetUrl ? (
-                  <a href={companion.baseAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
-                    Open base asset
-                  </a>
-                ) : null}
+              <div className={styles.heroActions}>
+                <a href="#ghostling-studio" className="button button--small">Equip your loadout</a>
+                <a href="#ghostling-library" className="button button--secondary button--small">Browse unlocks</a>
               </div>
             </div>
-            <div className={styles.heroStage}>
-              <div className={styles.heroStageLabel}>
-                <span>Live animated render</span>
-                <span>{companion.equippedCount}/4 slots equipped</span>
-              </div>
-              <div className={styles.avatarFrame}>
-                <AnimatedCompanionStage
-                  manifest={companion.renderManifest}
-                  fallbackSrc={companion.animatedRenderUrl}
-                  alt={`${companion.user.displayName}'s Ghostling`}
-                  className={styles.avatarImage}
-                  targetSize={304}
-                />
-              </div>
-              <div className={styles.stageMeta}>
-                <strong>{companion.user.displayName}</strong>
-                <span>@{companion.user.username}</span>
-              </div>
-            </div>
+          </section>
+
+          <section id="ghostling-studio" className={styles.studioSection}>
+            <AppGrid className={styles.studioGrid}>
+              <Panel
+                className={styles.studioPanel}
+                tier="primary"
+                title="Equip your live Ghostling"
+                body={(
+                  <div className={styles.studioBody}>
+                    <div className={styles.previewColumn}>
+                      <div className={styles.previewIntro}>
+                        <p className="kicker">Live Ghostling</p>
+                        <div className={styles.previewHeading}>
+                          <strong>{companion.user.displayName}&apos;s equipped loadout</strong>
+                          <span>Your full-size preview updates as soon as you equip a change.</span>
+                        </div>
+                      </div>
+                      <div className={styles.previewSurface}>
+                        <AnimatedCompanionStage
+                          manifest={companion.renderManifest}
+                          fallbackSrc={companion.animatedRenderUrl}
+                          alt={`${companion.user.displayName}'s Ghostling`}
+                          className={styles.previewImage}
+                          targetSize={352}
+                        />
+                      </div>
+                    </div>
+                    <aside className={styles.controlRail}>
+                      <div className={styles.controlIntro}>
+                        <strong>Loadout controls</strong>
+                        <span>Pick from your owned cosmetics for each slot and lock in the loadout you want the Hall to show.</span>
+                      </div>
+                      <div className={styles.slotList}>
+                        {companion.slots.map((slot) => (
+                          <label key={slot.key} className={styles.slotField}>
+                            <span>{slot.label}</span>
+                            <select
+                              className="input-base"
+                              value={slot.equippedSlug ?? ''}
+                              disabled={pendingKey === `equip:${slot.key}`}
+                              onChange={(event) => void handleEquip(slot.key, event.target.value)}
+                            >
+                              <option value="">Nothing equipped</option>
+                              {slot.ownedOptions.map((option) => (
+                                <option key={option.slug} value={option.slug}>
+                                  {option.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ))}
+                      </div>
+                    </aside>
+                  </div>
+                )}
+              />
+
+              <Panel
+                className={styles.sharePanel}
+                tier="meta"
+                title="Download and share files"
+                body={(
+                  <div className={styles.shareBody}>
+                    <p className={styles.sharePrelude}>
+                      Download these once your Ghostling looks the way you want it to.
+                    </p>
+                    <div className={styles.cardPreview}>
+                      <img src={companion.animatedCardUrl} alt="Animated Ghostling share card" className={styles.cardImage} />
+                    </div>
+                    <div className={styles.shareList}>
+                      {[
+                        {
+                          label: 'Avatar PNG',
+                          detail: '512 x 512 transparent output for profile images and overlays.',
+                          path: companion.share.avatarUrl,
+                          primaryLabel: 'Download PNG',
+                          primaryAction: () => downloadPng(companion.share.avatarUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-avatar.png`, 'Avatar PNG', 512, 512),
+                        },
+                        {
+                          label: 'Avatar SVG',
+                          detail: 'Animated vector source for sharp exports and future reuse.',
+                          path: companion.share.animatedAvatarUrl,
+                          primaryLabel: 'Download SVG',
+                          primaryAction: () => downloadSvg(companion.share.animatedAvatarUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-avatar-animated.svg`, 'Animated avatar SVG'),
+                        },
+                        {
+                          label: 'Share card PNG',
+                          detail: '480 x 320 social card output ready for Discord posts and uploads.',
+                          path: companion.share.cardUrl,
+                          primaryLabel: 'Download PNG',
+                          primaryAction: () => downloadPng(companion.share.cardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-card.png`, 'Share card PNG', 480, 320),
+                        },
+                        {
+                          label: 'Animated share card SVG',
+                          detail: 'Motion-preserving vector card that matches the homepage Ghostling style.',
+                          path: companion.share.animatedCardUrl,
+                          primaryLabel: 'Download SVG',
+                          primaryAction: () => downloadSvg(companion.share.animatedCardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-card-animated.svg`, 'Animated card SVG'),
+                        },
+                      ].map((item) => (
+                        <div key={item.label} className={styles.shareRow}>
+                          <div>
+                            <strong>{item.label}</strong>
+                            <span>{item.detail}</span>
+                          </div>
+                          <div className={styles.shareActions}>
+                            <button
+                              type="button"
+                              className="button button--secondary button--small"
+                              onClick={() => void item.primaryAction()}
+                            >
+                              {item.primaryLabel}
+                            </button>
+                            <button
+                              type="button"
+                              className="button button--secondary button--small"
+                              onClick={() => copyUrl(item.path, `${item.label} URL`)}
+                            >
+                              Copy source URL
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              />
+            </AppGrid>
           </section>
 
           <StatStrip
@@ -266,138 +361,15 @@ export default function CompanionPage() {
               { label: 'Balance', value: formatPoints(companion.balance), href: '/hall/rewards/' },
               { label: 'Unlocked', value: String(companion.ownedCount) },
               { label: 'Equipped slots', value: `${companion.equippedCount}/4` },
-              { label: 'Share ready', value: 'Yes' },
+              { label: 'Export tools', value: 'Ready' },
             ]}
           />
 
-          <AppGrid className={styles.studioGrid}>
-            <Panel
-              className={styles.studioPanel}
-              tier="primary"
-              title="Equip your current Ghostling"
-              body={(
-                <div className={styles.studioBody}>
-                  <div className={styles.previewColumn}>
-                    <div className={styles.previewIntro}>
-                      <p className="kicker">Live preview</p>
-                      <div className={styles.previewHeading}>
-                        <strong>{companion.user.displayName}&apos;s equipped loadout</strong>
-                        <span>Swap owned pieces on the right and this stage updates immediately.</span>
-                      </div>
-                    </div>
-                    <div className={styles.previewSurface}>
-                      <AnimatedCompanionStage
-                        manifest={companion.renderManifest}
-                        fallbackSrc={companion.animatedRenderUrl}
-                        alt="Equipped Ghostling preview"
-                        className={styles.previewImage}
-                        targetSize={352}
-                      />
-                    </div>
-                  </div>
-                  <aside className={styles.controlRail}>
-                    <div className={styles.controlIntro}>
-                      <strong>Loadout controls</strong>
-                      <span>Pick from your owned cosmetics for each slot and keep the stage focused while you tune the look.</span>
-                    </div>
-                    <div className={styles.slotList}>
-                      {companion.slots.map((slot) => (
-                        <label key={slot.key} className={styles.slotField}>
-                          <span>{slot.label}</span>
-                          <select
-                            className="input-base"
-                            value={slot.equippedSlug ?? ''}
-                            disabled={pendingKey === `equip:${slot.key}`}
-                            onChange={(event) => void handleEquip(slot.key, event.target.value)}
-                          >
-                            <option value="">Nothing equipped</option>
-                            {slot.ownedOptions.map((option) => (
-                              <option key={option.slug} value={option.slug}>
-                                {option.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      ))}
-                    </div>
-                  </aside>
-                </div>
-              )}
-            />
-
-            <Panel
-              className={styles.sharePanel}
-              tier="meta"
-              title="Export for Discord and beyond"
-              body={(
-                <div className={styles.shareBody}>
-                  <div className={styles.cardPreview}>
-                    <img src={companion.animatedCardUrl} alt="Animated Ghostling share card" className={styles.cardImage} />
-                  </div>
-                  <div className={styles.shareList}>
-                    {[
-                      {
-                        label: 'Avatar PNG',
-                        detail: '512 x 512 transparent output for profile images and overlays.',
-                        path: companion.share.avatarUrl,
-                        primaryLabel: 'Download PNG',
-                        primaryAction: () => downloadPng(companion.share.avatarUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-avatar.png`, 'Avatar PNG', 512, 512),
-                      },
-                      {
-                        label: 'Avatar SVG',
-                        detail: 'Animated vector source for sharp exports and future reuse.',
-                        path: companion.share.animatedAvatarUrl,
-                        primaryLabel: 'Download SVG',
-                        primaryAction: () => downloadSvg(companion.share.animatedAvatarUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-avatar-animated.svg`, 'Animated avatar SVG'),
-                      },
-                      {
-                        label: 'Share card PNG',
-                        detail: '480 x 320 social card output ready for Discord posts and uploads.',
-                        path: companion.share.cardUrl,
-                        primaryLabel: 'Download PNG',
-                        primaryAction: () => downloadPng(companion.share.cardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-card.png`, 'Share card PNG', 480, 320),
-                      },
-                      {
-                        label: 'Animated share card SVG',
-                        detail: 'Motion-preserving vector card that matches the homepage Ghostling style.',
-                        path: companion.share.animatedCardUrl,
-                        primaryLabel: 'Download SVG',
-                        primaryAction: () => downloadSvg(companion.share.animatedCardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-card-animated.svg`, 'Animated card SVG'),
-                      },
-                    ].map((item) => (
-                      <div key={item.label} className={styles.shareRow}>
-                        <div>
-                          <strong>{item.label}</strong>
-                          <span>{item.detail}</span>
-                        </div>
-                        <div className={styles.shareActions}>
-                          <button
-                            type="button"
-                            className="button button--secondary button--small"
-                            onClick={() => void item.primaryAction()}
-                          >
-                            {item.primaryLabel}
-                          </button>
-                          <button
-                            type="button"
-                            className="button button--secondary button--small"
-                            onClick={() => copyUrl(item.path, `${item.label} URL`)}
-                          >
-                            Copy source URL
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            />
-          </AppGrid>
-
-          <section className={styles.shopSection}>
+          <section id="ghostling-library" className={styles.shopSection}>
               <SectionHeading
+                eyebrow="Unlock library"
                 title="Ghostling cosmetics"
-                copy="Unlock once and equip anytime with the same shared points balance."
+                copy="Unlock once, then come back and equip the pieces you want on your live Ghostling."
               />
             <div className={styles.slotGroups}>
               {SLOT_ORDER.map((slot) => {

@@ -3,8 +3,12 @@
   --workspace-page-accent: rgba(160, 132, 242, 0.34);
 }
 
-.page :global(.app-grid-two) {
-  grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr);
+.context {
+  margin-bottom: 0.15rem;
+}
+
+.profileGrid {
+  grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
   gap: 1rem;
 }
 
@@ -13,12 +17,43 @@
   gap: 0.9rem;
 }
 
+.page :global(.profile-identity-panel .profile-identity) {
+  align-items: flex-start;
+}
+
+.page :global(.profile-identity-panel .profile-identity__copy) {
+  min-width: 0;
+}
+
 .page :global(.profile-identity-panel) {
   background: rgba(18, 15, 30, 0.9);
 }
 
 .page :global(.profile-perks-panel) {
   background: rgba(14, 12, 23, 0.82);
+}
+
+.page :global(.profile-link-state) {
+  background: rgba(14, 12, 23, 0.78);
+}
+
+.linkStatus {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(160, 132, 242, 0.12);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.linkStatus strong {
+  color: var(--color-text-strong);
+}
+
+.linkStatus span {
+  color: var(--color-text-muted);
+  line-height: 1.7;
+  max-width: 46ch;
 }
 
 .page :global(.profile-scoreboard),
@@ -31,8 +66,12 @@
   background: rgba(19, 15, 31, 0.94);
 }
 
+.page :global(.profile-link-state .app-metric-grid) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 @media (max-width: 1020px) {
-  .page :global(.app-grid-two) {
+  .profileGrid {
     grid-template-columns: 1fr;
   }
 }
@@ -42,12 +81,17 @@
   .page :global(.profile-scoreboard .app-summary-grid__secondary) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .page :global(.profile-link-state .app-metric-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
   .page :global(.profile-scoreboard),
   .page :global(.profile-scoreboard .app-summary-grid__secondary),
-  .page :global(.profile-identity-panel .app-metric-grid) {
+  .page :global(.profile-identity-panel .app-metric-grid),
+  .page :global(.profile-link-state .app-metric-grid) {
     grid-template-columns: 1fr;
   }
 }

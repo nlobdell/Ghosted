@@ -3,11 +3,15 @@ import type { ServerTestContext } from './test-utils';
 import { cleanupServerTestEnvironment, insertUser, setupServerTestEnvironment } from './test-utils';
 import {
   COMPETITION,
+  COMPETITIONS,
+  FINISHED_SOTW_COMPETITION,
+  GROUP_HISCORES,
   GROUP,
   GROUP_GAINS,
   OUTSIDER_GROUPS,
   PLAYER,
   PLAYER_GROUPS_NO_RANK,
+  TITLE_VARIANT_SOTW_COMPETITION,
   installWomFetchMock,
 } from './wom-fixtures';
 import {
@@ -18,6 +22,7 @@ import {
   womCachedJson,
   womClanPayload,
   womCompetitionDetailPayload,
+  womCompetitionsPayload,
   womGroupGainsPayload,
   womGroupHiscoresPayload,
   womGroupRosterPayload,
@@ -130,7 +135,12 @@ describe('wom server module', () => {
 
     expect(payload.group.name).toBe('Ghosted');
     expect(payload.featuredHiscores.entries[0]?.player.displayName).toBe(PLAYER.displayName);
+    expect(payload.featuredHiscores.entries[0]?.displayValue).toBe(GROUP_HISCORES[0]?.data.level);
     expect(payload.linkCoverage.trackedUsers).toBe(1);
+    expect(payload.skillOfTheWeek?.mode).toBe('active');
+    expect(payload.skillOfTheWeek?.competition.displayTitle).toBe('Agility Skill of the Week');
+    expect(payload.skillOfTheWeek?.competition.participantCount).toBe(COMPETITION.participantCount);
+    expect(payload.skillOfTheWeek?.standings[0]?.player.displayName).toBe(PLAYER.displayName);
   });
 
   it('normalizes WOM me membership when rank metadata is sparse', async () => {
@@ -153,8 +163,17 @@ describe('wom server module', () => {
 
     expect(hiscores.metric).toBe('overall');
     expect(hiscores.entries[0]?.rank).toBe(17);
+    expect(hiscores.entries[0]?.displayValue).toBe(GROUP_HISCORES[0]?.data.level);
+    expect(hiscores.entries[0]?.valueKind).toBe('level');
+    expect(hiscores.entries[0]?.experience).toBe(GROUP_HISCORES[0]?.data.experience);
     expect(gains.period).toBe('week');
     expect(gains.entries[0]?.gained).toBe(GROUP_GAINS[0]?.gained);
+    expect(gains.entries[0]?.progress).toEqual({
+      start: GROUP_GAINS[0]?.start,
+      end: GROUP_GAINS[0]?.end,
+      gained: GROUP_GAINS[0]?.gained,
+    });
+    expect(gains.entries[0]?.valueKind).toBe('gained');
   });
 
   it('returns competition detail and top history payloads', async () => {
@@ -163,7 +182,35 @@ describe('wom server module', () => {
     const payload = await womCompetitionDetailPayload(context.db, COMPETITION.id);
 
     expect(payload.competition.id).toBe(COMPETITION.id);
+    expect(payload.competition.participantCount).toBe(COMPETITION.participantCount);
+    expect(payload.competition.displayTitle).toBe('Agility Skill of the Week');
     expect(payload.competition.participants[0]?.player.displayName).toBe(PLAYER.displayName);
+    expect(payload.competition.participants[0]?.displayValue).toBe(4000);
+    expect(payload.competition.participants[0]?.rank).toBe(1);
     expect(payload.topHistory[0]?.player.displayName).toBe(PLAYER.displayName);
+  });
+
+  it('classifies Skill of the Week title variants and preserves participant counts', async () => {
+    installWomFetchMock();
+
+    const payload = await womCompetitionsPayload(context.db, 12);
+
+    expect(payload.competitions).toHaveLength(COMPETITIONS.length);
+    expect(payload.competitions.find((entry) => entry.id === COMPETITION.id)?.displayTitle).toBe('Agility Skill of the Week');
+    expect(payload.competitions.find((entry) => entry.id === FINISHED_SOTW_COMPETITION.id)?.displayTitle).toBe('Fishing Skill of the Week');
+    expect(payload.competitions.find((entry) => entry.id === TITLE_VARIANT_SOTW_COMPETITION.id)?.displayTitle).toBe('Agility Skill of the Week');
+    expect(payload.competitions.find((entry) => entry.id === COMPETITION.id)?.participantCount).toBe(COMPETITION.participantCount);
+  });
+
+  it('falls back to the latest finished Skill of the Week when no active board exists', async () => {
+    installWomFetchMock({
+      'GET /groups/123/competitions': [FINISHED_SOTW_COMPETITION, TITLE_VARIANT_SOTW_COMPETITION],
+    });
+
+    const payload = await womClanPayload(context.db);
+
+    expect(payload.skillOfTheWeek?.mode).toBe('latest_finished');
+    expect(payload.skillOfTheWeek?.competition.id).toBe(FINISHED_SOTW_COMPETITION.id);
+    expect(payload.skillOfTheWeek?.competition.displayTitle).toBe('Fishing Skill of the Week');
   });
 });

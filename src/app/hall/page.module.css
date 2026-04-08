@@ -6,6 +6,7 @@
 .spotlight,
 .spotlightCopy,
 .spotlightStage,
+.spotlightActions,
 .loopGrid,
 .loopCard,
 .stageMeta,
@@ -15,7 +16,7 @@
 }
 
 .spotlight {
-  grid-template-columns: minmax(0, 1.16fr) minmax(18rem, 0.84fr);
+  grid-template-columns: minmax(0, 1.06fr) minmax(22rem, 0.94fr);
   align-items: stretch;
   gap: var(--section-gap);
   min-height: clamp(24rem, 56svh, 32rem);
@@ -30,14 +31,15 @@
 }
 
 .spotlightCopy {
-  align-content: center;
-  gap: 1rem;
-  max-width: 48rem;
+  align-content: start;
+  gap: 0.9rem;
+  max-width: 46rem;
 }
 
 .spotlightTitle {
   font-size: clamp(3rem, 5.2vw, 4.9rem);
   line-height: 0.86;
+  max-width: 12ch;
 }
 
 .spotlightText {
@@ -47,11 +49,10 @@
   line-height: 1.75;
 }
 
-.transitionNote {
-  margin: 0;
-  max-width: 52ch;
-  color: rgba(250, 247, 255, 0.76);
-  line-height: 1.7;
+.spotlightActions {
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  gap: 0.75rem;
+  align-items: start;
 }
 
 .loopGrid {
@@ -67,6 +68,8 @@
   padding: 1.05rem 1.1rem;
   border-right: 1px solid rgba(191, 179, 255, 0.08);
   background: rgba(255, 255, 255, 0.01);
+  align-content: start;
+  gap: 0.35rem;
 }
 
 .loopCard:last-child {
@@ -87,14 +90,14 @@
 }
 
 .spotlightStage {
-  align-content: center;
+  align-content: start;
   gap: 0.95rem;
 }
 
 .stageFrame {
   display: grid;
   place-items: center;
-  min-height: 23rem;
+  min-height: 21rem;
   padding: 1.2rem;
   border-radius: 1.5rem;
   border: 1px solid rgba(191, 179, 255, 0.1);
@@ -112,6 +115,7 @@
   justify-items: center;
   gap: 0.18rem;
   color: var(--color-text-muted);
+  text-align: center;
 }
 
 .scoreboard,
@@ -120,21 +124,30 @@
   gap: 1rem;
 }
 
-.primarySection,
 .secondaryGrid {
   display: grid;
   gap: var(--section-gap);
 }
 
-.page :global(.hall-actions),
 .page :global(.hall-leaders),
 .page :global(.hall-pulse),
 .page :global(.hall-ledger) {
   min-height: 100%;
 }
 
+.page :global(.hall-pulse),
+.page :global(.hall-leaders),
+.page :global(.hall-ledger) {
+  background: rgba(14, 12, 23, 0.78);
+}
+
+.scoreboard :global(.app-stat--lead),
+.scoreboard :global(.app-stat--secondary) {
+  background: rgba(14, 12, 23, 0.74);
+}
+
 .secondaryGrid {
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .ledgerShell :global(.app-panel) {
@@ -143,10 +156,10 @@
 
 @media (max-width: 1120px) {
   .spotlight,
-  .primarySection,
   .secondaryGrid,
   .scoreboard,
   .scoreboard :global(.app-summary-grid__secondary),
+  .spotlightActions,
   .loopGrid {
     grid-template-columns: 1fr;
   }
@@ -173,5 +186,9 @@
 
   .stageImage {
     max-width: 100%;
+  }
+
+  .spotlightTitle {
+    max-width: none;
   }
 }

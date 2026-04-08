@@ -209,24 +209,6 @@ export default function CasinoGame() {
     const href = loginHref();
     return (
       <div id="casino-root">
-        <div className="app-summary-grid">
-          <article className="app-stat">
-            <div className="app-stat__value">{String(games?.games.length ?? 0)}</div>
-            <div className="app-stat__label">Machines</div>
-          </article>
-          <article className="app-stat">
-            <div className="app-stat__value">5x3</div>
-            <div className="app-stat__label">Grid</div>
-          </article>
-          <article className="app-stat">
-            <div className="app-stat__value">Points</div>
-            <div className="app-stat__label">Format</div>
-          </article>
-          <article className="app-stat">
-            <div className="app-stat__value">Sign in</div>
-            <div className="app-stat__label">Access</div>
-          </article>
-        </div>
         <section className="app-workspace">
           <div className="app-empty">
             <p>Sign in to play the casino.</p>
@@ -258,25 +240,6 @@ export default function CasinoGame() {
 
   return (
     <div id="casino-root">
-      <section className="app-summary-grid">
-        <a className="app-stat app-stat--link" href="/hall/rewards/">
-          <div className="app-stat__value">{formatPoints(rewards.balance)}</div>
-          <div className="app-stat__label">Balance</div>
-        </a>
-        <article className="app-stat">
-          <div className="app-stat__value">{String(machineList.length)}</div>
-          <div className="app-stat__label">Machines</div>
-        </article>
-        <article className="app-stat">
-          <div className="app-stat__value">{String(selectedGame.freeSpinsRemaining || 0)}</div>
-          <div className="app-stat__label">Free spins</div>
-        </article>
-        <a className="app-stat app-stat--link" href="/hall/rewards/">
-          <div className="app-stat__value">{rewards.dailyCap === null ? 'Unlimited' : formatPoints(rewards.dailyCap)}</div>
-          <div className="app-stat__label">Daily limit</div>
-        </a>
-      </section>
-
       <section className="app-workspace">
         <section className="casino-shell">
           <article className="app-card casino-stage-shell">
@@ -299,10 +262,10 @@ export default function CasinoGame() {
             <div className="casino-stage-shell__info">
               <aside className="casino-stage-shell__panel">
                 <div className="casino-console">
-                  <div className="casino-console__eyebrow">Latest spin</div>
+                  <div className="casino-console__eyebrow">Spin loop</div>
                   <div className="casino-console__headline">{latestResult?.outcome.label || selectedGame.name}</div>
                   <p className="casino-console__copy">
-                    {latestResult?.outcome.detail || selectedGame.flavor || 'Pick a machine and spin.'}
+                    {latestResult?.outcome.detail || selectedGame.flavor || 'Pick a machine, then spin to see how the cabinet pays out.'}
                   </p>
                 </div>
                 <div className="casino-controls">
@@ -333,28 +296,7 @@ export default function CasinoGame() {
 
               <section className="app-card casino-stage-shell__card">
                 <div className="app-card__row">
-                  <h3>Session</h3>
-                  <span className="app-chip">{formatPoints(rewards.balance)}</span>
-                </div>
-                <div className="casino-player-grid">
-                  <div className="casino-player-stat"><span className="app-muted">Balance</span><strong>{formatPoints(rewards.balance)}</strong></div>
-                  <div className="casino-player-stat"><span className="app-muted">Machine</span><strong>{selectedGame.name}</strong></div>
-                  <div className="casino-player-stat"><span className="app-muted">Wagered today</span><strong>{formatPoints(rewards.dailyWagered)}</strong></div>
-                  <div className="casino-player-stat"><span className="app-muted">Last win</span><strong>{lastWin ? formatPoints(lastWin.payout) : 'Waiting'}</strong></div>
-                </div>
-                <div className="casino-meter">
-                  <div className="casino-meter__track"><span className="casino-meter__fill" style={{ width: `${meterWidth}%` }} /></div>
-                  <div className="app-muted">
-                    {rewards.dailyCap === null
-                      ? `${formatPoints(rewards.dailyWagered)} wagered today. No cap is active.`
-                      : `${formatPoints(rewards.dailyRemaining || 0)} left before the daily cap.`}
-                  </div>
-                </div>
-              </section>
-
-              <section className="app-card casino-stage-shell__card">
-                <div className="app-card__row">
-                  <h3>Machines</h3>
+                  <h3>Choose a machine</h3>
                   <span className="app-chip">{`${machineList.length} live`}</span>
                 </div>
                 <div className="casino-machine-list">
@@ -380,6 +322,27 @@ export default function CasinoGame() {
                       </div>
                     </button>
                   ))}
+                </div>
+              </section>
+
+              <section className="app-card casino-stage-shell__card">
+                <div className="app-card__row">
+                  <h3>Balance and cap</h3>
+                  <span className="app-chip">{formatPoints(rewards.balance)}</span>
+                </div>
+                <div className="casino-player-grid">
+                  <div className="casino-player-stat"><span className="app-muted">Balance</span><strong>{formatPoints(rewards.balance)}</strong></div>
+                  <div className="casino-player-stat"><span className="app-muted">Free spins banked</span><strong>{selectedGame.freeSpinsRemaining ? String(selectedGame.freeSpinsRemaining) : 'None'}</strong></div>
+                  <div className="casino-player-stat"><span className="app-muted">Wagered today</span><strong>{formatPoints(rewards.dailyWagered)}</strong></div>
+                  <div className="casino-player-stat"><span className="app-muted">Last win</span><strong>{lastWin ? formatPoints(lastWin.payout) : 'Waiting'}</strong></div>
+                </div>
+                <div className="casino-meter">
+                  <div className="casino-meter__track"><span className="casino-meter__fill" style={{ width: `${meterWidth}%` }} /></div>
+                  <div className="app-muted">
+                    {rewards.dailyCap === null
+                      ? `${formatPoints(rewards.dailyWagered)} wagered today. No cap is active.`
+                      : `${formatPoints(rewards.dailyRemaining || 0)} left before the daily cap.`}
+                  </div>
                 </div>
               </section>
             </div>

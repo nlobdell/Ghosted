@@ -44,7 +44,7 @@ export function AuthWidget({ variant, shellData }: Props) {
     const rankLabel = user.womLink?.membership?.rankLabel ?? user.womLink?.membership?.role ?? (user.womLink?.linked ? 'Member' : 'Discord');
     const subtitle = variant === 'public'
       ? rankLabel
-      : `${formatPts(user.balance)} - ${user.womLink?.linked ? rankLabel : 'RSN not linked'}`;
+      : `${formatPts(user.balance)} - ${user.womLink?.linked ? rankLabel : 'Wise Old Man not linked'}`;
 
     return (
       <div className={`site-profile-widget site-profile-widget--signed-in site-profile-widget--${variant}`}>
@@ -87,15 +87,17 @@ export function AuthWidget({ variant, shellData }: Props) {
   return (
     <div className={`site-profile-widget site-profile-widget--signed-out site-profile-widget--${variant}`}>
       <div className="site-profile-widget__copy">
-        <strong>{compact ? 'Member access' : 'Sign in to Ghosted'}</strong>
+        <strong>{compact ? 'Enter the Hall' : 'Sign in with Discord'}</strong>
         <span>
           {shell.wom?.configured
-            ? 'Sync Discord, profile, and WOM status.'
-            : 'Discord auth is available once configured.'}
+            ? compact
+              ? 'Use Discord to load your Ghostling and member state.'
+              : 'Sign in to load your Ghostling, points balance, and Wise Old Man clan status.'
+            : 'Discord sign-in becomes available when clan auth is configured.'}
         </span>
       </div>
       {canSignIn ? (
-        <a className="button button--small" href={shell.auth.loginHref}>Sign In</a>
+        <a className="button button--small" href={shell.auth.loginHref}>{compact ? 'Enter' : 'Sign in'}</a>
       ) : (
         <span className="site-profile-widget__hint">Sign-in unavailable</span>
       )}

@@ -12,7 +12,7 @@
 }
 
 .page :global(.clan-scoreboard) {
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
   gap: 1rem;
 }
 
@@ -21,16 +21,29 @@
   gap: 0.9rem;
 }
 
-.page :global(.app-grid-two) {
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+.primaryGrid,
+.secondaryGrid,
+.archiveGrid {
   gap: 1rem;
 }
 
-.page :global(.clan-roster),
-.page :global(.clan-leaders),
-.page :global(.clan-events),
-.page :global(.clan-gains) {
+.primaryGrid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+}
+
+.secondaryGrid,
+.archiveGrid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.page :global(.clan-roster) {
   background: rgba(18, 15, 30, 0.9);
+}
+
+.page :global(.clan-events),
+.page :global(.clan-leaders),
+.page :global(.clan-gains) {
+  background: rgba(15, 13, 25, 0.84);
 }
 
 .page :global(.clan-roster .app-metric-grid) {
@@ -48,9 +61,16 @@
   background: rgba(14, 12, 23, 0.82);
 }
 
+.page :global(.clan-events .app-panel-note),
+.page :global(.clan-roster .app-panel-note) {
+  max-width: 60ch;
+}
+
 @media (max-width: 1120px) {
   .page :global(.clan-scoreboard),
-  .page :global(.app-grid-two) {
+  .primaryGrid,
+  .secondaryGrid,
+  .archiveGrid {
     grid-template-columns: 1fr;
   }
 }
