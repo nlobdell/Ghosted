@@ -3,6 +3,12 @@
   --workspace-page-accent: rgba(184, 168, 255, 0.32);
 }
 
+.workflowPanel,
+.workflowBody,
+.workflowCopy,
+.workflowChecklist,
+.workflowChecklistItem,
+.workflowActions,
 .scoreboard,
 .scoreboard :global(.app-summary-grid__secondary),
 .basePanelBody,
@@ -25,6 +31,69 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.workflowPanel {
+  border-color: rgba(191, 179, 255, 0.18);
+  background:
+    linear-gradient(180deg, rgba(21, 18, 34, 0.96), rgba(12, 10, 20, 0.92)),
+    radial-gradient(circle at top left, rgba(184, 168, 255, 0.18), transparent 28%);
+}
+
+.workflowBody {
+  grid-template-columns: minmax(0, 1.24fr) minmax(16rem, 0.76fr);
+  align-items: start;
+  gap: 1.15rem;
+}
+
+.workflowCopy {
+  gap: 1rem;
+  min-width: 0;
+}
+
+.workflowLead {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--color-text);
+  line-height: 1.72;
+}
+
+.workflowChecklist {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.workflowChecklistItem {
+  align-content: start;
+  min-width: 0;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(191, 179, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.workflowChecklistItem strong {
+  color: var(--color-text-strong);
+}
+
+.workflowChecklistItem span {
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.workflowActions {
+  align-content: start;
+  grid-auto-rows: max-content;
+  justify-items: start;
+  gap: 0.75rem;
+}
+
+.workflowActions :global(.button) {
+  min-width: 12.75rem;
+}
+
+.workflowGrid {
+  align-items: start;
+}
+
 .scoreboard :global(.app-summary-grid__secondary) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -35,8 +104,18 @@
 }
 
 .basePanelBody {
-  grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr);
+  grid-template-columns: minmax(14rem, 16rem) minmax(0, 1fr);
   align-items: start;
+  gap: 1.15rem;
+}
+
+.actionNote {
+  margin: 0;
+  padding-left: 0.9rem;
+  border-left: 2px solid rgba(184, 168, 255, 0.36);
+  color: var(--color-text-muted);
+  line-height: 1.66;
+  max-width: 60ch;
 }
 
 .basePreview {
@@ -78,6 +157,7 @@
 .assetMetaList span,
 .libraryCopy p {
   color: var(--color-text-muted);
+  line-height: 1.58;
   word-break: break-word;
 }
 
@@ -87,15 +167,23 @@
 
 .importRow {
   gap: 0.85rem;
+  min-width: 0;
 }
 
 .importHeader,
 .slotHeading,
 .libraryHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.importHeader > *,
+.slotHeading > *,
+.libraryHeader > * {
+  min-width: 0;
 }
 
 .importToggle,
@@ -113,6 +201,7 @@
 .importGrid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.85rem;
+  align-items: start;
 }
 
 .compactField {
@@ -121,7 +210,8 @@
 
 .importAssets {
   grid-template-columns: 7rem minmax(0, 1fr);
-  align-items: center;
+  align-items: start;
+  gap: 1rem;
 }
 
 .importPreview,
@@ -140,7 +230,7 @@
   padding: var(--surface-padding);
   border: 1px solid rgba(191, 179, 255, 0.1);
   border-radius: 1.35rem;
-  background: linear-gradient(180deg, rgba(14, 12, 23, 0.76), rgba(11, 10, 18, 0.66));
+  background: linear-gradient(180deg, rgba(12, 11, 20, 0.68), rgba(9, 8, 15, 0.56));
 }
 
 .slotHeading span {
@@ -152,13 +242,16 @@
 
 .libraryGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
 }
 
 .libraryCard {
+  align-content: start;
+  min-width: 0;
   padding: calc(var(--surface-padding) - 0.1rem);
   border-radius: 1.15rem;
   border: 1px solid rgba(191, 179, 255, 0.1);
-  background: rgba(18, 15, 29, 0.8);
+  background: rgba(15, 13, 24, 0.66);
 }
 
 .libraryPreview {
@@ -180,7 +273,37 @@
   flex-wrap: wrap;
 }
 
+.libraryCopy {
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.libraryCopy p {
+  margin: 0;
+}
+
+.page :global(.app-context__summary) {
+  max-width: 58ch;
+}
+
+.page :global(.app-form-field label) {
+  line-height: 1.4;
+}
+
+.page :global(.app-inline-actions) {
+  row-gap: 0.55rem;
+}
+
+@media (max-width: 1320px) {
+  .workflowChecklist,
+  .importGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1120px) {
+  .workflowBody,
+  .workflowChecklist,
   .scoreboard,
   .scoreboard :global(.app-summary-grid__secondary),
   .basePanelBody,
@@ -192,6 +315,7 @@
 }
 
 @media (max-width: 760px) {
+  .workflowActions,
   .importHeader,
   .slotHeading,
   .libraryHeader {

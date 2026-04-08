@@ -110,7 +110,7 @@ export default function GhostlingAdminPage() {
         method: 'POST',
         body: formData,
       });
-      applyLibrary(result, 'Ghostling base updated.');
+      applyLibrary(result, 'Ghostling base updated. Check the preview before you leave this page.');
       form.reset();
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling base upload failed.', variant: 'error' });
@@ -130,7 +130,7 @@ export default function GhostlingAdminPage() {
         method: 'POST',
         body: formData,
       });
-      applyLibrary(result, 'Ghostling cosmetic created.');
+      applyLibrary(result, 'Ghostling cosmetic created. Confirm it appears in the slot list below.');
       form.reset();
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Custom Ghostling cosmetic upload failed.', variant: 'error' });
@@ -150,7 +150,7 @@ export default function GhostlingAdminPage() {
         method: 'POST',
         body: formData,
       });
-      applyLibrary(result, 'Ghostling art replaced.');
+      applyLibrary(result, 'Ghostling art replaced. Check the preview and member studio after this update.');
       form.reset();
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling asset replacement failed.', variant: 'error' });
@@ -167,7 +167,12 @@ export default function GhostlingAdminPage() {
         method: 'POST',
         body: JSON.stringify({ slug, active }),
       });
-      applyLibrary(result, active ? 'Ghostling cosmetic restored.' : 'Ghostling cosmetic hidden.');
+      applyLibrary(
+        result,
+        active
+          ? 'Ghostling cosmetic restored. Verify it is visible in the member catalog again.'
+          : 'Ghostling cosmetic hidden. Verify it no longer appears in the member catalog.',
+      );
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling visibility update failed.', variant: 'error' });
     } finally {
@@ -183,7 +188,7 @@ export default function GhostlingAdminPage() {
         method: 'POST',
         body: JSON.stringify({ slug, direction }),
       });
-      applyLibrary(result, 'Ghostling order updated.');
+      applyLibrary(result, 'Ghostling order updated. Confirm the slot order below.');
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling reorder failed.', variant: 'error' });
     } finally {
@@ -219,7 +224,7 @@ export default function GhostlingAdminPage() {
         method: 'POST',
         body: JSON.stringify({ items: selectedItems }),
       });
-      applyLibrary(result, 'Repo Ghostling cosmetics imported.');
+      applyLibrary(result, 'Repo Ghostling cosmetics imported. Check visibility and slot order below.');
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Repo Ghostling import failed.', variant: 'error' });
     } finally {
@@ -248,12 +253,12 @@ export default function GhostlingAdminPage() {
           { label: 'Admin', href: '/admin/' },
           { label: 'Ghostling' },
         ]}
-        title="Ghostling asset vault"
-        summary="Manage the live cosmetic library separately from the member-facing studio. Hide or restore items, reorder them inside each slot, and keep the uploaded Ghostling art vault clean."
+        title="Manage live Ghostling assets"
+        summary="Update the base, create cosmetics, replace files, and import repo items here. Then use the catalog controls below to hide, restore, or reorder what members can see."
         actions={(
           <>
-            <Link href="/admin/" className="button button--secondary button--small">Admin home</Link>
-            <Link href="/hall/ghostling/" className="button button--secondary button--small">Ghostling studio</Link>
+            <Link href="/admin/" className="button button--secondary button--small">Back to admin</Link>
+            <Link href="/hall/ghostling/" className="button button--secondary button--small">Open member studio</Link>
           </>
         )}
       />
@@ -261,28 +266,59 @@ export default function GhostlingAdminPage() {
       {message ? <Banner message={message.text} variant={message.variant} /> : null}
 
       {loading ? (
-        <Banner message="Loading Ghostling asset vault..." variant="info" />
+        <Banner message="Loading Ghostling asset controls..." variant="info" />
       ) : !library ? (
-        <EmptyState message="Could not load the Ghostling asset vault." />
+        <EmptyState
+          message="Could not load Ghostling assets. Refresh this page or return to admin."
+          action={<Link href="/admin/" className="button button--secondary button--small">Back to admin</Link>}
+        />
       ) : (
         <>
-          <StatStrip
-            className={styles.scoreboard}
-            leadIndex={0}
-            stats={[
-              { label: 'Catalog items', value: String(totalItems) },
-              { label: 'Visible', value: String(activeItems) },
-              { label: 'Hidden', value: String(hiddenItems) },
-              { label: 'Pending imports', value: String(repoCandidates) },
-            ]}
+          <Panel
+            className={styles.workflowPanel}
+            tier="primary"
+            eyebrow="Asset changes"
+            title="Update files before you change catalog order"
+            bodyClassName={styles.workflowBody}
+            body={(
+              <>
+                <div className={styles.workflowCopy}>
+                  <p className={styles.workflowLead}>
+                    Base uploads, art replacements, repo imports, and visibility changes update the live member studio and the admin preview immediately.
+                  </p>
+                  <div className={styles.workflowChecklist}>
+                    <div className={styles.workflowChecklistItem}>
+                      <strong>Base uploads</strong>
+                      <span>Update the default body and head used anywhere a slot has no override.</span>
+                    </div>
+                    <div className={styles.workflowChecklistItem}>
+                      <strong>Create or replace</strong>
+                      <span>Publish new cosmetics or overwrite live art for an existing slug with an explicit operator step.</span>
+                    </div>
+                    <div className={styles.workflowChecklistItem}>
+                      <strong>Hide, restore, reorder</strong>
+                      <span>Use library controls afterward to pull cosmetics from the member catalog or change their live order.</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.workflowActions}>
+                  <a href="#ghostling-base" className="button button--small">Upload base files</a>
+                  <a href="#ghostling-create" className="button button--secondary button--small">Create cosmetic</a>
+                  <a href="#ghostling-replace" className="button button--secondary button--small">Replace live files</a>
+                  <a href="#ghostling-import" className="button button--secondary button--small">Import repo pieces</a>
+                  <a href="#ghostling-library" className="button button--secondary button--small">Library controls</a>
+                </div>
+              </>
+            )}
           />
 
-          <AppGrid>
+          <AppGrid className={styles.workflowGrid}>
+            <section id="ghostling-base">
             <Panel
               className={styles.adminPanel}
               tier="primary"
-              eyebrow="Base asset"
-              title="Refresh the layered Ghostling base"
+              eyebrow="Base workflow"
+              title="Upload a new layered Ghostling base"
               body={(
                 <div className={styles.basePanelBody}>
                   <div className={styles.basePreview}>
@@ -295,6 +331,9 @@ export default function GhostlingAdminPage() {
                     />
                   </div>
                   <form onSubmit={handleBaseUpload} className="app-form">
+                    <p className={styles.actionNote}>
+                      Changing these files updates the default live body and head used anywhere a Ghostling render does not have a slot override.
+                    </p>
                     <div className={styles.assetMetaBlock}>
                       <strong>User uploads</strong>
                       <span>{library.storageRoot}</span>
@@ -315,7 +354,7 @@ export default function GhostlingAdminPage() {
                     </FormField>
                     <div className="app-inline-actions">
                       <button className="button" type="submit" disabled={pendingKey === 'base'}>
-                        {pendingKey === 'base' ? 'Uploading...' : 'Upload layered base'}
+                        {pendingKey === 'base' ? 'Uploading...' : 'Upload base files'}
                       </button>
                       {library.base.bodyAssetUrl ? (
                         <a href={library.base.bodyAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
@@ -332,218 +371,251 @@ export default function GhostlingAdminPage() {
                 </div>
               )}
             />
+            </section>
 
+            <section id="ghostling-create">
             <Panel
               className={styles.adminPanel}
               tier="meta"
-              eyebrow="Create cosmetic"
-              title="Add a custom Ghostling item"
+              eyebrow="Create live cosmetic"
+              title="Create and publish a Ghostling cosmetic"
               body={(
-                <form onSubmit={handleCreateItem} className="app-form">
-                  <div className="form-grid-two">
-                    <FormField label="Name">
-                      <input name="name" type="text" placeholder="Moon Hood" className="input-base" required />
-                    </FormField>
-                    <FormField label="Slug (optional)">
-                      <input name="slug" type="text" placeholder="moon-hood" className="input-base" />
-                    </FormField>
-                  </div>
-                  <div className="form-grid-two">
-                    <FormField label="Slot">
-                      <select name="slot" className="input-base" defaultValue="hat">
-                        <option value="hat">Hat</option>
-                        <option value="face">Face</option>
-                        <option value="neck">Neck</option>
-                        <option value="body">Body</option>
-                      </select>
-                    </FormField>
-                    <FormField label="Rarity">
-                      <select name="rarity" className="input-base" defaultValue="common">
-                        <option value="common">Common</option>
-                        <option value="rare">Rare</option>
-                        <option value="epic">Epic</option>
-                        <option value="legendary">Legendary</option>
-                      </select>
-                    </FormField>
-                  </div>
-                  <div className="form-grid-two">
-                    <FormField label="Cost">
-                      <input name="cost" type="number" min="0" defaultValue="120" className="input-base" required />
-                    </FormField>
-                    <FormField label="Front asset (optional)">
-                      <input name="frontAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
-                    </FormField>
-                  </div>
-                  <FormField label="Back asset (optional)">
-                    <input name="backAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
-                  </FormField>
-                  <FormField label="Metadata sidecar (optional)">
-                    <input name="metadata" type="file" accept=".json,application/json,text/json" className="input-base" />
-                  </FormField>
-                  <FormField label="Description">
-                    <textarea name="description" rows={3} className="input-base" placeholder="Short flavor text for the unlock card." />
-                  </FormField>
-                  <button className="button" type="submit" disabled={pendingKey === 'create'}>
-                    {pendingKey === 'create' ? 'Creating...' : 'Create cosmetic'}
-                  </button>
-                </form>
-              )}
-            />
-          </AppGrid>
-
-          <AppGrid>
-            <Panel
-              className={styles.adminPanel}
-              tier="meta"
-              eyebrow="Replace art"
-              title="Swap files for an existing cosmetic"
-              body={(
-                <form onSubmit={handleReplaceAssets} className="app-form">
-                  <FormField label="Cosmetic">
-                    <select name="slug" className="input-base" defaultValue={library.items[0]?.slug ?? ''} required>
-                      {library.items.map((item) => (
-                        <option key={item.slug} value={item.slug}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
-                  <div className="form-grid-two">
-                    <FormField label="Front asset">
-                      <input name="frontAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
-                    </FormField>
-                    <FormField label="Back asset">
+                <div className="app-stack">
+                  <p className={styles.actionNote}>
+                    Saving here adds a new cosmetic to the member catalog. Hide it later only if it should stay off the live list after creation.
+                  </p>
+                  <form onSubmit={handleCreateItem} className="app-form">
+                    <div className="form-grid-two">
+                      <FormField label="Name">
+                        <input name="name" type="text" placeholder="Moon Hood" className="input-base" required />
+                      </FormField>
+                      <FormField label="Slug (optional)">
+                        <input name="slug" type="text" placeholder="moon-hood" className="input-base" />
+                      </FormField>
+                    </div>
+                    <div className="form-grid-two">
+                      <FormField label="Slot">
+                        <select name="slot" className="input-base" defaultValue="hat">
+                          <option value="hat">Hat</option>
+                          <option value="face">Face</option>
+                          <option value="neck">Neck</option>
+                          <option value="body">Body</option>
+                        </select>
+                      </FormField>
+                      <FormField label="Rarity">
+                        <select name="rarity" className="input-base" defaultValue="common">
+                          <option value="common">Common</option>
+                          <option value="rare">Rare</option>
+                          <option value="epic">Epic</option>
+                          <option value="legendary">Legendary</option>
+                        </select>
+                      </FormField>
+                    </div>
+                    <div className="form-grid-two">
+                      <FormField label="Cost">
+                        <input name="cost" type="number" min="0" defaultValue="120" className="input-base" required />
+                      </FormField>
+                      <FormField label="Front asset (optional)">
+                        <input name="frontAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
+                      </FormField>
+                    </div>
+                    <FormField label="Back asset (optional)">
                       <input name="backAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
                     </FormField>
-                  </div>
-                  <FormField label="Metadata sidecar">
-                    <input name="metadata" type="file" accept=".json,application/json,text/json" className="input-base" />
-                  </FormField>
-                  <button className="button" type="submit" disabled={pendingKey === 'replace'}>
-                    {pendingKey === 'replace' ? 'Replacing...' : 'Replace asset files'}
-                  </button>
-                </form>
+                    <FormField label="Metadata sidecar (optional)">
+                      <input name="metadata" type="file" accept=".json,application/json,text/json" className="input-base" />
+                    </FormField>
+                    <FormField label="Description">
+                      <textarea name="description" rows={3} className="input-base" placeholder="Short flavor text for the unlock card." />
+                    </FormField>
+                    <button className="button" type="submit" disabled={pendingKey === 'create'}>
+                      {pendingKey === 'create' ? 'Creating...' : 'Create cosmetic'}
+                    </button>
+                  </form>
+                </div>
               )}
             />
+            </section>
+          </AppGrid>
 
+          <AppGrid className={styles.workflowGrid}>
+            <section id="ghostling-replace">
+            <Panel
+              className={styles.adminPanel}
+              tier="meta"
+              eyebrow="Replace live files"
+              title="Replace files on a live Ghostling cosmetic"
+              body={(
+                <div className="app-stack">
+                  <p className={styles.actionNote}>
+                    Replacing files overwrites the live art for the selected slug and changes current member previews that use it.
+                  </p>
+                  <form onSubmit={handleReplaceAssets} className="app-form">
+                    <FormField label="Cosmetic">
+                      <select name="slug" className="input-base" defaultValue={library.items[0]?.slug ?? ''} required>
+                        {library.items.map((item) => (
+                          <option key={item.slug} value={item.slug}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <div className="form-grid-two">
+                      <FormField label="Front asset">
+                        <input name="frontAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
+                      </FormField>
+                      <FormField label="Back asset">
+                        <input name="backAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
+                      </FormField>
+                    </div>
+                    <FormField label="Metadata sidecar">
+                      <input name="metadata" type="file" accept=".json,application/json,text/json" className="input-base" />
+                    </FormField>
+                    <button className="button" type="submit" disabled={pendingKey === 'replace'}>
+                      {pendingKey === 'replace' ? 'Replacing...' : 'Replace files'}
+                    </button>
+                  </form>
+                </div>
+              )}
+            />
+            </section>
+
+            <section id="ghostling-import">
             <Panel
               className={styles.adminPanel}
               tier="meta"
               eyebrow="Repo import"
-              title="Bulk import repo art into the library"
+              title="Import repo cosmetics into the live library"
               body={repoCandidates ? (
-                <div className={styles.importStack}>
-                  {importDrafts.map((draft) => (
-                    <article key={draft.slug} className={styles.importRow}>
-                      <div className={styles.importHeader}>
-                        <label className={styles.importToggle}>
-                          <input
-                            type="checkbox"
-                            checked={draft.selected}
-                            onChange={(event) => updateImportDraft(draft.slug, 'selected', event.target.checked)}
-                          />
-                          <span>{draft.name}</span>
-                        </label>
-                        <span className="app-chip">{draft.frontAssetPath ?? draft.backAssetPath ?? 'No asset path'}</span>
-                      </div>
-                      <div className={styles.importGrid}>
-                        <FormField label="Name" className={styles.compactField}>
-                          <input
-                            type="text"
-                            className="input-base"
-                            value={draft.name}
-                            onChange={(event) => updateImportDraft(draft.slug, 'name', event.target.value)}
-                          />
-                        </FormField>
-                        <FormField label="Slug" className={styles.compactField}>
-                          <input
-                            type="text"
-                            className="input-base"
-                            value={draft.slug}
-                            onChange={(event) => updateImportDraft(draft.slug, 'slug', event.target.value)}
-                          />
-                        </FormField>
-                        <FormField label="Slot" className={styles.compactField}>
-                          <select
-                            className="input-base"
-                            value={draft.slot}
-                            onChange={(event) => updateImportDraft(draft.slug, 'slot', event.target.value)}
-                          >
-                            <option value="hat">Hat</option>
-                            <option value="face">Face</option>
-                            <option value="neck">Neck</option>
-                            <option value="body">Body</option>
-                          </select>
-                        </FormField>
-                        <FormField label="Rarity" className={styles.compactField}>
-                          <select
-                            className="input-base"
-                            value={draft.rarity}
-                            onChange={(event) => updateImportDraft(draft.slug, 'rarity', event.target.value)}
-                          >
-                            <option value="common">Common</option>
-                            <option value="rare">Rare</option>
-                            <option value="epic">Epic</option>
-                            <option value="legendary">Legendary</option>
-                          </select>
-                        </FormField>
-                        <FormField label="Cost" className={styles.compactField}>
-                          <input
-                            type="number"
-                            min="0"
-                            className="input-base"
-                            value={draft.cost}
-                            onChange={(event) => updateImportDraft(draft.slug, 'cost', event.target.value)}
-                          />
-                        </FormField>
-                        <FormField label="Visible on import" className={styles.compactField}>
-                          <label className={styles.activeToggle}>
+                <div className="app-stack">
+                  <p className={styles.actionNote}>
+                    Selected repo items import with the visibility setting you choose here and join the current slot order immediately.
+                  </p>
+                  <div className={styles.importStack}>
+                    {importDrafts.map((draft) => (
+                      <article key={draft.slug} className={styles.importRow}>
+                        <div className={styles.importHeader}>
+                          <label className={styles.importToggle}>
                             <input
                               type="checkbox"
-                              checked={draft.active}
-                              onChange={(event) => updateImportDraft(draft.slug, 'active', event.target.checked)}
+                              checked={draft.selected}
+                              onChange={(event) => updateImportDraft(draft.slug, 'selected', event.target.checked)}
                             />
-                            <span>{draft.active ? 'Visible' : 'Hidden'}</span>
+                            <span>{draft.name}</span>
                           </label>
-                        </FormField>
-                      </div>
-                      <FormField label="Description" className={styles.compactField}>
-                        <textarea
-                          rows={2}
-                          className="input-base"
-                          value={draft.description}
-                          onChange={(event) => updateImportDraft(draft.slug, 'description', event.target.value)}
-                        />
-                      </FormField>
-                      <div className={styles.importAssets}>
-                        {draft.frontAssetUrl ? <img src={draft.frontAssetUrl} alt={`${draft.name} front asset`} className={styles.importPreview} /> : null}
-                        <div className={styles.assetMetaList}>
-                          <span>{draft.frontAssetPath ?? 'No front asset'}</span>
-                          {draft.backAssetPath ? <span>{draft.backAssetPath}</span> : null}
-                          {draft.renderMetadataPath ? <span>{draft.renderMetadataPath}</span> : null}
-                          {draft.renderMetadata ? <span>Anchor metadata ready</span> : null}
-                          {(draft.renderMetadataErrors ?? []).map((error) => (
-                            <span key={`${draft.slug}:${error}`} className={styles.importErrorText}>{error}</span>
-                          ))}
+                          <span className="app-chip">{draft.frontAssetPath ?? draft.backAssetPath ?? 'No asset path'}</span>
                         </div>
-                      </div>
-                    </article>
-                  ))}
-                  <button className="button" type="button" onClick={() => void handleImportRepoItems()} disabled={pendingKey === 'import'}>
-                    {pendingKey === 'import' ? 'Importing...' : 'Import selected repo cosmetics'}
-                  </button>
+                        <div className={styles.importGrid}>
+                          <FormField label="Name" className={styles.compactField}>
+                            <input
+                              type="text"
+                              className="input-base"
+                              value={draft.name}
+                              onChange={(event) => updateImportDraft(draft.slug, 'name', event.target.value)}
+                            />
+                          </FormField>
+                          <FormField label="Slug" className={styles.compactField}>
+                            <input
+                              type="text"
+                              className="input-base"
+                              value={draft.slug}
+                              onChange={(event) => updateImportDraft(draft.slug, 'slug', event.target.value)}
+                            />
+                          </FormField>
+                          <FormField label="Slot" className={styles.compactField}>
+                            <select
+                              className="input-base"
+                              value={draft.slot}
+                              onChange={(event) => updateImportDraft(draft.slug, 'slot', event.target.value)}
+                            >
+                              <option value="hat">Hat</option>
+                              <option value="face">Face</option>
+                              <option value="neck">Neck</option>
+                              <option value="body">Body</option>
+                            </select>
+                          </FormField>
+                          <FormField label="Rarity" className={styles.compactField}>
+                            <select
+                              className="input-base"
+                              value={draft.rarity}
+                              onChange={(event) => updateImportDraft(draft.slug, 'rarity', event.target.value)}
+                            >
+                              <option value="common">Common</option>
+                              <option value="rare">Rare</option>
+                              <option value="epic">Epic</option>
+                              <option value="legendary">Legendary</option>
+                            </select>
+                          </FormField>
+                          <FormField label="Cost" className={styles.compactField}>
+                            <input
+                              type="number"
+                              min="0"
+                              className="input-base"
+                              value={draft.cost}
+                              onChange={(event) => updateImportDraft(draft.slug, 'cost', event.target.value)}
+                            />
+                          </FormField>
+                          <FormField label="Visible on import" className={styles.compactField}>
+                            <label className={styles.activeToggle}>
+                              <input
+                                type="checkbox"
+                                checked={draft.active}
+                                onChange={(event) => updateImportDraft(draft.slug, 'active', event.target.checked)}
+                              />
+                              <span>{draft.active ? 'Visible' : 'Hidden'}</span>
+                            </label>
+                          </FormField>
+                        </div>
+                        <FormField label="Description" className={styles.compactField}>
+                          <textarea
+                            rows={2}
+                            className="input-base"
+                            value={draft.description}
+                            onChange={(event) => updateImportDraft(draft.slug, 'description', event.target.value)}
+                          />
+                        </FormField>
+                        <div className={styles.importAssets}>
+                          {draft.frontAssetUrl ? <img src={draft.frontAssetUrl} alt={`${draft.name} front asset`} className={styles.importPreview} /> : null}
+                          <div className={styles.assetMetaList}>
+                            <span>{draft.frontAssetPath ?? 'No front asset'}</span>
+                            {draft.backAssetPath ? <span>{draft.backAssetPath}</span> : null}
+                            {draft.renderMetadataPath ? <span>{draft.renderMetadataPath}</span> : null}
+                            {draft.renderMetadata ? <span>Anchor metadata ready</span> : null}
+                            {(draft.renderMetadataErrors ?? []).map((error) => (
+                              <span key={`${draft.slug}:${error}`} className={styles.importErrorText}>{error}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                    <button className="button" type="button" onClick={() => void handleImportRepoItems()} disabled={pendingKey === 'import'}>
+                      {pendingKey === 'import' ? 'Importing...' : 'Import selected cosmetics'}
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <EmptyState message="No repo Ghostling assets are waiting to be imported." />
+                <EmptyState message="No repo Ghostling assets are ready to import." />
               )}
             />
+            </section>
           </AppGrid>
 
-          <section className={styles.librarySection}>
+          <StatStrip
+            className={styles.scoreboard}
+            leadIndex={0}
+            stats={[
+              { label: 'Live library', value: String(totalItems) },
+              { label: 'Visible', value: String(activeItems) },
+              { label: 'Hidden', value: String(hiddenItems) },
+              { label: 'Repo imports', value: String(repoCandidates) },
+            ]}
+          />
+
+          <section id="ghostling-library" className={styles.librarySection}>
             <SectionHeading
-              eyebrow="Library controls"
+              eyebrow="Catalog controls"
               title="Hide, restore, and reorder live cosmetics"
-              copy="Hidden cosmetics disappear from the public unlock catalog, but they remain in the operator library. Order changes apply within each slot."
+              copy="Use this section after uploads or imports. Hide removes a cosmetic from the member catalog without deleting files, restore brings it back, and reorder changes the order members see in the studio."
             />
             <div className={styles.slotGroups}>
               {SLOT_ORDER.map((slot) => {

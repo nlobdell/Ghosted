@@ -7,7 +7,7 @@ import { getServerJSON } from '@/lib/server-api';
 import type { ShellData } from '@/lib/types';
 
 export const metadata: Metadata = {
-  title: { template: '%s | Ghosted Admin', default: 'Admin' },
+  title: { template: '%s | Ghosted Admin', default: 'Ghosted Admin' },
 };
 
 export const dynamic = 'force-dynamic';
@@ -21,11 +21,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const shellData = await getServerJSON<ShellData>('/api/site-shell?next=%2Fadmin%2F');
 
   return (
-    <div className="app-page app-shell">
-      <HallTopbar shellData={shellData} />
-      <div className="hall-layout">
-        <HallSidebar includeAdmin />
-        <div className="hall-main">
+    <div className="app-page app-shell app-shell--admin">
+      <HallTopbar shellData={shellData} surface="admin" />
+      <div className="hall-layout hall-layout--admin">
+        <HallSidebar includeAdmin surface="admin" />
+        <div className="hall-main hall-main--admin" aria-label="Admin workspace">
           {children}
         </div>
       </div>

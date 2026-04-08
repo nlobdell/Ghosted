@@ -3,24 +3,37 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const HALL_LINKS = [
-  { href: '/hall/ghostling/', label: 'Ghostling', meta: 'Build + export' },
-  { href: '/hall/rewards/', label: 'Rewards', meta: 'Spend points' },
+  { href: '/hall/ghostling/', label: 'Ghostling', meta: 'Identity studio' },
+  { href: '/hall/rewards/', label: 'Rewards', meta: 'Spend or enter' },
   { href: '/hall/competitions/', label: 'Competitions', meta: 'Live standings' },
-  { href: '/hall/clan/', label: 'Clan', meta: 'Roster pulse' },
+  { href: '/hall/clan/', label: 'Clan', meta: 'Roster health' },
 ];
 
-export function HallSidebar({ includeAdmin = false }: { includeAdmin?: boolean }) {
+export function HallSidebar({
+  includeAdmin = false,
+  surface = 'hall',
+}: {
+  includeAdmin?: boolean;
+  surface?: 'hall' | 'admin';
+}) {
   const pathname = usePathname();
   const normalizedPath = pathname !== '/' && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+  const adminLink = { href: '/admin/', label: 'Admin', meta: 'Operator actions' };
   const links = includeAdmin
-    ? [...HALL_LINKS, { href: '/admin/', label: 'Admin', meta: 'Operations + tools' }]
+    ? surface === 'admin'
+      ? [adminLink, ...HALL_LINKS]
+      : [...HALL_LINKS, adminLink]
     : HALL_LINKS;
+  const summary = surface === 'admin'
+    ? 'Change live Ghosted state, then confirm sync, balances, and records.'
+    : 'Ghostling identity, rewards, Wise Old Man status, and the live clan board.';
 
   return (
-    <aside className="hall-sidebar" aria-label="Hall navigation">
+    <aside className={`hall-sidebar ${surface === 'admin' ? 'hall-sidebar--admin' : ''}`} aria-label={surface === 'admin' ? 'Admin navigation' : 'Hall navigation'}>
       <div className="hall-sidebar__header">
-        <span className="kicker">Persistent map</span>
-        <h2 className="hall-sidebar__title">The Hall</h2>
+        <span className="kicker">{surface === 'admin' ? 'Operator control' : 'Member workspace'}</span>
+        <h2 className="hall-sidebar__title">{surface === 'admin' ? 'Admin' : 'Hall'}</h2>
+        <p className="hall-sidebar__summary">{summary}</p>
       </div>
       <nav className="hall-sidebar__nav">
         {links.map((link) => (

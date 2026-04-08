@@ -13,17 +13,15 @@ export function AppContext({
   title,
   summary,
   actions,
-  slim = true,
   className,
 }: {
   breadcrumbs: BreadcrumbItem[];
   title: string;
   summary?: string;
   actions?: ReactNode;
-  slim?: boolean;
   className?: string;
 }) {
-  const sectionClassName = ['app-context', slim ? '' : 'app-context--wide', className].filter(Boolean).join(' ');
+  const sectionClassName = ['app-context', className].filter(Boolean).join(' ');
 
   return (
     <section className={sectionClassName}>
@@ -93,20 +91,24 @@ export function Panel({
   eyebrow,
   title,
   chip,
+  actions,
   body,
   href,
   subtle,
   tier = 'primary',
   className,
+  bodyClassName,
 }: {
   eyebrow?: string;
   title: string;
   chip?: string;
+  actions?: ReactNode;
   body: ReactNode;
   href?: string;
   subtle?: boolean;
   tier?: 'primary' | 'meta';
   className?: string;
+  bodyClassName?: string;
 }) {
   const panelClassName = [
     'app-panel',
@@ -125,9 +127,14 @@ export function Panel({
           {eyebrow ? <p className="kicker">{eyebrow}</p> : null}
           <h3>{title}</h3>
         </div>
-        {chip ? <span className="app-chip">{chip}</span> : null}
+        {(chip || actions) ? (
+          <div className="app-panel__header-actions">
+            {chip ? <span className="app-chip">{chip}</span> : null}
+            {actions}
+          </div>
+        ) : null}
       </div>
-      <div className="app-panel__body">{body}</div>
+      <div className={['app-panel__body', bodyClassName].filter(Boolean).join(' ')}>{body}</div>
     </>
   );
 
@@ -146,70 +153,6 @@ export function AppGrid({ children, className }: { children: ReactNode; classNam
   return <section className={['app-grid-two', className].filter(Boolean).join(' ')}>{children}</section>;
 }
 
-export interface ArchitectureNode {
-  label: string;
-  title: string;
-  copy: string;
-  href?: string;
-  external?: boolean;
-  cta?: string;
-  chips?: string[];
-}
-
-export function ArchitectureMap({
-  title,
-  copy,
-  nodes,
-}: {
-  title: string;
-  copy?: string;
-  nodes: ArchitectureNode[];
-}) {
-  return (
-    <section className="architecture-map">
-      <div className="architecture-map__heading">
-        <h3>{title}</h3>
-        {copy ? <p>{copy}</p> : null}
-      </div>
-      <div className="architecture-map__grid">
-        {nodes.map((node) => {
-          const body = (
-            <article key={node.title} className="architecture-node">
-              <span className="architecture-node__label">{node.label}</span>
-              <h4>{node.title}</h4>
-              <p>{node.copy}</p>
-              {node.chips?.length ? (
-                <div className="architecture-node__chips">
-                  {node.chips.map((chip) => (
-                    <span key={chip} className="app-chip">{chip}</span>
-                  ))}
-                </div>
-              ) : null}
-              {node.href && node.cta ? (
-                node.external ? (
-                  <a
-                    className="button button--secondary button--small"
-                    href={node.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {node.cta}
-                  </a>
-                ) : (
-                  <Link className="button button--secondary button--small" href={node.href}>
-                    {node.cta}
-                  </Link>
-                )
-              ) : null}
-            </article>
-          );
-          return body;
-        })}
-      </div>
-    </section>
-  );
-}
-
 export function Highlight({
   eyebrow,
   title,
@@ -217,6 +160,8 @@ export function Highlight({
   actions,
   stage,
   className,
+  copyClassName,
+  stageClassName,
 }: {
   eyebrow?: string;
   title: string;
@@ -225,21 +170,23 @@ export function Highlight({
   stage?: {
     label: string;
     primary: string;
-    secondary?: string;
-    chips?: string[];
-  };
+      secondary?: string;
+      chips?: string[];
+    };
   className?: string;
+  copyClassName?: string;
+  stageClassName?: string;
 }) {
   return (
     <section className={['highlight-shell', stage ? '' : 'highlight-shell--single', className].filter(Boolean).join(' ')}>
-      <div className="highlight-copy">
+      <div className={['highlight-copy', copyClassName].filter(Boolean).join(' ')}>
         {eyebrow ? <p className="kicker">{eyebrow}</p> : null}
         <h2 className="highlight-copy__title">{title}</h2>
         {copy ? <p>{copy}</p> : null}
         {actions ? <div className="app-inline-actions">{actions}</div> : null}
       </div>
       {stage ? (
-        <aside className="highlight-stage" aria-label={stage.label}>
+        <aside className={['highlight-stage', stageClassName].filter(Boolean).join(' ')} aria-label={stage.label}>
           <div className="highlight-stage__header">
             <span>{stage.label}</span>
           </div>
@@ -270,27 +217,6 @@ export function MetricGrid({ items }: { items: [string, string][] }) {
           <span>{label}</span>
           <strong>{value}</strong>
         </div>
-      ))}
-    </div>
-  );
-}
-
-export function RouteList({
-  routes,
-  className,
-}: {
-  routes: { href: string; label: string; meta: string; featured?: boolean }[];
-  className?: string;
-}) {
-  return (
-    <div className={['app-route-list', className].filter(Boolean).join(' ')}>
-      {routes.map((route) => (
-        <Link key={route.href} href={route.href} className={`app-route${route.featured ? ' app-route--featured' : ''}`}>
-          <div className="app-route__copy">
-            <strong>{route.label}</strong>
-          </div>
-          <span className="app-route__meta">{route.meta}</span>
-        </Link>
       ))}
     </div>
   );
@@ -445,7 +371,7 @@ export function CompetitionList({
   compact = false,
   className,
 }: {
-  entries: { title: string; status: string; metric?: string; type?: string; startsAt?: string; endsAt?: string }[];
+  entries: { title: string; displayTitle?: string; status: string; metric?: string; type?: string; startsAt?: string; endsAt?: string }[];
   compact?: boolean;
   className?: string;
 }) {
@@ -453,21 +379,24 @@ export function CompetitionList({
 
   return (
     <div className={['app-feed', className].filter(Boolean).join(' ')}>
-      {entries.map((entry, index) => (
-        <article key={`${entry.title}-${index}`} className={`app-feed__item${compact ? ' is-compact' : ''}`}>
-          <div className="app-card__row">
-            <strong>{entry.title || 'Competition'}</strong>
-            <span className="app-chip">{entry.status}</span>
-          </div>
-          {!compact ? (
-            <div className="app-feed__meta-row">
-              {entry.metric ? <span className="app-feed__eyebrow">{entry.metric}</span> : null}
-              {entry.type ? <span className="app-feed__eyebrow">{entry.type}</span> : null}
+      {entries.map((entry, index) => {
+        const title = entry.displayTitle || entry.title || 'Competition';
+        return (
+          <article key={`${title}-${index}`} className={`app-feed__item${compact ? ' is-compact' : ''}`}>
+            <div className="app-card__row">
+              <strong>{title}</strong>
+              <span className="app-chip">{entry.status}</span>
             </div>
-          ) : null}
-          <div className="app-feed__meta">{formatCompetitionWindow(entry)}</div>
-        </article>
-      ))}
+            {!compact ? (
+              <div className="app-feed__meta-row">
+                {entry.metric ? <span className="app-feed__eyebrow">{entry.metric}</span> : null}
+                {entry.type ? <span className="app-feed__eyebrow">{entry.type}</span> : null}
+              </div>
+            ) : null}
+            <div className="app-feed__meta">{formatCompetitionWindow(entry)}</div>
+          </article>
+        );
+      })}
     </div>
   );
 }

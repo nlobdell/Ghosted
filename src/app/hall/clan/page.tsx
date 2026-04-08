@@ -9,27 +9,25 @@ import {
   MetricGrid,
   LeaderboardTable,
   Feed,
-  CompetitionList,
   EmptyState,
   Banner,
 } from '@/components/ui/AppUI';
-import { formatMaybeNumber, formatDate, getJSON } from '@/lib/api';
+import { formatDate, formatMaybeNumber, formatMetricLabel, getJSON } from '@/lib/api';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 import type {
-  ClanData,
-  Competition,
-  LeaderboardEntry,
   AchievementItem,
   ActivityItem,
-  WomEntriesResponse,
+  ClanData,
+  LeaderboardEntry,
 } from '@/lib/types';
 import styles from './page.module.css';
 
+function leaderboardValue(entry?: LeaderboardEntry | null) {
+  return entry?.displayValue ?? entry?.progress?.gained ?? entry?.gained ?? entry?.value;
+}
+
 export default function ClanPage() {
   const [clan, setClan] = useState<ClanData | null>(null);
-  const [competitions, setCompetitions] = useState<Competition[]>([]);
-  const [hiscores, setHiscores] = useState<LeaderboardEntry[]>([]);
-  const [gains, setGains] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [womConfigured, setWomConfigured] = useState(true);
@@ -37,29 +35,15 @@ export default function ClanPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [clanData, compsData, hiscoresData, gainsData] = await Promise.all([
-          getJSON<ClanData>('/api/wom/clan').catch((err: Error) => {
-            if (err.message.toLowerCase().includes('not configured') || err.message.includes('404')) {
-              setWomConfigured(false);
-              return null;
-            }
-            throw err;
-          }),
-          getJSON<{ competitions?: Competition[] }>('/api/wom/competitions?limit=8')
-            .then((data) => data.competitions ?? [])
-            .catch(() => [] as Competition[]),
-          getJSON<WomEntriesResponse | { hiscores?: LeaderboardEntry[] }>('/api/wom/hiscores?metric=overall&limit=8')
-            .then((data) => ('entries' in data ? data.entries : (data.hiscores ?? [])))
-            .catch(() => [] as LeaderboardEntry[]),
-          getJSON<WomEntriesResponse | { gains?: LeaderboardEntry[] }>('/api/wom/gains?metric=overall&period=week&limit=8')
-            .then((data) => ('entries' in data ? data.entries : (data.gains ?? [])))
-            .catch(() => [] as LeaderboardEntry[]),
-        ]);
+        const clanData = await getJSON<ClanData>('/api/wom/clan').catch((err: Error) => {
+          if (err.message.toLowerCase().includes('not configured') || err.message.includes('404')) {
+            setWomConfigured(false);
+            return null;
+          }
+          throw err;
+        });
 
         if (clanData) setClan(clanData);
-        setCompetitions(compsData);
-        setHiscores(hiscoresData);
-        setGains(gainsData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load clan data.');
       } finally {
@@ -74,20 +58,23 @@ export default function ClanPage() {
     return (
       <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
         <EmptyState
-          message="Wise Old Man integration is not configured. Set up WOM to load verified Ghosted group data."
+          message="Wise Old Man integration is not configured. Set it up to load verified Ghosted group data."
           action={<Link href="/hall/" className="button button--secondary button--small">Back to Hall</Link>}
         />
       </main>
     );
   }
 
-  const ongoing = competitions.filter((c) => c.status === 'ongoing');
-  const upcoming = competitions.filter((c) => c.status === 'upcoming');
-  const finished = competitions.filter((c) => c.status === 'finished');
-  const leaderboardEntries = hiscores.length > 0 ? hiscores : (clan?.featuredHiscores?.entries ?? []);
-  const gainsEntries = gains.length > 0 ? gains : (clan?.featuredGains?.entries ?? []);
+  const leaderboardEntries = clan?.featuredHiscores?.entries ?? [];
+  const gainsEntries = clan?.featuredGains?.entries ?? [];
   const topLeader = leaderboardEntries[0];
   const topGainer = gainsEntries[0];
+  const skillOfTheWeek = clan?.skillOfTheWeek ?? null;
+  const skillBoardEntries = skillOfTheWeek?.standings ?? [];
+  const skillBoardLeader = skillBoardEntries[0];
+  const skillBoardTitle = skillOfTheWeek?.competition.displayTitle ?? skillOfTheWeek?.competition.title ?? 'Skill of the Week';
+  const skillBoardTracked = skillOfTheWeek?.competition.participantCount ?? skillBoardEntries.length;
+  const skillBoardModeLabel = skillOfTheWeek?.mode === 'latest_finished' ? 'Latest finished board' : 'Live now';
   const trackedMembers = clan?.linkCoverage.trackedUsers ?? 0;
   const linkedMembers = clan?.linkCoverage.linkedUsers ?? 0;
   const groupMemberCount = clan?.linkCoverage.groupMemberCount ?? clan?.group.memberCount ?? 0;
@@ -105,47 +92,58 @@ export default function ClanPage() {
           <Highlight
             className="clan-spotlight"
             title={clan.group.name}
-            copy="Roster health, live competition pressure, and the members setting the pace."
+            copy={
+              skillOfTheWeek
+                ? 'Start with roster health, then check the live competition pace across Ghosted.'
+                : 'Start with roster health, then compare the overall leaders with the latest weekly gains across Ghosted.'
+            }
+            actions={(
+              <>
+                <a href="#roster-health" className="button button--small">Review roster health</a>
+                <a href="#clan-competition-signal" className="button button--secondary button--small">Check clan pace</a>
+              </>
+            )}
             stage={
-              topLeader
+              skillOfTheWeek && skillBoardLeader
                 ? {
-                  label: 'Top performer',
-                  primary: topLeader.player?.displayName || topLeader.player?.username || 'Ghosted member',
-                  secondary: `${formatMaybeNumber(topLeader.value)} overall level`,
+                  label: skillOfTheWeek.mode === 'latest_finished' ? 'Last Skill of the Week' : 'Skill of the Week',
+                  primary: skillBoardTitle,
+                  secondary: `${skillBoardLeader.player?.displayName || skillBoardLeader.player?.username || 'Ghosted member'} leads with +${formatMaybeNumber(leaderboardValue(skillBoardLeader))}`,
                   chips: [
-                    `${ongoing.length} live events`,
+                    skillBoardModeLabel,
+                    `${formatMaybeNumber(skillBoardTracked)} tracked`,
                     `${linkRate} linked coverage`,
                   ],
                 }
-                : {
-                  label: 'Clan status',
-                  primary: `${clan.group.memberCount} members`,
-                  secondary: `${ongoing.length} competitions live`,
-                  chips: [`${linkRate} linked coverage`],
-                }
+                : topLeader
+                  ? {
+                    label: 'Top performer',
+                    primary: topLeader.player?.displayName || topLeader.player?.username || 'Ghosted member',
+                    secondary: `${formatMaybeNumber(leaderboardValue(topLeader))} overall level`,
+                    chips: [
+                      skillOfTheWeek ? skillBoardModeLabel : 'No recent Skill of the Week',
+                      `${linkRate} linked coverage`,
+                    ],
+                  }
+                  : {
+                    label: 'Clan status',
+                    primary: `${clan.group.memberCount} members`,
+                    secondary: skillOfTheWeek ? skillBoardTitle : 'No recent Skill of the Week board',
+                    chips: [`${linkRate} linked coverage`],
+                  }
             }
           />
 
-          <StatStrip
-            className="clan-scoreboard"
-            leadIndex={0}
-            stats={[
-              { label: 'Members', value: String(clan.group.memberCount) },
-              { label: 'Linked coverage', value: linkRate },
-              { label: 'Live competitions', value: String(ongoing.length), href: '/hall/competitions/' },
-              { label: 'Maxed total', value: String(clan.statistics.maxedTotalCount) },
-            ]}
-          />
-
-          <AppGrid>
+          <AppGrid className={styles.primaryGrid}>
             <Panel
               className="clan-roster"
               tier="primary"
+              eyebrow="Start here"
               title="Roster health"
               body={(
-                <div className="app-stack">
+                <div id="roster-health" className="app-stack">
                   <p className="app-panel-note">
-                    Verified WOM group {GHOSTED_CONTENT.wom.groupId}. Monitor core membership health and clan identity data.
+                    Verified Wise Old Man group {GHOSTED_CONTENT.wom.groupId}. Check membership coverage, linked accounts, and home-world details here first.
                   </p>
                   <MetricGrid
                     items={[
@@ -154,69 +152,88 @@ export default function ClanPage() {
                       ['Linked users', String(linkedMembers)],
                       ['Unlinked users', String(unlinkedMembers)],
                       ['Coverage', linkRate],
-                      ['Verified', clan.group.verified ? 'Yes' : 'No'],
                       ['Home world', String(clan.group.homeworld ?? GHOSTED_CONTENT.wom.homeworld)],
                       ['Clan chat', clan.group.clanChat ?? GHOSTED_CONTENT.wom.clanChat],
-                      ['Score', clan.group.score !== undefined ? String(clan.group.score) : '-'],
                       ['Avg overall', formatMaybeNumber(clan.statistics.averageOverallLevel)],
-                      ['Avg EHP', formatMaybeNumber(clan.statistics.averageEhp)],
-                      ['Avg EHB', formatMaybeNumber(clan.statistics.averageEhb)],
                       ['Maxed total', String(clan.statistics.maxedTotalCount)],
-                      ['Maxed combat', String(clan.statistics.maxedCombatCount)],
-                      ['200m players', String(clan.statistics.maxed200msCount)],
                     ]}
                   />
                 </div>
               )}
             />
             <Panel
-              className="clan-leaders"
-              tier="primary"
-              title="Overall leaders"
+              className="clan-events"
+              tier="meta"
+              eyebrow="Live board"
+              title="Board snapshot"
               body={(
-                <LeaderboardTable
-                  entries={leaderboardEntries}
-                  valueFormatter={(entry) => formatMaybeNumber(entry.value)}
-                  valueLabel="Level"
-                />
+                <div id="clan-competition-signal" className="app-stack">
+                  <p className="app-panel-note">
+                    {skillOfTheWeek
+                      ? `${skillOfTheWeek.mode === 'active' ? 'Wise Old Man is currently tracking' : 'The latest finished Wise Old Man board tracked'} ${formatMetricLabel(skillOfTheWeek.competition.metric)}. Use this snapshot to check the pace and compare it with the overall leaders below.`
+                      : 'Wise Old Man is not showing a recent Skill of the Week board right now. Use the overall leaders and weekly gain pace to keep tabs on the clan.'}
+                  </p>
+                  <MetricGrid
+                    items={[
+                      ['Board', skillOfTheWeek ? skillBoardTitle : 'No recent board'],
+                      ['Status', skillOfTheWeek ? skillBoardModeLabel : 'Unavailable'],
+                      ['Metric', skillOfTheWeek ? formatMetricLabel(skillOfTheWeek.competition.metric) : 'Overall'],
+                      ['Tracked', skillOfTheWeek ? String(skillBoardTracked) : '-'],
+                      ['Leader', skillBoardLeader?.player?.displayName || skillBoardLeader?.player?.username || '-'],
+                      ['Leader gain', skillBoardLeader ? `+${formatMaybeNumber(leaderboardValue(skillBoardLeader))}` : '-'],
+                      ['Weekly pace leader', topGainer?.player?.displayName || topGainer?.player?.username || '-'],
+                      ['Weekly pace', topGainer ? `+${formatMaybeNumber(leaderboardValue(topGainer))}` : '-'],
+                    ]}
+                  />
+                </div>
               )}
             />
           </AppGrid>
 
-          <AppGrid>
+          <StatStrip
+            className="clan-scoreboard"
+            leadIndex={0}
+            stats={[
+              { label: 'Members', value: String(clan.group.memberCount) },
+              { label: 'Linked coverage', value: linkRate },
+              { label: 'Tracked users', value: String(trackedMembers), href: '/hall/clan/' },
+              { label: 'Maxed total', value: String(clan.statistics.maxedTotalCount) },
+            ]}
+          />
+
+          <AppGrid className={styles.secondaryGrid}>
             <Panel
-              className="clan-events"
-              tier="primary"
-              title={ongoing.length > 0 ? `${ongoing.length} competitions live` : `${upcoming.length} competitions upcoming`}
+              className="clan-leaders"
+              tier="meta"
+              title="Skill of the Week standings"
+              chip={skillOfTheWeek ? skillBoardModeLabel : undefined}
               body={(
-                <div className="app-stack">
-                  <MetricGrid
-                    items={[
-                      ['Live', String(ongoing.length)],
-                      ['Upcoming', String(upcoming.length)],
-                      ['Finished', String(finished.length)],
-                      ['Weekly gain leader', topGainer?.player?.displayName || topGainer?.player?.username || '-'],
-                    ]}
+                skillBoardEntries.length > 0 ? (
+                  <LeaderboardTable
+                    entries={skillBoardEntries}
+                    valueFormatter={(entry) => `+${formatMaybeNumber(leaderboardValue(entry))}`}
+                    valueLabel="XP gained"
                   />
-                  <CompetitionList entries={competitions} compact />
-                </div>
+                ) : (
+                  <EmptyState message="No Skill of the Week standings are available yet." />
+                )
               )}
             />
             <Panel
               className="clan-gains"
-              tier="primary"
-              title="Weekly gains"
+              tier="meta"
+              title="Overall leaders"
               body={(
                 <LeaderboardTable
-                  entries={gainsEntries}
-                  valueFormatter={(entry) => `+${formatMaybeNumber(entry.gained ?? entry.progress?.gained)}`}
-                  valueLabel="XP gained"
+                  entries={leaderboardEntries}
+                  valueFormatter={(entry) => formatMaybeNumber(leaderboardValue(entry))}
+                  valueLabel="Total level"
                 />
               )}
             />
           </AppGrid>
 
-          <AppGrid>
+          <AppGrid className={styles.archiveGrid}>
             <Panel
               className="clan-history"
               tier="meta"
@@ -249,7 +266,7 @@ export default function ClanPage() {
         </>
       ) : (
         <EmptyState
-          message="No clan data available. Check WOM configuration."
+          message="No clan data available. Check Wise Old Man configuration."
           action={<Link href="/hall/" className="button button--secondary button--small">Back to Hall</Link>}
         />
       )}

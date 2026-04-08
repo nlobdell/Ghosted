@@ -12,6 +12,7 @@
 
 .page :global(.casino-rules) {
   background: rgba(14, 12, 23, 0.84);
-  max-width: min(52rem, 100%);
+  max-width: none;
   justify-self: start;
+  opacity: 0.92;
 }

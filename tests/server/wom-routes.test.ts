@@ -17,6 +17,8 @@ vi.mock('next/headers', () => ({
 }));
 
 import { DELETE as deleteWomLinkRoute, POST as postWomLinkRoute } from '@/app/api/profile/wom-link/route';
+import { GET as getWomClanRoute } from '@/app/api/wom/clan/route';
+import { GET as getWomCompetitionsRoute } from '@/app/api/wom/competitions/route';
 import { GET as getWomMeRoute } from '@/app/api/wom/me/route';
 
 describe('wom route handlers', () => {
@@ -70,6 +72,29 @@ describe('wom route handlers', () => {
     expect(response.status).toBe(200);
     expect(payload.player.id).toBe(PLAYER.id);
     expect(payload.membership.rankLabel).toBe('Event Captain');
+  });
+
+  it('returns the clan payload with Skill of the Week standings', async () => {
+    installWomFetchMock();
+
+    const response = await getWomClanRoute();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.skillOfTheWeek.mode).toBe('active');
+    expect(payload.skillOfTheWeek.competition.displayTitle).toBe('Agility Skill of the Week');
+    expect(payload.skillOfTheWeek.standings[0].displayValue).toBe(4000);
+  });
+
+  it('returns competitions with normalized participant counts', async () => {
+    installWomFetchMock();
+
+    const response = await getWomCompetitionsRoute(new Request('http://localhost/api/wom/competitions?limit=12'));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.competitions[0].participantCount).toBe(472);
+    expect(payload.competitions[0].displayTitle).toBe('Agility Skill of the Week');
   });
 
   it('returns 401 when linking a WOM account without auth', async () => {

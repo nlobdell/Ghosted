@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 
 export const metadata: Metadata = {
@@ -10,8 +9,8 @@ export default function TermsPage() {
   return (
     <main id="main-content" className="page-shell editorial-page">
       <section className="editorial-surface editorial-stack">
-        <p className="kicker">Terms of Use</p>
-        <h1>Ghosted access is for clan and community participation, not impersonation or abuse.</h1>
+        <p className="kicker">Terms</p>
+        <h1>Rules for using Ghosted, the Hall, and Ghostling features.</h1>
         <p className="editorial-copy">
           By using Ghosted, you agree to use the site lawfully, follow the Ghosted community rules, and respect the
           platform rules of any connected services, including Discord.
@@ -50,14 +49,9 @@ export default function TermsPage() {
           If you need help with access or account issues, use the official Ghosted Discord server or the public site
           contact paths.
         </p>
-        <div className="app-inline-actions">
-          <a href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer" className="button">
-            Open Discord
-          </a>
-          <Link href="/privacy/" className="button button--secondary">
-            Privacy Policy
-          </Link>
-        </div>
+        <a href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer" className="button button--secondary button--small">
+          Open Discord support
+        </a>
       </section>
     </main>
   );

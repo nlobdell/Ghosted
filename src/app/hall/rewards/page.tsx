@@ -2,11 +2,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
-  StatStrip,
   Highlight,
   Panel,
   AppGrid,
-  MetricGrid,
   LedgerTable,
   EmptyState,
   Banner,
@@ -87,6 +85,7 @@ export default function RewardsPage() {
 
   const activeDrops = giveaways.filter((g) => g.status === 'active');
   const otherDrops = giveaways.filter((g) => g.status !== 'active');
+  const featuredDrop = activeDrops[0] ?? null;
   const isAuthed = authed && !!shell?.authenticated;
 
   return (
@@ -103,116 +102,130 @@ export default function RewardsPage() {
         />
       ) : rewards ? (
         <>
-          <StatStrip
-            className="rewards-scoreboard"
-            leadIndex={0}
-            stats={[
-              { label: 'Balance', value: formatPoints(rewards.balance) },
-              { label: 'Daily remaining', value: rewards.dailyCap !== null ? formatPoints(rewards.dailyRemaining) : 'No cap' },
-              { label: 'Active drops', value: String(activeDrops.length) },
-              { label: 'Ledger entries', value: String(rewards.entries.length) },
-            ]}
-          />
-
           <Highlight
             className="rewards-balance"
             title={formatPointsFull(rewards.balance)}
             copy={
-              rewards.dailyCap !== null
-                ? `${formatPointsFull(rewards.dailyRemaining)} left today of ${formatPointsFull(rewards.dailyCap)}.`
-                : 'No daily spending cap is active on your account.'
+              featuredDrop
+                ? `${featuredDrop.title} is live right now. Use your balance while the board is open.`
+                : rewards.dailyCap !== null
+                  ? `${formatPointsFull(rewards.dailyRemaining)} left today of ${formatPointsFull(rewards.dailyCap)}. No live drops are open right now.`
+                  : 'No daily spending cap is active on your account, and there are no live drops right now.'
             }
+            actions={(
+              <>
+                <a href="#active-drops" className="button button--small">
+                  {featuredDrop ? 'Enter live drops' : 'Check the drop board'}
+                </a>
+                <a href="#points-ledger" className="button button--secondary button--small">See points ledger</a>
+              </>
+            )}
             stage={{
-              label: 'Drop signal',
-              primary: activeDrops.length > 0 ? `${activeDrops.length} active drops` : 'No active drops',
-              secondary: isAuthed ? 'Entry enabled for linked members.' : 'Browse mode only.',
+              label: 'Balance and cap',
+              primary: rewards.dailyCap !== null ? `${formatPointsFull(rewards.dailyRemaining)} left today` : 'No daily cap',
+              secondary: featuredDrop
+                ? `${featuredDrop.title} is live for ${formatPoints(featuredDrop.pointCost)} per entry.`
+                : (isAuthed ? 'Keep your balance ready for the next drop.' : 'Browse mode only.'),
               chips: [
+                `${activeDrops.length} active drops`,
                 `${rewards.entries.length} ledger entries`,
-                rewards.dailyCap !== null ? `${formatPoints(rewards.dailyRemaining)} left today` : 'No daily cap',
               ],
             }}
           />
 
-          {activeDrops.length > 0 ? (
-            <AppGrid>
-              {activeDrops.map((item) => (
-                <Panel
-                  className="rewards-drop"
-                  tier="primary"
-                  key={item.id}
-                  title={item.title}
-                  chip={item.status}
-                  body={(
-                    <div className="app-stack">
-                      {item.description ? <p className="app-panel-note">{item.description}</p> : null}
-                      <MetricGrid
-                        items={[
-                          ['Cost', formatPoints(item.pointCost)],
-                          ['Entries', `${item.userEntries} / ${item.maxEntries}`],
-                          ['Closes', formatDate(item.endAt)],
-                          ['Access', item.requiredRole ? item.requiredRole.label : 'Linked members'],
-                        ]}
-                      />
-                      <div className="app-inline-actions">
-                        <button
-                          className="button"
-                          disabled={!item.canEnter || entering === item.id}
-                          onClick={() => handleEnter(item.id)}
-                        >
-                          {entering === item.id ? 'Entering...' : 'Enter drop'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                />
-              ))}
-            </AppGrid>
-          ) : null}
+          <section id="active-drops" className={styles.activeSurface}>
+            <Panel
+              className="rewards-active"
+              tier="primary"
+              eyebrow="Start here"
+              title={activeDrops.length > 0 ? 'Live drops' : 'Drop board'}
+              chip={activeDrops.length > 0 ? `${activeDrops.length} live` : undefined}
+              body={(
+                activeDrops.length > 0 ? (
+                  <div className={styles.dropList}>
+                    {activeDrops.map((item) => {
+                      const remainingEntries = Math.max(item.maxEntries - item.userEntries, 0);
+                      return (
+                        <article key={item.id} className={styles.dropCard}>
+                          <div className={styles.dropCopy}>
+                            <div className={styles.dropHeader}>
+                              <strong>{item.title}</strong>
+                              <span className="app-chip">{formatPoints(item.pointCost)} per entry</span>
+                            </div>
+                            {item.description ? <p className={styles.dropDescription}>{item.description}</p> : null}
+                            <div className={styles.dropMeta}>
+                              <span>Closes {formatDate(item.endAt)}</span>
+                              <span>{item.userEntries} / {item.maxEntries} entries used</span>
+                              <span>{item.requiredRole ? item.requiredRole.label : 'Linked members'}</span>
+                            </div>
+                          </div>
+                          <div className={styles.dropAction}>
+                            <button
+                              className="button"
+                              disabled={!item.canEnter || entering === item.id}
+                              onClick={() => handleEnter(item.id)}
+                            >
+                              {entering === item.id ? 'Entering...' : 'Enter drop'}
+                            </button>
+                            <span className="app-muted">
+                              {remainingEntries > 0 ? `${remainingEntries} entries left for you` : 'Entry limit reached'}
+                            </span>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState message="No Ghosted drops are live right now. Keep your balance ready for the next board." />
+                )
+              )}
+            />
+          </section>
 
-          {otherDrops.length > 0 ? (
+          <AppGrid className={styles.lowerGrid}>
             <Panel
               className="rewards-archive"
               tier="meta"
-              title={activeDrops.length > 0 ? 'Upcoming and closed' : 'All drops'}
-              chip={`${giveaways.length} total`}
+              title={otherDrops.length > 0 ? (activeDrops.length > 0 ? 'More drops' : 'Drop archive') : 'Drop archive'}
+              chip={otherDrops.length > 0 ? `${otherDrops.length} scheduled or closed` : undefined}
               body={(
-                <div className="app-route-list">
-                  {otherDrops.map((item) => (
-                    <div key={item.id} className="app-route" style={{ cursor: 'default' }}>
-                      <div className="app-route__copy">
-                        <strong>{item.title}</strong>
-                        <span className="app-chip" style={{ marginTop: '0.2rem' }}>{item.status}</span>
-                      </div>
-                      <span className="app-route__meta">{formatDate(item.endAt)}</span>
-                    </div>
-                  ))}
-                </div>
+                otherDrops.length > 0 ? (
+                  <div className={styles.archiveList}>
+                    {otherDrops.map((item) => (
+                      <article key={item.id} className={styles.archiveRow}>
+                        <div className={styles.archiveCopy}>
+                          <div className={styles.archiveHeader}>
+                            <strong>{item.title}</strong>
+                            <span className="app-chip">{item.status}</span>
+                          </div>
+                          <span>{formatPoints(item.pointCost)} per entry</span>
+                        </div>
+                        <span className={styles.archiveDate}>{formatDate(item.endAt)}</span>
+                      </article>
+                    ))}
+                  </div>
+                ) : giveaways.length > 0 ? (
+                  <EmptyState message="Everything on the board is live right now." />
+                ) : (
+                  <EmptyState message="No Ghosted drops are published yet. Check Discord for announcements." />
+                )
               )}
             />
-          ) : null}
 
-          {giveaways.length === 0 ? (
             <Panel
-              className="rewards-empty"
+              className="rewards-ledger"
               tier="meta"
-              title="No giveaways yet"
-              body={<EmptyState message="No Ghosted drops are published yet. Check Discord for announcements." />}
+              title="Points ledger"
+              chip={`${rewards.entries.length} entries`}
+              body={
+                rewards.entries.length > 0 ? (
+                  <LedgerTable entries={rewards.entries} />
+                ) : (
+                  <EmptyState message="No ledger activity yet. Earn points by participating in the community." />
+                )
+              }
             />
-          ) : null}
-
-          <Panel
-            className="rewards-ledger"
-            tier="meta"
-            title="Points ledger"
-            chip={`${rewards.entries.length} entries`}
-            body={
-              rewards.entries.length > 0 ? (
-                <LedgerTable entries={rewards.entries} />
-              ) : (
-                <EmptyState message="No ledger activity yet. Earn points by participating in the community." />
-              )
-            }
-          />
+          </AppGrid>
         </>
       ) : (
         <EmptyState message="Could not load rewards data." />

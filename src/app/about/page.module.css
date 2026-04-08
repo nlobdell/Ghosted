@@ -1,25 +1,59 @@
 .page,
-.join {
+.storyGrid,
+.storySignal,
+.leadership,
+.leadershipIntro {
   display: grid;
   gap: 1rem;
 }
 
-.story {}
-
-.join {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
+.story {
+  padding: var(--surface-padding-lg);
 }
 
-.leadership {}
+.storyGrid {
+  grid-template-columns: minmax(0, 1.04fr) minmax(19rem, 0.96fr);
+  align-items: start;
+  gap: 1.25rem;
+}
+
+.storyCopy {
+  display: grid;
+  gap: 1rem;
+  max-width: 44rem;
+}
+
+.storySignal {
+  padding: 1rem;
+  border: 1px solid rgba(191, 179, 255, 0.08);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.015);
+  align-content: start;
+}
+
+.storySignal :global(.app-chip) {
+  justify-self: start;
+}
+
+.signalNote {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.68;
+  max-width: 34ch;
+}
+
+.leadershipIntro {
+  max-width: 50rem;
+}
 
 .card {
   display: grid;
-  gap: 0.7rem;
+  align-content: start;
+  gap: 0.78rem;
 }
 
 @media (max-width: 860px) {
-  .join {
+  .storyGrid {
     grid-template-columns: 1fr;
   }
 }

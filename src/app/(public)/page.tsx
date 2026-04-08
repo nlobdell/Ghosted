@@ -4,13 +4,12 @@ import { HeroSection } from '@/components/home/HeroSection';
 import { SocialProofStrip } from '@/components/home/SocialProofStrip';
 import { NewsPreview } from '@/components/home/NewsPreview';
 import { getConfiguredLoginHref } from '@/lib/auth/server-config';
-import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 import { getServerJSON } from '@/lib/server-api';
 import type { CompanionData, NewsPost, ShellData } from '@/lib/types';
 import styles from '../page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Ghosted Clan | Community Hub',
+  title: 'Home',
 };
 
 function getHallHref(shellData: ShellData | null) {
@@ -38,19 +37,11 @@ export default async function HomePage() {
           <div className={styles.heroLayout}>
             <div className={styles.heroCopy}>
               <HeroSection hallHref={hallHref} />
-
-              <div className={styles.metaRow}>
-                <span>Discord-first member hub</span>
-                <span className={styles.metaDivider} aria-hidden="true" />
-                <span>{GHOSTED_CONTENT.discord.memberCountApprox.toLocaleString()} Discord members</span>
-                <span className={styles.metaDivider} aria-hidden="true" />
-                <span>{GHOSTED_CONTENT.wom.memberCount.toLocaleString()} WOM-tracked members</span>
-              </div>
             </div>
 
             <aside className={styles.stagePane} aria-label="Ghostling preview">
               <div className={styles.stageFrame}>
-                <span className={styles.stageLabel}>{stageName ? 'Your Ghostling' : 'Ghostling preview'}</span>
+                <span className={styles.stageLabel}>{stageName ? 'Your Ghostling preview' : 'Ghostling preview'}</span>
                 <div className={styles.stageCanvas}>
                   <img
                     src={companionData?.animatedRenderUrl ?? '/api/companion/render-animated'}
@@ -59,16 +50,20 @@ export default async function HomePage() {
                   />
                 </div>
                 <div className={styles.stageMeta}>
-                  <strong>{companionData?.user.displayName ?? stageName ?? 'Ghosted Ghostling'}</strong>
-                  <span>{stageName ? 'Signed-in members see their own Ghostling here.' : 'Visitors see the default Ghostling until they enter the Hall.'}</span>
+                  <strong>{companionData?.user.displayName ?? stageName ?? 'Ghosted house Ghostling'}</strong>
+                  <span>
+                    {stageName
+                      ? 'Your Ghostling is ready when you step into the Hall.'
+                      : 'The house Ghostling keeps the preview warm until you join the clan.'}
+                  </span>
                 </div>
               </div>
+              <SocialProofStrip />
             </aside>
           </div>
         </div>
       </section>
 
-      <SocialProofStrip />
       <NewsPreview posts={previewPosts} />
     </main>
   );

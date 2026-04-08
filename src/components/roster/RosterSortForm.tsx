@@ -85,6 +85,7 @@ export function RosterSortForm({ sortKey, direction }: Props) {
           </select>
         </label>
       </div>
+      <span className={styles.sortHint}>Updates the public roster instantly without leaving the page.</span>
     </div>
   );
 }

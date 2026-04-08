@@ -23,10 +23,10 @@ const monoFont = Space_Mono({
 export const metadata: Metadata = {
   title: {
     template: '%s | Ghosted Clan',
-    default: 'Ghosted Clan | Welcome to the Hall',
+    default: 'Ghosted Clan | Public site, Hall, and Ghostling identity',
   },
   description:
-    'Ghosted is an Old School RuneScape clan community led by vghosted on Twitch, with a Discord-first event flow, rewards, giveaways, and a unified member hub.',
+    'Ghosted is a Discord-first Old School RuneScape clan with a public site, a private Hall, live Wise Old Man competition, and a Ghostling identity loop.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

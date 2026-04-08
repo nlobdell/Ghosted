@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { GHOSTED_CONTENT } from '@/lib/ghosted-content';
 
 export const metadata: Metadata = {
@@ -10,8 +9,8 @@ export default function PrivacyPage() {
   return (
     <main id="main-content" className="page-shell editorial-page">
       <section className="editorial-surface editorial-stack">
-        <p className="kicker">Privacy Policy</p>
-        <h1>Ghosted keeps Discord auth data narrow and uses it to run the Hall.</h1>
+        <p className="kicker">Privacy</p>
+        <h1>How Ghosted uses Discord and Hall account data.</h1>
         <p className="editorial-copy">
           Ghosted uses Discord OAuth only to identify members, protect Hall access, and connect account state like
           points, Ghostling ownership, competition activity, and profile preferences. Ghosted is not affiliated with
@@ -49,14 +48,9 @@ export default function PrivacyPage() {
           For account questions, data concerns, or support, contact the Ghosted team through the official Discord
           server.
         </p>
-        <div className="app-inline-actions">
-          <a href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer" className="button">
-            Open Discord
-          </a>
-          <Link href="/about/" className="button button--secondary">
-            About Ghosted
-          </Link>
-        </div>
+        <a href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer" className="button button--secondary button--small">
+          Open Discord support
+        </a>
       </section>
     </main>
   );

@@ -31,6 +31,55 @@ export default async function DashboardPage() {
   const featuredComp = ongoingComps[0] ?? upcomingComps[0] ?? null;
   const ghostlingReady = authenticated && Boolean(companion);
   const personalReady = authenticated && Boolean(rewards && companion);
+  const nextRoutes = personalReady && rewards && companion
+    ? [
+      {
+        href: '/hall/ghostling/',
+        label: 'Shape your Ghostling',
+        meta: `${companion.equippedCount}/4 slots equipped and ${companion.ownedCount} unlocks owned`,
+        featured: true,
+      },
+      {
+        href: '/hall/rewards/',
+        label: activeDrops > 0 ? 'Enter active drops' : 'Check your balance',
+        meta: `${formatPoints(rewards.balance)} ready${activeDrops > 0 ? ` across ${activeDrops} live drops` : ' for the next unlock'}`,
+      },
+      {
+        href: '/hall/competitions/',
+        label: featuredComp ? 'Watch the live board' : 'Scan upcoming competitions',
+        meta: featuredComp ? featuredComp.title : `${ongoingComps.length} live and ${upcomingComps.length} upcoming`,
+      },
+      {
+        href: '/hall/clan/',
+        label: 'Read the clan pulse',
+        meta: `${clan?.memberCount ?? '-'} tracked members and the current leaderboard pace`,
+      },
+    ]
+    : [
+      {
+        href: '/auth/login?next=%2Fhall%2F',
+        label: 'Enter the Hall with Discord',
+        meta: 'Load your Ghostling, points balance, and member state.',
+        featured: true,
+      },
+      {
+        href: '/hall/ghostling/',
+        label: 'Preview the Ghostling studio',
+        meta: 'See your Ghostling studio before you sign in.',
+      },
+      {
+        href: '/hall/rewards/',
+        label: 'Browse the rewards loop',
+        meta: `${activeDrops} drops live on the board right now.`,
+      },
+      {
+        href: '/hall/clan/',
+        label: 'Check the clan pulse',
+        meta: `${clan?.memberCount ?? '-'} members tracked in the current snapshot.`,
+      },
+    ];
+  const spotlightPrimaryRoute = nextRoutes[0];
+  const spotlightSecondaryRoute = nextRoutes[1] ?? nextRoutes[0];
 
   const scoreboardStats = personalReady && rewards && companion
     ? [
@@ -51,7 +100,7 @@ export default async function DashboardPage() {
       {error ? <Banner message={error} variant="error" /> : null}
       {!authenticated ? (
         <Banner
-          message="Sign in with Discord to load your Ghostling, points balance, and personal hall actions."
+          message="Sign in with Discord to load your Ghostling, balance, and Hall view."
           variant="info"
         />
       ) : null}
@@ -61,17 +110,22 @@ export default async function DashboardPage() {
           <p className="kicker">Entered the Hall</p>
           <h1 className={styles.spotlightTitle}>
             {ghostlingReady && companion
-              ? `${companion.user.displayName}'s Ghostling is ready to lead the room.`
-              : 'The Hall turns the public pulse into a personal workspace.'}
+              ? `${companion.user.displayName}, your Hall start is live.`
+              : 'The Hall turns clan activity into your next move.'}
           </h1>
           <p className={styles.spotlightText}>
             {personalReady && rewards && companion
-              ? `You have ${formatPoints(rewards.balance)} ready for cosmetics, drops, and the rest of the Ghosted loop. Start with the Ghostling, then fan out into rewards, casino, and live clan events.`
-              : 'Sign in to load your own Ghostling, sync your balance, and replace the public overview with a member-specific starting point.'}
+              ? `Check your Ghostling, spend ${formatPoints(rewards.balance)} on live drops, then head into competitions and the clan board.`
+              : 'Sign in to load your Ghostling, sync your balance, and see a Hall view built around you.'}
           </p>
-          <p className={styles.transitionNote}>
-            The public layer gives you the signal. The Hall keeps the same world, but narrows it down to what you can do next.
-          </p>
+          <div className={styles.spotlightActions}>
+            <Link href={spotlightPrimaryRoute.href} className="button button--small">
+              {spotlightPrimaryRoute.label}
+            </Link>
+            <Link href={spotlightSecondaryRoute.href} className="button button--secondary button--small">
+              {spotlightSecondaryRoute.label}
+            </Link>
+          </div>
 
           <div className={styles.loopGrid}>
             <article className={styles.loopCard}>
@@ -79,7 +133,7 @@ export default async function DashboardPage() {
               <strong>{ghostlingReady && companion ? `${companion.equippedCount}/4 slots equipped` : 'Default preview active'}</strong>
             </article>
             <article className={styles.loopCard}>
-              <span>Economy</span>
+              <span>Rewards</span>
               <strong>{ghostlingReady && companion ? `${companion.ownedCount} unlocks owned` : `${activeDrops} active drops waiting`}</strong>
             </article>
             <article className={styles.loopCard}>
@@ -112,40 +166,6 @@ export default async function DashboardPage() {
         stats={scoreboardStats}
       />
 
-      <section className={styles.primarySection}>
-        <Panel
-          className="hall-actions"
-          tier="primary"
-          eyebrow="Points loop"
-          title="What to do next"
-          body={(
-            personalReady && rewards && companion ? (
-              <div className="app-stack">
-                <div className="data-row">
-                  <span className="label">Current balance</span>
-                  <strong>{formatPoints(rewards.balance)}</strong>
-                </div>
-                <div className="data-row">
-                  <span className="label">Daily remaining</span>
-                  <strong>{rewards.dailyCap !== null ? formatPoints(rewards.dailyRemaining) : 'No cap'}</strong>
-                </div>
-                <div className="data-row">
-                  <span className="label">Ghostling unlocks</span>
-                  <strong>{companion.ownedCount} owned</strong>
-                </div>
-              </div>
-            ) : authenticated ? (
-              <EmptyState message="Your personal hall data is unavailable right now. Try refreshing the hall in a moment." />
-            ) : (
-              <EmptyState
-                message="Sign in to access your Ghostling loadout, points balance, and personal hall actions."
-                action={<Link href="/auth/login?next=%2Fhall%2F" className="button button--secondary button--small">Sign in</Link>}
-              />
-            )
-          )}
-        />
-      </section>
-
       <AppGrid className={styles.secondaryGrid}>
         <Panel
           className="hall-pulse"
@@ -163,10 +183,10 @@ export default async function DashboardPage() {
                 <strong>{clan?.memberCount ?? '-'}</strong>
               </div>
               <div className="data-row">
-                <span className="label">Top hiscore</span>
+                <span className="label">Top overall</span>
                 <strong>
                   {hiscores[0]
-                    ? `${hiscores[0].player?.displayName || hiscores[0].player?.username || 'Ghosted member'} - ${formatMaybeNumber(hiscores[0].value)}`
+                    ? `${hiscores[0].player?.displayName || hiscores[0].player?.username || 'Ghosted member'} - ${formatMaybeNumber(hiscores[0].displayValue ?? hiscores[0].value)} total level`
                     : 'Unavailable'}
                 </strong>
               </div>
@@ -180,15 +200,15 @@ export default async function DashboardPage() {
 
         <Panel
           className="hall-leaders"
-          tier="primary"
+          tier="meta"
           eyebrow="Snapshot"
           title="Leaderboard preview"
           body={(
             hiscores.length > 0 ? (
               <LeaderboardTable
                 entries={hiscores}
-                valueFormatter={(entry) => formatMaybeNumber(entry.value)}
-                valueLabel="Level"
+                valueFormatter={(entry) => formatMaybeNumber(entry.displayValue ?? entry.value)}
+                valueLabel="Total level"
               />
             ) : (
               <EmptyState message="Leaderboard data is unavailable right now." />
@@ -201,8 +221,8 @@ export default async function DashboardPage() {
         <Panel
           className="hall-ledger"
           tier="meta"
-          eyebrow="Ledger"
-          title="Recent activity"
+          eyebrow="Recent activity"
+          title="Recent rewards activity"
           chip={rewards ? `${rewards.entries.length} entries` : undefined}
           body={(
             rewards && rewards.entries.length > 0

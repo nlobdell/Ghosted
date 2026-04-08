@@ -53,7 +53,7 @@
 }
 
 .casino-stage-shell__info {
-  grid-template-columns: minmax(300px, 0.94fr) minmax(250px, 0.84fr) minmax(300px, 1.08fr);
+  grid-template-columns: minmax(300px, 1.02fr) minmax(260px, 0.9fr) minmax(300px, 0.98fr);
   align-items: start;
 }
 
@@ -121,6 +121,7 @@
 
 .casino-stage-shell__card {
   min-height: 100%;
+  align-content: start;
 }
 
 .casino-console {
@@ -152,7 +153,7 @@
   margin: 0.65rem 0 0;
   color: var(--text-muted);
   line-height: 1.58;
-  max-width: 34ch;
+  max-width: 38ch;
 }
 
 .casino-controls {
@@ -267,6 +268,10 @@
   line-height: 1.35;
 }
 
+.casino-machine-button__top strong {
+  max-width: 20ch;
+}
+
 .casino-machine-button__symbols,
 .casino-paytable__symbols {
   display: flex;
@@ -309,6 +314,7 @@
 .casino-paytable__copy {
   display: grid;
   gap: 0.15rem;
+  min-width: 0;
 }
 
 .casino-paytable__value,

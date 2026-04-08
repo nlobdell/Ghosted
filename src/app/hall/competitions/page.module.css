@@ -5,9 +5,23 @@
 
 .board {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+  grid-template-columns: minmax(0, 1.02fr) minmax(20rem, 0.98fr);
   gap: var(--section-gap);
   align-items: start;
+}
+
+.rail,
+.boardLead,
+.boardTable {
+  display: grid;
+  gap: var(--section-gap);
+}
+
+.boardNote {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.68;
+  max-width: 62ch;
 }
 
 .rail {
@@ -15,34 +29,43 @@
   gap: var(--section-gap);
 }
 
-.page :global(.comp-scoreboard),
-.page :global(.comp-scoreboard .app-summary-grid__secondary) {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
+.page :global(.comp-highlight) {
+  background:
+    radial-gradient(circle at top left, rgba(184, 168, 255, 0.14), transparent 28%),
+    linear-gradient(180deg, rgba(18, 15, 31, 0.94), rgba(11, 10, 19, 0.82));
 }
 
-.page :global(.comp-timeline) {
+.page :global(.comp-board) {
   background: rgba(18, 15, 31, 0.92);
   border-left: 4px solid rgba(166, 131, 255, 0.48);
 }
 
-.page :global(.comp-timeline .app-feed__item) {
+.page :global(.comp-timeline .app-feed__item),
+.page :global(.comp-archive .app-feed__item) {
   padding: 0.72rem 0;
 }
 
-.page :global(.comp-featured),
-.page :global(.comp-leaders) {
+.page :global(.comp-timeline),
+.page :global(.comp-archive) {
   background: rgba(17, 14, 28, 0.88);
 }
 
-.page :global(.comp-featured .app-metric-grid) {
+.page :global(.comp-board .app-metric-grid) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
 }
 
+.page :global(.comp-board .app-table) {
+  margin-top: 0.2rem;
+}
+
+.page :global(.comp-timeline .app-feed__item strong),
+.page :global(.comp-archive .app-feed__item strong) {
+  line-height: 1.28;
+}
+
 @media (max-width: 980px) {
-  .page :global(.comp-scoreboard),
-  .page :global(.comp-scoreboard .app-summary-grid__secondary) {
+  .page :global(.comp-board .app-metric-grid) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -52,9 +75,7 @@
 }
 
 @media (max-width: 680px) {
-  .page :global(.comp-scoreboard),
-  .page :global(.comp-scoreboard .app-summary-grid__secondary),
-  .page :global(.comp-featured .app-metric-grid) {
+  .page :global(.comp-board .app-metric-grid) {
     grid-template-columns: 1fr;
   }
 }

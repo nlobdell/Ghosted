@@ -10,10 +10,11 @@ export default function CasinoPage() {
       <Panel
         className="casino-rules"
         tier="meta"
-        title="Points-only machine"
+        title="Rules and limits"
         body={(
           <div className="app-stack">
             <p className="app-panel-note">Casino uses the same points balance as rewards and giveaways.</p>
+            <p className="app-panel-note">Choose a machine, spin, then use this panel to check the rules, limits, and payout context for that run.</p>
             <span className="app-chip">No cash value</span>
           </div>
         )}

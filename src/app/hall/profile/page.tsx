@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
+  AppContext,
   StatStrip,
   Panel,
   AppGrid,
@@ -12,7 +13,7 @@ import {
   Banner,
   FormField,
 } from '@/components/ui/AppUI';
-import { formatPoints, getJSON } from '@/lib/api';
+import { formatDate, formatPoints, getJSON } from '@/lib/api';
 import type { ShellData, WomLink, WomMeData } from '@/lib/types';
 import styles from './page.module.css';
 
@@ -21,6 +22,13 @@ type WomLinkMutationResponse = {
   message?: string;
   result: WomLink;
 };
+
+function normalizeHallProfileCopy(text: string) {
+  return text
+    .replace(/\bWOM\b/g, 'Wise Old Man')
+    .replaceAll('Companion', 'Ghostling')
+    .replaceAll('companion', 'Ghostling');
+}
 
 export default function ProfilePage() {
   const [shell, setShell] = useState<ShellData | null>(null);
@@ -75,7 +83,7 @@ export default function ProfilePage() {
         const womData = await getJSON<WomMeData>('/api/wom/me').catch(() => null);
         setWomMe(womData);
       } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : 'Failed to load profile.');
+        setError(nextError instanceof Error ? normalizeHallProfileCopy(nextError.message) : 'Failed to load profile.');
       } finally {
         setLoading(false);
       }
@@ -94,14 +102,17 @@ export default function ProfilePage() {
         body: JSON.stringify({ username: rsn.trim() }),
       });
       syncShellWom(payload.result);
-      setLinkResult({ ok: true, message: payload.message ?? 'WOM account linked.' });
+      setLinkResult({ ok: true, message: normalizeHallProfileCopy(payload.message ?? 'Wise Old Man account linked.') });
       setRsn('');
       const womData = await getJSON<WomMeData>('/api/wom/me').catch(() => null);
       setWomMe(womData);
       const shellData = await getJSON<ShellData>('/api/site-shell').catch(() => null);
       if (shellData) setShell(shellData);
     } catch (nextError) {
-      setLinkResult({ ok: false, message: nextError instanceof Error ? nextError.message : 'Failed to link account.' });
+      setLinkResult({
+        ok: false,
+        message: nextError instanceof Error ? normalizeHallProfileCopy(nextError.message) : 'Failed to link account.',
+      });
     } finally {
       setLinking(false);
     }
@@ -115,12 +126,15 @@ export default function ProfilePage() {
         method: 'DELETE',
       });
       syncShellWom(payload.result);
-      setLinkResult({ ok: true, message: payload.message ?? 'WOM account unlinked.' });
+      setLinkResult({ ok: true, message: normalizeHallProfileCopy(payload.message ?? 'Wise Old Man account unlinked.') });
       setWomMe(null);
       const shellData = await getJSON<ShellData>('/api/site-shell').catch(() => null);
       if (shellData) setShell(shellData);
     } catch (nextError) {
-      setLinkResult({ ok: false, message: nextError instanceof Error ? nextError.message : 'Failed to unlink account.' });
+      setLinkResult({
+        ok: false,
+        message: nextError instanceof Error ? normalizeHallProfileCopy(nextError.message) : 'Failed to unlink account.',
+      });
     } finally {
       setLinking(false);
     }
@@ -128,6 +142,9 @@ export default function ProfilePage() {
 
   const user = shell?.user;
   const wom = shell?.wom;
+  const profileSummary = wom?.linked
+    ? 'Your Hall identity and Wise Old Man account are connected.'
+    : 'Link your Wise Old Man account to load your clan status in the Hall.';
 
   return (
     <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
@@ -142,11 +159,22 @@ export default function ProfilePage() {
         />
       ) : (
         <>
-          <AppGrid>
+          <AppContext
+            breadcrumbs={[
+              { label: 'Hall', href: '/hall/' },
+              { label: 'Profile' },
+            ]}
+            title="Identity and Wise Old Man link"
+            summary={profileSummary}
+            className={styles.context}
+          />
+
+          <AppGrid className={styles.profileGrid}>
             <Panel
               className="profile-identity-panel"
               tier="primary"
-              title="Identity"
+              eyebrow="Profile check"
+              title="Identity and Wise Old Man link"
               body={(
                 <div className="app-stack">
                   <div className="profile-identity">
@@ -167,11 +195,20 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
+                  <div className={styles.linkStatus}>
+                    <strong>{wom?.linked ? 'Wise Old Man is linked and ready.' : 'Wise Old Man still needs to be linked.'}</strong>
+                    <span>
+                      {wom?.linked
+                        ? `Ghosted is tracking you as ${womMe?.player?.displayName ?? wom?.displayName ?? wom?.username ?? 'your linked account'} across the Hall.`
+                        : 'Add the RuneScape username your clan tracks so your Hall profile matches live clan data.'}
+                    </span>
+                  </div>
+
                   <MetricGrid
                     items={[
                       ['Balance', user ? formatPoints(user.balance) : '-'],
                       ['Admin', user?.isAdmin ? 'Yes' : 'No'],
-                      ['WOM status', wom?.linked ? 'Linked' : 'Not linked'],
+                      ['Wise Old Man status', wom?.linked ? 'Linked' : 'Not linked'],
                       ['Clan', wom?.membership?.groupName ?? '-'],
                     ]}
                   />
@@ -191,12 +228,12 @@ export default function ProfilePage() {
                         disabled={linking}
                         onClick={handleWomUnlink}
                       >
-                        {linking ? 'Unlinking...' : 'Unlink WOM account'}
+                        {linking ? 'Unlinking...' : 'Unlink Wise Old Man account'}
                       </button>
                     </div>
                   ) : (
                     <form onSubmit={handleWomLink} className="app-form">
-                      <FormField label="RuneScape username" note="Link your Wise Old Man profile to unlock clan features.">
+                      <FormField label="RuneScape username" note="Use the RuneScape username your clan tracks in Wise Old Man.">
                         <input
                           type="text"
                           placeholder="Enter RSN..."
@@ -211,7 +248,7 @@ export default function ProfilePage() {
                         type="submit"
                         disabled={linking || !rsn.trim()}
                       >
-                        {linking ? 'Linking...' : 'Link WOM account'}
+                        {linking ? 'Linking...' : 'Link Wise Old Man account'}
                       </button>
                     </form>
                   )}
@@ -222,6 +259,7 @@ export default function ProfilePage() {
             <Panel
               className="profile-perks-panel"
               tier="meta"
+              eyebrow="Supporting"
               title="Roles and perks"
               body={(
                 <div className="app-stack">
@@ -256,10 +294,35 @@ export default function ProfilePage() {
             leadIndex={0}
             stats={[
               { label: 'Balance', value: user ? formatPoints(user.balance) : '-', href: '/hall/rewards/' },
-              { label: 'WOM link', value: wom?.linked ? 'Linked' : 'Not linked' },
+              { label: 'Wise Old Man link', value: wom?.linked ? 'Linked' : 'Not linked' },
               { label: 'Clan rank', value: wom?.membership?.rankLabel ?? '-' },
               { label: 'Roles', value: user ? String(user.roles.length) : '-' },
             ]}
+          />
+
+          <Panel
+            className="profile-link-state"
+            tier="meta"
+            eyebrow="Synced details"
+            title="Wise Old Man clan state"
+            body={(
+              wom?.linked ? (
+                <MetricGrid
+                  items={[
+                    ['Display', womMe?.player?.displayName ?? wom?.displayName ?? wom?.username ?? '-'],
+                    ['Build', womMe?.player?.build ?? '-'],
+                    ['Status', womMe?.player?.status ?? '-'],
+                    ['Clan rank', wom?.membership?.rankLabel ?? '-'],
+                    ['Updated', formatDate(womMe?.player?.updatedAt ?? null)],
+                    ['Last sync', formatDate(wom?.lastSyncedAt ?? null)],
+                    ['Competitions', String(womMe?.competitions?.length ?? 0)],
+                    ['Achievements', String(womMe?.achievements?.length ?? 0)],
+                  ]}
+                />
+              ) : (
+                <EmptyState message="Link your Wise Old Man account to load your clan status here." />
+              )
+            )}
           />
         </>
       )}

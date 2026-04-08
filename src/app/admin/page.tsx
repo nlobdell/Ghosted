@@ -6,7 +6,6 @@ import {
   StatStrip,
   Panel,
   AppGrid,
-  ArchitectureMap,
   Highlight,
   MetricGrid,
   DenseTable,
@@ -36,6 +35,13 @@ interface AdminNewsPayload {
   posts: NewsPost[];
 }
 
+function normalizeAdminCopy(text: string) {
+  return text
+    .replace(/\bWOM\b/g, 'Wise Old Man')
+    .replaceAll('Companion', 'Ghostling')
+    .replaceAll('companion', 'Ghostling');
+}
+
 export default function AdminPage() {
   const [data, setData] = useState<AdminOverview | null>(null);
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
@@ -57,7 +63,7 @@ export default function AdminPage() {
         setRoles(nextRoles.roles ?? []);
         setNewsPosts(nextNews.posts ?? []);
       })
-      .catch((nextError) => setError(nextError instanceof Error ? nextError.message : 'Failed to load admin data.'))
+      .catch((nextError) => setError(nextError instanceof Error ? normalizeAdminCopy(nextError.message) : 'Failed to load operator data.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -75,9 +81,9 @@ export default function AdminPage() {
           description: formData.get('description'),
         }),
       });
-      setMessage({ text: 'Points granted.', variant: 'info' });
+      setMessage({ text: 'Points granted. Recheck the user balance table below.', variant: 'info' });
     } catch (err) {
-      setMessage({ text: err instanceof Error ? err.message : 'Grant failed.', variant: 'error' });
+      setMessage({ text: err instanceof Error ? normalizeAdminCopy(err.message) : 'Grant failed.', variant: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -100,9 +106,9 @@ export default function AdminPage() {
           requiredRoleId: formData.get('requiredRoleId') || undefined,
         }),
       });
-      setMessage({ text: 'Giveaway created.', variant: 'info' });
+      setMessage({ text: 'Drop created. Confirm it appears on Hall rewards.', variant: 'info' });
     } catch (err) {
-      setMessage({ text: err instanceof Error ? err.message : 'Create failed.', variant: 'error' });
+      setMessage({ text: err instanceof Error ? normalizeAdminCopy(err.message) : 'Create failed.', variant: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -113,9 +119,9 @@ export default function AdminPage() {
     setMessage(null);
     try {
       await getJSON('/api/admin/wom/refresh', { method: 'POST' });
-      setMessage({ text: 'WOM data refreshed.', variant: 'info' });
+      setMessage({ text: 'Wise Old Man data refreshed. Recheck Hall clan and competition data.', variant: 'info' });
     } catch (err) {
-      setMessage({ text: err instanceof Error ? err.message : 'Refresh failed.', variant: 'error' });
+      setMessage({ text: err instanceof Error ? normalizeAdminCopy(err.message) : 'Refresh failed.', variant: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -139,10 +145,10 @@ export default function AdminPage() {
       });
       const refreshed = await getJSON<AdminNewsPayload>('/api/admin/news?limit=50');
       setNewsPosts(refreshed.posts ?? []);
-      setMessage({ text: 'News post saved.', variant: 'info' });
+      setMessage({ text: 'Dispatch saved. Review the record below before sharing it.', variant: 'info' });
       event.currentTarget.reset();
     } catch (err) {
-      setMessage({ text: err instanceof Error ? err.message : 'News publish failed.', variant: 'error' });
+      setMessage({ text: err instanceof Error ? normalizeAdminCopy(err.message) : 'Dispatch publish failed.', variant: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -154,9 +160,9 @@ export default function AdminPage() {
     try {
       await getJSON(`/api/admin/news/${postId}`, { method: 'DELETE' });
       setNewsPosts((current) => current.filter((post) => post.id !== postId));
-      setMessage({ text: 'News post deleted.', variant: 'info' });
+      setMessage({ text: 'Dispatch deleted. Confirm it is gone from the records below.', variant: 'info' });
     } catch (err) {
-      setMessage({ text: err instanceof Error ? err.message : 'Delete failed.', variant: 'error' });
+      setMessage({ text: err instanceof Error ? normalizeAdminCopy(err.message) : 'Delete failed.', variant: 'error' });
     } finally {
       setDeletingPostId(null);
     }
@@ -165,7 +171,7 @@ export default function AdminPage() {
   if (loading) {
     return (
       <main className={`page-shell workspace-page ${styles.page}`}>
-        <Banner message="Loading admin data..." variant="info" />
+        <Banner message="Loading operator controls..." variant="info" />
       </main>
     );
   }
@@ -182,149 +188,149 @@ export default function AdminPage() {
           { label: 'Hall', href: '/hall/' },
           { label: 'Admin' },
         ]}
-        title="Operator console"
-        summary="Execute economy actions first, verify sync health second, and use tables last for audits."
+        title="Change live Ghosted state"
+        summary="Grant points, publish drops, refresh Wise Old Man data, and manage dispatches here. After each change, verify the current sync and records below."
       />
 
       {error ? <Banner message={error} variant="error" /> : null}
       {message ? <Banner message={message.text} variant={message.variant} /> : null}
 
-      <AppGrid>
-        <Panel
-          className="admin-ghostling"
-          tier="meta"
-          eyebrow="Workflow"
-          title="Ghostling asset vault"
-          href="/admin/ghostling/"
-          body={(
-            <p className="app-panel-note">
-              Hide cosmetics, reorder slot libraries, and manage uploaded art without exposing operator tools on the member-facing Ghostling page.
-            </p>
-          )}
-        />
+      <Panel
+        className="admin-workbench"
+        tier="primary"
+        eyebrow="Live changes"
+        title="Run admin actions"
+        bodyClassName={styles.workbenchLayout}
+        body={(
+          <>
+            <div className={styles.workbenchPrimary}>
+              <section className={styles.workbenchSection}>
+                <div className={styles.workbenchSectionHeader}>
+                  <h3>Grant points</h3>
+                  <p>Change a member balance directly, then verify the updated balance and ledger below.</p>
+                </div>
+                <form onSubmit={handleGrant} className="app-form">
+                  <FormField label="User ID or Discord ID">
+                    <input name="userId" type="text" placeholder="User ID" className="input-base" required />
+                  </FormField>
+                  <FormField label="Amount">
+                    <input name="amount" type="number" placeholder="100" className="input-base" required />
+                  </FormField>
+                  <FormField label="Description">
+                    <input name="description" type="text" placeholder="Reason" className="input-base" />
+                  </FormField>
+                  <button className="button" type="submit" disabled={submitting}>Grant points</button>
+                </form>
+              </section>
 
-        <Panel
-          className="admin-actions admin-grant"
-          tier="primary"
-          eyebrow="Workflow"
-          title="Grant points"
-          body={
-            <form onSubmit={handleGrant} className="app-form">
-              <FormField label="User ID or Discord ID">
-                <input name="userId" type="text" placeholder="User ID" className="input-base" required />
-              </FormField>
-              <FormField label="Amount">
-                <input name="amount" type="number" placeholder="100" className="input-base" required />
-              </FormField>
-              <FormField label="Description">
-                <input name="description" type="text" placeholder="Reason" className="input-base" />
-              </FormField>
-              <button className="button" type="submit" disabled={submitting}>Grant</button>
-            </form>
-          }
-        />
-
-        <Panel
-          className="admin-actions admin-create"
-          tier="primary"
-          eyebrow="Workflow"
-          title="Create giveaway"
-          body={
-            <form onSubmit={handleCreateGiveaway} className="app-form">
-              <FormField label="Title">
-                <input name="title" type="text" placeholder="Prize name" className="input-base" required />
-              </FormField>
-              <FormField label="Description">
-                <input name="description" type="text" placeholder="Optional" className="input-base" />
-              </FormField>
-              <div className="form-grid-two">
-                <FormField label="Point cost">
-                  <input name="pointCost" type="number" placeholder="50" className="input-base" required />
-                </FormField>
-                <FormField label="Max entries">
-                  <input name="maxEntries" type="number" placeholder="10" className="input-base" required />
-                </FormField>
-              </div>
-              <FormField label="End date">
-                <input name="endAt" type="datetime-local" className="input-base" required />
-              </FormField>
-              <FormField label="Required role (optional)">
-                <select name="requiredRoleId" className="input-base">
-                  <option value="">None</option>
-                  {roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
-                </select>
-              </FormField>
-              <button className="button" type="submit" disabled={submitting}>Create</button>
-            </form>
-          }
-        />
-      </AppGrid>
-
-      <AppGrid>
-        <Panel
-          className="admin-actions admin-news-create"
-          tier="primary"
-          eyebrow="Content"
-          title="Publish news update"
-          body={(
-            <form onSubmit={handleCreateNews} className="app-form">
-              <FormField label="Title">
-                <input name="title" type="text" placeholder="Update headline" className="input-base" required />
-              </FormField>
-              <FormField label="Excerpt">
-                <input name="excerpt" type="text" placeholder="One-sentence summary" className="input-base" required />
-              </FormField>
-              <FormField label="Body">
-                <textarea name="body" rows={6} className="input-base" placeholder="Write the update..." required />
-              </FormField>
-              <div className="form-grid-two">
-                <FormField label="Status">
-                  <select name="status" className="input-base" defaultValue="draft">
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                  </select>
-                </FormField>
-                <FormField label="Publish at (optional)">
-                  <input name="publishedAt" type="datetime-local" className="input-base" />
-                </FormField>
-              </div>
-              <button className="button" type="submit" disabled={submitting}>Save post</button>
-            </form>
-          )}
-        />
-        <Panel
-          className="admin-news-list"
-          tier="meta"
-          eyebrow="Content"
-          title="Recent news posts"
-          body={newsPosts.length ? (
-            <div className="app-feed">
-              {newsPosts.slice(0, 10).map((post) => (
-                <article key={post.id} className="app-feed__item">
-                  <div className="app-card__row">
-                    <strong>{post.title}</strong>
-                    <span className="app-chip">{post.status}</span>
+              <section className={styles.workbenchSection}>
+                <div className={styles.workbenchSectionHeader}>
+                  <h3>Create drop</h3>
+                  <p>Set the prize, point cost, access gate, and end time here, then confirm the drop on Hall rewards.</p>
+                </div>
+                <form onSubmit={handleCreateGiveaway} className="app-form">
+                  <FormField label="Title">
+                    <input name="title" type="text" placeholder="Prize name" className="input-base" required />
+                  </FormField>
+                  <FormField label="Description">
+                    <input name="description" type="text" placeholder="Optional" className="input-base" />
+                  </FormField>
+                  <div className="form-grid-two">
+                    <FormField label="Point cost">
+                      <input name="pointCost" type="number" placeholder="50" className="input-base" required />
+                    </FormField>
+                    <FormField label="Max entries">
+                      <input name="maxEntries" type="number" placeholder="10" className="input-base" required />
+                    </FormField>
                   </div>
-                  <div className="app-feed__meta">{post.excerpt}</div>
-                  <div className="app-inline-actions">
-                    <Link href={`/news/${post.slug}/`} className="button button--secondary button--small">Open</Link>
-                    <button
-                      type="button"
-                      className="button button--secondary button--small"
-                      onClick={() => handleDeleteNews(post.id)}
-                      disabled={deletingPostId === post.id}
-                    >
-                      {deletingPostId === post.id ? 'Deleting...' : 'Delete'}
-                    </button>
+                  <FormField label="End date">
+                    <input name="endAt" type="datetime-local" className="input-base" required />
+                  </FormField>
+                  <FormField label="Required role (optional)">
+                    <select name="requiredRoleId" className="input-base">
+                      <option value="">None</option>
+                      {roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
+                    </select>
+                  </FormField>
+                  <button className="button" type="submit" disabled={submitting}>Create drop</button>
+                </form>
+              </section>
+
+              <section className={styles.workbenchSection}>
+                <div className={styles.workbenchSectionHeader}>
+                  <h3>Publish dispatch</h3>
+                  <p>Save the next public update here, then confirm its status and link in the records below.</p>
+                </div>
+                <form onSubmit={handleCreateNews} className="app-form">
+                  <FormField label="Title">
+                    <input name="title" type="text" placeholder="Dispatch headline" className="input-base" required />
+                  </FormField>
+                  <FormField label="Excerpt">
+                    <input name="excerpt" type="text" placeholder="One-sentence summary" className="input-base" required />
+                  </FormField>
+                  <FormField label="Body">
+                    <textarea name="body" rows={6} className="input-base" placeholder="Write the dispatch..." required />
+                  </FormField>
+                  <div className="form-grid-two">
+                    <FormField label="Status">
+                      <select name="status" className="input-base" defaultValue="draft">
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                      </select>
+                    </FormField>
+                    <FormField label="Publish at (optional)">
+                      <input name="publishedAt" type="datetime-local" className="input-base" />
+                    </FormField>
                   </div>
-                </article>
-              ))}
+                  <button className="button" type="submit" disabled={submitting}>Save dispatch</button>
+                </form>
+              </section>
             </div>
-          ) : (
-            <EmptyState message="No news posts created yet." />
-          )}
-        />
-      </AppGrid>
+
+            <aside className={styles.workbenchSecondary}>
+              <section className={styles.consequenceSection}>
+                <div className={styles.workbenchSectionHeader}>
+                  <h3>Verify after each change</h3>
+                  <p>Use these checks to confirm the live drop count, public dispatch count, and Wise Old Man link total after an update lands.</p>
+                </div>
+                <MetricGrid
+                  items={[
+                    ['Active drops', String(activeGiveaways)],
+                    ['Published dispatches', String(publishedNewsCount)],
+                    ['Wise Old Man links', String(data?.overview.wom?.linkedUsers ?? 0)],
+                    ['Current actor', data?.actor.displayName ?? 'Unknown'],
+                  ]}
+                />
+                <p className="app-panel-note">
+                  Ghostling files, visibility, and slot order live in their own admin route so asset changes stay separate from points and dispatch work.
+                </p>
+              </section>
+
+              <section className={styles.workbenchVault}>
+                <span className="app-chip">Ghostling assets</span>
+                <h3>Manage Ghostling files</h3>
+                <p>Upload, hide, restore, reorder, and replace Ghostling files in the dedicated admin route.</p>
+                <Link href="/admin/ghostling/" className="button button--secondary button--small">
+                  Open Ghostling admin
+                </Link>
+              </section>
+            </aside>
+          </>
+        )}
+      />
+
+      <Highlight
+        className="admin-highlight"
+        eyebrow="System state"
+        title="Verify the live state"
+        copy="Check operator identity, Wise Old Man sync health, and the current campaign counts here after you make a change."
+        stage={{
+          label: 'Current operator',
+          primary: `Actor: ${data?.actor.displayName ?? 'Unknown'}`,
+          secondary: data?.overview.wom?.configured ? `Wise Old Man live with ${data?.overview.wom?.linkedUsers ?? 0} linked users` : 'Wise Old Man offline',
+          chips: [`${activeGiveaways} live giveaways`, `${adminCount} admin users`],
+        }}
+      />
 
       <StatStrip
         className="admin-scoreboard"
@@ -332,41 +338,28 @@ export default function AdminPage() {
         stats={[
           { label: 'Tracked users', value: String(data?.overview.users.length ?? 0) },
           { label: 'Live giveaways', value: String(activeGiveaways) },
-          { label: 'WOM links', value: String(data?.overview.wom?.linkedUsers ?? 0) },
-          { label: 'Published news', value: String(publishedNewsCount) },
+          { label: 'Wise Old Man links', value: String(data?.overview.wom?.linkedUsers ?? 0) },
+          { label: 'Published dispatches', value: String(publishedNewsCount) },
         ]}
       />
 
-      <Highlight
-        className="admin-highlight"
-        eyebrow="Operator state"
-        title="System snapshot"
-        copy="Manage the economy first, then verify sync and records."
-        stage={{
-          label: 'Operator signal',
-          primary: `Actor: ${data?.actor.displayName ?? 'Unknown'}`,
-          secondary: data?.overview.wom?.configured ? 'WOM live (Group 6371)' : 'WOM offline',
-          chips: [`${activeGiveaways} live giveaways`, `${adminCount} admin users`],
-        }}
-      />
-
-      <AppGrid>
+      <AppGrid className={styles.secondaryGrid}>
         <Panel
           className="admin-sync"
           tier="meta"
           eyebrow="Sync"
-          title="Wise Old Man refresh"
+          title="Refresh Wise Old Man"
           chip={data?.overview.wom?.configured ? 'Live' : 'Offline'}
           body={(
             <div className="app-stack">
               <MetricGrid
                 items={[
                   ['Linked users', String(data?.overview.wom?.linkedUsers ?? 0)],
-                  ['Group config', data?.overview.wom?.configured ? 'Ready' : 'Missing WOM_GROUP_ID'],
+                  ['Group config', data?.overview.wom?.configured ? 'Ready' : 'Missing Wise Old Man group config'],
                 ]}
               />
               <p className="app-panel-note">
-                Ghosted keeps WOM group data read-only. Refresh clears cache drift without editing live clan membership.
+                Ghosted keeps Wise Old Man group data read-only. Refresh clears cached data so Hall clan and competition views catch up to the latest sync.
               </p>
               <button
                 className="button"
@@ -374,7 +367,7 @@ export default function AdminPage() {
                 onClick={handleWomRefresh}
                 disabled={submitting || !data?.overview.wom?.configured}
               >
-                Refresh WOM
+                Refresh Wise Old Man
               </button>
             </div>
           )}
@@ -389,7 +382,7 @@ export default function AdminPage() {
             <MetricGrid
               items={[
                 ['Auth', data ? 'Configured' : 'Unknown'],
-                ['WOM', data?.overview.wom?.configured ? 'Live' : 'Offline'],
+                ['Wise Old Man', data?.overview.wom?.configured ? 'Live' : 'Offline'],
                 ['Users', String(data?.overview.users.length ?? 0)],
                 ['Giveaways', String(data?.overview.giveaways.length ?? 0)],
               ]}
@@ -398,42 +391,12 @@ export default function AdminPage() {
         />
       </AppGrid>
 
-      <ArchitectureMap
-        title="Operations playbook"
-        copy="Workflow first, verification second, records last."
-        nodes={[
-          {
-            label: 'Economy',
-            title: 'Points and ledger controls',
-            copy: 'Grant or correct points and verify balances that drive member casino play and giveaway participation.',
-            chips: ['Rewards ledger', 'Balance corrections'],
-          },
-          {
-            label: 'Drops',
-            title: 'Campaign lifecycle',
-            copy: 'Create campaigns with role gates, entry costs, and status progression mapped to member routes.',
-            chips: ['Role-gated entries', 'Campaign state'],
-          },
-          {
-            label: 'Sync',
-            title: 'External data health',
-            copy: 'Refresh WOM-backed data and validate runtime health across auth, users, and integrations.',
-            chips: [data?.overview.wom?.configured ? 'WOM configured' : 'WOM missing', 'System status'],
-          },
-          {
-            label: 'Content',
-            title: 'Clan communications',
-            copy: 'Publish official updates to the public news feed from one moderated admin workflow.',
-            chips: [`${publishedNewsCount} published`, `${newsPosts.length} total posts`],
-          },
-        ]}
-      />
-
-      <AppGrid>
+      <AppGrid className={styles.auditGrid}>
         <Panel
           className="admin-users"
           tier="meta"
-          title="Users"
+          eyebrow="Audit"
+          title="User balances"
           body={(
             <DenseTable
               columns={['ID', 'User', 'Balance']}
@@ -446,7 +409,8 @@ export default function AdminPage() {
         <Panel
           className="admin-giveaways"
           tier="meta"
-          title="Giveaway draws"
+          eyebrow="Audit"
+          title="Giveaway status"
           body={
             data?.overview.giveaways.length ? (
               <DenseTable
@@ -460,6 +424,39 @@ export default function AdminPage() {
           }
         />
       </AppGrid>
+
+      <Panel
+        className="admin-news-list"
+        tier="meta"
+        eyebrow="Audit"
+        title="Dispatch records"
+        body={newsPosts.length ? (
+          <div className="app-feed">
+            {newsPosts.slice(0, 10).map((post) => (
+              <article key={post.id} className="app-feed__item">
+                <div className="app-card__row">
+                  <strong>{post.title}</strong>
+                  <span className="app-chip">{post.status}</span>
+                </div>
+                <div className="app-feed__meta">{post.excerpt}</div>
+                <div className="app-inline-actions">
+                  <Link href={`/news/${post.slug}/`} className="button button--secondary button--small">Open dispatch</Link>
+                  <button
+                    type="button"
+                    className="button button--secondary button--small"
+                    onClick={() => handleDeleteNews(post.id)}
+                    disabled={deletingPostId === post.id}
+                  >
+                    {deletingPostId === post.id ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState message="No dispatches created yet." />
+        )}
+      />
     </main>
   );
 }

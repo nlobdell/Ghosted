@@ -6,7 +6,7 @@ import { GhostedLogo } from '@/components/GhostedLogo';
 
 const PUBLIC_LINKS = [
   { href: '/roster/', label: 'Roster' },
-  { href: '/news/', label: 'News' },
+  { href: '/news/', label: 'Dispatches' },
   { href: '/media/', label: 'Media' },
   { href: '/about/', label: 'About' },
 ];
@@ -32,7 +32,7 @@ export function PublicNav({ hallHref }: { hallHref: string }) {
               <GhostedLogo className="nav-brand-logo" sizes="44px" decorative />
               <span className="nav-brand__copy">
                 <strong>Ghosted</strong>
-                <span>Discord-first clan</span>
+                <span>Clan Site</span>
               </span>
             </Link>
           </div>
@@ -82,7 +82,7 @@ export function PublicNav({ hallHref }: { hallHref: string }) {
                 <GhostedLogo className="nav-brand-logo nav-brand-logo--drawer" sizes="48px" decorative />
                 <span className="nav-brand__copy">
                   <strong>Ghosted</strong>
-                  <span>Public layer</span>
+                  <span>Clan Site</span>
                 </span>
               </Link>
               <button

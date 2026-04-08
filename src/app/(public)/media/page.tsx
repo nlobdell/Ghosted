@@ -27,42 +27,59 @@ export default async function MediaPage() {
 
   return (
     <main id="main-content" className={`page-shell editorial-page ${styles.page}`}>
-      <section className={`editorial-surface editorial-surface--hero editorial-stack ${styles.hero}`}>
-        <p className="kicker">Media layer</p>
-        <h1>Live stream energy first. Replayable clan moments second.</h1>
-        <p className="editorial-copy">
-          The public media page keeps the stream front and center, then fans out into clips and highlights that make
-          the community feel alive before a visitor ever signs in.
-        </p>
-      </section>
-
-      <section className={`editorial-surface editorial-stack ${styles.embed}`}>
-        <div className={styles.embedHeader}>
-          <div>
-            <p className="kicker">Live stream</p>
-            <h2>vghosted on Twitch</h2>
+      <section className={`editorial-surface editorial-surface--hero ${styles.broadcast}`}>
+        <div className={styles.broadcastCopy}>
+          <p className="kicker">Live on Twitch</p>
+          <h1>Watch Ghosted in motion before you ever join the call.</h1>
+          <p className="editorial-copy">
+            The stream is the fastest way to catch Ghosted in motion. Start with the clan live on Twitch, then catch
+            clips and replays once the night settles.
+          </p>
+          <div className={styles.broadcastSignals} aria-label="Ghosted live stream signals">
+            <span className="app-chip">Live clan nights</span>
+            <span className="app-chip">Ghostling showcases</span>
+            <span className="app-chip">Discord callouts</span>
           </div>
-          <span className="app-chip">Live-ready slot</span>
-        </div>
-        <iframe
-          title="Ghosted Twitch stream"
-          src={buildTwitchPlayerSrc(hostname)}
-          className={styles.frame}
-          allowFullScreen
-        />
-      </section>
-
-      <section className={`editorial-grid-two ${styles.grid}`}>
-        {CLIPS.map((clip) => (
-          <article key={clip.title} className={`editorial-surface editorial-card ${styles.card}`}>
-            <span className="app-chip">Clip slot</span>
-            <h3>{clip.title}</h3>
-            <p className="editorial-copy">{clip.meta}</p>
-            <a href={GHOSTED_CONTENT.links.twitch} target="_blank" rel="noopener noreferrer" className="button button--secondary button--small">
+          <div className="app-inline-actions">
+            <a href={GHOSTED_CONTENT.links.twitch} target="_blank" rel="noopener noreferrer" className="button">
               Watch on Twitch
             </a>
-          </article>
-        ))}
+            <a href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer" className="button button--secondary">
+              Join Discord
+            </a>
+          </div>
+        </div>
+        <div className={styles.broadcastFrame}>
+          <iframe
+            title="Ghosted Twitch stream"
+            src={buildTwitchPlayerSrc(hostname)}
+            className={styles.frame}
+            allowFullScreen
+          />
+        </div>
+      </section>
+
+      <section className={styles.replaySection}>
+        <div className={styles.replayHeader}>
+          <p className="kicker">Clips and replays</p>
+          <h2>Catch the moments worth replaying after the stream.</h2>
+          <p className="editorial-copy">
+            Replays stay here for anyone who missed the live call or wants the highlights again.
+          </p>
+        </div>
+
+        <div className={`editorial-grid-two ${styles.grid}`}>
+          {CLIPS.map((clip) => (
+            <article key={clip.title} className={`editorial-surface editorial-card ${styles.card}`}>
+              <span className="app-chip">Replay</span>
+              <h3>{clip.title}</h3>
+              <p className="editorial-copy">{clip.meta}</p>
+              <a href={GHOSTED_CONTENT.links.twitch} target="_blank" rel="noopener noreferrer" className="button button--secondary button--small">
+                Open replay
+              </a>
+            </article>
+          ))}
+        </div>
       </section>
     </main>
   );
