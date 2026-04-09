@@ -17,6 +17,7 @@ vi.mock('next/headers', () => ({
 import { GET as getCompanionAssetRoute } from '@/app/api/companion/assets/[...path]/route';
 import { POST as postCompanionAdminBaseRoute } from '@/app/api/companion/admin/base/route';
 import { GET as getCompanionAnimatedRenderRoute } from '@/app/api/companion/render-animated/route';
+import { GET as getCompanionDiscordGifRoute } from '@/app/api/companion/render-discord-animated.gif/route';
 import { GET as getCompanionRenderRoute } from '@/app/api/companion/render/route';
 import { GET as getDevLoginRoute } from '@/app/auth/dev-login/route';
 import { createCompanionItem } from '@/lib/server/companion';
@@ -333,6 +334,23 @@ describe('companion render and dev-login routes', () => {
     expect(stageTransform).not.toBeNull();
     expect(Number(stageTransform?.[1] ?? 0)).toBeGreaterThan(60);
     expect(Number(stageTransform?.[2] ?? 0)).toBeGreaterThan(180);
+  });
+
+  it('renders a Discord-pasteable animated GIF card', async () => {
+    const userId = insertUser(context.db, { username: 'member', globalName: 'Member' });
+    saveUserGameAccount(context.db, userId, 'osrs', PLAYER);
+    installWomFetchMock();
+
+    const response = await getCompanionDiscordGifRoute(
+      new Request(`http://localhost/api/companion/render-discord-animated.gif?user=${userId}`),
+    );
+    const payload = Buffer.from(await response.arrayBuffer());
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('image/gif');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(payload.subarray(0, 6).toString('ascii')).toBe('GIF89a');
+    expect(payload.length).toBeGreaterThan(1024);
   });
 
   it('returns 404 when dev auth is disabled', async () => {

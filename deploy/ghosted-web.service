@@ -6,13 +6,13 @@ After=network.target
 Type=simple
 User=ghosted
 Group=ghosted
-WorkingDirectory=/opt/ghosted/current-web
+WorkingDirectory=/opt/ghosted
 EnvironmentFile=/etc/ghosted/ghosted.env
-ExecStart=/usr/bin/node /opt/ghosted/current-web/server.js
+ExecStart=/usr/bin/node /opt/ghosted/.next/standalone/server.js
 Restart=always
 RestartSec=5
 
-# Keep runtime state outside the release bundle.
+# Keep runtime state outside the repo checkout.
 ReadWritePaths=/var/lib/ghosted
 
 [Install]
