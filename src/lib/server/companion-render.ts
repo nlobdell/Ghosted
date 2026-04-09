@@ -1,5 +1,7 @@
 import 'server-only';
 
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Database } from 'better-sqlite3';
 import { GIFEncoder, applyPalette, quantize } from 'gifenc';
 import sharp from 'sharp';
@@ -45,6 +47,7 @@ const DISCORD_CARD_WIDTH = 1200;
 const DISCORD_CARD_HEIGHT = 630;
 const DISCORD_EMBED_GIF_FRAME_DELAY_MS = 120;
 const DISCORD_EMBED_GIF_FRAME_COUNT = 16;
+const DISCORD_CARD_EMBEDDED_FONT_FAMILY = 'Arial';
 const DISCORD_STAGE_FRAME = {
   x: 58,
   y: 58,
@@ -55,6 +58,8 @@ const DISCORD_STAGE_FRAME = {
 type CompanionRenderUserRow = CompanionUserRow & {
   discord_id: string;
 };
+
+let cachedDiscordCardFontFaceMarkup: string | null | undefined;
 
 function escapeXml(value: string | null | undefined) {
   return String(value ?? '')
@@ -82,6 +87,35 @@ function wrapCompanionCardText(text: string, limit: number) {
   }
   lines.push(current);
   return lines;
+}
+
+function discordCardFontFaceMarkup() {
+  if (cachedDiscordCardFontFaceMarkup !== undefined) {
+    return cachedDiscordCardFontFaceMarkup ?? '';
+  }
+
+  try {
+    const fontPath = path.join(
+      /*turbopackIgnore: true*/ process.cwd(),
+      'node_modules',
+      'next',
+      'dist',
+      'compiled',
+      '@vercel',
+      'og',
+      'Geist-Regular.ttf',
+    );
+    const fontBase64 = fs.readFileSync(fontPath).toString('base64');
+    cachedDiscordCardFontFaceMarkup = (
+      '<style>'
+      + `@font-face{font-family:'${DISCORD_CARD_EMBEDDED_FONT_FAMILY}';src:url(data:font/ttf;base64,${fontBase64}) format('truetype');font-weight:400 700;font-style:normal;}`
+      + '</style>'
+    );
+  } catch {
+    cachedDiscordCardFontFaceMarkup = null;
+  }
+
+  return cachedDiscordCardFontFaceMarkup ?? '';
 }
 
 function fitCompanionCardTitle(text: string, limit = 18) {
@@ -252,6 +286,7 @@ function renderDiscordCompanionCard(options: {
   profile: CompanionDiscordCardProfile | null;
   shadowMarkup?: string;
   footerText?: string;
+  defsExtraMarkup?: string;
 }) {
   const stageLayout = resolveDiscordCompanionStageLayout(options.sceneWidth, options.sceneHeight);
   const shadow = options.shadowMarkup ?? (options.animated
@@ -268,6 +303,7 @@ function renderDiscordCompanionCard(options: {
     '<defs>',
     '<linearGradient id="discord-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#090b13" /><stop offset="52%" stop-color="#17192d" /><stop offset="100%" stop-color="#211942" /></linearGradient>',
     '<linearGradient id="discord-panel" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(9, 11, 18, 0.98)" /><stop offset="100%" stop-color="rgba(18, 22, 35, 0.92)" /></linearGradient>',
+    options.defsExtraMarkup ?? '',
     '</defs>',
     `<rect width="${DISCORD_CARD_WIDTH}" height="${DISCORD_CARD_HEIGHT}" rx="38" fill="url(#discord-bg)" />`,
     '<rect x="32" y="32" width="356" height="566" rx="34" fill="url(#discord-panel)" stroke="rgba(155, 182, 255, 0.16)" />',
@@ -437,6 +473,7 @@ function renderAnimatedDiscordCompanionCardSnapshot(
     animated: false,
     profile: options.profile,
     shadowMarkup,
+    defsExtraMarkup: discordCardFontFaceMarkup(),
   });
 }
 
