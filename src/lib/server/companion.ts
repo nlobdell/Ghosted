@@ -215,6 +215,8 @@ export function buildCompanionPayload(db: Database, user: CompanionUserRow): Com
   const equippedCount = COMPANION_SLOT_ORDER.filter((slot) => Boolean(loadout[slot])).length;
   const animatedRenderUrl = `/api/companion/render-animated?user=${user.id}`;
   const animatedCardUrl = `/api/companion/render-animated?user=${user.id}&card=1`;
+  const discordCardUrl = `/api/companion/render?user=${user.id}&card=1&discord=1`;
+  const animatedDiscordCardUrl = `/api/companion/render-animated?user=${user.id}&card=1&discord=1`;
 
   return {
     user: {
@@ -243,6 +245,8 @@ export function buildCompanionPayload(db: Database, user: CompanionUserRow): Com
       animatedAvatarUrl: animatedRenderUrl,
       cardUrl: `/api/companion/render?user=${user.id}&card=1`,
       animatedCardUrl,
+      discordCardUrl,
+      animatedDiscordCardUrl,
     },
     baseAssetUrl: baseConfig.bodyAssetUrl,
   };

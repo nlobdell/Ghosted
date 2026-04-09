@@ -17,8 +17,36 @@ import {
   companionAssetAnimation,
   companionAssetDataUri,
 } from '@/lib/server/companion-storage';
+import { womMePayload } from '@/lib/server/wom';
 
 type CompanionLoadout = Record<CompanionSlotKey, string | null>;
+type CompanionCardStat = {
+  label: string;
+  value: string;
+};
+type CompanionDiscordCardWom = Awaited<ReturnType<typeof womMePayload>>;
+type CompanionDiscordCardProfile = {
+  rankLabel: string | null;
+  groupName: string | null;
+  stats: CompanionCardStat[];
+};
+
+const COMPACT_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+const DECIMAL_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 1,
+  minimumFractionDigits: 0,
+});
+const DISCORD_CARD_WIDTH = 1200;
+const DISCORD_CARD_HEIGHT = 630;
+const DISCORD_STAGE_FRAME = {
+  x: 58,
+  y: 58,
+  width: 304,
+  height: 514,
+};
 
 type CompanionRenderUserRow = CompanionUserRow & {
   discord_id: string;
@@ -71,6 +99,186 @@ function renderCompanionCardCopy(options: {
     .map((line, index) => `<text x="244" y="${226 + (index * 20)}" fill="#d9d4ef" font-family="Arial, sans-serif" font-size="15">${escapeXml(line)}</text>`)
     .join('');
   return titleMarkup + subtitleMarkup + bodyMarkup;
+}
+
+function formatCompanionCompactNumber(value: unknown) {
+  if (!Number.isFinite(Number(value))) return null;
+  return COMPACT_NUMBER_FORMATTER.format(Number(value));
+}
+
+function formatCompanionDecimalNumber(value: unknown) {
+  if (!Number.isFinite(Number(value))) return null;
+  return DECIMAL_NUMBER_FORMATTER.format(Number(value));
+}
+
+function buildCompanionDiscordCardStats(wom: CompanionDiscordCardWom) {
+  const stats: CompanionCardStat[] = [];
+  const totalExp = formatCompanionCompactNumber(wom.player.exp);
+  const ehp = formatCompanionDecimalNumber(wom.player.ehp);
+  const ehb = formatCompanionDecimalNumber(wom.player.ehb);
+
+  if (totalExp) stats.push({ label: 'Total EXP', value: totalExp });
+  if (ehp) stats.push({ label: 'EHP', value: ehp });
+  if (ehb) stats.push({ label: 'EHB', value: ehb });
+  if (Array.isArray(wom.competitions)) {
+    stats.push({ label: 'Competitions', value: String(wom.competitions.length) });
+  }
+  if (stats.length < 4 && Array.isArray(wom.achievements)) {
+    stats.push({ label: 'Achievements', value: String(wom.achievements.length) });
+  }
+
+  return stats.slice(0, 4);
+}
+
+async function resolveCompanionDiscordCardProfile(db: Database, userId: number | null | undefined) {
+  if (!userId) return null;
+
+  try {
+    const wom = await womMePayload(db, { id: userId });
+    return {
+      rankLabel: wom.membership?.rankLabel ?? wom.membership?.role ?? null,
+      groupName: wom.membership?.groupName ?? null,
+      stats: buildCompanionDiscordCardStats(wom),
+    } satisfies CompanionDiscordCardProfile;
+  } catch {
+    return null;
+  }
+}
+
+function renderCompanionDiscordStatGrid(stats: CompanionCardStat[]) {
+  const tiles = [
+    { x: 448, y: 378 },
+    { x: 780, y: 378 },
+    { x: 448, y: 484 },
+    { x: 780, y: 484 },
+  ];
+
+  return stats.slice(0, 4).map((stat, index) => {
+    const tile = tiles[index];
+    if (!tile) return '';
+
+    return (
+      `<g transform="translate(${tile.x} ${tile.y})">`
+      + '<rect width="296" height="88" rx="22" fill="rgba(12, 14, 24, 0.82)" stroke="rgba(155, 182, 255, 0.18)" />'
+      + `<text x="24" y="33" fill="#91a8ec" font-family="Arial, sans-serif" font-size="18" letter-spacing="0.8">${escapeXml(stat.label)}</text>`
+      + `<text x="24" y="65" fill="#f4f6ff" font-family="Arial, sans-serif" font-size="34" font-weight="700">${escapeXml(stat.value)}</text>`
+      + '</g>'
+    );
+  }).join('');
+}
+
+function renderCompanionDiscordCardCopy(options: {
+  title: string;
+  subtitle: string;
+  profile: CompanionDiscordCardProfile | null;
+}) {
+  const titleMarkup = `<text x="448" y="184" fill="#f7f6ff" font-family="Arial, sans-serif" font-size="58" font-weight="700">${fitCompanionCardTitle(options.title, 24)}</text>`;
+  const subtitleMarkup = `<text x="448" y="226" fill="#b8c4ea" font-family="Arial, sans-serif" font-size="26">${escapeXml(options.subtitle)}</text>`;
+
+  if (!options.profile) {
+    const fallbackBody = wrapCompanionCardText(
+      'Link a Wise Old Man account to add clan rank and tracked progress to this Discord-ready Ghostling card.',
+      46,
+    )
+      .slice(0, 3)
+      .map((line, index) => `<text x="448" y="${296 + (index * 32)}" fill="#d9dff7" font-family="Arial, sans-serif" font-size="24">${escapeXml(line)}</text>`)
+      .join('');
+
+    return (
+      titleMarkup
+      + subtitleMarkup
+      + '<text x="448" y="270" fill="#91a8ec" font-family="Arial, sans-serif" font-size="18" letter-spacing="2">WISE OLD MAN</text>'
+      + fallbackBody
+    );
+  }
+
+  const rankLines = wrapCompanionCardText(options.profile.rankLabel ?? 'Tracked member', 34).slice(0, 2);
+  const groupLabel = options.profile.groupName
+    ? `<text x="448" y="${rankLines.length > 1 ? 348 : 320}" fill="#c3cced" font-family="Arial, sans-serif" font-size="22">${escapeXml(options.profile.groupName)}</text>`
+    : '';
+  const statsMarkup = options.profile.stats.length
+    ? renderCompanionDiscordStatGrid(options.profile.stats)
+    : '<text x="448" y="410" fill="#d9dff7" font-family="Arial, sans-serif" font-size="24">Tracked data is linked, but no export stats are ready yet.</text>';
+
+  return (
+    titleMarkup
+    + subtitleMarkup
+    + '<text x="448" y="270" fill="#91a8ec" font-family="Arial, sans-serif" font-size="18" letter-spacing="2">WISE OLD MAN RANK</text>'
+    + rankLines
+      .map((line, index) => `<text x="448" y="${304 + (index * 28)}" fill="#f4f6ff" font-family="Arial, sans-serif" font-size="34" font-weight="700">${escapeXml(line)}</text>`)
+      .join('')
+    + groupLabel
+    + statsMarkup
+  );
+}
+
+function resolveDiscordCompanionStageLayout(sceneWidth: number, sceneHeight: number) {
+  const maxSceneDimension = Math.max(1, sceneWidth, sceneHeight);
+  const targetScale = 9 * (COMPANION_CANVAS_SIZE / maxSceneDimension);
+  const maxScaleByWidth = (DISCORD_STAGE_FRAME.width - 28) / Math.max(1, sceneWidth);
+  const maxScaleByHeight = (DISCORD_STAGE_FRAME.height - 72) / Math.max(1, sceneHeight);
+  const stageScale = Math.max(1, Math.min(targetScale, maxScaleByWidth, maxScaleByHeight));
+  const stageWidth = sceneWidth * stageScale;
+  const stageHeight = sceneHeight * stageScale;
+  const shadowCx = DISCORD_STAGE_FRAME.x + (DISCORD_STAGE_FRAME.width / 2);
+  const shadowCy = DISCORD_STAGE_FRAME.y + DISCORD_STAGE_FRAME.height - 40;
+  const shadowRx = Math.max(96, Math.min(136, stageWidth * 0.46));
+  const shadowRy = Math.max(22, Math.min(30, stageHeight * 0.09));
+  const stageFloorY = shadowCy - shadowRy;
+
+  return {
+    stageScale,
+    stageX: DISCORD_STAGE_FRAME.x + ((DISCORD_STAGE_FRAME.width - stageWidth) / 2),
+    stageY: stageFloorY - stageHeight,
+    shadowCx,
+    shadowCy,
+    shadowRx,
+    shadowRy,
+  };
+}
+
+function renderDiscordCompanionCard(options: {
+  sceneWidth: number;
+  sceneHeight: number;
+  layersMarkup: string;
+  title: string;
+  subtitle: string;
+  animated: boolean;
+  shadowDuration?: string;
+  profile: CompanionDiscordCardProfile | null;
+}) {
+  const stageLayout = resolveDiscordCompanionStageLayout(options.sceneWidth, options.sceneHeight);
+  const shadow = options.animated
+    ? (
+      `<ellipse cx="${stageLayout.shadowCx}" cy="${stageLayout.shadowCy}" rx="${stageLayout.shadowRx}" ry="${stageLayout.shadowRy}" fill="rgba(7, 8, 16, 0.42)">`
+      + `<animate attributeName="rx" values="${stageLayout.shadowRx};${(stageLayout.shadowRx * 0.9).toFixed(3)};${stageLayout.shadowRx}" dur="${options.shadowDuration ?? '3.200s'}" repeatCount="indefinite" />`
+      + `<animate attributeName="opacity" values="0.42;0.28;0.42" dur="${options.shadowDuration ?? '3.200s'}" repeatCount="indefinite" />`
+      + '</ellipse>'
+    )
+    : `<ellipse cx="${stageLayout.shadowCx}" cy="${stageLayout.shadowCy}" rx="${stageLayout.shadowRx}" ry="${stageLayout.shadowRy}" fill="rgba(7, 8, 16, 0.34)" />`;
+
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${DISCORD_CARD_WIDTH}" height="${DISCORD_CARD_HEIGHT}" viewBox="0 0 ${DISCORD_CARD_WIDTH} ${DISCORD_CARD_HEIGHT}" shape-rendering="crispEdges" style="image-rendering:pixelated">`
+    + '<defs>'
+    + '<linearGradient id="discord-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#090b13" /><stop offset="52%" stop-color="#17192d" /><stop offset="100%" stop-color="#211942" /></linearGradient>'
+    + '<linearGradient id="discord-panel" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(9, 11, 18, 0.98)" /><stop offset="100%" stop-color="rgba(18, 22, 35, 0.92)" /></linearGradient>'
+    + '</defs>'
+    + `<rect width="${DISCORD_CARD_WIDTH}" height="${DISCORD_CARD_HEIGHT}" rx="38" fill="url(#discord-bg)" />`
+    + '<rect x="32" y="32" width="356" height="566" rx="34" fill="url(#discord-panel)" stroke="rgba(155, 182, 255, 0.16)" />'
+    + `<rect x="${DISCORD_STAGE_FRAME.x}" y="${DISCORD_STAGE_FRAME.y}" width="${DISCORD_STAGE_FRAME.width}" height="${DISCORD_STAGE_FRAME.height}" rx="28" fill="rgba(10, 13, 23, 0.78)" stroke="rgba(155, 182, 255, 0.12)" />`
+    + shadow
+    + `<g transform="translate(${stageLayout.stageX.toFixed(3)} ${stageLayout.stageY.toFixed(3)}) scale(${stageLayout.stageScale.toFixed(4)})">`
+    + options.layersMarkup
+    + '</g>'
+    + '<text x="448" y="118" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="18" letter-spacing="3">GHOSTED GHOSTLING</text>'
+    + renderCompanionDiscordCardCopy({
+      title: options.title,
+      subtitle: options.subtitle,
+      profile: options.profile,
+    })
+    + '<text x="448" y="582" fill="#8fa4e6" font-family="Arial, sans-serif" font-size="18">Discord-ready export • animated Ghostling card</text>'
+    + '</svg>'
+  );
 }
 
 function companionSvgTranslateAnimation(
@@ -331,6 +539,7 @@ export function resolveCompanionRenderRequest(
   ) as CompanionLoadout;
   let display = 'Ghosted Ghostling';
   let subtitle = 'Preview';
+  let ownerId: number | null = null;
 
   if (options.baseOnly) {
     subtitle = 'Ghostling vault';
@@ -342,6 +551,7 @@ export function resolveCompanionRenderRequest(
     Object.assign(loadout, companionLoadoutMap(db, row.id));
     display = userDisplayName(row);
     subtitle = `@${row.username}`;
+    ownerId = row.id;
   } else if (options.currentUser) {
     Object.assign(loadout, companionLoadoutMap(db, options.currentUser.id));
     display = userDisplayName({
@@ -349,6 +559,7 @@ export function resolveCompanionRenderRequest(
       discord_id: '',
     });
     subtitle = `@${options.currentUser.username}`;
+    ownerId = options.currentUser.id;
   }
 
   if (options.previewSlug) {
@@ -363,7 +574,7 @@ export function resolveCompanionRenderRequest(
     }
   }
 
-  return { loadout, display, subtitle };
+  return { loadout, display, subtitle, ownerId };
 }
 
 export function renderCompanionSvg(
@@ -373,6 +584,8 @@ export function renderCompanionSvg(
     displayName: string;
     subtitle?: string | null;
     card?: boolean;
+    discord?: boolean;
+    discordProfile?: CompanionDiscordCardProfile | null;
   },
 ) {
   const { scene, markup } = resolveCompanionLayers(db, loadout);
@@ -386,6 +599,18 @@ export function renderCompanionSvg(
   }
 
   if (options.card) {
+    if (options.discord) {
+      return renderDiscordCompanionCard({
+        sceneWidth: scene.width,
+        sceneHeight: scene.height,
+        layersMarkup: markup,
+        title: options.displayName,
+        subtitle: options.subtitle || 'Ghosted Ghostling',
+        animated: false,
+        profile: options.discordProfile ?? null,
+      });
+    }
+
     const cardScale = 4.8 * (COMPANION_CANVAS_SIZE / Math.max(scene.width, scene.height));
     return (
       '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320" shape-rendering="crispEdges" style="image-rendering:pixelated">'
@@ -422,6 +647,8 @@ export function renderAnimatedCompanionSvg(
     displayName: string;
     subtitle?: string | null;
     card?: boolean;
+    discord?: boolean;
+    discordProfile?: CompanionDiscordCardProfile | null;
   },
 ) {
   const scene = resolveCompanionLayerScene(db, loadout);
@@ -470,6 +697,19 @@ export function renderAnimatedCompanionSvg(
   const shadowDuration = `${(shadowDurationMs / 1000).toFixed(3)}s`;
 
   if (options.card) {
+    if (options.discord) {
+      return renderDiscordCompanionCard({
+        sceneWidth: scene.width,
+        sceneHeight: scene.height,
+        layersMarkup: layers,
+        title: options.displayName,
+        subtitle: options.subtitle || 'Ghosted Ghostling',
+        animated: true,
+        shadowDuration,
+        profile: options.discordProfile ?? null,
+      });
+    }
+
     const cardScale = 4.8 * (COMPANION_CANVAS_SIZE / Math.max(scene.width, scene.height));
     return (
       '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320" shape-rendering="crispEdges" style="image-rendering:pixelated">'
@@ -512,33 +752,41 @@ export function renderAnimatedCompanionSvg(
   );
 }
 
-export function renderRequestedCompanionSvg(
+export async function renderRequestedCompanionSvg(
   db: Database,
   options: {
     animated: boolean;
     userRef: string;
     previewSlug: string;
     card: boolean;
+    discord?: boolean;
     baseOnly?: boolean;
     currentUser?: CompanionUserRow | null;
   },
 ) {
-  const { loadout, display, subtitle } = resolveCompanionRenderRequest(db, {
+  const { loadout, display, subtitle, ownerId } = resolveCompanionRenderRequest(db, {
     userRef: options.userRef,
     previewSlug: options.previewSlug,
     baseOnly: options.baseOnly,
     currentUser: options.currentUser,
   });
+  const discordProfile = options.card && options.discord
+    ? await resolveCompanionDiscordCardProfile(db, ownerId)
+    : null;
 
   return options.animated
     ? renderAnimatedCompanionSvg(db, loadout, {
       displayName: display,
       subtitle,
       card: options.card,
+      discord: options.discord,
+      discordProfile,
     })
     : renderCompanionSvg(db, loadout, {
       displayName: display,
       subtitle,
       card: options.card,
+      discord: options.discord,
+      discordProfile,
     });
 }

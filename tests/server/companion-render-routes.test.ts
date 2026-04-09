@@ -21,6 +21,8 @@ import { GET as getCompanionRenderRoute } from '@/app/api/companion/render/route
 import { GET as getDevLoginRoute } from '@/app/auth/dev-login/route';
 import { createCompanionItem } from '@/lib/server/companion';
 import { companionRenderManifest } from '@/lib/server/companion-storage';
+import { saveUserGameAccount } from '@/lib/server/wom';
+import { PLAYER, installWomFetchMock } from './wom-fixtures';
 
 function svgBuffer(fill = '#7c5cff') {
   return Buffer.from(
@@ -308,6 +310,29 @@ describe('companion render and dev-login routes', () => {
 
     expect(missingResponse.status).toBe(404);
     expect(missingPayload).toEqual({ error: 'Preview item not found.' });
+  });
+
+  it('renders Discord card variants at wide-card dimensions with WOM rank and tracked stats', async () => {
+    const userId = insertUser(context.db, { username: 'member', globalName: 'Member' });
+    saveUserGameAccount(context.db, userId, 'osrs', PLAYER);
+    installWomFetchMock();
+
+    const response = await getCompanionAnimatedRenderRoute(
+      new Request(`http://localhost/api/companion/render-animated?user=${userId}&card=1&discord=1`),
+    );
+    const payload = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(payload).toContain('width="1200"');
+    expect(payload).toContain('height="630"');
+    expect(payload).toContain('Event Captain');
+    expect(payload).toContain('Total EXP');
+    expect(payload).toContain('432.1');
+    expect(payload).toContain('Competitions');
+    const stageTransform = /<g transform="translate\(([0-9.]+) ([0-9.]+)\) scale\(([0-9.]+)\)">/.exec(payload);
+    expect(stageTransform).not.toBeNull();
+    expect(Number(stageTransform?.[1] ?? 0)).toBeGreaterThan(60);
+    expect(Number(stageTransform?.[2] ?? 0)).toBeGreaterThan(180);
   });
 
   it('returns 404 when dev auth is disabled', async () => {
