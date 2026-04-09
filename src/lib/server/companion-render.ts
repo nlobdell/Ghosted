@@ -45,8 +45,8 @@ const DECIMAL_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
 });
 const DISCORD_CARD_WIDTH = 1200;
 const DISCORD_CARD_HEIGHT = 630;
-const DISCORD_EMBED_GIF_FRAME_DELAY_MS = 120;
-const DISCORD_EMBED_GIF_FRAME_COUNT = 16;
+const DISCORD_EMBED_GIF_FRAME_DELAY_MS = 80;
+const DISCORD_EMBED_GIF_FRAME_COUNT = 24;
 const DISCORD_CARD_EMBEDDED_FONT_FAMILY = 'Arial';
 const DISCORD_STAGE_FRAME = {
   x: 58,
@@ -323,22 +323,20 @@ function renderDiscordCompanionCard(options: {
   ].join('');
 }
 
-function companionWaveOffsetAtElapsed(
+function companionWaveOffsetAtLoopProgress(
   wave: CompanionMotionChannel['offsetX'] | CompanionMotionChannel['offsetY'] | undefined,
-  elapsedMs: number,
+  loopProgress: number,
 ) {
   const amplitude = Number(wave?.amplitude ?? 0);
-  const durationMs = Math.max(1, Math.trunc(Number(wave?.durationMs ?? 0)));
   const phase = Number(wave?.phase ?? 0);
-  if (!Number.isFinite(amplitude) || amplitude === 0 || !Number.isFinite(durationMs) || !Number.isFinite(phase)) {
+  if (!Number.isFinite(amplitude) || amplitude === 0 || !Number.isFinite(phase)) {
     return 0;
   }
 
-  const progress = (((elapsedMs % durationMs) + durationMs) % durationMs) / durationMs;
-  return Math.sin((progress * Math.PI * 2) + (phase * Math.PI * 2)) * amplitude;
+  return Math.sin((loopProgress * Math.PI * 2) + (phase * Math.PI * 2)) * amplitude;
 }
 
-function companionFrameAtElapsed(relativePath: string | null | undefined, elapsedMs: number) {
+function companionFrameAtLoopProgress(relativePath: string | null | undefined, loopProgress: number) {
   const { animation, frames } = companionAnimationFrames(relativePath);
   if (animation.mode !== 'spritesheet' || animation.frameCount <= 1 || frames.length <= 1) {
     return frames[0]!;
@@ -346,8 +344,8 @@ function companionFrameAtElapsed(relativePath: string | null | undefined, elapse
 
   const totalDurationMs = Math.max(1, frames.reduce((sum, frame) => sum + Math.max(1, Math.trunc(frame.durationMs ?? 100)), 0));
   let remainingMs = animation.loop
-    ? (((elapsedMs % totalDurationMs) + totalDurationMs) % totalDurationMs)
-    : Math.min(Math.max(0, elapsedMs), totalDurationMs - 1);
+    ? loopProgress * totalDurationMs
+    : Math.min(Math.max(0, loopProgress * totalDurationMs), totalDurationMs - 1);
 
   for (const frame of frames) {
     const frameDurationMs = Math.max(1, Math.trunc(frame.durationMs ?? 100));
@@ -372,13 +370,13 @@ function companionSnapshotSliceMarkup(
     targetWidth: number;
     targetHeight: number;
   },
-  elapsedMs: number,
+  loopProgress: number,
 ) {
   const dataUri = companionAssetDataUri(relativePath);
   if (!dataUri) return '';
 
   const { animation } = companionAnimationFrames(relativePath);
-  const frame = companionFrameAtElapsed(relativePath, elapsedMs);
+  const frame = companionFrameAtLoopProgress(relativePath, loopProgress);
   const sourceWidth = Math.max(1, Math.trunc(slice.sourceWidth));
   const sourceHeight = Math.max(1, Math.trunc(slice.sourceHeight));
   const sheetWidth = Math.max(sourceWidth, Math.trunc(animation.sheetWidth ?? sourceWidth));
@@ -398,12 +396,12 @@ function companionSnapshotMotionGroupMarkup(
   groupKey: string,
   markup: string,
   channel: CompanionMotionChannel | undefined,
-  elapsedMs: number,
+  loopProgress: number,
 ) {
   if (!markup) return '';
 
-  const offsetX = companionWaveOffsetAtElapsed(channel?.offsetX, elapsedMs);
-  const offsetY = companionWaveOffsetAtElapsed(channel?.offsetY, elapsedMs);
+  const offsetX = companionWaveOffsetAtLoopProgress(channel?.offsetX, loopProgress);
+  const offsetY = companionWaveOffsetAtLoopProgress(channel?.offsetY, loopProgress);
   const transform = (offsetX !== 0 || offsetY !== 0)
     ? ` transform="translate(${offsetX.toFixed(3)} ${offsetY.toFixed(3)})"`
     : '';
@@ -418,7 +416,7 @@ function renderAnimatedDiscordCompanionCardSnapshot(
     displayName: string;
     subtitle?: string | null;
     profile: CompanionDiscordCardProfile | null;
-    elapsedMs: number;
+    loopProgress: number;
   },
 ) {
   const scene = resolveCompanionLayerScene(db, loadout);
@@ -427,7 +425,7 @@ function renderAnimatedDiscordCompanionCardSnapshot(
   const groupedMarkup: Record<string, string[]> = { root: [], body: [], head: [] };
   for (const layer of scene.layers) {
     for (const slice of layer.slices) {
-      const markup = companionSnapshotSliceMarkup(layer.relativePath, slice, options.elapsedMs);
+      const markup = companionSnapshotSliceMarkup(layer.relativePath, slice, options.loopProgress);
       if (!markup) continue;
 
       const motionGroup = slice.motionGroup || layer.motionGroup || (layer.slot ? baseConfig.rig.slotGroups[layer.slot] ?? null : null);
@@ -438,27 +436,25 @@ function renderAnimatedDiscordCompanionCardSnapshot(
   }
 
   const motionChannels = baseConfig.rig.motionChannels;
-  const headMarkup = companionSnapshotMotionGroupMarkup('head', (groupedMarkup.head ?? []).join(''), motionChannels.head, options.elapsedMs);
+  const headMarkup = companionSnapshotMotionGroupMarkup('head', (groupedMarkup.head ?? []).join(''), motionChannels.head, options.loopProgress);
   const bodyMarkup = companionSnapshotMotionGroupMarkup(
     'body',
     (groupedMarkup.body ?? []).join('') + headMarkup,
     motionChannels.body,
-    options.elapsedMs,
+    options.loopProgress,
   );
   const otherGroups = Object.entries(groupedMarkup)
     .filter(([groupKey, markups]) => !['root', 'body', 'head'].includes(groupKey) && markups.length > 0)
-    .map(([groupKey, markups]) => companionSnapshotMotionGroupMarkup(groupKey, markups.join(''), motionChannels[groupKey], options.elapsedMs))
+    .map(([groupKey, markups]) => companionSnapshotMotionGroupMarkup(groupKey, markups.join(''), motionChannels[groupKey], options.loopProgress))
     .join('');
   const layersMarkup = companionSnapshotMotionGroupMarkup(
     'root',
     (groupedMarkup.root ?? []).join('') + otherGroups + bodyMarkup,
     motionChannels.root,
-    options.elapsedMs,
+    options.loopProgress,
   );
 
-  const shadowDurationMs = Math.max(1, Math.trunc(motionChannels.body?.offsetY?.durationMs ?? 2860));
-  const shadowProgress = ((((options.elapsedMs % shadowDurationMs) + shadowDurationMs) % shadowDurationMs) / shadowDurationMs);
-  const shadowPulse = (Math.cos(shadowProgress * Math.PI * 2) + 1) / 2;
+  const shadowPulse = (Math.cos(options.loopProgress * Math.PI * 2) + 1) / 2;
   const stageLayout = resolveDiscordCompanionStageLayout(scene.width, scene.height);
   const shadowRx = stageLayout.shadowRx * (0.9 + (shadowPulse * 0.1));
   const shadowOpacity = 0.28 + (shadowPulse * 0.14);
@@ -504,11 +500,12 @@ async function renderAnimatedDiscordCompanionCardGif(
   let palette: number[][] | null = null;
 
   for (let index = 0; index < DISCORD_EMBED_GIF_FRAME_COUNT; index += 1) {
+    const loopProgress = index / DISCORD_EMBED_GIF_FRAME_COUNT;
     const frame = await svgMarkupToRawRgba(renderAnimatedDiscordCompanionCardSnapshot(db, loadout, {
       displayName: options.displayName,
       subtitle: options.subtitle,
       profile: options.profile,
-      elapsedMs: index * DISCORD_EMBED_GIF_FRAME_DELAY_MS,
+      loopProgress,
     }));
 
     palette ??= quantize(frame.data, 256, { format: 'rgb565' });
