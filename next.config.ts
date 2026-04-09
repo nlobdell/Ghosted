@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     '/api/companion/assets/[...path]': ['./assets/companion/**/*'],
     '/api/companion/render': ['./assets/companion/**/*'],
     '/api/companion/render-animated': ['./assets/companion/**/*'],
+    '/api/companion/render-discord-animated.gif': ['./assets/companion/**/*'],
   },
   // Turbopack (default in Next.js 16) handles most static assets natively.
   // Empty config acknowledges the intentional turbopack-only setup.

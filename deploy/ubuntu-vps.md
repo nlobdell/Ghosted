@@ -24,16 +24,14 @@ sudo chown -R ghosted:ghosted /opt/ghosted
 sudo chown -R ghosted:ghosted /var/lib/ghosted
 ```
 
-## 3. Copy code and prepare the build workspace
+## 3. Copy code to the live checkout
 
 ```bash
-sudo mkdir -p /opt/ghosted/releases
-sudo mkdir -p /opt/ghosted/.deploy-state
-sudo rsync -av --delete ./ /opt/ghosted/build/
+sudo rsync -av --delete ./ /opt/ghosted/
 sudo chown -R ghosted:ghosted /opt/ghosted
 ```
 
-Using a dedicated checkout at `/opt/ghosted/build` is recommended, but not required. The release script can run from any Git checkout on the server. If your repo already lives at `/opt/ghosted`, you can run the script from there instead of creating `/opt/ghosted/build`.
+The recommended production layout is now a single Git checkout at `/opt/ghosted`. The web service runs the standalone Next bundle directly from that checkout after every build.
 
 ## 4. Configure env file
 
@@ -59,28 +57,16 @@ Discord application settings must include this redirect URI for browser sign-in:
 
 ## 5. Install the web service
 
-Use [`deploy/ghosted-web.service`](./ghosted-web.service). The service runs the standalone Next bundle from `/opt/ghosted/current-web`.
+Use [`deploy/ghosted-web.service`](./ghosted-web.service). The service runs the standalone Next bundle directly from `/opt/ghosted/.next/standalone/server.js`.
 
 Companion uploads should stay outside `/opt/ghosted`; the default runtime target is `/var/lib/ghosted/companion-assets` when `COMPANION_ASSET_DIR` is set as above.
 
 Install the unit:
 
 ```bash
-sudo cp /opt/ghosted/build/deploy/ghosted-web.service /etc/systemd/system/ghosted-web.service
+sudo cp /opt/ghosted/deploy/ghosted-web.service /etc/systemd/system/ghosted-web.service
 sudo systemctl daemon-reload
 sudo systemctl enable ghosted-web
-```
-
-If your checkout lives at `/opt/ghosted` instead of `/opt/ghosted/build`, copy the unit from `/opt/ghosted/deploy/ghosted-web.service` instead.
-
-If you want to run `scripts/deploy-release.sh` as the `ghosted` user, grant it passwordless access to inspect and restart just this service:
-
-```bash
-SYSTEMCTL_BIN="$(command -v systemctl)"
-printf 'ghosted ALL=NOPASSWD:%s cat ghosted-web,%s restart ghosted-web,%s is-active ghosted-web\n' \
-  "$SYSTEMCTL_BIN" "$SYSTEMCTL_BIN" "$SYSTEMCTL_BIN" \
-  | sudo tee /etc/sudoers.d/ghosted-web >/dev/null
-sudo chmod 440 /etc/sudoers.d/ghosted-web
 ```
 
 ## 6. Configure Caddy
@@ -98,42 +84,26 @@ Do not point Caddy at any other backend process. The Next.js app now owns the pu
 
 ## 7. Deploy updates
 
-From a dedicated build checkout:
-
-```bash
-cd /opt/ghosted/build
-sudo -u ghosted -H bash -lc 'cd /opt/ghosted/build && bash ./scripts/deploy-release.sh origin/main'
-```
-
-From a repo that already lives at `/opt/ghosted`:
+For normal app deploys:
 
 ```bash
 cd /opt/ghosted
-sudo -u ghosted -H bash -lc 'cd /opt/ghosted && bash ./scripts/deploy-release.sh origin/main'
+git pull
+npm run build
+sudo systemctl restart ghosted-web
 ```
 
-Manual rollback:
-
-From a dedicated build checkout:
-
-```bash
-cd /opt/ghosted/build
-sudo -u ghosted -H bash -lc 'cd /opt/ghosted/build && bash ./scripts/deploy-release.sh rollback'
-```
-
-From a repo that already lives at `/opt/ghosted`:
+If `package-lock.json` changed in the pull, run `npm ci` before `npm run build`:
 
 ```bash
 cd /opt/ghosted
-sudo -u ghosted -H bash -lc 'cd /opt/ghosted && bash ./scripts/deploy-release.sh rollback'
+git pull
+npm ci
+npm run build
+sudo systemctl restart ghosted-web
 ```
 
-The release script now:
-
-- verifies that the installed `ghosted-web` service is the standalone `/opt/ghosted/current-web/server.js` unit
-- rebuilds dependencies when `package-lock.json` changes or the Node runtime/ABI changes
-- restarts the service and waits for `http://127.0.0.1:3000/api/config` to pass a health check
-- automatically rolls back to the previous release if the new one fails to come up
+`npm run build` now prepares the standalone runtime bundle in place, including `.next/static`, `public`, and companion assets, so the restart picks up the new build directly.
 
 ## 8. Validate
 
@@ -151,7 +121,7 @@ curl -I https://your-domain.com/api/auth/signin
 
 If `/api/auth/signin` fails to render the Auth.js sign-in page, verify that `AUTH_SECRET`, `AUTH_URL`, `DISCORD_CLIENT_ID`, and `DISCORD_CLIENT_SECRET` are all set for the web service and that the Discord app redirect URI exactly matches `https://your-domain.com/api/auth/callback/discord`.
 
-If a manual `npm run build` behaves differently from the release script, make sure you loaded `/etc/ghosted/ghosted.env` first. Builds without that env file can fall back to `./data/ghosted.db` instead of `DATABASE_PATH=/var/lib/ghosted/ghosted.db`.
+If a manual `npm run build` behaves differently on the server, make sure you loaded `/etc/ghosted/ghosted.env` first. Builds without that env file can fall back to `./data/ghosted.db` instead of `DATABASE_PATH=/var/lib/ghosted/ghosted.db`.
 
 ## 9. Backups
 

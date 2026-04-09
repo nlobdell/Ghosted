@@ -291,7 +291,7 @@ export default function CompanionPage() {
                       Download these once your Ghostling looks the way you want it to.
                     </p>
                     <div className={styles.cardPreview}>
-                      <img src={companion.share.animatedDiscordCardUrl} alt="Animated Ghostling Discord share card" className={styles.cardImage} />
+                      <img src={companion.share.animatedDiscordEmbedUrl} alt="Animated Ghostling Discord share card" className={styles.cardImage} />
                     </div>
                     <div className={styles.shareList}>
                       {[
@@ -324,6 +324,24 @@ export default function CompanionPage() {
                           primaryLabel: 'Download SVG',
                           copyLabel: 'Animated Discord export URL',
                           primaryAction: () => downloadSvg(companion.share.animatedDiscordCardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-discord-card-animated.svg`, 'Animated Discord card SVG'),
+                        },
+                        {
+                          label: 'Discord embed GIF',
+                          detail: 'Paste this direct GIF URL into Discord to auto-embed the animated Ghostling card.',
+                          path: companion.share.animatedDiscordEmbedUrl,
+                          primaryLabel: 'Download GIF',
+                          copyLabel: 'Discord embed GIF URL',
+                          primaryAction: async () => {
+                            try {
+                              const response = await fetch(companion.share.animatedDiscordEmbedUrl, { headers: { Accept: 'image/gif,*/*' } });
+                              if (!response.ok) throw new Error(`Request failed: ${companion.share.animatedDiscordEmbedUrl}`);
+                              const blob = await response.blob();
+                              triggerDownload(blob, `${slugifyFilename(companion.user.displayName)}-ghostling-discord-embed.gif`);
+                              setMessage({ text: 'Discord embed GIF downloaded.', variant: 'info' });
+                            } catch (nextError) {
+                              setMessage({ text: nextError instanceof Error ? nextError.message : 'Unable to download Discord embed GIF.', variant: 'error' });
+                            }
+                          },
                         },
                       ].map((item) => (
                         <div key={item.label} className={styles.shareRow}>

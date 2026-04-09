@@ -59,6 +59,7 @@ type CompanionLoadoutRow = {
   face_item_slug: string | null;
   neck_item_slug: string | null;
   body_item_slug: string | null;
+  updated_at?: string | null;
 };
 
 type RepoCompanionImportInput = {
@@ -155,6 +156,19 @@ export function companionLoadoutMap(db: Database, userId: number): Record<Compan
   };
 }
 
+function companionShareVersionQuery(db: Database, userId: number) {
+  ensureUserCompanionLoadout(db, userId);
+  const row = db.prepare(`
+    SELECT updated_at
+    FROM user_companion_loadout
+    WHERE user_id = ?
+  `).get(userId) as Pick<CompanionLoadoutRow, 'updated_at'> | undefined;
+
+  return row?.updated_at
+    ? `&v=${encodeURIComponent(row.updated_at)}`
+    : '';
+}
+
 function companionSlotOptions(
   catalogRows: CompanionCatalogRow[],
   ownedSlugs: Set<string>,
@@ -217,6 +231,8 @@ export function buildCompanionPayload(db: Database, user: CompanionUserRow): Com
   const animatedCardUrl = `/api/companion/render-animated?user=${user.id}&card=1`;
   const discordCardUrl = `/api/companion/render?user=${user.id}&card=1&discord=1`;
   const animatedDiscordCardUrl = `/api/companion/render-animated?user=${user.id}&card=1&discord=1`;
+  const shareVersionQuery = companionShareVersionQuery(db, user.id);
+  const animatedDiscordEmbedUrl = `/api/companion/render-discord-animated.gif?user=${user.id}${shareVersionQuery}`;
 
   return {
     user: {
@@ -247,6 +263,7 @@ export function buildCompanionPayload(db: Database, user: CompanionUserRow): Com
       animatedCardUrl,
       discordCardUrl,
       animatedDiscordCardUrl,
+      animatedDiscordEmbedUrl,
     },
     baseAssetUrl: baseConfig.bodyAssetUrl,
   };

@@ -75,6 +75,7 @@ describe('companion server module', () => {
     expect(payload.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
     expect(payload.share.discordCardUrl).toContain('card=1&discord=1');
     expect(payload.share.animatedDiscordCardUrl).toContain('card=1&discord=1');
+    expect(payload.share.animatedDiscordEmbedUrl).toContain('/api/companion/render-discord-animated.gif?user=');
     expect(hallSummary.renderManifest.width).toBe(70);
     expect(hallSummary.renderManifest.height).toBe(70);
     expect(hallSummary.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-right-hand.png'))).toBe(true);

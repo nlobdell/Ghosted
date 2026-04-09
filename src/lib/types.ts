@@ -243,6 +243,7 @@ export interface CompanionData {
     animatedCardUrl: string;
     discordCardUrl: string;
     animatedDiscordCardUrl: string;
+    animatedDiscordEmbedUrl: string;
   };
   baseAssetUrl?: string | null;
 }

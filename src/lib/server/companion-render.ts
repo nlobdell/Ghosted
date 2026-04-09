@@ -1,6 +1,8 @@
 import 'server-only';
 
 import type { Database } from 'better-sqlite3';
+import { GIFEncoder, applyPalette, quantize } from 'gifenc';
+import sharp from 'sharp';
 import type { CompanionMotionChannel, CompanionSlotKey } from '@/lib/types';
 import {
   type CompanionUserRow,
@@ -41,6 +43,8 @@ const DECIMAL_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
 });
 const DISCORD_CARD_WIDTH = 1200;
 const DISCORD_CARD_HEIGHT = 630;
+const DISCORD_EMBED_GIF_FRAME_DELAY_MS = 120;
+const DISCORD_EMBED_GIF_FRAME_COUNT = 16;
 const DISCORD_STAGE_FRAME = {
   x: 58,
   y: 58,
@@ -246,16 +250,18 @@ function renderDiscordCompanionCard(options: {
   animated: boolean;
   shadowDuration?: string;
   profile: CompanionDiscordCardProfile | null;
+  shadowMarkup?: string;
+  footerText?: string;
 }) {
   const stageLayout = resolveDiscordCompanionStageLayout(options.sceneWidth, options.sceneHeight);
-  const shadow = options.animated
+  const shadow = options.shadowMarkup ?? (options.animated
     ? (
       `<ellipse cx="${stageLayout.shadowCx}" cy="${stageLayout.shadowCy}" rx="${stageLayout.shadowRx}" ry="${stageLayout.shadowRy}" fill="rgba(7, 8, 16, 0.42)">`
       + `<animate attributeName="rx" values="${stageLayout.shadowRx};${(stageLayout.shadowRx * 0.9).toFixed(3)};${stageLayout.shadowRx}" dur="${options.shadowDuration ?? '3.200s'}" repeatCount="indefinite" />`
       + `<animate attributeName="opacity" values="0.42;0.28;0.42" dur="${options.shadowDuration ?? '3.200s'}" repeatCount="indefinite" />`
       + '</ellipse>'
     )
-    : `<ellipse cx="${stageLayout.shadowCx}" cy="${stageLayout.shadowCy}" rx="${stageLayout.shadowRx}" ry="${stageLayout.shadowRy}" fill="rgba(7, 8, 16, 0.34)" />`;
+    : `<ellipse cx="${stageLayout.shadowCx}" cy="${stageLayout.shadowCy}" rx="${stageLayout.shadowRx}" ry="${stageLayout.shadowRy}" fill="rgba(7, 8, 16, 0.34)" />`);
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${DISCORD_CARD_WIDTH}" height="${DISCORD_CARD_HEIGHT}" viewBox="0 0 ${DISCORD_CARD_WIDTH} ${DISCORD_CARD_HEIGHT}" shape-rendering="crispEdges" style="image-rendering:pixelated">`,
@@ -279,6 +285,206 @@ function renderDiscordCompanionCard(options: {
     '<text x="448" y="582" fill="#8fa4e6" font-family="Arial, sans-serif" font-size="18">Discord-ready export • animated Ghostling card</text>',
     '</svg>',
   ].join('');
+}
+
+function companionWaveOffsetAtElapsed(
+  wave: CompanionMotionChannel['offsetX'] | CompanionMotionChannel['offsetY'] | undefined,
+  elapsedMs: number,
+) {
+  const amplitude = Number(wave?.amplitude ?? 0);
+  const durationMs = Math.max(1, Math.trunc(Number(wave?.durationMs ?? 0)));
+  const phase = Number(wave?.phase ?? 0);
+  if (!Number.isFinite(amplitude) || amplitude === 0 || !Number.isFinite(durationMs) || !Number.isFinite(phase)) {
+    return 0;
+  }
+
+  const progress = (((elapsedMs % durationMs) + durationMs) % durationMs) / durationMs;
+  return Math.sin((progress * Math.PI * 2) + (phase * Math.PI * 2)) * amplitude;
+}
+
+function companionFrameAtElapsed(relativePath: string | null | undefined, elapsedMs: number) {
+  const { animation, frames } = companionAnimationFrames(relativePath);
+  if (animation.mode !== 'spritesheet' || animation.frameCount <= 1 || frames.length <= 1) {
+    return frames[0]!;
+  }
+
+  const totalDurationMs = Math.max(1, frames.reduce((sum, frame) => sum + Math.max(1, Math.trunc(frame.durationMs ?? 100)), 0));
+  let remainingMs = animation.loop
+    ? (((elapsedMs % totalDurationMs) + totalDurationMs) % totalDurationMs)
+    : Math.min(Math.max(0, elapsedMs), totalDurationMs - 1);
+
+  for (const frame of frames) {
+    const frameDurationMs = Math.max(1, Math.trunc(frame.durationMs ?? 100));
+    if (remainingMs < frameDurationMs) {
+      return frame;
+    }
+    remainingMs -= frameDurationMs;
+  }
+
+  return frames[frames.length - 1]!;
+}
+
+function companionSnapshotSliceMarkup(
+  relativePath: string | null | undefined,
+  slice: {
+    sourceX: number;
+    sourceY: number;
+    sourceWidth: number;
+    sourceHeight: number;
+    targetX: number;
+    targetY: number;
+    targetWidth: number;
+    targetHeight: number;
+  },
+  elapsedMs: number,
+) {
+  const dataUri = companionAssetDataUri(relativePath);
+  if (!dataUri) return '';
+
+  const { animation } = companionAnimationFrames(relativePath);
+  const frame = companionFrameAtElapsed(relativePath, elapsedMs);
+  const sourceWidth = Math.max(1, Math.trunc(slice.sourceWidth));
+  const sourceHeight = Math.max(1, Math.trunc(slice.sourceHeight));
+  const sheetWidth = Math.max(sourceWidth, Math.trunc(animation.sheetWidth ?? sourceWidth));
+  const sheetHeight = Math.max(sourceHeight, Math.trunc(animation.sheetHeight ?? sourceHeight));
+  const imageX = (frame.offsetX ?? 0) - frame.x - slice.sourceX;
+  const imageY = (frame.offsetY ?? 0) - frame.y - slice.sourceY;
+
+  return (
+    `<svg x="${slice.targetX}" y="${slice.targetY}" width="${slice.targetWidth}" height="${slice.targetHeight}" `
+    + `viewBox="0 0 ${sourceWidth} ${sourceHeight}" preserveAspectRatio="none">`
+    + `<image href="${dataUri}" x="${imageX}" y="${imageY}" width="${sheetWidth}" height="${sheetHeight}" preserveAspectRatio="none" />`
+    + '</svg>'
+  );
+}
+
+function companionSnapshotMotionGroupMarkup(
+  groupKey: string,
+  markup: string,
+  channel: CompanionMotionChannel | undefined,
+  elapsedMs: number,
+) {
+  if (!markup) return '';
+
+  const offsetX = companionWaveOffsetAtElapsed(channel?.offsetX, elapsedMs);
+  const offsetY = companionWaveOffsetAtElapsed(channel?.offsetY, elapsedMs);
+  const transform = (offsetX !== 0 || offsetY !== 0)
+    ? ` transform="translate(${offsetX.toFixed(3)} ${offsetY.toFixed(3)})"`
+    : '';
+
+  return `<g id="ghostling-${escapeXml(groupKey)}"${transform}>${markup}</g>`;
+}
+
+function renderAnimatedDiscordCompanionCardSnapshot(
+  db: Database,
+  loadout: CompanionLoadout,
+  options: {
+    displayName: string;
+    subtitle?: string | null;
+    profile: CompanionDiscordCardProfile | null;
+    elapsedMs: number;
+  },
+) {
+  const scene = resolveCompanionLayerScene(db, loadout);
+  const baseConfig = scene.baseConfig;
+
+  const groupedMarkup: Record<string, string[]> = { root: [], body: [], head: [] };
+  for (const layer of scene.layers) {
+    for (const slice of layer.slices) {
+      const markup = companionSnapshotSliceMarkup(layer.relativePath, slice, options.elapsedMs);
+      if (!markup) continue;
+
+      const motionGroup = slice.motionGroup || layer.motionGroup || (layer.slot ? baseConfig.rig.slotGroups[layer.slot] ?? null : null);
+      const groupKey = String(motionGroup || 'root');
+      groupedMarkup[groupKey] ??= [];
+      groupedMarkup[groupKey]!.push(markup);
+    }
+  }
+
+  const motionChannels = baseConfig.rig.motionChannels;
+  const headMarkup = companionSnapshotMotionGroupMarkup('head', (groupedMarkup.head ?? []).join(''), motionChannels.head, options.elapsedMs);
+  const bodyMarkup = companionSnapshotMotionGroupMarkup(
+    'body',
+    (groupedMarkup.body ?? []).join('') + headMarkup,
+    motionChannels.body,
+    options.elapsedMs,
+  );
+  const otherGroups = Object.entries(groupedMarkup)
+    .filter(([groupKey, markups]) => !['root', 'body', 'head'].includes(groupKey) && markups.length > 0)
+    .map(([groupKey, markups]) => companionSnapshotMotionGroupMarkup(groupKey, markups.join(''), motionChannels[groupKey], options.elapsedMs))
+    .join('');
+  const layersMarkup = companionSnapshotMotionGroupMarkup(
+    'root',
+    (groupedMarkup.root ?? []).join('') + otherGroups + bodyMarkup,
+    motionChannels.root,
+    options.elapsedMs,
+  );
+
+  const shadowDurationMs = Math.max(1, Math.trunc(motionChannels.body?.offsetY?.durationMs ?? 2860));
+  const shadowProgress = ((((options.elapsedMs % shadowDurationMs) + shadowDurationMs) % shadowDurationMs) / shadowDurationMs);
+  const shadowPulse = (Math.cos(shadowProgress * Math.PI * 2) + 1) / 2;
+  const stageLayout = resolveDiscordCompanionStageLayout(scene.width, scene.height);
+  const shadowRx = stageLayout.shadowRx * (0.9 + (shadowPulse * 0.1));
+  const shadowOpacity = 0.28 + (shadowPulse * 0.14);
+  const shadowMarkup = `<ellipse cx="${stageLayout.shadowCx}" cy="${stageLayout.shadowCy}" rx="${shadowRx.toFixed(3)}" ry="${stageLayout.shadowRy}" fill="rgba(7, 8, 16, ${shadowOpacity.toFixed(2)})" />`;
+
+  return renderDiscordCompanionCard({
+    sceneWidth: scene.width,
+    sceneHeight: scene.height,
+    layersMarkup,
+    title: options.displayName,
+    subtitle: options.subtitle || 'Ghosted Ghostling',
+    animated: false,
+    profile: options.profile,
+    shadowMarkup,
+  });
+}
+
+async function svgMarkupToRawRgba(markup: string) {
+  const { data, info } = await sharp(Buffer.from(markup))
+    .resize(DISCORD_CARD_WIDTH, DISCORD_CARD_HEIGHT, { fit: 'fill', kernel: sharp.kernel.nearest })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  return {
+    data,
+    width: info.width,
+    height: info.height,
+  };
+}
+
+async function renderAnimatedDiscordCompanionCardGif(
+  db: Database,
+  loadout: CompanionLoadout,
+  options: {
+    displayName: string;
+    subtitle?: string | null;
+    profile: CompanionDiscordCardProfile | null;
+  },
+) {
+  const gif = GIFEncoder();
+  let palette: number[][] | null = null;
+
+  for (let index = 0; index < DISCORD_EMBED_GIF_FRAME_COUNT; index += 1) {
+    const frame = await svgMarkupToRawRgba(renderAnimatedDiscordCompanionCardSnapshot(db, loadout, {
+      displayName: options.displayName,
+      subtitle: options.subtitle,
+      profile: options.profile,
+      elapsedMs: index * DISCORD_EMBED_GIF_FRAME_DELAY_MS,
+    }));
+
+    palette ??= quantize(frame.data, 256, { format: 'rgb565' });
+    const indexed = applyPalette(frame.data, palette, 'rgb565');
+    gif.writeFrame(indexed, frame.width, frame.height, {
+      palette: index === 0 ? palette : undefined,
+      delay: DISCORD_EMBED_GIF_FRAME_DELAY_MS,
+      repeat: index === 0 ? 0 : undefined,
+    });
+  }
+
+  gif.finish();
+  return Buffer.from(gif.bytesView());
 }
 
 function companionSvgTranslateAnimation(
@@ -789,4 +995,28 @@ export async function renderRequestedCompanionSvg(
       discord: options.discord,
       discordProfile,
     });
+}
+
+export async function renderRequestedDiscordCompanionGif(
+  db: Database,
+  options: {
+    userRef: string;
+    previewSlug: string;
+    baseOnly?: boolean;
+    currentUser?: CompanionUserRow | null;
+  },
+) {
+  const { loadout, display, subtitle, ownerId } = resolveCompanionRenderRequest(db, {
+    userRef: options.userRef,
+    previewSlug: options.previewSlug,
+    baseOnly: options.baseOnly,
+    currentUser: options.currentUser,
+  });
+  const discordProfile = await resolveCompanionDiscordCardProfile(db, ownerId);
+
+  return renderAnimatedDiscordCompanionCardGif(db, loadout, {
+    displayName: display,
+    subtitle,
+    profile: discordProfile,
+  });
 }
