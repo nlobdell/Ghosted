@@ -257,28 +257,28 @@ function renderDiscordCompanionCard(options: {
     )
     : `<ellipse cx="${stageLayout.shadowCx}" cy="${stageLayout.shadowCy}" rx="${stageLayout.shadowRx}" ry="${stageLayout.shadowRy}" fill="rgba(7, 8, 16, 0.34)" />`;
 
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${DISCORD_CARD_WIDTH}" height="${DISCORD_CARD_HEIGHT}" viewBox="0 0 ${DISCORD_CARD_WIDTH} ${DISCORD_CARD_HEIGHT}" shape-rendering="crispEdges" style="image-rendering:pixelated">`
-    + '<defs>'
-    + '<linearGradient id="discord-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#090b13" /><stop offset="52%" stop-color="#17192d" /><stop offset="100%" stop-color="#211942" /></linearGradient>'
-    + '<linearGradient id="discord-panel" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(9, 11, 18, 0.98)" /><stop offset="100%" stop-color="rgba(18, 22, 35, 0.92)" /></linearGradient>'
-    + '</defs>'
-    + `<rect width="${DISCORD_CARD_WIDTH}" height="${DISCORD_CARD_HEIGHT}" rx="38" fill="url(#discord-bg)" />`
-    + '<rect x="32" y="32" width="356" height="566" rx="34" fill="url(#discord-panel)" stroke="rgba(155, 182, 255, 0.16)" />'
-    + `<rect x="${DISCORD_STAGE_FRAME.x}" y="${DISCORD_STAGE_FRAME.y}" width="${DISCORD_STAGE_FRAME.width}" height="${DISCORD_STAGE_FRAME.height}" rx="28" fill="rgba(10, 13, 23, 0.78)" stroke="rgba(155, 182, 255, 0.12)" />`
-    + shadow
-    + `<g transform="translate(${stageLayout.stageX.toFixed(3)} ${stageLayout.stageY.toFixed(3)}) scale(${stageLayout.stageScale.toFixed(4)})">`
-    + options.layersMarkup
-    + '</g>'
-    + '<text x="448" y="118" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="18" letter-spacing="3">GHOSTED GHOSTLING</text>'
-    + renderCompanionDiscordCardCopy({
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${DISCORD_CARD_WIDTH}" height="${DISCORD_CARD_HEIGHT}" viewBox="0 0 ${DISCORD_CARD_WIDTH} ${DISCORD_CARD_HEIGHT}" shape-rendering="crispEdges" style="image-rendering:pixelated">`,
+    '<defs>',
+    '<linearGradient id="discord-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#090b13" /><stop offset="52%" stop-color="#17192d" /><stop offset="100%" stop-color="#211942" /></linearGradient>',
+    '<linearGradient id="discord-panel" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(9, 11, 18, 0.98)" /><stop offset="100%" stop-color="rgba(18, 22, 35, 0.92)" /></linearGradient>',
+    '</defs>',
+    `<rect width="${DISCORD_CARD_WIDTH}" height="${DISCORD_CARD_HEIGHT}" rx="38" fill="url(#discord-bg)" />`,
+    '<rect x="32" y="32" width="356" height="566" rx="34" fill="url(#discord-panel)" stroke="rgba(155, 182, 255, 0.16)" />',
+    `<rect x="${DISCORD_STAGE_FRAME.x}" y="${DISCORD_STAGE_FRAME.y}" width="${DISCORD_STAGE_FRAME.width}" height="${DISCORD_STAGE_FRAME.height}" rx="28" fill="rgba(10, 13, 23, 0.78)" stroke="rgba(155, 182, 255, 0.12)" />`,
+    shadow,
+    `<g transform="translate(${stageLayout.stageX.toFixed(3)} ${stageLayout.stageY.toFixed(3)}) scale(${stageLayout.stageScale.toFixed(4)})">`,
+    options.layersMarkup,
+    '</g>',
+    '<text x="448" y="118" fill="#9bb6ff" font-family="Arial, sans-serif" font-size="18" letter-spacing="3">GHOSTED GHOSTLING</text>',
+    renderCompanionDiscordCardCopy({
       title: options.title,
       subtitle: options.subtitle,
       profile: options.profile,
-    })
-    + '<text x="448" y="582" fill="#8fa4e6" font-family="Arial, sans-serif" font-size="18">Discord-ready export • animated Ghostling card</text>'
-    + '</svg>'
-  );
+    }),
+    '<text x="448" y="582" fill="#8fa4e6" font-family="Arial, sans-serif" font-size="18">Discord-ready export • animated Ghostling card</text>',
+    '</svg>',
+  ].join('');
 }
 
 function companionSvgTranslateAnimation(
