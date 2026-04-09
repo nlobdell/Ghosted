@@ -19,11 +19,12 @@ export const GET = withRouteErrorHandling(async (request: Request) => {
     userRef,
     previewSlug,
     card: boolSearchParam(url.searchParams.get('card')),
+    discord: boolSearchParam(url.searchParams.get('discord')),
     baseOnly,
     currentUser: userRef || baseOnly ? null : await getCurrentUser(),
   });
 
-  return new Response(markup, {
+  return new Response(await markup, {
     status: 200,
     headers: {
       'Content-Type': 'image/svg+xml; charset=utf-8',

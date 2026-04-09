@@ -241,6 +241,8 @@ export interface CompanionData {
     animatedAvatarUrl: string;
     cardUrl: string;
     animatedCardUrl: string;
+    discordCardUrl: string;
+    animatedDiscordCardUrl: string;
   };
   baseAssetUrl?: string | null;
 }

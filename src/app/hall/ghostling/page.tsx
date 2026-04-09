@@ -291,7 +291,7 @@ export default function CompanionPage() {
                       Download these once your Ghostling looks the way you want it to.
                     </p>
                     <div className={styles.cardPreview}>
-                      <img src={companion.animatedCardUrl} alt="Animated Ghostling share card" className={styles.cardImage} />
+                      <img src={companion.share.animatedDiscordCardUrl} alt="Animated Ghostling Discord share card" className={styles.cardImage} />
                     </div>
                     <div className={styles.shareList}>
                       {[
@@ -310,18 +310,20 @@ export default function CompanionPage() {
                           primaryAction: () => downloadSvg(companion.share.animatedAvatarUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-avatar-animated.svg`, 'Animated avatar SVG'),
                         },
                         {
-                          label: 'Share card PNG',
-                          detail: '480 x 320 social card output ready for Discord posts and uploads.',
-                          path: companion.share.cardUrl,
+                          label: 'Discord card PNG',
+                          detail: '1200 x 630 Discord-ready card with WOM rank and tracked stats when linked.',
+                          path: companion.share.discordCardUrl,
                           primaryLabel: 'Download PNG',
-                          primaryAction: () => downloadPng(companion.share.cardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-card.png`, 'Share card PNG', 480, 320),
+                          copyLabel: 'Discord card export URL',
+                          primaryAction: () => downloadPng(companion.share.discordCardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-discord-card.png`, 'Discord card PNG', 1200, 630),
                         },
                         {
-                          label: 'Animated share card SVG',
-                          detail: 'Motion-preserving vector card that matches the homepage Ghostling style.',
-                          path: companion.share.animatedCardUrl,
+                          label: 'Animated Discord card SVG',
+                          detail: 'Motion-preserving Discord export URL for the animated Ghostling card.',
+                          path: companion.share.animatedDiscordCardUrl,
                           primaryLabel: 'Download SVG',
-                          primaryAction: () => downloadSvg(companion.share.animatedCardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-card-animated.svg`, 'Animated card SVG'),
+                          copyLabel: 'Animated Discord export URL',
+                          primaryAction: () => downloadSvg(companion.share.animatedDiscordCardUrl, `${slugifyFilename(companion.user.displayName)}-ghostling-discord-card-animated.svg`, 'Animated Discord card SVG'),
                         },
                       ].map((item) => (
                         <div key={item.label} className={styles.shareRow}>
@@ -340,9 +342,9 @@ export default function CompanionPage() {
                             <button
                               type="button"
                               className="button button--secondary button--small"
-                              onClick={() => copyUrl(item.path, `${item.label} URL`)}
+                              onClick={() => copyUrl(item.path, item.copyLabel ?? `${item.label} URL`)}
                             >
-                              Copy source URL
+                              {item.copyLabel ? 'Copy export URL' : 'Copy source URL'}
                             </button>
                           </div>
                         </div>
