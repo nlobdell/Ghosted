@@ -1,0 +1,82 @@
+.sceneSection {
+  border: 1px solid rgba(191, 179, 255, 0.14);
+  border-radius: 2.25rem;
+  background: linear-gradient(140deg, rgba(8, 7, 13, 0.99), rgba(14, 12, 22, 0.97) 56%, rgba(7, 6, 12, 1));
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  padding: var(--surface-padding);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sceneLabel {
+  color: var(--color-text-soft);
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.sceneStage {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  border: 1px solid rgba(191, 179, 255, 0.1);
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(circle at 50% 60%, rgba(117, 104, 187, 0.2), transparent 55%),
+    linear-gradient(180deg, rgba(8, 7, 14, 0.96), rgba(14, 12, 22, 0.98));
+  overflow: hidden;
+}
+
+.ghostWrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: default;
+  will-change: transform, opacity;
+}
+
+.ghostImg {
+  display: block;
+  width: 56px;
+  height: 56px;
+  image-rendering: pixelated;
+}
+
+.ghostTooltip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.18rem 0.45rem;
+  background: rgba(9, 8, 17, 0.92);
+  border: 1px solid rgba(191, 179, 255, 0.22);
+  border-radius: 0.4rem;
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  color: rgba(255, 255, 255, 0.82);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 200;
+}
+
+/* Reduced-motion: static grid layout */
+.staticGrid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 0.5rem;
+}
+
+.staticGrid .ghostWrap {
+  position: static;
+  opacity: 1 !important;
+  transform: none !important;
+  will-change: auto;
+}

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { HeroSection } from '@/components/home/HeroSection';
 import { SocialProofStrip } from '@/components/home/SocialProofStrip';
 import { NewsPreview } from '@/components/home/NewsPreview';
+import { GhostlingScene } from '@/components/GhostlingScene';
 import { getConfiguredLoginHref } from '@/lib/auth/server-config';
 import { getServerJSON } from '@/lib/server-api';
 import type { CompanionData, NewsPost, ShellData } from '@/lib/types';
@@ -63,6 +64,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <GhostlingScene />
 
       <NewsPreview posts={previewPosts} />
     </main>
