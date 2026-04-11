@@ -264,6 +264,7 @@ export function GhostlingScene() {
         aria-label="Ghostlings of members active in Discord voice"
         role="img"
       >
+        <div className={styles.sceneBounds} aria-hidden="true" />
         {memberKeys.map((key) => {
           const entity = entitiesRef.current.get(key);
           if (!entity) return null;

@@ -65,6 +65,42 @@
   z-index: 200;
 }
 
+/* Walkable-area bounds overlay */
+.sceneBounds {
+  position: absolute;
+  inset: 56px; /* = PADDING = GHOST_SIZE */
+  border: 1px dashed rgba(184, 168, 255, 0.28);
+  border-radius: 0.6rem;
+  background: rgba(184, 168, 255, 0.03);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Corner ticks */
+.sceneBounds::before,
+.sceneBounds::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: rgba(184, 168, 255, 0.5);
+  border-style: solid;
+}
+
+.sceneBounds::before {
+  top: -1px;
+  left: -1px;
+  border-width: 2px 0 0 2px;
+  border-radius: 2px 0 0 0;
+}
+
+.sceneBounds::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 2px 2px 0;
+  border-radius: 0 0 2px 0;
+}
+
 /* Reduced-motion: static grid layout */
 .staticGrid {
   display: flex;
