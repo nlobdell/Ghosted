@@ -218,7 +218,7 @@ export function GhostlingScene() {
           wrapEl.style.transform = `translate(${Math.round(entity.x)}px, ${Math.round(entity.y)}px)`;
         }
         if (imgEl) {
-          imgEl.style.transform = entity.facingLeft ? 'scaleX(-1)' : '';
+          imgEl.style.transform = entity.facingLeft ? '' : 'scaleX(-1)';
         }
       }
 
