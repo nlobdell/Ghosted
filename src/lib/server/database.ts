@@ -211,6 +211,55 @@ function ensureSchema(db: Database.Database) {
       base_head_asset_path TEXT,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS discord_voice_presence (
+      guild_id TEXT NOT NULL,
+      discord_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      username TEXT NOT NULL,
+      joined_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      PRIMARY KEY (guild_id, discord_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_discord_voice_presence_channel
+    ON discord_voice_presence(guild_id, channel_id);
+
+    CREATE INDEX IF NOT EXISTS idx_discord_voice_presence_seen
+    ON discord_voice_presence(guild_id, last_seen_at);
+
+    CREATE TABLE IF NOT EXISTS scene_presence_channel_allowlist (
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      channel_name TEXT NOT NULL,
+      channel_type TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (guild_id, channel_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS discord_presence_worker_state (
+      guild_id TEXT PRIMARY KEY,
+      runtime_status TEXT NOT NULL,
+      bot_install_status TEXT NOT NULL,
+      last_heartbeat_at TEXT,
+      last_sync_at TEXT,
+      last_error TEXT,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS scene_shared_snapshots (
+      scene_key TEXT PRIMARY KEY,
+      version INTEGER NOT NULL,
+      variant TEXT NOT NULL,
+      width INTEGER NOT NULL,
+      height INTEGER NOT NULL,
+      saved_at INTEGER NOT NULL,
+      payload_source TEXT NOT NULL,
+      live_count INTEGER NOT NULL,
+      entities_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   ensureTableColumn(db, 'companion_catalog', 'front_asset_path', 'TEXT');

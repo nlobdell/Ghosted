@@ -10,6 +10,8 @@ type EnvKey =
   | 'COMPANION_ASSET_DIR'
   | 'DAILY_WAGER_CAP'
   | 'DATABASE_PATH'
+  | 'DISCORD_BOT_TOKEN'
+  | 'DISCORD_GUILD_ID'
   | 'DEV_AUTH_ADMIN'
   | 'ENABLE_DEV_AUTH'
   | 'SESSION_COOKIE_SECURE'
@@ -22,6 +24,8 @@ const ENV_KEYS: EnvKey[] = [
   'COMPANION_ASSET_DIR',
   'DAILY_WAGER_CAP',
   'DATABASE_PATH',
+  'DISCORD_BOT_TOKEN',
+  'DISCORD_GUILD_ID',
   'DEV_AUTH_ADMIN',
   'ENABLE_DEV_AUTH',
   'SESSION_COOKIE_SECURE',
@@ -46,6 +50,8 @@ export function setupServerTestEnvironment(overrides: Partial<Record<EnvKey, str
   process.env.COMPANION_ASSET_DIR = overrides.COMPANION_ASSET_DIR ?? path.join(tempDir, 'companion-assets');
   process.env.DAILY_WAGER_CAP = overrides.DAILY_WAGER_CAP ?? '';
   process.env.DEV_AUTH_ADMIN = overrides.DEV_AUTH_ADMIN ?? '';
+  process.env.DISCORD_BOT_TOKEN = overrides.DISCORD_BOT_TOKEN ?? '';
+  process.env.DISCORD_GUILD_ID = overrides.DISCORD_GUILD_ID ?? '';
   process.env.WOM_GROUP_ID = overrides.WOM_GROUP_ID ?? '123';
   process.env.WOM_CACHE_TTL_SECONDS = overrides.WOM_CACHE_TTL_SECONDS ?? '900';
   process.env.WOM_API_BASE = overrides.WOM_API_BASE ?? 'https://api.wiseoldman.net/v2';

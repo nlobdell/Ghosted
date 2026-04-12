@@ -1,11 +1,19 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from 'react';
 import type { StatItem, LedgerEntry, LeaderboardEntry } from '@/lib/types';
 import { formatDate, formatCompetitionWindow } from '@/lib/api';
 
 interface BreadcrumbItem {
   label: string;
   href?: string;
+}
+
+type FormControlElement = ReactElement<{ id?: string }, 'input' | 'select' | 'textarea'>;
+
+function isFormControlElement(node: ReactNode): node is FormControlElement {
+  return isValidElement(node)
+    && typeof node.type === 'string'
+    && ['input', 'select', 'textarea'].includes(node.type);
 }
 
 export function AppContext({
@@ -475,10 +483,23 @@ export function FormField({
   note?: string;
   className?: string;
 }) {
+  const generatedId = useId();
+  let control = children;
+  let htmlFor: string | undefined;
+
+  if (isFormControlElement(children)) {
+    const existingId = String(children.props.id ?? '').trim();
+    const resolvedId = existingId || `${generatedId}-control`;
+    htmlFor = resolvedId;
+    control = cloneElement(children, {
+      id: resolvedId,
+    });
+  }
+
   return (
     <div className={['app-form-field', className].filter(Boolean).join(' ')}>
-      <label>{label}</label>
-      {children}
+      <label htmlFor={htmlFor}>{label}</label>
+      {control}
       {note ? <p className="app-muted">{note}</p> : null}
     </div>
   );

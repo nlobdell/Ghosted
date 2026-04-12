@@ -151,6 +151,8 @@ export default async function DashboardPage() {
               alt={ghostlingReady && companion ? `${companion.user.displayName}'s Ghostling` : 'Ghosted Ghostling preview'}
               className={styles.stageImage}
               targetSize={232}
+              presentation="ambient"
+              seedKey={ghostlingReady && companion ? `hall:${companion.user.username}` : 'hall:house'}
             />
           </div>
           <div className={styles.stageMeta}>

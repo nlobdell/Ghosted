@@ -110,6 +110,18 @@ export interface CompanionMotionWave {
 export interface CompanionMotionChannel {
   offsetX?: CompanionMotionWave;
   offsetY?: CompanionMotionWave;
+  rotateDeg?: CompanionMotionWave;
+  scaleX?: CompanionMotionWave;
+  scaleY?: CompanionMotionWave;
+}
+
+export interface CompanionMotionAccent {
+  key: string;
+  groups: string[];
+  intervalMsMin: number;
+  intervalMsMax: number;
+  durationMs: number;
+  overrides: Record<string, CompanionMotionChannel>;
 }
 
 export interface CompanionLayerAnimation {
@@ -186,9 +198,305 @@ export interface CompanionRenderManifest {
     rootGroup: string;
     channels: Record<string, CompanionMotionChannel>;
     slotGroups: Partial<Record<CompanionSlotKey, string>>;
+    accents?: CompanionMotionAccent[];
+  };
+  debug?: {
+    slotAnchors: Partial<Record<CompanionSlotKey, CompanionRenderPoint>>;
+    shadowRect: CompanionRenderRect;
+    actorMetrics?: CompanionActorMetrics;
   };
   layers: CompanionRenderLayer[];
 }
+
+export interface CompanionActorMetrics {
+  sourceWidth: number;
+  sourceHeight: number;
+  visibleBounds: CompanionRenderRect;
+  footprintBounds: CompanionRenderRect;
+  feetAnchor: CompanionRenderPoint;
+}
+
+export interface CompanionPreviewSummary {
+  user: {
+    displayName: string;
+    username: string;
+  } | null;
+  animatedRenderUrl: string;
+  renderManifest: CompanionRenderManifest;
+  actorMetrics: CompanionActorMetrics;
+}
+
+export type DiscordPresenceChannelType = 'voice' | 'stage';
+export type DiscordPresenceWorkerRuntimeStatus = 'idle' | 'running' | 'error';
+export type DiscordPresenceBotInstallStatus = 'unknown' | 'installed' | 'not-installed';
+export type DiscordPresenceWorkerHealth = 'not-configured' | 'idle' | 'healthy' | 'stale' | 'error' | 'not-installed';
+
+export interface DiscordVoicePresenceRow {
+  guildId: string;
+  discordId: string;
+  channelId: string;
+  displayName: string;
+  username: string;
+  joinedAt: string;
+  lastSeenAt: string;
+}
+
+export interface ScenePresenceChannelAllowlistEntry {
+  guildId: string;
+  channelId: string;
+  channelName: string;
+  channelType: DiscordPresenceChannelType;
+  updatedAt: string;
+}
+
+export interface DiscordPresenceWorkerState {
+  guildId: string;
+  runtimeStatus: DiscordPresenceWorkerRuntimeStatus;
+  botInstallStatus: DiscordPresenceBotInstallStatus;
+  lastHeartbeatAt: string | null;
+  lastSyncAt: string | null;
+  lastError: string | null;
+  updatedAt: string;
+}
+
+export interface DiscordPresenceWorkerSummary {
+  configured: boolean;
+  guildId: string | null;
+  health: DiscordPresenceWorkerHealth;
+  state: DiscordPresenceWorkerState | null;
+}
+
+export interface DiscordPresenceAdminModuleStatus {
+  key: string;
+  label: string;
+  enabled: boolean;
+}
+
+export interface DiscordPresenceAdminChannel {
+  id: string;
+  name: string;
+  type: DiscordPresenceChannelType;
+  selected: boolean;
+}
+
+export interface DiscordPresenceAdminData {
+  actor: {
+    displayName: string;
+  };
+  guild: {
+    id: string | null;
+    configured: boolean;
+    ready: boolean;
+  };
+  publicMode: 'bot' | 'widget';
+  worker: DiscordPresenceWorkerSummary & {
+    activeModules: DiscordPresenceAdminModuleStatus[];
+  };
+  channels: DiscordPresenceAdminChannel[];
+  allowlist: ScenePresenceChannelAllowlistEntry[];
+  channelFetchError?: string | null;
+}
+
+export type AdminSectionKey = 'rewards' | 'content' | 'systems' | 'ghostling';
+export type AdminSectionStatus = 'ready' | 'warning' | 'critical';
+
+export interface AdminAlert {
+  id: string;
+  title: string;
+  detail: string;
+  variant: 'info' | 'warning' | 'error';
+  section?: AdminSectionKey;
+  href?: string;
+  ctaLabel?: string;
+}
+
+export interface AdminAuditEntry {
+  id: number;
+  action: string;
+  actionLabel: string;
+  section: AdminSectionKey;
+  targetType: string;
+  targetId: string;
+  actorDisplayName: string;
+  createdAt: string;
+  summary: string;
+}
+
+export interface AdminSectionSummary {
+  key: AdminSectionKey;
+  label: string;
+  href: string;
+  status: AdminSectionStatus;
+  primary: string;
+  secondary: string;
+  chips: string[];
+}
+
+export interface AdminRoleOption {
+  id: string;
+  name: string;
+}
+
+export interface AdminUserBalanceRow {
+  id: number;
+  discordId: string;
+  displayName: string;
+  balance: number;
+  isAdmin: boolean;
+}
+
+export interface AdminGiveawayRow {
+  id: number;
+  title: string;
+  status: string;
+  pointCost: number;
+  maxEntries: number;
+  totalEntries: number;
+  endAt: string;
+  requiredRoleLabel?: string | null;
+}
+
+export interface AdminWomSummary {
+  configured: boolean;
+  linkedUsers: number;
+}
+
+export interface AdminOverviewData {
+  actor: { displayName: string };
+  overview: {
+    users: AdminUserBalanceRow[];
+    giveaways: Pick<AdminGiveawayRow, 'id' | 'title' | 'status'>[];
+    wom: AdminWomSummary | null;
+    newsCount?: number;
+  };
+  alerts: AdminAlert[];
+  sectionSummaries: AdminSectionSummary[];
+  quickActionReferenceData: {
+    roles: AdminRoleOption[];
+  };
+  recentAudit: AdminAuditEntry[];
+}
+
+export interface AdminRewardsData {
+  actor: { displayName: string };
+  alerts: AdminAlert[];
+  sectionSummary: AdminSectionSummary;
+  stats: {
+    trackedUsers: number;
+    adminUsers: number;
+    activeGiveaways: number;
+    scheduledGiveaways: number;
+    recentGrantCount: number;
+  };
+  roles: AdminRoleOption[];
+  users: AdminUserBalanceRow[];
+  giveaways: AdminGiveawayRow[];
+  recentAudit: AdminAuditEntry[];
+}
+
+export interface AdminContentData {
+  actor: { displayName: string };
+  alerts: AdminAlert[];
+  sectionSummary: AdminSectionSummary;
+  stats: {
+    draftCount: number;
+    publishedCount: number;
+    recentlyPublishedCount: number;
+  };
+  posts: NewsPost[];
+  recentAudit: AdminAuditEntry[];
+}
+
+export interface AdminSystemsData {
+  actor: { displayName: string };
+  alerts: AdminAlert[];
+  sectionSummary: AdminSectionSummary;
+  wom: AdminWomSummary;
+  discord: DiscordPresenceAdminData;
+  recentAudit: AdminAuditEntry[];
+}
+
+export type ScenePresenceMemberSource = 'voice' | 'wom' | 'fallback';
+export type ScenePresenceVoiceSource = 'bot' | 'widget';
+export type ScenePresencePayloadSource = 'voice' | 'wom' | 'empty';
+
+export interface ScenePresenceActivity {
+  firstSeenAt: string;
+  lastSeenAt: string;
+  freshness: 'new' | 'steady';
+  strength: 'high' | 'medium';
+}
+
+export interface ScenePresenceMember {
+  key: string;
+  userId: number | null;
+  username: string;
+  displayName: string;
+  source: ScenePresenceMemberSource;
+  voiceSource?: ScenePresenceVoiceSource;
+  activity: ScenePresenceActivity;
+  companion?: CompanionPreviewSummary;
+}
+
+export type GhostlingMovementPhase = 'travel' | 'settle' | 'paused';
+
+export interface SceneSharedEntityState {
+  key: string;
+  x: number;
+  y: number;
+  targetX: number;
+  targetY: number;
+  speed: number;
+  velocityX: number;
+  velocityY: number;
+  pauseRemainingMs: number;
+  phaseRemainingMs: number;
+  targetSerial: number;
+  safeZoneKey: string;
+  pointKey: string;
+  scaleTier: 2 | 3;
+  renderScale: number;
+  movementPhase: GhostlingMovementPhase;
+  facingLeft: boolean;
+  opacity: number;
+  jammedMs: number;
+  fallback: boolean;
+  source: ScenePresenceMemberSource;
+  activeUntilTs: number;
+  lastSeenSignature: string;
+  actorMetrics: CompanionActorMetrics;
+}
+
+export interface SceneSharedSnapshot {
+  version: number;
+  variant: 'hero';
+  width: number;
+  height: number;
+  savedAt: number;
+  payloadSource: ScenePresencePayloadSource;
+  liveCount: number;
+  entities: SceneSharedEntityState[];
+}
+
+export interface ScenePresencePayload {
+  members: ScenePresenceMember[];
+  source: ScenePresencePayloadSource;
+  sharedScene?: {
+    hero?: SceneSharedSnapshot;
+  };
+}
+
+export type ScenePresenceSocketMessage =
+  | {
+    type: 'scene:snapshot';
+    payload: ScenePresencePayload;
+    sentAt: string;
+  }
+  | {
+    type: 'scene:error';
+    code: 'unavailable';
+    retryable: boolean;
+  };
 
 export interface CompanionItem {
   slug: string;
@@ -248,7 +556,7 @@ export interface CompanionData {
   baseAssetUrl?: string | null;
 }
 
-export interface HallCompanionSummary {
+export interface HallCompanionSummary extends CompanionPreviewSummary {
   user: {
     displayName: string;
     username: string;
@@ -256,8 +564,6 @@ export interface HallCompanionSummary {
   balance: number;
   ownedCount: number;
   equippedCount: number;
-  animatedRenderUrl: string;
-  renderManifest: CompanionRenderManifest;
 }
 
 export interface CompanionAdminAssetItem {

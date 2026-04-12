@@ -1,0 +1,19 @@
+[Unit]
+Description=Ghosted Scene Realtime Service
+After=network.target
+
+[Service]
+Type=simple
+User=ghosted
+Group=ghosted
+WorkingDirectory=/opt/ghosted
+EnvironmentFile=/etc/ghosted/ghosted.env
+ExecStart=/usr/bin/node --conditions=react-server --import tsx /opt/ghosted/scripts/scene-realtime.ts
+Restart=always
+RestartSec=5
+
+# Keep runtime state outside the repo checkout.
+ReadWritePaths=/var/lib/ghosted
+
+[Install]
+WantedBy=multi-user.target

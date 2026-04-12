@@ -8,6 +8,9 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:discord:worker": "node scripts/discord-worker.mjs",
+    "dev:presence:worker": "node scripts/discord-worker.mjs",
+    "dev:scene:realtime": "node --conditions=react-server --import tsx scripts/scene-realtime.ts",
     "dev:stack": "powershell -ExecutionPolicy Bypass -File scripts/dev-stack.ps1 start",
     "dev:stack:stop": "powershell -ExecutionPolicy Bypass -File scripts/dev-stack.ps1 stop",
     "dev:stack:restart": "powershell -ExecutionPolicy Bypass -File scripts/dev-stack.ps1 restart",
@@ -18,6 +21,11 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test:visual": "playwright test tests/visual/homepage-hero.visual.spec.ts",
+    "test:visual:update": "npm run build && playwright test tests/visual/homepage-hero.visual.spec.ts --update-snapshots",
+    "discord:worker": "node scripts/discord-worker.mjs",
+    "discord:presence:worker": "node scripts/discord-worker.mjs",
+    "scene:realtime": "node --conditions=react-server --import tsx scripts/scene-realtime.ts",
     "test:server": "vitest run",
     "git:update": "powershell -ExecutionPolicy Bypass -File scripts/git-update.ps1",
     "git:update:autostash": "powershell -ExecutionPolicy Bypass -File scripts/git-update.ps1 -Autostash"
@@ -40,22 +48,29 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.2.2",
     "better-sqlite3": "^12.8.0",
+    "discord.js": "^14.26.2",
     "gifenc": "^1.0.3",
     "next": "^16.2.2",
     "next-auth": "^5.0.0-beta.30",
     "pixi.js": "^8.13.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "server-only": "^0.0.1",
     "sharp": "^0.34.5",
-    "tailwindcss": "^4.2.2"
+    "tailwindcss": "^4.2.2",
+    "tsx": "^4.21.0",
+    "ws": "^8.20.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@testing-library/react": "^16.3.2",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.8.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.2",
+    "jsdom": "^29.0.2",
     "postcss": "^8.5.8",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"

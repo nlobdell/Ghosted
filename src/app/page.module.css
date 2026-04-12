@@ -1,211 +1,114 @@
-.page,
-.heroShell,
-.heroCopy,
-.stagePane,
-.stageFrame {
-  display: grid;
-  gap: 1rem;
-}
-
 .page {
-  width: min(var(--spacing-container), calc(100vw - var(--page-gutter) - var(--safe-left) - var(--safe-right)));
-  margin: 0 auto;
-  gap: var(--section-gap);
-  min-height: 100vh;
-  padding: calc(var(--safe-top) + 1rem) 0 calc(2rem + var(--safe-bottom));
-}
-
-.hero {
-  position: relative;
-  overflow: clip;
-  border: 1px solid rgba(191, 179, 255, 0.14);
-  border-radius: 2.25rem;
-  background:
-    radial-gradient(circle at 78% 22%, rgba(184, 168, 255, 0.26), transparent 18%),
-    radial-gradient(circle at 58% 62%, rgba(117, 104, 187, 0.22), transparent 26%),
-    linear-gradient(140deg, rgba(8, 7, 13, 0.99), rgba(14, 12, 22, 0.97) 56%, rgba(7, 6, 12, 1));
-  box-shadow: var(--shadow-md);
-  isolation: isolate;
-}
-
-.heroBackdrop {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(circle at 16% 14%, rgba(184, 168, 255, 0.12), transparent 22%),
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-  background-size: auto, 112px 112px, 112px 112px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0.5));
-  opacity: 0.36;
-}
-
-.heroShell {
-  min-height: calc(100svh - var(--safe-top) - 5.4rem);
-  padding: clamp(1.4rem, 2vw, 1.9rem) var(--surface-padding) var(--surface-padding);
-}
-
-.heroLayout {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(24rem, 0.92fr);
-  align-items: start;
-  gap: clamp(1.6rem, 3vw, 3.1rem);
-  min-height: 100%;
+  gap: clamp(1rem, 2vw, 1.4rem);
+  width: 100%;
+  min-height: 100vh;
+  padding: 0 0 calc(2.75rem + var(--safe-bottom));
 }
 
-.heroCopy {
-  align-content: start;
-  max-width: min(50rem, 100%);
-  gap: 1.1rem;
-}
-
-.stagePane {
-  justify-items: stretch;
+.heroBleed {
+  display: grid;
   align-self: start;
-  width: min(100%, 38rem);
-  margin-left: auto;
+  align-content: start;
+  gap: 0;
+  height: fit-content;
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
 }
 
-.stageFrame {
-  justify-items: center;
-  width: min(100%, 38rem);
-  margin-left: auto;
-  padding: var(--surface-padding);
-  border: 1px solid rgba(191, 179, 255, 0.14);
-  border-radius: 1.9rem;
+.heroRail {
+  position: relative;
+  z-index: 2;
+  border-bottom: 1px solid rgba(191, 179, 255, 0.12);
   background:
-    linear-gradient(180deg, rgba(12, 10, 20, 0.9), rgba(9, 8, 17, 0.96));
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 26px 56px rgba(2, 2, 6, 0.26);
+    linear-gradient(180deg, rgba(10, 9, 14, 0.96), rgba(8, 8, 11, 0.94));
 }
 
-.stageLabel {
-  color: var(--color-text-soft);
-  font-size: 0.7rem;
+.heroRailInner,
+.contentShell {
+  width: min(var(--spacing-container), calc(100vw - var(--page-gutter) - var(--safe-left) - var(--safe-right)));
+  margin-inline: auto;
+}
+
+.heroRailInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4.6rem;
+  padding: 0.95rem 0;
+}
+
+.heroSignal {
+  display: grid;
+  gap: 0.32rem;
+  min-width: 0;
+}
+
+.heroSignalChip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 1.95rem;
+  padding: 0.28rem 0.72rem;
+  border: 1px solid rgba(191, 179, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(250, 247, 255, 0.92);
   font-family: var(--font-mono);
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-.stageCanvas {
-  position: relative;
-  width: min(100%, 36rem);
-  min-height: clamp(18rem, 43vw, 30rem);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border-radius: 1.6rem;
-  border: 1px solid rgba(191, 179, 255, 0.12);
-  background:
-    radial-gradient(circle at 50% 58%, rgba(117, 104, 187, 0.32), transparent 24%),
-    radial-gradient(circle at 50% 46%, rgba(255, 255, 255, 0.06), transparent 45%),
-    linear-gradient(180deg, rgba(8, 7, 14, 0.96), rgba(14, 12, 22, 0.98));
-}
-
-.stageCanvas::before {
-  content: "";
-  position: absolute;
-  inset: 12% 14%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(184, 168, 255, 0.36), transparent 70%);
-  filter: blur(48px);
-  opacity: 0.78;
-}
-
-.stageImage {
-  position: relative;
-  z-index: 1;
-  width: min(100%, 23rem);
-  height: auto;
-  image-rendering: pixelated;
-}
-
-.stageMeta {
-  display: grid;
-  gap: 0.24rem;
-  justify-items: center;
-  text-align: center;
-}
-
-.stageMeta strong {
-  color: var(--color-text-strong);
-  font-size: 1rem;
-}
-
-.stageMeta span {
-  max-width: 38ch;
-  color: var(--color-text-muted);
+.heroSignalText {
+  color: rgba(226, 220, 255, 0.72);
   font-size: 0.88rem;
-  line-height: 1.62;
+  line-height: 1.45;
 }
 
-.stagePane :global(.home-proof) {
-  width: 100%;
-  grid-template-columns: 1fr;
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 
-.stagePane :global(.home-proof article) {
-  gap: 0.45rem;
-  padding: 0.95rem 1rem;
-  border-right: 0;
-  border-bottom: 1px solid rgba(191, 179, 255, 0.08);
-}
-
-.stagePane :global(.home-proof article:last-child) {
-  border-bottom: 0;
-}
-
-.stagePane :global(.home-proof strong) {
-  font-size: clamp(1.3rem, 2vw, 1.85rem);
-}
-
-.page :global(.home-hero__copy) {
+.contentShell {
+  display: grid;
   gap: 1rem;
+  padding-top: 0.15rem;
 }
 
-.page :global(.home-hero__copy h1) {
-  max-width: 16ch;
-  font-size: clamp(4.1rem, 5.2vw, 5.8rem);
-  line-height: 0.92;
-  text-wrap: balance;
-}
-
-.page :global(.home-hero__copy p:last-of-type) {
-  max-width: 44ch;
-  font-size: 1rem;
-}
-
-.page :global(.home-section) {
+.contentShell :global(.home-section) {
   grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
   gap: 1.2rem;
 }
 
-.page :global(.home-section__copy) {
+.contentShell :global(.home-section__copy) {
   max-width: 38rem;
 }
 
-.page :global(.home-news-layout) {
+.contentShell :global(.home-news-layout) {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.88fr);
   gap: 1rem;
   min-width: 0;
 }
 
-.page :global(.home-news-feature),
-.page :global(.home-news-card) {
+.contentShell :global(.home-news-feature),
+.contentShell :global(.home-news-card) {
   align-content: start;
 }
 
-.page :global(.home-news-feature h3),
-.page :global(.home-news-card h3) {
+.contentShell :global(.home-news-feature h3),
+.contentShell :global(.home-news-card h3) {
   line-height: 1.02;
 }
 
-.page :global(.home-news-feature span:last-of-type),
-.page :global(.home-news-card span:last-of-type) {
+.contentShell :global(.home-news-feature span:last-of-type),
+.contentShell :global(.home-news-card span:last-of-type) {
   color: var(--color-text-soft);
   font-size: 0.78rem;
   letter-spacing: 0.1em;
@@ -213,54 +116,40 @@
 }
 
 @media (max-width: 1120px) {
-  .heroLayout {
+  .contentShell :global(.home-section),
+  .contentShell :global(.home-news-layout) {
     grid-template-columns: 1fr;
-    gap: 1.6rem;
-  }
-
-  .page :global(.home-section),
-  .page :global(.home-news-layout) {
-    grid-template-columns: 1fr;
-  }
-
-  .stageFrame {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .stagePane {
-    width: 100%;
-    margin-left: 0;
   }
 }
 
 @media (max-width: 860px) {
-  .heroShell {
+  .heroRailInner {
+    flex-direction: column;
+    align-items: flex-start;
     min-height: auto;
+    padding-block: 1rem;
   }
 
-  .page :global(.home-hero__copy h1) {
-    max-width: 12ch;
-    font-size: clamp(3.5rem, 9vw, 5rem);
+  .heroActions {
+    justify-content: flex-start;
   }
 }
 
 @media (max-width: 640px) {
   .page {
-    gap: 0.8rem;
-    padding-bottom: calc(1.35rem + var(--safe-bottom));
+    gap: 0.9rem;
+    padding-bottom: calc(1.5rem + var(--safe-bottom));
   }
 
-  .heroLayout {
-    gap: 1.25rem;
+  .heroSignalText {
+    font-size: 0.84rem;
   }
 
-  .stageCanvas {
-    min-height: 18rem;
+  .heroActions {
+    width: 100%;
   }
 
-  .page :global(.home-hero__copy h1) {
-    max-width: none;
-    font-size: clamp(3rem, 13vw, 4.4rem);
+  .heroActions :global(.button) {
+    flex: 1 1 auto;
   }
 }

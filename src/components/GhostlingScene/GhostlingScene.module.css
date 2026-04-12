@@ -1,0 +1,482 @@
+.sceneSection {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.sceneSection[data-variant='hero'] {
+  display: block;
+  align-self: start;
+  height: fit-content;
+  width: 100%;
+}
+
+.sceneSection[data-variant='hero'][data-scene-lab='true'] {
+  padding-bottom: 36rem;
+}
+
+.sceneSection[data-variant='section'] {
+  gap: 0.75rem;
+}
+
+.sceneHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.sceneLabel,
+.sceneSubtle {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sceneLabel {
+  color: var(--color-text-soft);
+}
+
+.sceneSubtle {
+  color: rgba(226, 220, 255, 0.72);
+}
+
+.sceneStage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #000;
+}
+
+.sceneStage[data-scene-lab='true'] {
+  overflow: visible;
+}
+
+.sceneStage[data-variant='hero'] {
+  width: 100%;
+  height: min(350px, max(15rem, 20vw));
+  border-top: 1px solid rgba(191, 179, 255, 0.16);
+  border-bottom: 1px solid rgba(191, 179, 255, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    0 18px 60px rgba(0, 0, 0, 0.34);
+}
+
+.sceneStage[data-variant='section'] {
+  min-height: 19rem;
+  border: 1px solid rgba(191, 179, 255, 0.16);
+  border-radius: 2rem;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 28px 72px rgba(0, 0, 0, 0.28);
+}
+
+.sceneLayer,
+.debugOverlay {
+  position: absolute;
+  pointer-events: none;
+  max-width: none;
+  max-height: none;
+}
+
+.sceneLayer {
+  top: 0;
+  left: 0;
+  object-fit: fill;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.sceneOverlay {
+  position: absolute;
+  top: clamp(1rem, 2.3vw, 1.6rem);
+  left: clamp(1rem, 2.4vw, 1.8rem);
+  z-index: 7;
+  width: min(24rem, calc(100% - 2rem));
+  pointer-events: none;
+}
+
+.sceneOverlay > * {
+  pointer-events: auto;
+}
+
+.sceneField {
+  position: relative;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  contain: layout size style;
+}
+
+.sceneStage[data-variant='hero'] .sceneField {
+  z-index: 2;
+}
+
+.debugOverlay {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9;
+  overflow: visible;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.55));
+}
+
+.sceneLabOverlay {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: 10;
+  pointer-events: none;
+  overflow: visible;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+}
+
+.sceneLabRect,
+.sceneLabGuideRect,
+.sceneLabHandle,
+.sceneLabGuideLine,
+.sceneLabAnchor,
+.sceneLabFallbackAnchor,
+.sceneLabMemberMarker circle,
+.sceneLabMemberMarker line {
+  pointer-events: auto;
+}
+
+.sceneLabRect {
+  fill: rgba(255, 110, 160, 0.08);
+  stroke: rgba(255, 110, 160, 0.85);
+  stroke-width: 1;
+}
+
+.sceneLabGuideRect {
+  fill: rgba(132, 202, 255, 0.05);
+  stroke: rgba(132, 202, 255, 0.72);
+  stroke-width: 1;
+  stroke-dasharray: 6 4;
+}
+
+.sceneLabGuideLine {
+  stroke: rgba(255, 216, 138, 0.9);
+  stroke-width: 2;
+  stroke-dasharray: 8 4;
+  cursor: ns-resize;
+}
+
+.sceneLabHandle {
+  fill: rgba(245, 248, 255, 0.94);
+  stroke: rgba(26, 23, 43, 0.9);
+  stroke-width: 1;
+  cursor: nwse-resize;
+}
+
+.sceneLabAnchor {
+  fill: rgba(149, 216, 255, 0.9);
+  stroke: rgba(9, 9, 12, 0.94);
+  stroke-width: 1.2;
+  cursor: grab;
+}
+
+.sceneLabFallbackAnchor {
+  fill: rgba(255, 152, 181, 0.92);
+  stroke: rgba(9, 9, 12, 0.94);
+  stroke-width: 1.2;
+  cursor: grab;
+}
+
+.sceneLabMemberMarker line {
+  stroke: rgba(255, 255, 255, 0.42);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.sceneLabMemberMarker circle {
+  fill: rgba(193, 183, 255, 0.92);
+  stroke: rgba(9, 9, 12, 0.92);
+  stroke-width: 1.1;
+  cursor: pointer;
+}
+
+.sceneLabRect[data-selected='true'],
+.sceneLabGuideRect[data-selected='true'],
+.sceneLabGuideLine[data-selected='true'],
+.sceneLabHandle[data-selected='true'],
+.sceneLabAnchor[data-selected='true'],
+.sceneLabFallbackAnchor[data-selected='true'],
+.sceneLabMemberMarker circle[data-selected='true'] {
+  stroke: #fff7d1;
+  stroke-width: 1.6;
+}
+
+.sceneLabPanel {
+  position: absolute;
+  top: calc(100% + 0.85rem);
+  left: max(0px, calc(50% - min(var(--spacing-container), calc(100vw - var(--page-gutter) - var(--safe-left) - var(--safe-right))) / 2));
+  display: grid;
+  gap: 0.9rem;
+  width: min(var(--spacing-container), calc(100vw - var(--page-gutter) - var(--safe-left) - var(--safe-right)));
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(191, 179, 255, 0.14);
+  border-radius: 1.4rem;
+  background: rgba(10, 9, 14, 0.96);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+  z-index: 11;
+}
+
+.sceneLabSection {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.sceneLabSectionTitle {
+  color: rgba(250, 247, 255, 0.94);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sceneLabChipRow,
+.sceneLabButtonRow,
+.sceneLabFields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.sceneLabField {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 8rem;
+  color: rgba(226, 220, 255, 0.76);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.sceneLabInput {
+  min-height: 2rem;
+  padding: 0.34rem 0.5rem;
+  border: 1px solid rgba(191, 179, 255, 0.16);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(250, 247, 255, 0.92);
+  font: inherit;
+}
+
+.sceneLabChip,
+.sceneLabButton {
+  min-height: 2rem;
+  padding: 0.34rem 0.7rem;
+  border: 1px solid rgba(191, 179, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(250, 247, 255, 0.92);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sceneLabChip[data-selected='true'],
+.sceneLabButton:hover {
+  background: rgba(167, 150, 255, 0.18);
+  border-color: rgba(191, 179, 255, 0.34);
+}
+
+.sceneLabDiagnostics,
+.sceneLabMeta {
+  color: rgba(226, 220, 255, 0.72);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.ghostWrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  will-change: transform, opacity;
+  contain: layout style;
+  overflow: visible;
+  pointer-events: auto;
+}
+
+.ghostAura {
+  position: absolute;
+  top: 76%;
+  left: 50%;
+  pointer-events: none;
+  z-index: -1;
+  width: calc(var(--ghost-size, 140px) * 1.18);
+  height: calc(var(--ghost-size, 140px) * 0.32);
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(193, 183, 255, 0.28), transparent 74%);
+  filter: blur(10px);
+  opacity: 0.12;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    width 180ms ease,
+    height 180ms ease;
+}
+
+.ghostVisual {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transition: filter 180ms ease;
+  will-change: transform;
+}
+
+.ghostImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.ghostNameplate {
+  position: absolute;
+  top: 0;
+  left: var(--ghost-label-anchor-x, 50%);
+  z-index: 2;
+  transform: translate(-50%, calc(-100% - 0.45rem + var(--ghost-label-nudge, 0px)));
+  padding: 0.26rem 0.58rem;
+  border: 1px solid rgba(205, 198, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(8, 8, 11, 0.84);
+  color: rgba(250, 247, 255, 0.92);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.ghostWrap[data-scene-state='hovered'] .ghostVisual {
+  filter: drop-shadow(0 16px 24px rgba(135, 110, 255, 0.24));
+}
+
+.ghostWrap[data-scene-state='hovered'] .ghostAura {
+  opacity: 0.44;
+  transform: translate(-50%, -54%);
+}
+
+.ghostWrap[data-scene-state='live-active'] .ghostAura {
+  opacity: 0.28;
+}
+
+.ghostWrap[data-scene-state='featured-mascot'] .ghostAura {
+  opacity: 0.34;
+}
+
+.ghostWrap[data-source='voice'] .ghostAura {
+  background: radial-gradient(circle, rgba(173, 160, 255, 0.42), transparent 72%);
+}
+
+.ghostWrap[data-source='wom'] .ghostAura {
+  background: radial-gradient(circle, rgba(110, 176, 255, 0.34), transparent 72%);
+}
+
+.ghostWrap[data-source='fallback'] .ghostAura {
+  background: radial-gradient(circle, rgba(255, 187, 134, 0.28), transparent 72%);
+}
+
+.ghostWrap[data-scene-state='hovered'] .ghostNameplate,
+.ghostWrap[data-scene-state='live-active'] .ghostNameplate,
+.ghostWrap[data-scene-state='featured-mascot'] .ghostNameplate {
+  opacity: 1;
+  transform: translate(-50%, calc(-100% - 0.45rem + var(--ghost-label-nudge, 0px)));
+}
+
+.staticGrid .sceneField {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, max-content));
+  justify-content: center;
+  align-content: end;
+  gap: 1.2rem 1rem;
+  padding: clamp(7.5rem, 12vw, 8.75rem) clamp(1rem, 3vw, 1.6rem) clamp(1.4rem, 4vw, 2rem);
+  min-height: 100%;
+}
+
+.sceneStage[data-variant='section'].staticGrid .sceneField {
+  padding-top: 1.25rem;
+}
+
+.staticGrid .ghostWrap {
+  position: static;
+  width: auto !important;
+  height: auto !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.staticGrid .ghostAura {
+  display: none;
+}
+
+.staticGrid .ghostVisual {
+  position: relative;
+  top: auto !important;
+  left: auto !important;
+  filter: none;
+}
+
+.staticGrid .ghostNameplate {
+  position: static;
+  transform: none;
+  opacity: 1;
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 960px) {
+  .sceneStage[data-variant='section'] {
+    min-height: 17rem;
+  }
+
+  .sceneStage[data-variant='hero'] {
+    height: clamp(15rem, 26vw, 20rem);
+  }
+}
+
+@media (max-width: 640px) {
+  .sceneHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .sceneStage[data-variant='section'] {
+    min-height: 15rem;
+    border-radius: 1.4rem;
+  }
+
+  .sceneStage[data-variant='hero'] {
+    height: clamp(14rem, 54vw, 18rem);
+  }
+
+  .sceneOverlay {
+    top: 0.9rem;
+    left: 0.9rem;
+    width: min(18rem, calc(100% - 1.8rem));
+  }
+
+  .staticGrid .sceneField {
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, max-content));
+    gap: 0.9rem 0.8rem;
+    padding-top: 5.5rem;
+  }
+}

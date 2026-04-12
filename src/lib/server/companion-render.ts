@@ -5,12 +5,28 @@ import path from 'node:path';
 import type { Database } from 'better-sqlite3';
 import { GIFEncoder, applyPalette, quantize } from 'gifenc';
 import sharp from 'sharp';
-import type { CompanionMotionChannel, CompanionSlotKey } from '@/lib/types';
+import type { CompanionSlotKey } from '@/lib/types';
 import {
-  type CompanionUserRow,
   companionCatalogAnyRow,
+  getCompanionUserByRef,
   companionLoadoutMap,
+  type CompanionUserRefRow,
+  type CompanionUserRow,
 } from '@/lib/server/companion';
+import {
+  accentMotionForGroup,
+  buildAccentSchedule,
+  composeMotionMatrix,
+  evaluateMotionChannel,
+  matrixToSvg,
+  mergeMotionVectors,
+  motionGroupChain,
+  multiplyMatrix,
+  resolveStageShadowRect,
+  unionRects,
+  type CompanionMotionAccentEvent,
+  type Matrix2D,
+} from '@/lib/companion-motion';
 import { AppError } from '@/lib/server/core';
 import {
   COMPANION_CANVAS_SIZE,
@@ -45,8 +61,8 @@ const DECIMAL_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
 });
 const DISCORD_CARD_WIDTH = 1200;
 const DISCORD_CARD_HEIGHT = 630;
-const DISCORD_EMBED_GIF_FRAME_DELAY_MS = 80;
-const DISCORD_EMBED_GIF_FRAME_COUNT = 24;
+const DISCORD_EMBED_GIF_FRAME_DELAY_MS = 120;
+const DISCORD_EMBED_GIF_FRAME_COUNT = 36;
 const DISCORD_CARD_EMBEDDED_FONT_FAMILY = 'Arial';
 const DISCORD_STAGE_FRAME = {
   x: 58,
@@ -54,10 +70,9 @@ const DISCORD_STAGE_FRAME = {
   width: 304,
   height: 514,
 };
-
-type CompanionRenderUserRow = CompanionUserRow & {
-  discord_id: string;
-};
+const COMPANION_EXPORT_LOOP_DURATION_MS = 6000;
+const COMPANION_EXPORT_ANIMATION_STEPS = 24;
+const SHADOW_MIN_SCALE_X = 7.9 / 8.5;
 
 let cachedDiscordCardFontFaceMarkup: string | null | undefined;
 
@@ -275,6 +290,152 @@ function resolveDiscordCompanionStageLayout(sceneWidth: number, sceneHeight: num
   };
 }
 
+type SceneMotionPiece = {
+  key: string;
+  role: string;
+  relativePath: string;
+  motionGroup: string;
+  slice: {
+    sourceX: number;
+    sourceY: number;
+    sourceWidth: number;
+    sourceHeight: number;
+    targetX: number;
+    targetY: number;
+    targetWidth: number;
+    targetHeight: number;
+  };
+  baseRect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+};
+
+function rectCenter(rect: { x: number; y: number; width: number; height: number }) {
+  return {
+    x: rect.x + (rect.width / 2),
+    y: rect.y + (rect.height / 2),
+  };
+}
+
+function resolveSceneMotionPieces(scene: ReturnType<typeof resolveCompanionLayerScene>) {
+  const rootKey = 'root';
+  return scene.layers.flatMap((layer) => layer.slices.map((slice, index) => ({
+    key: `${layer.key}:${slice.key || index}`,
+    role: layer.role,
+    relativePath: layer.relativePath,
+    motionGroup: String(slice.motionGroup || layer.motionGroup || (layer.slot ? scene.baseConfig.rig.slotGroups[layer.slot] ?? null : null) || rootKey),
+    slice,
+    baseRect: {
+      x: slice.targetX,
+      y: slice.targetY,
+      width: slice.targetWidth,
+      height: slice.targetHeight,
+    },
+  } satisfies SceneMotionPiece)));
+}
+
+function resolveSceneMotionGroupBounds(pieces: SceneMotionPiece[], rootKey: string) {
+  const bounds: Record<string, { x: number; y: number; width: number; height: number }> = {};
+  const rootBounds = unionRects(pieces.map((piece) => piece.baseRect));
+  if (rootBounds) bounds[rootKey] = rootBounds;
+
+  const bodyBounds = unionRects(
+    pieces
+      .filter((piece) => ['body', 'head'].includes(piece.motionGroup))
+      .map((piece) => piece.baseRect),
+  );
+  if (bodyBounds) bounds.body = bodyBounds;
+
+  const headBounds = unionRects(
+    pieces
+      .filter((piece) => piece.motionGroup === 'head')
+      .map((piece) => piece.baseRect),
+  );
+  if (headBounds) bounds.head = headBounds;
+
+  const customGroups = new Set(
+    pieces
+      .map((piece) => piece.motionGroup)
+      .filter((groupKey) => ![rootKey, 'root', 'body', 'head'].includes(groupKey)),
+  );
+  for (const groupKey of customGroups) {
+    const rect = unionRects(
+      pieces
+        .filter((piece) => piece.motionGroup === groupKey)
+        .map((piece) => piece.baseRect),
+    );
+    if (rect) bounds[groupKey] = rect;
+  }
+
+  return bounds;
+}
+
+function resolveSceneGroupMatrices(
+  scene: ReturnType<typeof resolveCompanionLayerScene>,
+  pieces: SceneMotionPiece[],
+  accentEvents: CompanionMotionAccentEvent[],
+  elapsedMs: number,
+) {
+  const rootKey = 'root';
+  const groupBounds = resolveSceneMotionGroupBounds(pieces, rootKey);
+  const rootBounds = groupBounds[rootKey] ?? { x: 0, y: 0, width: scene.width, height: scene.height };
+  const rootMotion = mergeMotionVectors(
+    evaluateMotionChannel(scene.baseConfig.rig.motionChannels[rootKey], elapsedMs),
+    accentMotionForGroup(accentEvents, rootKey, elapsedMs),
+  );
+  const rootMatrix = composeMotionMatrix(rootMotion, rectCenter(rootBounds));
+
+  const bodyLocalMotion = mergeMotionVectors(
+    evaluateMotionChannel(scene.baseConfig.rig.motionChannels.body, elapsedMs),
+    accentMotionForGroup(accentEvents, 'body', elapsedMs),
+  );
+  const bodyMatrix = groupBounds.body
+    ? multiplyMatrix(rootMatrix, composeMotionMatrix(bodyLocalMotion, rectCenter(groupBounds.body)))
+    : rootMatrix;
+
+  const headLocalMotion = mergeMotionVectors(
+    evaluateMotionChannel(scene.baseConfig.rig.motionChannels.head, elapsedMs),
+    accentMotionForGroup(accentEvents, 'head', elapsedMs),
+  );
+  const headMatrix = groupBounds.head
+    ? multiplyMatrix(bodyMatrix, composeMotionMatrix(headLocalMotion, rectCenter(groupBounds.head)))
+    : bodyMatrix;
+
+  const customMatrices: Record<string, Matrix2D> = {};
+  for (const [groupKey, bounds] of Object.entries(groupBounds)) {
+    if ([rootKey, 'body', 'head'].includes(groupKey)) continue;
+    const groupMotion = mergeMotionVectors(
+      evaluateMotionChannel(scene.baseConfig.rig.motionChannels[groupKey], elapsedMs),
+      accentMotionForGroup(accentEvents, groupKey, elapsedMs),
+    );
+    customMatrices[groupKey] = multiplyMatrix(rootMatrix, composeMotionMatrix(groupMotion, rectCenter(bounds)));
+  }
+
+  return {
+    groupBounds,
+    rootMatrix,
+    bodyMatrix,
+    headMatrix,
+    customMatrices,
+    bodyLocalMotion,
+  };
+}
+
+function resolvePieceGroupMatrix(
+  piece: SceneMotionPiece,
+  matrices: ReturnType<typeof resolveSceneGroupMatrices>,
+) {
+  const chain = motionGroupChain(piece.motionGroup, 'root');
+  const customGroup = chain.find((groupKey) => !['root', 'body', 'head'].includes(groupKey));
+  if (customGroup) return matrices.customMatrices[customGroup] ?? matrices.rootMatrix;
+  if (chain.includes('head')) return matrices.headMatrix;
+  if (chain.includes('body')) return matrices.bodyMatrix;
+  return matrices.rootMatrix;
+}
+
 function renderDiscordCompanionCard(options: {
   sceneWidth: number;
   sceneHeight: number;
@@ -323,20 +484,7 @@ function renderDiscordCompanionCard(options: {
   ].join('');
 }
 
-function companionWaveOffsetAtLoopProgress(
-  wave: CompanionMotionChannel['offsetX'] | CompanionMotionChannel['offsetY'] | undefined,
-  loopProgress: number,
-) {
-  const amplitude = Number(wave?.amplitude ?? 0);
-  const phase = Number(wave?.phase ?? 0);
-  if (!Number.isFinite(amplitude) || amplitude === 0 || !Number.isFinite(phase)) {
-    return 0;
-  }
-
-  return Math.sin((loopProgress * Math.PI * 2) + (phase * Math.PI * 2)) * amplitude;
-}
-
-function companionFrameAtLoopProgress(relativePath: string | null | undefined, loopProgress: number) {
+function companionFrameAtElapsed(relativePath: string | null | undefined, elapsedMs: number) {
   const { animation, frames } = companionAnimationFrames(relativePath);
   if (animation.mode !== 'spritesheet' || animation.frameCount <= 1 || frames.length <= 1) {
     return frames[0]!;
@@ -344,8 +492,8 @@ function companionFrameAtLoopProgress(relativePath: string | null | undefined, l
 
   const totalDurationMs = Math.max(1, frames.reduce((sum, frame) => sum + Math.max(1, Math.trunc(frame.durationMs ?? 100)), 0));
   let remainingMs = animation.loop
-    ? loopProgress * totalDurationMs
-    : Math.min(Math.max(0, loopProgress * totalDurationMs), totalDurationMs - 1);
+    ? elapsedMs % totalDurationMs
+    : Math.min(Math.max(0, elapsedMs), totalDurationMs - 1);
 
   for (const frame of frames) {
     const frameDurationMs = Math.max(1, Math.trunc(frame.durationMs ?? 100));
@@ -370,13 +518,13 @@ function companionSnapshotSliceMarkup(
     targetWidth: number;
     targetHeight: number;
   },
-  loopProgress: number,
+  elapsedMs: number,
 ) {
   const dataUri = companionAssetDataUri(relativePath);
   if (!dataUri) return '';
 
   const { animation } = companionAnimationFrames(relativePath);
-  const frame = companionFrameAtLoopProgress(relativePath, loopProgress);
+  const frame = companionFrameAtElapsed(relativePath, elapsedMs);
   const sourceWidth = Math.max(1, Math.trunc(slice.sourceWidth));
   const sourceHeight = Math.max(1, Math.trunc(slice.sourceHeight));
   const sheetWidth = Math.max(sourceWidth, Math.trunc(animation.sheetWidth ?? sourceWidth));
@@ -392,23 +540,6 @@ function companionSnapshotSliceMarkup(
   );
 }
 
-function companionSnapshotMotionGroupMarkup(
-  groupKey: string,
-  markup: string,
-  channel: CompanionMotionChannel | undefined,
-  loopProgress: number,
-) {
-  if (!markup) return '';
-
-  const offsetX = companionWaveOffsetAtLoopProgress(channel?.offsetX, loopProgress);
-  const offsetY = companionWaveOffsetAtLoopProgress(channel?.offsetY, loopProgress);
-  const transform = (offsetX !== 0 || offsetY !== 0)
-    ? ` transform="translate(${offsetX.toFixed(3)} ${offsetY.toFixed(3)})"`
-    : '';
-
-  return `<g id="ghostling-${escapeXml(groupKey)}"${transform}>${markup}</g>`;
-}
-
 function renderAnimatedDiscordCompanionCardSnapshot(
   db: Database,
   loadout: CompanionLoadout,
@@ -416,48 +547,30 @@ function renderAnimatedDiscordCompanionCardSnapshot(
     displayName: string;
     subtitle?: string | null;
     profile: CompanionDiscordCardProfile | null;
-    loopProgress: number;
+    elapsedMs: number;
   },
 ) {
   const scene = resolveCompanionLayerScene(db, loadout);
-  const baseConfig = scene.baseConfig;
-
-  const groupedMarkup: Record<string, string[]> = { root: [], body: [], head: [] };
-  for (const layer of scene.layers) {
-    for (const slice of layer.slices) {
-      const markup = companionSnapshotSliceMarkup(layer.relativePath, slice, options.loopProgress);
-      if (!markup) continue;
-
-      const motionGroup = slice.motionGroup || layer.motionGroup || (layer.slot ? baseConfig.rig.slotGroups[layer.slot] ?? null : null);
-      const groupKey = String(motionGroup || 'root');
-      groupedMarkup[groupKey] ??= [];
-      groupedMarkup[groupKey]!.push(markup);
-    }
-  }
-
-  const motionChannels = baseConfig.rig.motionChannels;
-  const headMarkup = companionSnapshotMotionGroupMarkup('head', (groupedMarkup.head ?? []).join(''), motionChannels.head, options.loopProgress);
-  const bodyMarkup = companionSnapshotMotionGroupMarkup(
-    'body',
-    (groupedMarkup.body ?? []).join('') + headMarkup,
-    motionChannels.body,
-    options.loopProgress,
+  const pieces = resolveSceneMotionPieces(scene);
+  const accentEvents = buildAccentSchedule(
+    scene.baseConfig.rig.motionAccents,
+    `discord-gif:${options.displayName}:${options.subtitle ?? ''}`,
+    COMPANION_EXPORT_LOOP_DURATION_MS + 1000,
   );
-  const otherGroups = Object.entries(groupedMarkup)
-    .filter(([groupKey, markups]) => !['root', 'body', 'head'].includes(groupKey) && markups.length > 0)
-    .map(([groupKey, markups]) => companionSnapshotMotionGroupMarkup(groupKey, markups.join(''), motionChannels[groupKey], options.loopProgress))
+  const matrices = resolveSceneGroupMatrices(scene, pieces, accentEvents, options.elapsedMs);
+  const layersMarkup = pieces
+    .map((piece) => {
+      const markup = companionSnapshotSliceMarkup(piece.relativePath, piece.slice, options.elapsedMs);
+      if (!markup) return '';
+      return `<g transform="${matrixToSvg(resolvePieceGroupMatrix(piece, matrices))}">${markup}</g>`;
+    })
     .join('');
-  const layersMarkup = companionSnapshotMotionGroupMarkup(
-    'root',
-    (groupedMarkup.root ?? []).join('') + otherGroups + bodyMarkup,
-    motionChannels.root,
-    options.loopProgress,
-  );
 
-  const shadowPulse = (Math.cos(options.loopProgress * Math.PI * 2) + 1) / 2;
+  const shadowDurationMs = Math.max(1, Math.trunc(scene.baseConfig.rig.motionChannels.body?.offsetY?.durationMs ?? 2860));
+  const shadowProgress = (Math.cos((options.elapsedMs / shadowDurationMs) * Math.PI * 2) + 1) / 2;
   const stageLayout = resolveDiscordCompanionStageLayout(scene.width, scene.height);
-  const shadowRx = stageLayout.shadowRx * (0.9 + (shadowPulse * 0.1));
-  const shadowOpacity = 0.28 + (shadowPulse * 0.14);
+  const shadowRx = stageLayout.shadowRx * (0.9 + (shadowProgress * 0.1)) + (Math.max(0, matrices.bodyLocalMotion.scaleX - 1) * 12);
+  const shadowOpacity = 0.28 + (shadowProgress * 0.14);
   const shadowMarkup = `<ellipse cx="${stageLayout.shadowCx}" cy="${stageLayout.shadowCy}" rx="${shadowRx.toFixed(3)}" ry="${stageLayout.shadowRy}" fill="rgba(7, 8, 16, ${shadowOpacity.toFixed(2)})" />`;
 
   return renderDiscordCompanionCard({
@@ -500,12 +613,12 @@ async function renderAnimatedDiscordCompanionCardGif(
   let palette: number[][] | null = null;
 
   for (let index = 0; index < DISCORD_EMBED_GIF_FRAME_COUNT; index += 1) {
-    const loopProgress = index / DISCORD_EMBED_GIF_FRAME_COUNT;
+    const elapsedMs = (index / DISCORD_EMBED_GIF_FRAME_COUNT) * COMPANION_EXPORT_LOOP_DURATION_MS;
     const frame = await svgMarkupToRawRgba(renderAnimatedDiscordCompanionCardSnapshot(db, loadout, {
       displayName: options.displayName,
       subtitle: options.subtitle,
       profile: options.profile,
-      loopProgress,
+      elapsedMs,
     }));
 
     palette ??= quantize(frame.data, 256, { format: 'rgb565' });
@@ -519,42 +632,6 @@ async function renderAnimatedDiscordCompanionCardGif(
 
   gif.finish();
   return Buffer.from(gif.bytesView());
-}
-
-function companionSvgTranslateAnimation(
-  wave: CompanionMotionChannel['offsetX'] | CompanionMotionChannel['offsetY'] | undefined,
-  axis: 'x' | 'y',
-  steps = 10,
-) {
-  if (!wave) return '';
-
-  const amplitude = Number(wave.amplitude ?? 0);
-  const durationMs = Math.max(1, Math.trunc(Number(wave.durationMs ?? 0)));
-  const phase = Number(wave.phase ?? 0);
-  if (!Number.isFinite(amplitude) || amplitude === 0 || !Number.isFinite(durationMs) || !Number.isFinite(phase)) {
-    return '';
-  }
-
-  const values: string[] = [];
-  for (let index = 0; index <= steps; index += 1) {
-    const progress = index / steps;
-    const radians = progress * Math.PI * 2 + (phase * Math.PI * 2);
-    const offset = Math.sin(radians) * amplitude;
-    values.push(axis === 'x' ? `${offset.toFixed(3)} 0` : `0 ${offset.toFixed(3)}`);
-  }
-
-  return `<animateTransform attributeName="transform" type="translate" additive="sum" values="${values.join(';')}" dur="${(durationMs / 1000).toFixed(3)}s" repeatCount="indefinite" />`;
-}
-
-function companionSvgMotionGroupMarkup(
-  groupKey: string,
-  markup: string,
-  channel: CompanionMotionChannel | undefined,
-) {
-  if (!markup) return '';
-  const xAnimation = companionSvgTranslateAnimation(channel?.offsetX, 'x');
-  const yAnimation = companionSvgTranslateAnimation(channel?.offsetY, 'y');
-  return `<g id="ghostling-${escapeXml(groupKey)}">${xAnimation}${yAnimation}${markup}</g>`;
 }
 
 function companionAnimationFrames(relativePath: string | null | undefined) {
@@ -744,25 +821,12 @@ function resolveCompanionLayers(db: Database, loadout: CompanionLoadout) {
   };
 }
 
-function userDisplayName(user: CompanionRenderUserRow) {
+function userDisplayName(user: CompanionUserRow) {
   return user.global_name || user.username;
 }
 
 function getRenderOwnerByUserRef(db: Database, userRef: string) {
-  if (!userRef) return null;
-  if (/^\d+$/.test(userRef)) {
-    return db.prepare(`
-      SELECT id, discord_id, username, global_name
-      FROM users
-      WHERE id = ?
-    `).get(Number(userRef)) as CompanionRenderUserRow | undefined;
-  }
-
-  return db.prepare(`
-    SELECT id, discord_id, username, global_name
-    FROM users
-    WHERE discord_id = ?
-  `).get(userRef) as CompanionRenderUserRow | undefined;
+  return getCompanionUserByRef(db, userRef) as CompanionUserRefRow | null;
 }
 
 export function resolveCompanionRenderRequest(
@@ -794,10 +858,7 @@ export function resolveCompanionRenderRequest(
     ownerId = row.id;
   } else if (options.currentUser) {
     Object.assign(loadout, companionLoadoutMap(db, options.currentUser.id));
-    display = userDisplayName({
-      ...options.currentUser,
-      discord_id: '',
-    });
+    display = userDisplayName(options.currentUser);
     subtitle = `@${options.currentUser.username}`;
     ownerId = options.currentUser.id;
   }
@@ -892,23 +953,8 @@ export function renderAnimatedCompanionSvg(
   },
 ) {
   const scene = resolveCompanionLayerScene(db, loadout);
-  const baseConfig = scene.baseConfig;
-
-  const groupedMarkup: Record<string, string[]> = { root: [], body: [], head: [] };
-  for (const layer of scene.layers) {
-    for (const slice of layer.slices) {
-      const markup = companionAnimatedSliceMarkup(layer.relativePath, slice);
-      if (markup) {
-        const motionGroup = slice.motionGroup || layer.motionGroup || (layer.slot ? baseConfig.rig.slotGroups[layer.slot] ?? null : null);
-        const groupKey = String(motionGroup || 'root');
-        groupedMarkup[groupKey] ??= [];
-        groupedMarkup[groupKey]!.push(markup);
-      }
-    }
-  }
-
-  const hasLayers = Object.values(groupedMarkup).some((markups) => markups.length > 0);
-  if (!hasLayers) {
+  const pieces = resolveSceneMotionPieces(scene);
+  if (!pieces.length) {
     return renderEmptyCompanionSvg({
       displayName: options.displayName,
       subtitle: options.subtitle,
@@ -917,27 +963,55 @@ export function renderAnimatedCompanionSvg(
     });
   }
 
-  const motionChannels = baseConfig.rig.motionChannels;
-  const headMarkup = companionSvgMotionGroupMarkup('head', (groupedMarkup.head ?? []).join(''), motionChannels.head);
-  const bodyMarkup = companionSvgMotionGroupMarkup(
-    'body',
-    (groupedMarkup.body ?? []).join('') + headMarkup,
-    motionChannels.body,
+  const accentEvents = buildAccentSchedule(
+    scene.baseConfig.rig.motionAccents,
+    `animated-svg:${options.displayName}:${options.subtitle ?? ''}`,
+    COMPANION_EXPORT_LOOP_DURATION_MS + 1000,
   );
-  const otherGroups = Object.entries(groupedMarkup)
-    .filter(([groupKey, markups]) => !['root', 'body', 'head'].includes(groupKey) && markups.length > 0)
-    .map(([groupKey, markups]) => companionSvgMotionGroupMarkup(groupKey, markups.join(''), motionChannels[groupKey]))
+  const keyTimes = Array.from({ length: COMPANION_EXPORT_ANIMATION_STEPS + 1 }, (_, index) => (index / COMPANION_EXPORT_ANIMATION_STEPS).toFixed(4)).join(';');
+  const sampleMatrices = Array.from({ length: COMPANION_EXPORT_ANIMATION_STEPS + 1 }, (_, index) => {
+    const elapsedMs = (index / COMPANION_EXPORT_ANIMATION_STEPS) * COMPANION_EXPORT_LOOP_DURATION_MS;
+    return {
+      elapsedMs,
+      matrices: resolveSceneGroupMatrices(scene, pieces, accentEvents, elapsedMs),
+    };
+  });
+  const layers = pieces
+    .map((piece) => {
+      const markup = companionAnimatedSliceMarkup(piece.relativePath, piece.slice);
+      if (!markup) return '';
+      const initialTransform = matrixToSvg(resolvePieceGroupMatrix(piece, sampleMatrices[0]!.matrices));
+      const transformValues = sampleMatrices
+        .map((sample) => matrixToSvg(resolvePieceGroupMatrix(piece, sample.matrices)))
+        .join(';');
+      return (
+        `<g transform="${initialTransform}">`
+        + `<animate attributeName="transform" values="${transformValues}" keyTimes="${keyTimes}" dur="${(COMPANION_EXPORT_LOOP_DURATION_MS / 1000).toFixed(3)}s" repeatCount="indefinite" />`
+        + markup
+        + '</g>'
+      );
+    })
     .join('');
-  const layers = companionSvgMotionGroupMarkup(
-    'root',
-    (groupedMarkup.root ?? []).join('') + otherGroups + bodyMarkup,
-    motionChannels.root,
-  );
-  const shadowDurationMs = Math.max(1, Math.trunc(motionChannels.body?.offsetY?.durationMs ?? 2860));
-  const shadowDuration = `${(shadowDurationMs / 1000).toFixed(3)}s`;
+
+  const shadowDuration = `${(COMPANION_EXPORT_LOOP_DURATION_MS / 1000).toFixed(3)}s`;
 
   if (options.card) {
     if (options.discord) {
+      const stageLayout = resolveDiscordCompanionStageLayout(scene.width, scene.height);
+      const shadowValues = sampleMatrices.map((sample) => {
+        const shadowDurationMs = Math.max(1, Math.trunc(scene.baseConfig.rig.motionChannels.body?.offsetY?.durationMs ?? 2860));
+        const shadowProgress = (Math.cos((sample.elapsedMs / shadowDurationMs) * Math.PI * 2) + 1) / 2;
+        return {
+          rx: stageLayout.shadowRx * (0.9 + (shadowProgress * 0.1)) + (Math.max(0, sample.matrices.bodyLocalMotion.scaleX - 1) * 12),
+          opacity: 0.28 + (shadowProgress * 0.14),
+        };
+      });
+      const shadowMarkup = (
+        `<ellipse cx="${stageLayout.shadowCx}" cy="${stageLayout.shadowCy}" rx="${shadowValues[0]!.rx.toFixed(3)}" ry="${stageLayout.shadowRy}" fill="rgba(7, 8, 16, ${shadowValues[0]!.opacity.toFixed(2)})">`
+        + `<animate attributeName="rx" values="${shadowValues.map((sample) => sample.rx.toFixed(3)).join(';')}" keyTimes="${keyTimes}" dur="${shadowDuration}" repeatCount="indefinite" />`
+        + `<animate attributeName="opacity" values="${shadowValues.map((sample) => sample.opacity.toFixed(2)).join(';')}" keyTimes="${keyTimes}" dur="${shadowDuration}" repeatCount="indefinite" />`
+        + '</ellipse>'
+      );
       return renderDiscordCompanionCard({
         sceneWidth: scene.width,
         sceneHeight: scene.height,
@@ -947,6 +1021,7 @@ export function renderAnimatedCompanionSvg(
         animated: true,
         shadowDuration,
         profile: options.discordProfile ?? null,
+        shadowMarkup,
       });
     }
 
@@ -978,14 +1053,21 @@ export function renderAnimatedCompanionSvg(
     );
   }
 
-  const shadowRx = scene.width * 0.265625;
-  const shadowRy = scene.height * 0.075;
-  const shadowMinRx = shadowRx * (7.9 / 8.5);
+  const shadowRect = resolveStageShadowRect(scene.width, scene.height);
+  const shadowValues = sampleMatrices.map((sample) => {
+    const shadowDurationMs = Math.max(1, Math.trunc(scene.baseConfig.rig.motionChannels.body?.offsetY?.durationMs ?? 2860));
+    const shadowProgress = (Math.cos((sample.elapsedMs / shadowDurationMs) * Math.PI * 2) + 1) / 2;
+    const widthScale = SHADOW_MIN_SCALE_X + ((1 - SHADOW_MIN_SCALE_X) * shadowProgress) + (Math.max(0, sample.matrices.bodyLocalMotion.scaleX - 1) * 0.35);
+    return {
+      rx: (shadowRect.width / 2) * widthScale,
+      opacity: (COMPANION_DEFAULT_SHADOW_OPACITY + 0.02) + (((COMPANION_DEFAULT_SHADOW_OPACITY + 0.12) - (COMPANION_DEFAULT_SHADOW_OPACITY + 0.02)) * shadowProgress),
+    };
+  });
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 ${scene.width} ${scene.height}" shape-rendering="crispEdges" style="image-rendering:pixelated">`
-    + `<ellipse cx="${scene.width / 2}" cy="${scene.height - 3}" rx="${shadowRx}" ry="${shadowRy}" fill="rgba(10, 8, 18, ${COMPANION_DEFAULT_SHADOW_OPACITY + 0.12})">`
-    + `<animate attributeName="rx" values="${shadowRx};${shadowMinRx};${shadowRx}" dur="${shadowDuration}" repeatCount="indefinite" />`
-    + `<animate attributeName="opacity" values="${(COMPANION_DEFAULT_SHADOW_OPACITY + 0.12).toFixed(2)};${(COMPANION_DEFAULT_SHADOW_OPACITY + 0.02).toFixed(2)};${(COMPANION_DEFAULT_SHADOW_OPACITY + 0.12).toFixed(2)}" dur="${shadowDuration}" repeatCount="indefinite" />`
+    + `<ellipse cx="${(shadowRect.x + (shadowRect.width / 2)).toFixed(3)}" cy="${(shadowRect.y + (shadowRect.height / 2)).toFixed(3)}" rx="${shadowValues[0]!.rx.toFixed(3)}" ry="${(shadowRect.height / 2).toFixed(3)}" fill="rgba(10, 8, 18, ${shadowValues[0]!.opacity.toFixed(2)})">`
+    + `<animate attributeName="rx" values="${shadowValues.map((sample) => sample.rx.toFixed(3)).join(';')}" keyTimes="${keyTimes}" dur="${shadowDuration}" repeatCount="indefinite" />`
+    + `<animate attributeName="opacity" values="${shadowValues.map((sample) => sample.opacity.toFixed(2)).join(';')}" keyTimes="${keyTimes}" dur="${shadowDuration}" repeatCount="indefinite" />`
     + '</ellipse>'
     + layers
     + '</svg>'
