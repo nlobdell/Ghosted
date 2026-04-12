@@ -38,5 +38,11 @@ jobs:
       - name: Build Next.js app
         run: npm run build
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run homepage visual checks
+        run: npm run test:visual
+
       - name: Run server contract tests
         run: npm run test:server

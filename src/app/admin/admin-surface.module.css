@@ -1,0 +1,564 @@
+.page {
+  --workspace-page-gap: 0.85rem;
+  --workspace-page-accent: rgba(214, 219, 225, 0.18);
+  --admin-surface-0: #101317;
+  --admin-surface-1: #14181d;
+  --admin-surface-2: #191e24;
+  --admin-surface-3: #1f252c;
+  --admin-line: #2a3139;
+  --admin-line-strong: #3b444e;
+  --admin-text: #edf1f4;
+  --admin-text-muted: #a2abb5;
+  --admin-text-soft: #737c86;
+  --admin-danger: #c06f61;
+  --admin-warning: #b58d53;
+  --admin-success: #95ac8e;
+  color: var(--admin-text);
+}
+
+.page,
+.bannerStack,
+.workspace,
+.actionRail,
+.readbackPane,
+.header,
+.headerCopy,
+.railSection,
+.paneSection,
+.sectionHeader,
+.sectionBody,
+.statStrip,
+.statusList,
+.auditFeed,
+.keyValueList,
+.inlineConfirmBar,
+.inlineConfirmCopy,
+.inlineConfirmMeta,
+.tableWrap,
+.registerList,
+.registerRow,
+.registerMain,
+.selectionList,
+.selectionRow,
+.selectionCopy,
+.formStack {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.header {
+  gap: 0.45rem;
+  padding: 0.15rem 0 0.45rem;
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  color: var(--admin-text-soft);
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.breadcrumbDivider {
+  color: var(--admin-text-soft);
+}
+
+.headerRow,
+.paneSectionHeader,
+.registerHeader,
+.registerMeta,
+.registerActions,
+.statusRowHeader,
+.auditRowHeader,
+.auditMeta,
+.inlineConfirmActions,
+.selectionRow,
+.selectionMeta,
+.sectionActions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.headerCopy {
+  min-width: 0;
+}
+
+.headerTitle {
+  margin: 0;
+  color: var(--admin-text);
+  font-family: var(--font-body);
+  font-size: clamp(1.42rem, 2.2vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.headerSummary {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--admin-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.62;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.bannerStack {
+  gap: 0.65rem;
+}
+
+.workspace {
+  grid-template-columns: minmax(17.75rem, 22rem) minmax(0, 1fr);
+  align-items: start;
+  gap: 0.85rem;
+}
+
+.actionRail {
+  position: sticky;
+  top: var(--hall-sticky-offset);
+  align-self: start;
+}
+
+.readbackPane {
+  min-width: 0;
+}
+
+.railSection,
+.paneSection,
+.statItem,
+.statusRow,
+.auditRow,
+.selectionRow,
+.inlineConfirmBar,
+.registerRow {
+  min-width: 0;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 0.9rem;
+  background: var(--admin-surface-1);
+  box-shadow: none;
+}
+
+.paneSection,
+.registerRow {
+  background: var(--admin-surface-0);
+}
+
+.sectionEyebrow,
+.statLabel,
+.statusLabel,
+.auditMeta,
+.keyValueRow dt,
+.inlineConfirmMetric span,
+.selectionMeta,
+.table th {
+  color: var(--admin-text-soft);
+  font-size: 0.67rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--admin-text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.sectionDescription,
+.note,
+.emptyNote,
+.statusSecondary,
+.auditSummary,
+.registerSummary,
+.selectionCopy p,
+.inlineConfirmCopy p {
+  margin: 0;
+  color: var(--admin-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.58;
+}
+
+.sectionBody {
+  min-width: 0;
+  gap: 0.75rem;
+}
+
+.formStack {
+  gap: 0.7rem;
+}
+
+.fieldPair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.statStrip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.statItem {
+  gap: 0.35rem;
+  padding-block: 0.75rem;
+  background: var(--admin-surface-0);
+}
+
+.statValue {
+  color: var(--admin-text);
+  font-family: var(--font-body);
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.statusList {
+  gap: 0.6rem;
+}
+
+.statusRow {
+  text-decoration: none;
+  transition: border-color var(--ease-snappy), transform var(--ease-snappy), background-color var(--ease-snappy);
+}
+
+.statusRow:hover {
+  transform: translateY(-1px);
+  border-color: var(--admin-line-strong);
+  background: var(--admin-surface-2);
+}
+
+.statusRow[data-status='critical'] .statusTone {
+  color: var(--admin-danger);
+}
+
+.statusRow[data-status='warning'] .statusTone {
+  color: var(--admin-warning);
+}
+
+.statusPrimary,
+.registerTitle {
+  color: var(--admin-text);
+  font-size: 0.96rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.statusTone {
+  color: var(--admin-success);
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.statusMeta,
+.inlineMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.metaToken {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.45rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--admin-line-strong);
+  background: transparent;
+  color: var(--admin-text-muted);
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auditFeed,
+.registerList {
+  gap: 0.55rem;
+}
+
+.auditRow,
+.registerRow {
+  gap: 0.55rem;
+}
+
+.auditMeta,
+.selectionMeta,
+.registerMeta {
+  color: var(--admin-text-soft);
+  font-size: 0.68rem;
+}
+
+.tableWrap {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--admin-line);
+  border-radius: 0.85rem;
+}
+
+.table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+  background: var(--admin-surface-0);
+}
+
+.table th,
+.table td {
+  padding: 0.82rem 0.9rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.table th {
+  background: var(--admin-surface-1);
+}
+
+.table td {
+  color: var(--admin-text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.tableStrong {
+  display: block;
+  color: var(--admin-text);
+  font-weight: 700;
+}
+
+.tableSubtle {
+  display: block;
+  color: var(--admin-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.registerSummary {
+  max-width: 72ch;
+}
+
+.selectionList {
+  gap: 0.55rem;
+}
+
+.selectionRow {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.7rem;
+  cursor: pointer;
+}
+
+.selectionRow input {
+  margin-top: 0.18rem;
+}
+
+.selectionCopy {
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.selectionTitle {
+  color: var(--admin-text);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.keyValueList {
+  gap: 0;
+  border: 1px solid var(--admin-line);
+  border-radius: 0.85rem;
+  overflow: hidden;
+}
+
+.keyValueRow {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.85rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--admin-surface-0);
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.keyValueRow:last-child {
+  border-bottom: 0;
+}
+
+.keyValueRow dt {
+  line-height: 1.5;
+}
+
+.keyValueRow dd {
+  margin: 0;
+  color: var(--admin-text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.inlineConfirmBar {
+  gap: 0.65rem;
+  border-color: var(--admin-line-strong);
+  background: var(--admin-surface-2);
+}
+
+.inlineConfirmBarDanger {
+  border-color: rgba(192, 111, 97, 0.5);
+}
+
+.inlineConfirmCopy strong,
+.inlineConfirmMetric strong {
+  color: var(--admin-text);
+}
+
+.inlineConfirmMeta {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.inlineConfirmMetric {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.inlineConfirmActions {
+  align-items: center;
+}
+
+.note,
+.emptyNote {
+  font-size: 0.84rem;
+}
+
+.dangerText {
+  color: #d9a8a0;
+}
+
+.page :global(.app-form) {
+  gap: 0.75rem;
+}
+
+.page :global(.app-form-field) {
+  gap: 0.42rem;
+}
+
+.page :global(.app-form-field label) {
+  color: var(--admin-text-muted);
+  font-size: 0.73rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.page :global(.input-base) {
+  border-radius: 0.78rem;
+  border: 1px solid var(--admin-line);
+  background: #0d1014;
+  color: var(--admin-text);
+  box-shadow: none;
+}
+
+.page :global(.input-base::placeholder) {
+  color: var(--admin-text-soft);
+}
+
+.page :global(.input-base:focus) {
+  border-color: var(--admin-line-strong);
+  background: #11151a;
+  box-shadow: 0 0 0 1px rgba(237, 241, 244, 0.08);
+}
+
+.page :global(.app-banner) {
+  border-radius: 0.82rem;
+  border: 1px solid var(--admin-line);
+  background: var(--admin-surface-1);
+  color: var(--admin-text);
+  box-shadow: none;
+}
+
+.page :global(.app-banner.is-warning) {
+  border-color: rgba(181, 141, 83, 0.36);
+  background: rgba(58, 46, 30, 0.72);
+}
+
+.page :global(.app-banner.is-error) {
+  border-color: rgba(192, 111, 97, 0.36);
+  background: rgba(61, 34, 31, 0.76);
+}
+
+.page :global(.app-empty) {
+  border-radius: 0.82rem;
+  border-color: var(--admin-line);
+  background: var(--admin-surface-1);
+  box-shadow: none;
+}
+
+.page :global(.button) {
+  min-height: 2.5rem;
+}
+
+@media (max-width: 1180px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .actionRail {
+    position: static;
+  }
+}
+
+@media (max-width: 920px) {
+  .statStrip,
+  .fieldPair,
+  .inlineConfirmMeta,
+  .keyValueRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .headerRow,
+  .paneSectionHeader,
+  .registerHeader,
+  .registerMeta,
+  .registerActions,
+  .auditMeta,
+  .inlineConfirmActions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .table {
+    min-width: 28rem;
+  }
+}

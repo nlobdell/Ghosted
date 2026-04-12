@@ -1,0 +1,238 @@
+{
+  "kind": "ghostling-world",
+  "schemaVersion": 1,
+  "worldId": "shared-commons",
+  "preset": "public-hero",
+  "canvas": {
+    "width": 3150,
+    "height": 350
+  },
+  "layers": [
+    {
+      "key": "sky",
+      "src": "/worlds/shared-commons/v1/sky.svg",
+      "zIndex": 0
+    },
+    {
+      "key": "midground",
+      "src": "/worlds/shared-commons/v1/midground.png",
+      "zIndex": 1
+    },
+    {
+      "key": "floor",
+      "src": "/worlds/shared-commons/v1/floor.png",
+      "zIndex": 2
+    },
+    {
+      "key": "foreground",
+      "src": "/worlds/shared-commons/v1/foreground.png",
+      "zIndex": 3
+    }
+  ],
+  "guides": {
+    "horizonY": 114,
+    "floorY": 320,
+    "safeArea": {
+      "x": 770,
+      "y": 22,
+      "width": 1610,
+      "height": 304
+    },
+    "debugFloorBand": {
+      "x": 0,
+      "y": 186,
+      "width": 3150,
+      "height": 164
+    },
+    "centerSafe": {
+      "x": 950,
+      "y": 24,
+      "width": 1250,
+      "height": 286
+    },
+    "ultrawideBleed": {
+      "x": 0,
+      "y": 12,
+      "width": 3150,
+      "height": 314
+    },
+    "labelSafeTop": {
+      "x": 0,
+      "y": 0,
+      "width": 3150,
+      "height": 78
+    }
+  },
+  "fallbackAnchor": {
+    "key": "fallback-anchor",
+    "label": "Fallback anchor",
+    "x": 1575,
+    "y": 236,
+    "safeZoneKey": "shared-floor",
+    "layer": "front",
+    "scaleTier": 2,
+    "adjacent": []
+  },
+  "safeZones": [
+    {
+      "key": "shared-floor",
+      "label": "Shared floor",
+      "layer": "front",
+      "bounds": {
+        "x": 960,
+        "y": 154,
+        "width": 1230,
+        "height": 156
+      },
+      "roamRadius": 42
+    }
+  ],
+  "anchors": [
+    {
+      "key": "floor-left-outer",
+      "label": "Floor left outer",
+      "x": 1005,
+      "y": 238,
+      "safeZoneKey": "shared-floor",
+      "layer": "front",
+      "scaleTier": 2,
+      "adjacent": [
+        "floor-left-inner"
+      ]
+    },
+    {
+      "key": "floor-left-inner",
+      "label": "Floor left inner",
+      "x": 1160,
+      "y": 236,
+      "safeZoneKey": "shared-floor",
+      "layer": "front",
+      "scaleTier": 2,
+      "adjacent": [
+        "floor-left-outer",
+        "floor-left-mid"
+      ]
+    },
+    {
+      "key": "floor-left-mid",
+      "label": "Floor left mid",
+      "x": 1315,
+      "y": 234,
+      "safeZoneKey": "shared-floor",
+      "layer": "front",
+      "scaleTier": 2,
+      "adjacent": [
+        "floor-left-inner",
+        "floor-mid-left"
+      ]
+    },
+    {
+      "key": "floor-mid-left",
+      "label": "Floor mid left",
+      "x": 1470,
+      "y": 232,
+      "safeZoneKey": "shared-floor",
+      "layer": "front",
+      "scaleTier": 2,
+      "adjacent": [
+        "floor-left-mid",
+        "floor-mid-right"
+      ]
+    },
+    {
+      "key": "floor-mid-right",
+      "label": "Floor mid right",
+      "x": 1680,
+      "y": 232,
+      "safeZoneKey": "shared-floor",
+      "layer": "front",
+      "scaleTier": 2,
+      "adjacent": [
+        "floor-mid-left",
+        "floor-right-mid"
+      ]
+    },
+    {
+      "key": "floor-right-mid",
+      "label": "Floor right mid",
+      "x": 1835,
+      "y": 234,
+      "safeZoneKey": "shared-floor",
+      "layer": "front",
+      "scaleTier": 2,
+      "adjacent": [
+        "floor-mid-right",
+        "floor-right-inner"
+      ]
+    },
+    {
+      "key": "floor-right-inner",
+      "label": "Floor right inner",
+      "x": 1990,
+      "y": 234,
+      "safeZoneKey": "shared-floor",
+      "layer": "front",
+      "scaleTier": 2,
+      "adjacent": [
+        "floor-right-mid",
+        "floor-right-outer"
+      ]
+    },
+    {
+      "key": "floor-right-outer",
+      "label": "Floor right outer",
+      "x": 2145,
+      "y": 238,
+      "safeZoneKey": "shared-floor",
+      "layer": "front",
+      "scaleTier": 2,
+      "adjacent": [
+        "floor-right-inner"
+      ]
+    }
+  ],
+  "viewports": {
+    "desktop": {
+      "bucket": "desktop",
+      "maxVisible": 8,
+      "pointOrder": [
+        "floor-left-outer",
+        "floor-left-inner",
+        "floor-left-mid",
+        "floor-mid-left",
+        "floor-mid-right",
+        "floor-right-mid",
+        "floor-right-inner",
+        "floor-right-outer"
+      ]
+    },
+    "tablet": {
+      "bucket": "tablet",
+      "maxVisible": 6,
+      "pointOrder": [
+        "floor-left-outer",
+        "floor-left-inner",
+        "floor-left-mid",
+        "floor-mid-left",
+        "floor-mid-right",
+        "floor-right-mid",
+        "floor-right-inner",
+        "floor-right-outer"
+      ]
+    },
+    "mobile": {
+      "bucket": "mobile",
+      "maxVisible": 4,
+      "pointOrder": [
+        "floor-left-outer",
+        "floor-left-inner",
+        "floor-left-mid",
+        "floor-mid-left",
+        "floor-mid-right",
+        "floor-right-mid",
+        "floor-right-inner",
+        "floor-right-outer"
+      ]
+    }
+  }
+}

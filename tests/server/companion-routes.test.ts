@@ -17,6 +17,7 @@ vi.mock('next/headers', () => ({
 }));
 
 import { GET as getCompanionRoute } from '@/app/api/companion/route';
+import { GET as getCompanionPreviewRoute } from '@/app/api/companion/preview/route';
 import { POST as postCompanionPurchaseRoute } from '@/app/api/companion/purchase/route';
 import { POST as postCompanionEquipRoute } from '@/app/api/companion/equip/route';
 import { POST as postCompanionAdminBaseRoute } from '@/app/api/companion/admin/base/route';
@@ -140,6 +141,29 @@ describe('companion route handlers', () => {
     expect(response.status).toBe(200);
     expect(payload.user).toMatchObject({ id: userId, displayName: 'Member' });
     expect(payload.items).toEqual([]);
+  });
+
+  it('returns a public house preview summary without requiring auth', async () => {
+    const response = await getCompanionPreviewRoute(new Request('http://localhost/api/companion/preview'));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.user).toBeNull();
+    expect(payload.animatedRenderUrl).toBe('/api/companion/render-animated');
+    expect(payload.renderManifest.motion.accents.length).toBeGreaterThan(0);
+    expect(payload.renderManifest.debug.slotAnchors.hat).toEqual({ x: 105, y: 72 });
+  });
+
+  it('returns a public preview summary for a specific user reference', async () => {
+    const userId = insertUser(context.db, { discordId: 'member-123', username: 'member', globalName: 'Member' });
+
+    const response = await getCompanionPreviewRoute(new Request(`http://localhost/api/companion/preview?user=${userId}`));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.user).toEqual({ displayName: 'Member', username: 'member' });
+    expect(payload.animatedRenderUrl).toContain(`user=${userId}`);
+    expect(payload.renderManifest.debug.shadowRect.width).toBeGreaterThan(0);
   });
 
   it('returns the expected purchase success envelope', async () => {

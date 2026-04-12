@@ -264,6 +264,36 @@ textarea:focus-visible,
   font-size: 0.88rem;
 }
 
+.app-shell--admin .button {
+  border-radius: 0.78rem;
+  border-color: rgba(236, 241, 244, 0.12);
+  background: #edf1f4;
+  color: #111419;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+
+.app-shell--admin .button:hover {
+  filter: none;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.app-shell--admin .button--secondary {
+  background: transparent;
+  color: #edf1f4;
+  border-color: rgba(236, 241, 244, 0.12);
+}
+
+.app-shell--admin .button--secondary:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(236, 241, 244, 0.2);
+}
+
 .app-header {
   padding-top: 1rem;
 }
@@ -308,11 +338,9 @@ textarea:focus-visible,
 
 .nav-shell--admin {
   grid-template-columns: minmax(0, var(--hall-sidebar-width)) minmax(0, 1fr) auto;
-  background:
-    radial-gradient(circle at 100% 0%, rgba(184, 168, 255, 0.08), transparent 24%),
-    linear-gradient(180deg, rgba(11, 9, 17, 0.97), rgba(8, 7, 14, 0.94));
-  border-color: rgba(191, 179, 255, 0.24);
-  box-shadow: 0 16px 38px rgba(2, 2, 6, 0.22);
+  background: rgba(13, 16, 20, 0.98);
+  border-color: rgba(236, 241, 244, 0.08);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
 }
 
 .nav-shell--public .nav-brand__copy span {
@@ -675,8 +703,7 @@ textarea:focus-visible,
 
 .app-shell--admin {
   background:
-    radial-gradient(circle at 100% 0%, rgba(184, 168, 255, 0.05), transparent 26%),
-    linear-gradient(180deg, rgba(7, 6, 12, 0.98), rgba(11, 9, 17, 0.98) 42%, rgba(16, 13, 24, 0.98) 100%);
+    linear-gradient(180deg, #090b0e 0%, #0d1014 45%, #111419 100%);
 }
 
 .public-shell {
@@ -785,7 +812,8 @@ textarea:focus-visible,
 
 .home-section,
 .home-proof,
-.hall-sidebar {
+.hall-sidebar,
+.admin-sidebar {
   position: relative;
   border: 1px solid rgba(191, 179, 255, 0.12);
   border-radius: 1.8rem;
@@ -794,7 +822,8 @@ textarea:focus-visible,
 }
 
 .home-section,
-.hall-sidebar {
+.hall-sidebar,
+.admin-sidebar {
   padding: var(--surface-padding);
 }
 
@@ -1013,6 +1042,20 @@ textarea:focus-visible,
   overflow: hidden;
 }
 
+.admin-sidebar {
+  position: sticky;
+  top: var(--hall-sticky-offset);
+  align-self: start;
+  display: grid;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.9rem;
+  border-radius: 1rem;
+  background: rgba(15, 18, 22, 0.96);
+  border-color: rgba(236, 241, 244, 0.08);
+  box-shadow: none;
+}
+
 .hall-sidebar--admin {
   background:
     linear-gradient(180deg, rgba(14, 12, 23, 0.94), rgba(9, 8, 16, 0.82));
@@ -1043,14 +1086,35 @@ textarea:focus-visible,
   gap: 0.45rem;
 }
 
+.admin-sidebar__header,
+.admin-sidebar__footer {
+  display: grid;
+  gap: 0.35rem;
+}
+
 .hall-sidebar__title {
   font-size: clamp(1.8rem, 3vw, 2.4rem);
+}
+
+.admin-sidebar__title {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .hall-sidebar__summary {
   margin: 0;
   color: var(--color-text-muted);
   font-size: 0.84rem;
+  line-height: 1.7;
+}
+
+.admin-sidebar__summary {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
   line-height: 1.7;
 }
 
@@ -1062,6 +1126,11 @@ textarea:focus-visible,
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   padding-right: 0.12rem;
+}
+
+.admin-sidebar__nav {
+  display: grid;
+  gap: 0.35rem;
 }
 
 .hall-sidebar__link {
@@ -1097,6 +1166,80 @@ textarea:focus-visible,
   font-size: 0.82rem;
 }
 
+.admin-sidebar__link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.72rem 0.78rem;
+  border: 1px solid rgba(236, 241, 244, 0.06);
+  border-radius: 0.82rem;
+  background: transparent;
+  text-decoration: none;
+  transition: transform var(--ease-snappy), border-color var(--ease-snappy), background-color var(--ease-snappy);
+}
+
+.admin-sidebar__link:hover,
+.admin-sidebar__link[aria-current="page"] {
+  transform: none;
+  border-color: rgba(236, 241, 244, 0.16);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.admin-sidebar__link strong {
+  color: var(--color-text-strong);
+  font-size: 0.84rem;
+  font-family: var(--font-body);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.admin-sidebar__link span {
+  color: var(--color-text-muted);
+  font-size: 0.66rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.admin-sidebar__link .admin-sidebar__marker {
+  color: var(--color-text-muted);
+}
+
+.admin-sidebar__footer {
+  padding-top: 0.2rem;
+  border-top: 1px solid rgba(236, 241, 244, 0.08);
+}
+
+.admin-sidebar__kicker {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 0.64rem;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.admin-sidebar__marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.2rem;
+  min-height: 1.55rem;
+  padding: 0 0.42rem;
+  border-radius: 999px;
+  border: 1px solid rgba(236, 241, 244, 0.1);
+  color: var(--color-text-muted);
+  font-size: 0.66rem;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-style: normal;
+  text-transform: uppercase;
+}
+
 .kicker {
   margin: 0;
   color: var(--color-accent);
@@ -1120,6 +1263,18 @@ textarea:focus-visible,
   color: var(--color-text-strong);
   font-size: 0.74rem;
   font-weight: 700;
+}
+
+.app-shell--admin .app-chip {
+  border-radius: 999px;
+  border-color: rgba(236, 241, 244, 0.12);
+  background: transparent;
+  color: #c6cdd4;
+  font-family: var(--font-mono);
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .app-context,
@@ -1777,7 +1932,8 @@ select.input-base option {
     grid-template-columns: 1fr;
   }
 
-  .hall-sidebar {
+  .hall-sidebar,
+  .admin-sidebar {
     position: static;
     max-height: none;
     overflow: visible;

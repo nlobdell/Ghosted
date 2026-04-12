@@ -2,7 +2,7 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 import { recordAudit } from '@/lib/server/audit';
-import { buildRoleDirectory, postWebhook, sortedRoleOptions } from '@/lib/server/discord';
+import { buildRoleDirectory, buildRuntimeAuthConfig, postWebhook, sortedRoleOptions } from '@/lib/server/discord';
 import { AppError, parseIso, readJsonBody, slugify, utcIso, utcNow } from '@/lib/server/core';
 import { getDatabase } from '@/lib/server/database';
 import { appendRewardLedger } from '@/lib/server/rewards';
@@ -17,6 +17,11 @@ import {
   requireAdminUser,
 } from '@/lib/server/ghosted-api';
 import {
+  getDiscordPresenceWorkerSummary,
+  listScenePresenceChannelAllowlist,
+  replaceScenePresenceChannelAllowlist,
+} from '@/lib/server/discord-presence';
+import {
   DEFAULT_WOM_PERIOD,
   countLinkedGameAccounts,
   invalidateWomCache,
@@ -27,10 +32,85 @@ import {
   womGroupId,
   womRequestJson,
 } from '@/lib/server/wom';
+import type {
+  AdminAlert,
+  AdminAuditEntry,
+  AdminContentData,
+  AdminGiveawayRow,
+  AdminOverviewData,
+  AdminRewardsData,
+  AdminRoleOption,
+  AdminSectionKey,
+  AdminSectionStatus,
+  AdminSectionSummary,
+  AdminSystemsData,
+  AdminUserBalanceRow,
+  AdminWomSummary,
+  DiscordPresenceAdminChannel,
+  DiscordPresenceAdminData,
+  DiscordPresenceChannelType,
+  DiscordPresenceWorkerSummary,
+} from '@/lib/types';
 
-export async function adminOverviewPayload() {
+const ADMIN_SECTION_HREFS: Record<AdminSectionKey, string> = {
+  rewards: '/admin/rewards/',
+  content: '/admin/content/',
+  systems: '/admin/systems/',
+  ghostling: '/admin/ghostling/',
+};
+
+const ADMIN_AUDIT_SECTION_MAP: Partial<Record<string, AdminSectionKey>> = {
+  grant_points: 'rewards',
+  create_giveaway: 'rewards',
+  create_news_post: 'content',
+  delete_news_post: 'content',
+  refresh_wom_cache: 'systems',
+  update_scene_presence_allowlist: 'systems',
+  upload_companion_base_asset: 'ghostling',
+  create_companion_item: 'ghostling',
+  replace_companion_item_assets: 'ghostling',
+  import_repo_companion_items: 'ghostling',
+  set_companion_item_active: 'ghostling',
+  reorder_companion_item: 'ghostling',
+};
+
+const ADMIN_AUDIT_LABELS: Partial<Record<string, string>> = {
+  grant_points: 'Grant points',
+  create_giveaway: 'Create drop',
+  create_news_post: 'Save dispatch',
+  delete_news_post: 'Delete dispatch',
+  refresh_wom_cache: 'Refresh Wise Old Man',
+  update_scene_presence_allowlist: 'Update public channels',
+  upload_companion_base_asset: 'Upload base files',
+  create_companion_item: 'Create cosmetic',
+  replace_companion_item_assets: 'Replace cosmetic files',
+  import_repo_companion_items: 'Import repo cosmetics',
+  set_companion_item_active: 'Update visibility',
+  reorder_companion_item: 'Reorder catalog',
+};
+
+function safeJsonLoad<T>(value: string | null | undefined, fallback: T): T {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function adminRoleOptions(roleDirectory: Awaited<ReturnType<typeof buildRoleDirectory>>): AdminRoleOption[] {
+  return sortedRoleOptions(roleDirectory).map((role) => ({
+    id: role.id,
+    name: role.label,
+  }));
+}
+
+async function adminRoleOptionsPayload() {
+  return adminRoleOptions(await buildRoleDirectory());
+}
+
+function adminUsersWithBalances(limit = 20) {
   const db = getDatabase();
-  const actor = await requireAdminUser();
   const users = db.prepare(`
     SELECT
       users.id,
@@ -43,8 +123,8 @@ export async function adminOverviewPayload() {
     LEFT JOIN reward_ledger ON reward_ledger.user_id = users.id
     GROUP BY users.id
     ORDER BY balance DESC, users.id ASC
-    LIMIT 20
-  `).all() as Array<{
+    LIMIT ?
+  `).all(Math.max(1, Math.min(limit, 50))) as Array<{
     id: number;
     discord_id: string;
     username: string;
@@ -52,40 +132,711 @@ export async function adminOverviewPayload() {
     is_admin: number;
     balance: number;
   }>;
-  const newsCountRow = db.prepare('SELECT COUNT(*) AS count FROM news_posts').get() as { count: number };
+  const totals = db.prepare(`
+    SELECT
+      COUNT(*) AS tracked_users,
+      SUM(CASE WHEN is_admin = 1 THEN 1 ELSE 0 END) AS admin_users
+    FROM users
+  `).get() as {
+    tracked_users: number;
+    admin_users: number;
+  };
+
+  return {
+    rows: users.map((user) => ({
+      id: user.id,
+      discordId: user.discord_id,
+      displayName: user.global_name || user.username,
+      balance: Number(user.balance),
+      isAdmin: Boolean(user.is_admin),
+    })) satisfies AdminUserBalanceRow[],
+    trackedUsers: Number(totals.tracked_users ?? 0),
+    adminUsers: Number(totals.admin_users ?? 0),
+  };
+}
+
+async function adminGiveawayRows(): Promise<AdminGiveawayRow[]> {
+  const giveaways = await listGiveaways(null);
+  return giveaways.map((giveaway) => ({
+    id: giveaway.id,
+    title: giveaway.title,
+    status: giveaway.status,
+    pointCost: Number(giveaway.pointCost ?? 0),
+    maxEntries: Number(giveaway.maxEntries ?? 0),
+    totalEntries: Number(giveaway.totalEntries ?? 0),
+    endAt: giveaway.endAt,
+    requiredRoleLabel: giveaway.requiredRole?.label ?? null,
+  }));
+}
+
+function adminNewsCounts() {
+  const db = getDatabase();
+  const rows = db.prepare(`
+    SELECT status, COUNT(*) AS count
+    FROM news_posts
+    GROUP BY status
+  `).all() as Array<{ status: string; count: number }>;
+  const lastDay = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const recentPublishedRow = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM news_posts
+    WHERE status = 'published'
+      AND COALESCE(published_at, created_at) >= ?
+  `).get(utcIso(lastDay)) as { count: number };
+
+  return {
+    publishedCount: Number(rows.find((row) => row.status === 'published')?.count ?? 0),
+    draftCount: Number(rows.find((row) => row.status === 'draft')?.count ?? 0),
+    recentlyPublishedCount: Number(recentPublishedRow.count ?? 0),
+  };
+}
+
+function adminWomSummary(): AdminWomSummary {
+  const db = getDatabase();
+  return {
+    configured: womGroupId() !== undefined,
+    linkedUsers: countLinkedGameAccounts(db, 'osrs'),
+  };
+}
+
+function adminGhostlingSummary() {
+  const db = getDatabase();
+  const row = db.prepare(`
+    SELECT
+      COUNT(*) AS total_items,
+      SUM(CASE WHEN active = 1 THEN 1 ELSE 0 END) AS active_items
+    FROM companion_catalog
+  `).get() as {
+    total_items: number;
+    active_items: number | null;
+  };
+
+  return {
+    totalItems: Number(row.total_items ?? 0),
+    activeItems: Number(row.active_items ?? 0),
+  };
+}
+
+function countAuditActions(actions: string[], since?: Date) {
+  if (!actions.length) return 0;
+  const db = getDatabase();
+  const placeholders = actions.map(() => '?').join(', ');
+  const params: unknown[] = [...actions];
+  let where = `action IN (${placeholders})`;
+  if (since) {
+    where += ' AND created_at >= ?';
+    params.push(utcIso(since));
+  }
+  const row = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM audit_log
+    WHERE ${where}
+  `).get(...params) as { count: number };
+  return Number(row.count ?? 0);
+}
+
+function systemsHealthSeverity(data: DiscordPresenceAdminData, wom: AdminWomSummary): AdminSectionStatus {
+  if (!wom.configured || !data.guild.ready || data.worker.health === 'error') return 'critical';
+  if (data.worker.health !== 'healthy' || data.allowlist.length === 0) return 'warning';
+  return 'ready';
+}
+
+function rewardsSectionSummary(input: {
+  activeGiveaways: number;
+  scheduledGiveaways: number;
+  trackedUsers: number;
+  recentGrantCount: number;
+}): AdminSectionSummary {
+  const status: AdminSectionStatus = input.recentGrantCount >= 8 ? 'warning' : 'ready';
+  return {
+    key: 'rewards',
+    label: 'Rewards',
+    href: ADMIN_SECTION_HREFS.rewards,
+    status,
+    primary: `${input.activeGiveaways} live ${input.activeGiveaways === 1 ? 'drop' : 'drops'}`,
+    secondary: `${input.recentGrantCount} direct balance ${input.recentGrantCount === 1 ? 'update' : 'updates'} in the last 24 hours.`,
+    chips: [
+      `${input.trackedUsers} tracked balances`,
+      `${input.scheduledGiveaways} scheduled`,
+    ],
+  };
+}
+
+function contentSectionSummary(input: {
+  publishedCount: number;
+  draftCount: number;
+  recentlyPublishedCount: number;
+}): AdminSectionSummary {
+  const status: AdminSectionStatus = input.draftCount > 0 ? 'warning' : 'ready';
+  return {
+    key: 'content',
+    label: 'Content',
+    href: ADMIN_SECTION_HREFS.content,
+    status,
+    primary: `${input.publishedCount} published dispatches`,
+    secondary: input.draftCount > 0
+      ? `${input.draftCount} draft ${input.draftCount === 1 ? 'dispatch is' : 'dispatches are'} waiting for review.`
+      : `${input.recentlyPublishedCount} published in the last 24 hours.`,
+    chips: [
+      `${input.draftCount} drafts`,
+      `${input.recentlyPublishedCount} recently published`,
+    ],
+  };
+}
+
+function systemsSectionSummary(input: {
+  wom: AdminWomSummary;
+  discord: DiscordPresenceAdminData;
+}): AdminSectionSummary {
+  return {
+    key: 'systems',
+    label: 'Systems',
+    href: ADMIN_SECTION_HREFS.systems,
+    status: systemsHealthSeverity(input.discord, input.wom),
+    primary: input.wom.configured ? 'Wise Old Man linked to Ghosted' : 'Wise Old Man needs configuration',
+    secondary: input.discord.guild.ready
+      ? `Discord worker health is ${input.discord.worker.health.replaceAll('-', ' ')}.`
+      : 'Discord guild sync still needs bot credentials before public channel control is reliable.',
+    chips: [
+      `${input.wom.linkedUsers} Wise Old Man links`,
+      `${input.discord.allowlist.length} public channels`,
+    ],
+  };
+}
+
+function ghostlingSectionSummary(input: { totalItems: number; activeItems: number }): AdminSectionSummary {
+  const hiddenItems = Math.max(0, input.totalItems - input.activeItems);
+  const status: AdminSectionStatus = input.totalItems === 0 ? 'warning' : 'ready';
+  return {
+    key: 'ghostling',
+    label: 'Ghostling',
+    href: ADMIN_SECTION_HREFS.ghostling,
+    status,
+    primary: input.totalItems > 0 ? `${input.activeItems} visible cosmetics live` : 'Ghostling library needs content',
+    secondary: input.totalItems > 0
+      ? `${hiddenItems} ${hiddenItems === 1 ? 'item is' : 'items are'} hidden from the member catalog.`
+      : 'Upload base files or cosmetics before members rely on this library.',
+    chips: [
+      `${input.totalItems} total cosmetics`,
+      `${hiddenItems} hidden`,
+    ],
+  };
+}
+
+function adminAlertHref(section: AdminSectionKey) {
+  return ADMIN_SECTION_HREFS[section];
+}
+
+function workerHealthDetail(data: DiscordPresenceAdminData) {
+  if (data.worker.health === 'healthy') {
+    return 'Public Discord channel matching is healthy.';
+  }
+  if (data.worker.health === 'not-installed') {
+    return 'The configured guild does not have the bot installed yet, so public presence is still using fallback behavior.';
+  }
+  if (data.worker.health === 'stale') {
+    return 'The worker heartbeat is stale. Recheck the worker before trusting the public homepage scene.';
+  }
+  if (data.worker.health === 'error') {
+    return 'The worker reported an error and needs attention before public presence can be trusted.';
+  }
+  if (!data.guild.ready) {
+    return 'Set DISCORD_GUILD_ID and DISCORD_BOT_TOKEN before you expect bot-backed public presence.';
+  }
+  return 'Public presence is not fully ready yet.';
+}
+
+function buildAdminAlerts(input: {
+  wom: AdminWomSummary;
+  discord: DiscordPresenceAdminData;
+}): AdminAlert[] {
+  const alerts: AdminAlert[] = [];
+
+  if (!input.wom.configured) {
+    alerts.push({
+      id: 'wom-not-configured',
+      title: 'Wise Old Man is not configured',
+      detail: 'Clan sync, Hall competition state, and admin refresh controls stay degraded until WOM_GROUP_ID is set.',
+      variant: 'warning',
+      section: 'systems',
+      href: adminAlertHref('systems'),
+      ctaLabel: 'Open systems',
+    });
+  }
+
+  if (!input.discord.guild.ready) {
+    alerts.push({
+      id: 'discord-not-ready',
+      title: 'Discord guild sync is incomplete',
+      detail: 'Set DISCORD_GUILD_ID and DISCORD_BOT_TOKEN before public channel visibility can be managed safely.',
+      variant: 'warning',
+      section: 'systems',
+      href: adminAlertHref('systems'),
+      ctaLabel: 'Review systems',
+    });
+  } else if (input.discord.worker.health !== 'healthy') {
+    alerts.push({
+      id: `discord-worker-${input.discord.worker.health}`,
+      title: 'Discord worker needs attention',
+      detail: workerHealthDetail(input.discord),
+      variant: input.discord.worker.health === 'error' ? 'error' : 'warning',
+      section: 'systems',
+      href: adminAlertHref('systems'),
+      ctaLabel: 'Inspect systems',
+    });
+  }
+
+  if (input.discord.guild.ready && input.discord.allowlist.length === 0) {
+    alerts.push({
+      id: 'discord-allowlist-empty',
+      title: 'No public voice or stage channels are allowed yet',
+      detail: 'The homepage cannot safely show Discord presence until at least one channel is selected for the public allowlist.',
+      variant: 'warning',
+      section: 'systems',
+      href: adminAlertHref('systems'),
+      ctaLabel: 'Choose channels',
+    });
+  }
+
+  return alerts;
+}
+
+function auditSection(action: string): AdminSectionKey | null {
+  return ADMIN_AUDIT_SECTION_MAP[action] ?? null;
+}
+
+function auditActionLabel(action: string) {
+  return ADMIN_AUDIT_LABELS[action] ?? action.replaceAll('_', ' ');
+}
+
+function auditSummary(action: string, targetId: string, payloadJson: string) {
+  const payload = safeJsonLoad<Record<string, unknown>>(payloadJson, {});
+  switch (action) {
+    case 'grant_points':
+      return `Granted ${Number(payload.amount ?? 0).toLocaleString()} pts to user #${targetId}.`;
+    case 'create_giveaway':
+      return `Created drop "${String(payload.title ?? targetId)}".`;
+    case 'create_news_post':
+      return `Saved dispatch "${String(payload.title ?? targetId)}" as ${String(payload.status ?? 'draft')}.`;
+    case 'delete_news_post':
+      return `Deleted dispatch "${String(payload.title ?? targetId)}".`;
+    case 'refresh_wom_cache':
+      return `Refreshed Wise Old Man cache for ${String(payload.scope ?? 'all')}.`;
+    case 'update_scene_presence_allowlist': {
+      const channelIds = Array.isArray(payload.channelIds) ? payload.channelIds.length : 0;
+      return `Updated the public Discord allowlist for ${channelIds} ${channelIds === 1 ? 'channel' : 'channels'}.`;
+    }
+    case 'upload_companion_base_asset':
+      return 'Uploaded new Ghostling base files.';
+    case 'create_companion_item':
+      return `Created Ghostling cosmetic "${String(payload.name ?? targetId)}".`;
+    case 'replace_companion_item_assets':
+      return `Replaced live files for Ghostling item "${targetId}".`;
+    case 'import_repo_companion_items':
+      return 'Imported repo Ghostling cosmetics into the live library.';
+    case 'set_companion_item_active':
+      return Boolean(payload.active)
+        ? `Restored Ghostling item "${targetId}" to the live catalog.`
+        : `Hid Ghostling item "${targetId}" from the live catalog.`;
+    case 'reorder_companion_item':
+      return `Changed the live order for Ghostling item "${targetId}".`;
+    default:
+      return `${auditActionLabel(action)} on ${targetId}.`;
+  }
+}
+
+function buildAdminAuditFeed(limit = 6, sections?: AdminSectionKey[]): AdminAuditEntry[] {
+  const db = getDatabase();
+  const safeLimit = Math.max(1, Math.min(limit, 20));
+  const rows = db.prepare(`
+    SELECT
+      audit_log.id,
+      audit_log.action,
+      audit_log.target_type,
+      audit_log.target_id,
+      audit_log.payload_json,
+      audit_log.created_at,
+      users.username AS actor_username,
+      users.global_name AS actor_global_name
+    FROM audit_log
+    LEFT JOIN users ON users.id = audit_log.actor_user_id
+    ORDER BY audit_log.created_at DESC, audit_log.id DESC
+    LIMIT ?
+  `).all(safeLimit * 5) as Array<{
+    id: number;
+    action: string;
+    target_type: string;
+    target_id: string;
+    payload_json: string;
+    created_at: string;
+    actor_username: string | null;
+    actor_global_name: string | null;
+  }>;
+  const sectionSet = sections ? new Set(sections) : null;
+
+  return rows
+    .map((row) => {
+      const section = auditSection(row.action);
+      if (!section) return null;
+      if (sectionSet && !sectionSet.has(section)) return null;
+      return {
+        id: row.id,
+        action: row.action,
+        actionLabel: auditActionLabel(row.action),
+        section,
+        targetType: row.target_type,
+        targetId: row.target_id,
+        actorDisplayName: row.actor_global_name || row.actor_username || 'System',
+        createdAt: row.created_at,
+        summary: auditSummary(row.action, row.target_id, row.payload_json),
+      } satisfies AdminAuditEntry;
+    })
+    .filter((entry): entry is AdminAuditEntry => Boolean(entry))
+    .slice(0, safeLimit);
+}
+
+async function buildSharedAdminState(actorOverride?: Awaited<ReturnType<typeof requireAdminUser>>) {
+  const [roles, giveaways, discord] = await Promise.all([
+    adminRoleOptionsPayload(),
+    adminGiveawayRows(),
+    buildDiscordPresenceAdminData(actorOverride),
+  ]);
+  const users = adminUsersWithBalances(24);
+  const wom = adminWomSummary();
+  const news = adminNewsCounts();
+  const ghostling = adminGhostlingSummary();
+  const recentGrantCount = countAuditActions(['grant_points'], new Date(Date.now() - 24 * 60 * 60 * 1000));
+
+  return {
+    roles,
+    users,
+    giveaways,
+    wom,
+    news,
+    ghostling,
+    discord,
+    recentGrantCount,
+  };
+}
+
+export async function adminOverviewPayload(): Promise<AdminOverviewData> {
+  const actor = await requireAdminUser();
+  const shared = await buildSharedAdminState(actor);
+  const rewardsSummary = rewardsSectionSummary({
+    activeGiveaways: shared.giveaways.filter((giveaway) => giveaway.status === 'active').length,
+    scheduledGiveaways: shared.giveaways.filter((giveaway) => giveaway.status === 'scheduled').length,
+    trackedUsers: shared.users.trackedUsers,
+    recentGrantCount: shared.recentGrantCount,
+  });
+  const contentSummary = contentSectionSummary(shared.news);
+  const systemsSummary = systemsSectionSummary({
+    wom: shared.wom,
+    discord: shared.discord,
+  });
+  const ghostlingSummary = ghostlingSectionSummary(shared.ghostling);
 
   return {
     actor: { displayName: displayName(actor) },
     overview: {
-      users: users.map((user) => ({
-        id: user.id,
-        discordId: user.discord_id,
-        displayName: user.global_name || user.username,
-        balance: Number(user.balance),
-        isAdmin: Boolean(user.is_admin),
-      })),
-      giveaways: (await listGiveaways(null)).map((giveaway) => ({
+      users: shared.users.rows,
+      giveaways: shared.giveaways.map((giveaway) => ({
         id: giveaway.id,
         title: giveaway.title,
         status: giveaway.status,
       })),
-      wom: {
-        configured: womGroupId() !== undefined,
-        linkedUsers: countLinkedGameAccounts(db, 'osrs'),
-      },
-      newsCount: Number(newsCountRow.count ?? 0),
+      wom: shared.wom,
+      newsCount: shared.news.publishedCount + shared.news.draftCount,
     },
+    alerts: buildAdminAlerts({
+      wom: shared.wom,
+      discord: shared.discord,
+    }),
+    sectionSummaries: [
+      rewardsSummary,
+      contentSummary,
+      systemsSummary,
+      ghostlingSummary,
+    ],
+    quickActionReferenceData: {
+      roles: shared.roles,
+    },
+    recentAudit: buildAdminAuditFeed(8),
   };
 }
 
 export async function discordRolesPayload() {
-  const roleDirectory = await buildRoleDirectory();
   return {
-    roles: sortedRoleOptions(roleDirectory).map((role) => ({
-      id: role.id,
-      name: role.label,
-    })),
+    roles: await adminRoleOptionsPayload(),
   };
+}
+
+const DISCORD_VOICE_CHANNEL_TYPE = 2;
+const DISCORD_STAGE_CHANNEL_TYPE = 13;
+const DISCORD_ADMIN_MODULES = [
+  { key: 'voicePresence', label: 'Voice presence' },
+] as const;
+
+type DiscordGuildChannelPayload = {
+  id?: unknown;
+  name?: unknown;
+  type?: unknown;
+};
+
+function normalizeDiscordPresenceChannelType(value: unknown): DiscordPresenceChannelType | null {
+  const numericType = Number(value);
+  if (numericType === DISCORD_VOICE_CHANNEL_TYPE) return 'voice';
+  if (numericType === DISCORD_STAGE_CHANNEL_TYPE) return 'stage';
+  return null;
+}
+
+function discordAdminHeaders(botToken: string) {
+  return {
+    Accept: 'application/json',
+    Authorization: `Bot ${botToken}`,
+    'User-Agent': 'GhostedNext/1.0',
+  };
+}
+
+async function fetchDiscordPresenceGuildChannels(config = buildRuntimeAuthConfig()) {
+  if (!config.guildId || !config.botToken) {
+    return {
+      channels: [] as DiscordPresenceAdminChannel[],
+      error: 'Discord guild sync is not configured yet.',
+    };
+  }
+
+  try {
+    const response = await fetch(`https://discord.com/api/guilds/${config.guildId}/channels`, {
+      headers: discordAdminHeaders(config.botToken),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const rawBody = await response.text().catch(() => '');
+      const body = rawBody.trim();
+      if (response.status === 401 || response.status === 403) {
+        return {
+          channels: [] as DiscordPresenceAdminChannel[],
+          error: 'Discord rejected the bot token or channel lookup permissions. Check the bot install and gateway settings.',
+        };
+      }
+      if (response.status === 404) {
+        return {
+          channels: [] as DiscordPresenceAdminChannel[],
+          error: 'The configured Discord guild could not be found for channel management.',
+        };
+      }
+      return {
+        channels: [] as DiscordPresenceAdminChannel[],
+        error: body
+          ? `Discord channel lookup failed: ${body}`
+          : `Discord channel lookup failed with HTTP ${response.status}.`,
+      };
+    }
+
+    const payload = await response.json().catch(() => null);
+    if (!Array.isArray(payload)) {
+      return {
+        channels: [] as DiscordPresenceAdminChannel[],
+        error: 'Discord returned an unexpected guild channel payload.',
+      };
+    }
+
+    const channels: DiscordPresenceAdminChannel[] = [];
+    for (const entry of payload) {
+      const channel = entry as DiscordGuildChannelPayload;
+      const id = String(channel.id ?? '').trim();
+      const name = String(channel.name ?? '').trim();
+      const type = normalizeDiscordPresenceChannelType(channel.type);
+      if (!id || !name || !type) continue;
+      channels.push({
+        id,
+        name,
+        type,
+        selected: false,
+      });
+    }
+
+    channels.sort((left, right) => {
+      const typeCompare = left.type.localeCompare(right.type);
+      if (typeCompare !== 0) return typeCompare;
+      return left.name.localeCompare(right.name, undefined, { sensitivity: 'base' });
+    });
+
+    return {
+      channels,
+      error: null,
+    };
+  } catch {
+    return {
+      channels: [] as DiscordPresenceAdminChannel[],
+      error: 'Discord guild channel lookup failed. Check the bot install and local network access.',
+    };
+  }
+}
+
+function resolveDiscordPresencePublicMode(worker: DiscordPresenceWorkerSummary) {
+  return worker.health === 'healthy' ? 'bot' : 'widget';
+}
+
+function withSelectedChannels(
+  channels: DiscordPresenceAdminChannel[],
+  selectedIds: Set<string>,
+) {
+  return channels.map((channel) => ({
+    ...channel,
+    selected: selectedIds.has(channel.id),
+  }));
+}
+
+async function buildDiscordPresenceAdminData(actorOverride?: Awaited<ReturnType<typeof requireAdminUser>>): Promise<DiscordPresenceAdminData> {
+  const db = getDatabase();
+  const actor = actorOverride ?? await requireAdminUser();
+  const runtimeConfig = buildRuntimeAuthConfig();
+  const worker = getDiscordPresenceWorkerSummary(db);
+  const allowlist = listScenePresenceChannelAllowlist(db, runtimeConfig.guildId ?? worker.guildId);
+  const selectedIds = new Set(allowlist.map((entry) => entry.channelId));
+  const channelLookup = await fetchDiscordPresenceGuildChannels(runtimeConfig);
+
+  return {
+    actor: { displayName: displayName(actor) },
+    guild: {
+      id: runtimeConfig.guildId ?? worker.guildId,
+      configured: Boolean(runtimeConfig.guildId || worker.guildId),
+      ready: Boolean(runtimeConfig.guildId && runtimeConfig.botToken),
+    },
+    publicMode: resolveDiscordPresencePublicMode(worker),
+    worker: {
+      ...worker,
+      activeModules: DISCORD_ADMIN_MODULES.map((module) => ({
+        ...module,
+        enabled: worker.configured,
+      })),
+    },
+    channels: withSelectedChannels(channelLookup.channels, selectedIds),
+    allowlist,
+    channelFetchError: channelLookup.error,
+  };
+}
+
+export async function discordPresenceAdminPayload() {
+  return buildDiscordPresenceAdminData();
+}
+
+export async function adminRewardsPayload(): Promise<AdminRewardsData> {
+  const actor = await requireAdminUser();
+  const [roles, giveaways, discord] = await Promise.all([
+    adminRoleOptionsPayload(),
+    adminGiveawayRows(),
+    buildDiscordPresenceAdminData(actor),
+  ]);
+  const users = adminUsersWithBalances(20);
+  const wom = adminWomSummary();
+  const recentGrantCount = countAuditActions(['grant_points'], new Date(Date.now() - 24 * 60 * 60 * 1000));
+
+  return {
+    actor: { displayName: displayName(actor) },
+    alerts: buildAdminAlerts({ wom, discord }),
+    sectionSummary: rewardsSectionSummary({
+      activeGiveaways: giveaways.filter((giveaway) => giveaway.status === 'active').length,
+      scheduledGiveaways: giveaways.filter((giveaway) => giveaway.status === 'scheduled').length,
+      trackedUsers: users.trackedUsers,
+      recentGrantCount,
+    }),
+    stats: {
+      trackedUsers: users.trackedUsers,
+      adminUsers: users.adminUsers,
+      activeGiveaways: giveaways.filter((giveaway) => giveaway.status === 'active').length,
+      scheduledGiveaways: giveaways.filter((giveaway) => giveaway.status === 'scheduled').length,
+      recentGrantCount,
+    },
+    roles,
+    users: users.rows,
+    giveaways,
+    recentAudit: buildAdminAuditFeed(8, ['rewards']),
+  };
+}
+
+export async function adminContentPayload(): Promise<AdminContentData> {
+  const actor = await requireAdminUser();
+  const [discord] = await Promise.all([
+    buildDiscordPresenceAdminData(actor),
+  ]);
+  const wom = adminWomSummary();
+  const posts = listNewsPosts(true, 24);
+  const news = adminNewsCounts();
+
+  return {
+    actor: { displayName: displayName(actor) },
+    alerts: buildAdminAlerts({ wom, discord }),
+    sectionSummary: contentSectionSummary(news),
+    stats: news,
+    posts,
+    recentAudit: buildAdminAuditFeed(8, ['content']),
+  };
+}
+
+export async function adminSystemsPayload(): Promise<AdminSystemsData> {
+  const actor = await requireAdminUser();
+  const discord = await buildDiscordPresenceAdminData(actor);
+  const wom = adminWomSummary();
+
+  return {
+    actor: { displayName: displayName(actor) },
+    alerts: buildAdminAlerts({ wom, discord }),
+    sectionSummary: systemsSectionSummary({ wom, discord }),
+    wom,
+    discord,
+    recentAudit: buildAdminAuditFeed(8, ['systems']),
+  };
+}
+
+export async function saveDiscordPresenceAllowlist(request: Request) {
+  const db = getDatabase();
+  const actor = await requireAdminUser();
+  const config = buildRuntimeAuthConfig();
+  const guildId = String(config.guildId ?? '').trim();
+  if (!guildId) {
+    throw new AppError('Discord guild sync is not configured yet.', 400);
+  }
+
+  const payload = await readJsonBody<Record<string, unknown>>(request);
+  const requestedChannelIds = Array.isArray(payload.channelIds)
+    ? payload.channelIds.map((value) => String(value ?? '').trim()).filter(Boolean)
+    : [];
+
+  const channelLookup = await fetchDiscordPresenceGuildChannels(config);
+  if (channelLookup.error) {
+    throw new AppError(channelLookup.error, 400);
+  }
+
+  const channelDirectory = new Map(channelLookup.channels.map((channel) => [channel.id, channel]));
+  const invalidIds = requestedChannelIds.filter((channelId) => !channelDirectory.has(channelId));
+  if (invalidIds.length > 0) {
+    throw new AppError(`Unknown Discord voice or stage channels: ${invalidIds.join(', ')}`, 400);
+  }
+
+  replaceScenePresenceChannelAllowlist(
+    db,
+    guildId,
+    requestedChannelIds.map((channelId) => {
+      const channel = channelDirectory.get(channelId);
+      if (!channel) {
+        throw new AppError(`Unknown Discord voice or stage channel: ${channelId}`, 400);
+      }
+      return {
+        channelId: channel.id,
+        channelName: channel.name,
+        channelType: channel.type,
+      };
+    }),
+  );
+
+  recordAudit(actor.id, 'update_scene_presence_allowlist', 'discord_guild', guildId, {
+    channelIds: requestedChannelIds,
+  });
+
+  return buildDiscordPresenceAdminData(actor);
 }
 
 export async function grantPoints(request: Request) {

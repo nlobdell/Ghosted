@@ -248,6 +248,8 @@ export default function CompanionPage() {
                           alt={`${companion.user.displayName}'s Ghostling`}
                           className={styles.previewImage}
                           targetSize={352}
+                          presentation="studio"
+                          seedKey={`studio:${companion.user.username}`}
                         />
                       </div>
                     </div>

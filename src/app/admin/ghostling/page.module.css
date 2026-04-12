@@ -1,325 +1,156 @@
-.page {
-  --workspace-page-gap: 1.15rem;
-  --workspace-page-accent: rgba(184, 168, 255, 0.32);
+.workspace {
+  grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
 }
 
-.workflowPanel,
-.workflowBody,
-.workflowCopy,
-.workflowChecklist,
-.workflowChecklistItem,
-.workflowActions,
-.scoreboard,
-.scoreboard :global(.app-summary-grid__secondary),
-.basePanelBody,
-.basePreview,
+.previewPanel {
+  position: sticky;
+  top: var(--hall-sticky-offset);
+}
+
+.previewLayout,
+.previewState,
+.importList,
+.importBody,
+.fileMeta,
 .slotGroups,
 .slotGroup,
-.libraryGrid,
-.libraryCard,
-.libraryCopy,
-.assetMetaList,
-.importStack,
-.importRow,
-.importAssets,
-.importGrid {
+.assetRows,
+.assetBody {
   display: grid;
-  gap: 1rem;
-}
-
-.scoreboard {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.workflowPanel {
-  border-color: rgba(191, 179, 255, 0.18);
-  background:
-    linear-gradient(180deg, rgba(21, 18, 34, 0.96), rgba(12, 10, 20, 0.92)),
-    radial-gradient(circle at top left, rgba(184, 168, 255, 0.18), transparent 28%);
-}
-
-.workflowBody {
-  grid-template-columns: minmax(0, 1.24fr) minmax(16rem, 0.76fr);
-  align-items: start;
-  gap: 1.15rem;
-}
-
-.workflowCopy {
-  gap: 1rem;
-  min-width: 0;
-}
-
-.workflowLead {
-  margin: 0;
-  max-width: 62ch;
-  color: var(--color-text);
-  line-height: 1.72;
-}
-
-.workflowChecklist {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.9rem;
-}
-
-.workflowChecklistItem {
-  align-content: start;
-  min-width: 0;
-  padding: 0.95rem 1rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(191, 179, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.workflowChecklistItem strong {
-  color: var(--color-text-strong);
-}
-
-.workflowChecklistItem span {
-  color: var(--color-text-muted);
-  line-height: 1.6;
-}
-
-.workflowActions {
-  align-content: start;
-  grid-auto-rows: max-content;
-  justify-items: start;
   gap: 0.75rem;
 }
 
-.workflowActions :global(.button) {
-  min-width: 12.75rem;
-}
-
-.workflowGrid {
-  align-items: start;
-}
-
-.scoreboard :global(.app-summary-grid__secondary) {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.adminPanel,
-.librarySection {
-  min-height: 100%;
-}
-
-.basePanelBody {
+.previewLayout {
   grid-template-columns: minmax(14rem, 16rem) minmax(0, 1fr);
   align-items: start;
-  gap: 1.15rem;
 }
 
-.actionNote {
-  margin: 0;
-  padding-left: 0.9rem;
-  border-left: 2px solid rgba(184, 168, 255, 0.36);
-  color: var(--color-text-muted);
-  line-height: 1.66;
-  max-width: 60ch;
-}
-
-.basePreview {
-  min-height: 15rem;
-  padding: 1rem;
-  border-radius: 1.2rem;
-  border: 1px solid rgba(191, 179, 255, 0.1);
+.previewStage,
+.importThumbWrap,
+.assetThumbWrap {
+  display: grid;
+  place-items: center;
+  min-height: 13rem;
+  border: 1px solid rgba(236, 241, 244, 0.08);
+  border-radius: 0.9rem;
   background:
-    radial-gradient(circle at 50% 55%, rgba(184, 168, 255, 0.2), transparent 24%),
-    linear-gradient(180deg, rgba(8, 7, 14, 0.94), rgba(14, 12, 22, 0.96));
+    radial-gradient(circle at 50% 54%, rgba(239, 242, 245, 0.1), transparent 28%),
+    linear-gradient(180deg, rgba(15, 18, 22, 0.96), rgba(10, 13, 17, 0.98));
 }
 
-.basePreviewStage {
+.previewStageFrame {
   justify-self: center;
   max-width: 100%;
 }
 
-.assetMetaBlock,
-.importRow {
-  padding: 0.95rem 1rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(191, 179, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.assetMetaBlock {
-  display: grid;
-  gap: 0.24rem;
-}
-
-.assetMetaBlock strong,
-.libraryHeader strong,
-.slotHeading h3,
-.importToggle span {
-  color: var(--color-text-strong);
-}
-
-.assetMetaBlock span,
-.assetMetaList span,
-.libraryCopy p {
-  color: var(--color-text-muted);
-  line-height: 1.58;
-  word-break: break-word;
-}
-
-.importErrorText {
-  color: #ffb0bd;
-}
-
-.importRow {
-  gap: 0.85rem;
-  min-width: 0;
-}
-
+.previewActions,
 .importHeader,
-.slotHeading,
-.libraryHeader {
+.slotHeader,
+.assetHeader,
+.assetActions {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.8rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
-.importHeader > *,
-.slotHeading > *,
-.libraryHeader > * {
+.importRow,
+.slotGroup,
+.assetRow {
   min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid rgba(236, 241, 244, 0.08);
+  border-radius: 0.9rem;
+  background: rgba(12, 15, 19, 0.92);
 }
 
-.importToggle,
-.activeToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.importToggle input,
-.activeToggle input {
-  accent-color: #b8a8ff;
-}
-
-.importGrid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.importRow,
+.assetRow {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
   gap: 0.85rem;
-  align-items: start;
 }
 
-.compactField {
-  min-width: 0;
-}
-
-.importAssets {
-  grid-template-columns: 7rem minmax(0, 1fr);
-  align-items: start;
-  gap: 1rem;
-}
-
-.importPreview,
-.libraryPreviewImage {
-  width: min(7rem, 100%);
+.importThumb,
+.assetThumb {
+  width: min(6rem, 100%);
   height: auto;
   display: block;
   image-rendering: pixelated;
 }
 
-.librarySection {
-  gap: var(--section-gap);
+.inlineToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--color-text-strong);
 }
 
-.slotGroup {
-  padding: var(--surface-padding);
-  border: 1px solid rgba(191, 179, 255, 0.1);
-  border-radius: 1.35rem;
-  background: linear-gradient(180deg, rgba(12, 11, 20, 0.68), rgba(9, 8, 15, 0.56));
+.inlineToggle input {
+  accent-color: #edf1f4;
 }
 
-.slotHeading span {
-  color: var(--color-text-muted);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.importTitle,
+.assetTitle,
+.slotHeader h3 {
+  color: var(--color-text-strong);
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
-.libraryGrid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-}
-
-.libraryCard {
-  align-content: start;
-  min-width: 0;
-  padding: calc(var(--surface-padding) - 0.1rem);
-  border-radius: 1.15rem;
-  border: 1px solid rgba(191, 179, 255, 0.1);
-  background: rgba(15, 13, 24, 0.66);
-}
-
-.libraryPreview {
+.importGrid {
   display: grid;
-  place-items: center;
-  min-height: 9.75rem;
-  padding: 1rem;
-  border-radius: 1.2rem;
-  border: 1px solid rgba(191, 179, 255, 0.1);
-  background:
-    radial-gradient(circle at 50% 55%, rgba(184, 168, 255, 0.2), transparent 24%),
-    linear-gradient(180deg, rgba(8, 7, 14, 0.94), rgba(14, 12, 22, 0.96));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
 }
 
-.itemChips {
+.fileMeta {
+  gap: 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.assetTokens {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
   flex-wrap: wrap;
 }
 
-.libraryCopy {
-  gap: 0.7rem;
-  min-width: 0;
+@media (max-width: 1240px) {
+  .workspace,
+  .previewLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .previewPanel {
+    position: static;
+  }
 }
 
-.libraryCopy p {
-  margin: 0;
-}
-
-.page :global(.app-context__summary) {
-  max-width: 58ch;
-}
-
-.page :global(.app-form-field label) {
-  line-height: 1.4;
-}
-
-.page :global(.app-inline-actions) {
-  row-gap: 0.55rem;
-}
-
-@media (max-width: 1320px) {
-  .workflowChecklist,
+@media (max-width: 980px) {
   .importGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 1120px) {
-  .workflowBody,
-  .workflowChecklist,
-  .scoreboard,
-  .scoreboard :global(.app-summary-grid__secondary),
-  .basePanelBody,
-  .importGrid,
-  .libraryGrid,
-  .importAssets {
+@media (max-width: 760px) {
+  .importRow,
+  .assetRow,
+  .importGrid {
     grid-template-columns: 1fr;
   }
-}
 
-@media (max-width: 760px) {
-  .workflowActions,
+  .previewActions,
   .importHeader,
-  .slotHeading,
-  .libraryHeader {
-    align-items: flex-start;
+  .slotHeader,
+  .assetHeader,
+  .assetActions {
     flex-direction: column;
+    align-items: flex-start;
   }
 }

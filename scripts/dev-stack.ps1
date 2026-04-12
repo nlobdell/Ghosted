@@ -10,14 +10,26 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $RuntimeDir = Join-Path $RepoRoot "data\dev-runtime"
 $NextScript = Join-Path $RepoRoot "node_modules\next\dist\bin\next"
+$SceneRealtimeScript = Join-Path $RepoRoot "scripts\scene-realtime.ts"
 $EnvFileNames = @(".env", ".env.development", ".env.local", ".env.development.local")
-$Service = @{
-    Name = "web"
-    Label = "Next.js"
-    Command = "node"
-    Arguments = @($NextScript, "dev")
-    Url = "http://localhost:3000"
-}
+$Services = @(
+    @{
+        Name = "web"
+        Label = "Next.js"
+        Command = "node"
+        Arguments = @($NextScript, "dev")
+        Url = "http://localhost:3000"
+        RequiredPath = $NextScript
+    },
+    @{
+        Name = "scene-realtime"
+        Label = "Scene Realtime"
+        Command = "node"
+        Arguments = @("--conditions=react-server", "--import", "tsx", $SceneRealtimeScript)
+        Url = "ws://localhost:3001/ws/scene/presence"
+        RequiredPath = $SceneRealtimeScript
+    }
+)
 
 function Ensure-RuntimeDir {
     if (-not (Test-Path -LiteralPath $RuntimeDir)) {
@@ -26,14 +38,17 @@ function Ensure-RuntimeDir {
 }
 
 function Get-PidFile {
+    param([hashtable]$Service)
     return Join-Path $RuntimeDir "$($Service.Name).pid"
 }
 
 function Get-OutLog {
+    param([hashtable]$Service)
     return Join-Path $RuntimeDir "$($Service.Name).out.log"
 }
 
 function Get-ErrLog {
+    param([hashtable]$Service)
     return Join-Path $RuntimeDir "$($Service.Name).err.log"
 }
 
@@ -195,14 +210,19 @@ function Show-SetupNotes {
 }
 
 function Test-CommandReady {
-    if (-not (Test-Path -LiteralPath $NextScript)) {
-        throw "Next.js script not found at '$NextScript'. Run 'npm install' first."
+    param([hashtable]$Service)
+
+    if (-not (Test-Path -LiteralPath $Service.RequiredPath)) {
+        throw "$($Service.Label) runtime not found at '$($Service.RequiredPath)'. Run 'npm install' first."
     }
+
     $null = Get-Command $Service.Command -ErrorAction Stop
 }
 
 function Get-RunningProcess {
-    $pidFile = Get-PidFile
+    param([hashtable]$Service)
+
+    $pidFile = Get-PidFile $Service
     if (-not (Test-Path -LiteralPath $pidFile)) {
         return $null
     }
@@ -224,20 +244,22 @@ function Get-RunningProcess {
 }
 
 function Start-ServiceProcess {
-    param([PSCustomObject]$EnvState)
+    param(
+        [hashtable]$Service,
+        [PSCustomObject]$EnvState
+    )
 
-    $existing = Get-RunningProcess
+    $existing = Get-RunningProcess $Service
     if ($existing) {
         Write-Host "$($Service.Label) already running (PID $($existing.Id)). Restart to pick up env changes." -ForegroundColor Yellow
         return
     }
 
-    Test-CommandReady
-    Show-SetupNotes $EnvState
+    Test-CommandReady $Service
 
-    $outLog = Get-OutLog
-    $errLog = Get-ErrLog
-    $pidFile = Get-PidFile
+    $outLog = Get-OutLog $Service
+    $errLog = Get-ErrLog $Service
+    $pidFile = Get-PidFile $Service
 
     if (Test-Path -LiteralPath $outLog) {
         Remove-Item -LiteralPath $outLog -Force
@@ -261,8 +283,10 @@ function Start-ServiceProcess {
 }
 
 function Stop-ServiceProcess {
-    $process = Get-RunningProcess
-    $pidFile = Get-PidFile
+    param([hashtable]$Service)
+
+    $process = Get-RunningProcess $Service
+    $pidFile = Get-PidFile $Service
     if (-not $process) {
         Remove-Item -LiteralPath $pidFile -Force -ErrorAction SilentlyContinue
         Write-Host "$($Service.Label) is not running." -ForegroundColor DarkYellow
@@ -275,17 +299,24 @@ function Stop-ServiceProcess {
 }
 
 function Show-Status {
-    $process = Get-RunningProcess
-    if ($process) {
-        Write-Host "$($Service.Label): running (PID $($process.Id)) -> $($Service.Url)" -ForegroundColor Green
-    }
-    else {
-        Write-Host "$($Service.Label): stopped" -ForegroundColor DarkYellow
+    foreach ($service in $Services) {
+        $process = Get-RunningProcess $service
+        if ($process) {
+            Write-Host "$($service.Label): running (PID $($process.Id)) -> $($service.Url)" -ForegroundColor Green
+        }
+        else {
+            Write-Host "$($service.Label): stopped" -ForegroundColor DarkYellow
+        }
     }
 }
 
 function Show-Logs {
-    $files = @((Get-OutLog), (Get-ErrLog))
+    $files = @()
+    foreach ($service in $Services) {
+        $files += (Get-OutLog $service)
+        $files += (Get-ErrLog $service)
+    }
+
     foreach ($file in $files) {
         if (-not (Test-Path -LiteralPath $file)) {
             New-Item -ItemType File -Path $file | Out-Null
@@ -301,15 +332,25 @@ $EnvState = Import-LocalEnv
 
 switch ($Action) {
     "start" {
-        Start-ServiceProcess $EnvState
+        Show-SetupNotes $EnvState
+        foreach ($service in $Services) {
+            Start-ServiceProcess $service $EnvState
+        }
         Show-Status
     }
     "stop" {
-        Stop-ServiceProcess
+        foreach ($service in $Services) {
+            Stop-ServiceProcess $service
+        }
     }
     "restart" {
-        Stop-ServiceProcess
-        Start-ServiceProcess $EnvState
+        foreach ($service in $Services) {
+            Stop-ServiceProcess $service
+        }
+        Show-SetupNotes $EnvState
+        foreach ($service in $Services) {
+            Start-ServiceProcess $service $EnvState
+        }
         Show-Status
     }
     "status" {

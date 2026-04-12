@@ -5,6 +5,8 @@ Ghosted is a Next.js community platform for the Ghosted Old School RuneScape cla
 Current production shape:
 
 - one **Next.js 16** app (`src/app`)
+- one **Discord worker** host for bot-backed Discord features
+- one **scene realtime** websocket sidecar for the public homepage hero
 - **SQLite** for users, rewards, giveaways, WOM cache, casino history, and companion state
 - a native **Ghostling** system for companion state, admin uploads, asset serving, and SVG rendering
 - **Caddy + systemd** on a single Ubuntu VPS
@@ -43,11 +45,24 @@ npm install
 npm run dev
 ```
 
+Optional Discord worker:
+
+```powershell
+npm run dev:discord:worker
+```
+
+Optional homepage scene realtime service:
+
+```powershell
+npm run dev:scene:realtime
+```
+
 Local env files:
 
 - Next dev and the `dev:stack` helpers both pick up `.env`, `.env.development`, `.env.local`, and `.env.development.local`
 - Common local setup vars:
   - `ENABLE_DEV_AUTH=true` to enable `/auth/dev-login`
+  - `DEV_AUTH_ADMIN=true` if you want `/auth/dev-login` to create an admin session by default during local development
   - `AUTH_SECRET` is optional locally; if unset, development uses a built-in fallback secret
   - `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` for real Discord sign-in
   - `DISCORD_REDIRECT_URI` if you want Discord OAuth to use one fixed registered callback URI
@@ -84,10 +99,10 @@ npm run dev:stack
 
 Available Windows shortcuts:
 
-- `npm run dev:stack` - start the local Next.js dev server in the background
-- `npm run dev:stack:restart` - restart the local Next.js dev server
-- `npm run dev:stack:stop` - stop the local Next.js dev server
-- `npm run dev:stack:status` - show whether the local Next.js dev server is running
+- `npm run dev:stack` - start the local Next.js dev server and scene realtime service in the background
+- `npm run dev:stack:restart` - restart the local background dev services
+- `npm run dev:stack:stop` - stop the local background dev services
+- `npm run dev:stack:status` - show whether the local background dev services are running
 - `npm run dev:stack:logs` - tail the local dev logs
 
 If you prefer bash:
@@ -100,6 +115,12 @@ If you prefer bash:
 
 Runtime pid files and logs are written to `data/dev-runtime/`.
 
+Foreground sidecars:
+
+- `npm run dev:discord:worker` - run the Discord worker in a separate terminal
+- `npm run dev:presence:worker` - compatibility alias for the current `voicePresence` worker module host
+- `npm run dev:scene:realtime` - run the homepage scene realtime websocket service
+
 ## Scripts
 
 - `npm run dev` - start Next.js in development mode
@@ -108,6 +129,12 @@ Runtime pid files and logs are written to `data/dev-runtime/`.
 - `npm run dev:stack:stop` - stop the local dev process
 - `npm run dev:stack:status` - show local dev process status
 - `npm run dev:stack:logs` - tail local dev logs
+- `npm run dev:discord:worker` - run the Discord worker in development
+- `npm run dev:presence:worker` - compatibility alias for the Discord worker
+- `npm run dev:scene:realtime` - run the homepage scene realtime websocket service in development
+- `npm run discord:worker` - run the Discord worker entrypoint directly
+- `npm run discord:presence:worker` - compatibility alias for the Discord worker
+- `npm run scene:realtime` - run the homepage scene realtime websocket service directly
 - `npm run build` - production build
 - `npm run start` - run the built Next.js app
 - `npm run typecheck` - run TypeScript checks
@@ -115,7 +142,7 @@ Runtime pid files and logs are written to `data/dev-runtime/`.
 - `npm run lint:fix` - auto-fix safe ESLint issues
 - `npm run test:server` - run Vitest coverage for server modules and route contracts
 - `npm run git:update` - local workflow helper script
-- `scripts/deploy-release.sh` - release-oriented VPS deploy script with lockfile-aware installs and rollback support
+- `scripts/deploy-release.sh` - optional release-oriented VPS helper script; not the current primary production workflow
 
 Legacy note:
 
@@ -137,29 +164,48 @@ npm run test:server
 Current VPS pattern:
 
 - Caddy -> Next.js (`ghosted-web.service`) on `127.0.0.1:3000`
+- Caddy -> scene realtime websocket sidecar (`ghosted-scene-realtime.service`) on `127.0.0.1:3001` for `/ws/scene/presence`
+- optional Discord worker (`ghosted-discord-worker.service`) for bot-backed Discord features
 - Next owns all public and internal `/api/*` routes, including companion asset serving and render endpoints
 - `/auth/login`, `/auth/logout`, `/auth/dev-login`, and `/api/auth/*` live in Next/Auth.js plus the legacy-session bridge
+- `/admin/discord-presence/` is the operator surface for worker health, current public mode, and the public voice/stage allowlist
 - Env file lives at `/etc/ghosted/ghosted.env`
 - With `DATABASE_PATH=/var/lib/ghosted/ghosted.db`, uploaded companion assets default to `/var/lib/ghosted/companion-assets/` unless `COMPANION_ASSET_DIR` is set explicitly
-- Production builds use Next standalone output and run from `/opt/ghosted/current-web`
+- Production builds use Next standalone output and run from `/opt/ghosted/.next/standalone/server.js`
 
-Recommended deploy command sequence:
+Current deploy workflow:
+
+1. Push local changes to a feature branch.
+2. Open a PR to `main`.
+3. Merge the PR.
+4. On the VPS, update and restart the web app:
 
 ```bash
-bash scripts/deploy-release.sh origin/main
+cd /opt/ghosted
+sudo git pull
+sudo npm run build
+sudo systemctl restart ghosted-web
 ```
 
-Rollback example:
+If a deploy changes the Discord worker code, env, or service wiring, also restart it:
 
 ```bash
-bash scripts/deploy-release.sh rollback
+sudo systemctl restart ghosted-discord-worker
 ```
 
-The release script validates `DATABASE_PATH` and `COMPANION_ASSET_DIR`, skips `npm ci` when `package-lock.json` is unchanged, copies `assets/companion` into the web release, and only restarts `ghosted-web.service`.
+If a deploy changes the homepage realtime websocket code, env, or proxy wiring, also restart it:
+
+```bash
+sudo systemctl restart ghosted-scene-realtime
+```
+
+The release script still exists for experiments and rollback work, but it is not the current production deploy path.
 
 ## Additional Docs
 
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md)
+- [`deploy/discord-worker.md`](./deploy/discord-worker.md)
+- [`deploy/discord-presence-worker.md`](./deploy/discord-presence-worker.md)
 - [`deploy/ubuntu-vps.md`](./deploy/ubuntu-vps.md)
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - [`STYLING_METHOD.md`](./STYLING_METHOD.md)

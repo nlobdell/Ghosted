@@ -2,10 +2,11 @@
 
 ## 1. System Overview
 
-Ghosted is now a single-service Next.js web app:
+Ghosted is a Next.js web app with one additional worker process for Discord integration:
 
 - **Next.js (React 19 + App Router)** serves the UI and all `/api/*` routes on port `3000`
-- **SQLite** stores users, sessions, rewards, giveaways, WOM cache, casino history, and companion state
+- **Discord worker** is a separate Node process that owns the shared Discord Gateway client and registered worker modules
+- **SQLite** stores users, sessions, rewards, giveaways, WOM cache, casino history, companion state, and Discord presence foundation tables
 - **Caddy** terminates TLS and reverse proxies public traffic to the Next.js web service
 - **Vitest** covers server modules and route contracts as the repository test runner
 
@@ -18,6 +19,7 @@ There is also no separate supported casino build pipeline; archived HTML under `
 Browser
   -> Caddy (443)
   -> Next.js web (ghosted-web.service, :3000)
+  -> Discord worker (ghosted-discord-worker.service)
   -> SQLite (/var/lib/ghosted/ghosted.db)
   -> Companion asset storage (/var/lib/ghosted/companion-assets)
 ```
@@ -114,19 +116,23 @@ Shared backend logic is organized by domain:
 Observed production stack:
 
 - Caddy serves the public domain and proxies to `127.0.0.1:3000`
-- `ghosted-web.service` runs the standalone Next bundle from `/opt/ghosted/current-web`
+- `ghosted-web.service` runs the standalone Next bundle from `/opt/ghosted/.next/standalone/server.js`
+- `ghosted-discord-worker.service` is the Node worker host for bot-backed Discord sync and worker health persistence
 - Environment and secrets come from `/etc/ghosted/ghosted.env`
-- Releases are assembled under `/opt/ghosted/releases/<timestamp>-<sha>/` and activated through the `current-web` symlink
+- The live checkout stays at `/opt/ghosted`, and `npm run build` refreshes the in-place standalone runtime bundle there
 
-Typical deploy command:
+Typical deploy workflow:
 
-1. `bash scripts/deploy-release.sh origin/main`
+1. Push local changes to a feature branch.
+2. Open a PR to `main`.
+3. Merge the PR.
+4. On the VPS:
+   `cd /opt/ghosted`
+   `sudo git pull`
+   `sudo npm run build`
+   `sudo systemctl restart ghosted-web`
 
-Typical rollback command:
-
-1. `bash scripts/deploy-release.sh rollback`
-
-The deploy script reuses `node_modules` when `package-lock.json` is unchanged, always rebuilds the standalone bundle, copies `public/` and `assets/companion/` into the release, and restarts only `ghosted-web.service`.
+If the deploy also changes the Discord worker, restart `ghosted-discord-worker` separately after the build. The `scripts/deploy-release.sh` helper still exists, but it is not the primary production workflow described here.
 
 ## 9. Editing Guidance
 

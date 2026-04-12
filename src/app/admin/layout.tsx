@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { HallTopbar } from '@/components/nav/HallTopbar';
-import { HallSidebar } from '@/components/nav/HallSidebar';
+import { AdminSidebar } from '@/components/nav/AdminSidebar';
 import { getCurrentUser } from '@/lib/server/ghosted-api';
 import { getServerJSON } from '@/lib/server-api';
 import type { ShellData } from '@/lib/types';
@@ -24,7 +24,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="app-page app-shell app-shell--admin">
       <HallTopbar shellData={shellData} surface="admin" />
       <div className="hall-layout hall-layout--admin">
-        <HallSidebar includeAdmin surface="admin" />
+        <AdminSidebar />
         <div className="hall-main hall-main--admin" aria-label="Admin workspace">
           {children}
         </div>

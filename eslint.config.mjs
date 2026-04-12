@@ -13,5 +13,6 @@ export default defineConfig([
     'legacy/**',
     'next-env.d.ts',
     'public/**',
+    'tmp/**',
   ]),
 ]);

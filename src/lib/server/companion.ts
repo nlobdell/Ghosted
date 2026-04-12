@@ -3,10 +3,13 @@ import 'server-only';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Database } from 'better-sqlite3';
+import { resolveGhostlingActorMetrics } from '@/lib/ghostling-actor';
 import type {
+  CompanionActorMetrics,
   CompanionAdminData,
   CompanionData,
   CompanionItem,
+  CompanionPreviewSummary,
   CompanionSlotKey,
   HallCompanionSummary,
 } from '@/lib/types';
@@ -37,6 +40,10 @@ export type CompanionUserRow = {
   id: number;
   username: string;
   global_name: string | null;
+};
+
+export type CompanionUserRefRow = CompanionUserRow & {
+  discord_id: string;
 };
 
 type CompanionCatalogRow = {
@@ -75,12 +82,33 @@ type RepoCompanionImportInput = {
   renderMetadataPath?: string | null;
 };
 
+const companionActorMetricsCache = new Map<string, CompanionActorMetrics>();
+
 function companionDisplayName(user: CompanionUserRow) {
   return user.global_name || user.username;
 }
 
 function emptyCompanionLoadout() {
   return Object.fromEntries(COMPANION_SLOT_ORDER.map((slot) => [slot, null])) as Record<CompanionSlotKey, string | null>;
+}
+
+export function getCompanionUserByRef(db: Database, userRef: string) {
+  const normalizedRef = String(userRef ?? '').trim();
+  if (!normalizedRef) return null;
+
+  if (/^\d+$/.test(normalizedRef)) {
+    return db.prepare(`
+      SELECT id, discord_id, username, global_name
+      FROM users
+      WHERE id = ?
+    `).get(Number(normalizedRef)) as CompanionUserRefRow | undefined;
+  }
+
+  return db.prepare(`
+    SELECT id, discord_id, username, global_name
+    FROM users
+    WHERE discord_id = ?
+  `).get(normalizedRef) as CompanionUserRefRow | undefined;
 }
 
 export function ensureUserCompanionLoadout(db: Database, userId: number) {
@@ -220,6 +248,65 @@ function companionItemPayload(
   };
 }
 
+function companionPreviewUser(user: CompanionUserRow | null | undefined) {
+  if (!user) return null;
+  return {
+    displayName: companionDisplayName(user),
+    username: user.username,
+  };
+}
+
+function companionActorMetricsCacheKey(animatedRenderUrl: string, manifest: CompanionPreviewSummary['renderManifest']) {
+  const debugActorMetrics = manifest.debug?.actorMetrics
+    ? JSON.stringify(manifest.debug.actorMetrics)
+    : '';
+  const layerSignature = manifest.layers
+    .map((layer) => {
+      const sliceSignature = (layer.slices ?? [])
+        .map((slice) => (
+          `${slice.key}:${slice.targetX},${slice.targetY},${slice.targetWidth},${slice.targetHeight}`
+        ))
+        .join(';');
+      return `${layer.key}:${layer.src}:${layer.zIndex}:${layer.slot ?? ''}:${layer.motionGroup ?? ''}:${sliceSignature}`;
+    })
+    .join('|');
+  return `${animatedRenderUrl}|${manifest.width}x${manifest.height}|${debugActorMetrics}|${layerSignature}`;
+}
+
+function companionActorMetrics(manifest: CompanionPreviewSummary['renderManifest'], animatedRenderUrl: string) {
+  const cacheKey = companionActorMetricsCacheKey(animatedRenderUrl, manifest);
+  const cached = companionActorMetricsCache.get(cacheKey);
+  if (cached) return cached;
+
+  const resolved = resolveGhostlingActorMetrics(manifest);
+  const actorMetrics = {
+    sourceWidth: resolved.sourceWidth,
+    sourceHeight: resolved.sourceHeight,
+    visibleBounds: resolved.visibleBounds,
+    footprintBounds: resolved.footprintBounds,
+    feetAnchor: resolved.feetAnchor,
+  } satisfies CompanionActorMetrics;
+  companionActorMetricsCache.set(cacheKey, actorMetrics);
+  return actorMetrics;
+}
+
+function buildCompanionPreviewSummary(
+  db: Database,
+  options: {
+    user: CompanionUserRow | null;
+    loadout: Record<CompanionSlotKey, string | null>;
+    animatedRenderUrl: string;
+  },
+) {
+  const renderManifest = companionRenderManifest(db, options.loadout);
+  return {
+    user: companionPreviewUser(options.user),
+    animatedRenderUrl: options.animatedRenderUrl,
+    renderManifest,
+    actorMetrics: companionActorMetrics(renderManifest, options.animatedRenderUrl),
+  } satisfies CompanionPreviewSummary;
+}
+
 export function buildCompanionPayload(db: Database, user: CompanionUserRow): CompanionData {
   const catalogRows = companionCatalogRows(db, false);
   const ownedSlugs = companionInventorySlugs(db, user.id);
@@ -269,22 +356,51 @@ export function buildCompanionPayload(db: Database, user: CompanionUserRow): Com
   };
 }
 
+export function buildCompanionPreviewSummaryPayload(db: Database, user: CompanionUserRow): CompanionPreviewSummary {
+  return buildCompanionPreviewSummary(db, {
+    user,
+    loadout: companionLoadoutMap(db, user.id),
+    animatedRenderUrl: `/api/companion/render-animated?user=${user.id}`,
+  });
+}
+
+export function buildCompanionPreviewSummaryOrBasePayload(
+  db: Database,
+  user: CompanionUserRow | null | undefined,
+  fallbackPreview?: CompanionPreviewSummary,
+): CompanionPreviewSummary {
+  if (user) {
+    return buildCompanionPreviewSummaryPayload(db, user);
+  }
+
+  return fallbackPreview ?? buildHouseCompanionPreviewSummaryPayload(db);
+}
+
+export function buildHouseCompanionPreviewSummaryPayload(db: Database): CompanionPreviewSummary {
+  return buildCompanionPreviewSummary(db, {
+    user: null,
+    loadout: emptyCompanionLoadout(),
+    animatedRenderUrl: '/api/companion/render-animated',
+  });
+}
+
 export function buildHallCompanionSummaryPayload(db: Database, user: CompanionUserRow): HallCompanionSummary {
   const ownedSlugs = companionInventorySlugs(db, user.id);
   const loadout = companionLoadoutMap(db, user.id);
   const equippedCount = COMPANION_SLOT_ORDER.filter((slot) => Boolean(loadout[slot])).length;
   const animatedRenderUrl = `/api/companion/render-animated?user=${user.id}`;
+  const preview = buildCompanionPreviewSummary(db, {
+    user,
+    loadout,
+    animatedRenderUrl,
+  });
 
   return {
-    user: {
-      displayName: companionDisplayName(user),
-      username: user.username,
-    },
+    ...preview,
+    user: companionPreviewUser(user)!,
     balance: getBalance(db, user.id),
     ownedCount: ownedSlugs.size,
     equippedCount,
-    animatedRenderUrl,
-    renderManifest: companionRenderManifest(db, loadout),
   };
 }
 

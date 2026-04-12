@@ -7,13 +7,13 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
 runtime_dir="$repo_root/data/dev-runtime"
 next_script="$repo_root/node_modules/next/dist/bin/next"
+scene_realtime_script="$repo_root/scripts/scene-realtime.ts"
 env_files=(".env" ".env.development" ".env.local" ".env.development.local")
 loaded_env_files=()
 
-mkdir -p "$runtime_dir"
+service_names=("web" "scene-realtime")
 
-web_pid="$runtime_dir/web.pid"
-web_log="$runtime_dir/web.log"
+mkdir -p "$runtime_dir"
 
 trim() {
   local value="$1"
@@ -125,45 +125,79 @@ show_setup_notes() {
   fi
 }
 
+pid_file() {
+  printf '%s/%s.pid' "$runtime_dir" "$1"
+}
+
+log_file() {
+  printf '%s/%s.log' "$runtime_dir" "$1"
+}
+
 is_running() {
-  [[ -f "$web_pid" ]] || return 1
+  local pid_path
+  pid_path="$(pid_file "$1")"
+  [[ -f "$pid_path" ]] || return 1
   local pid
-  pid="$(cat "$web_pid")"
+  pid="$(cat "$pid_path")"
   [[ -n "$pid" ]] || return 1
   kill -0 "$pid" 2>/dev/null
 }
 
+service_label() {
+  case "$1" in
+    web) printf 'Next.js' ;;
+    scene-realtime) printf 'Scene Realtime' ;;
+  esac
+}
+
+service_url() {
+  case "$1" in
+    web) printf 'http://localhost:3000' ;;
+    scene-realtime) printf 'ws://localhost:3001/ws/scene/presence' ;;
+  esac
+}
+
 start_service() {
-  if is_running; then
-    echo "Next.js already running (PID $(cat "$web_pid")). Restart to pick up env changes."
+  local service="$1"
+  if is_running "$service"; then
+    echo "$(service_label "$service") already running (PID $(cat "$(pid_file "$service")")). Restart to pick up env changes."
     return
   fi
 
-  if [[ ! -f "$next_script" ]]; then
-    echo "Next.js script not found. Run 'npm install' first." >&2
-    exit 1
-  fi
+  case "$service" in
+    web)
+      [[ -f "$next_script" ]] || { echo "Next.js script not found. Run 'npm install' first." >&2; exit 1; }
+      rm -f "$(pid_file "$service")" "$(log_file "$service")"
+      (
+        cd "$repo_root"
+        nohup node "$next_script" dev >"$(log_file "$service")" 2>&1 &
+        echo $! >"$(pid_file "$service")"
+      )
+      ;;
+    scene-realtime)
+      [[ -f "$scene_realtime_script" ]] || { echo "Scene realtime script not found. Run 'npm install' first." >&2; exit 1; }
+      rm -f "$(pid_file "$service")" "$(log_file "$service")"
+      (
+        cd "$repo_root"
+        nohup node --conditions=react-server --import tsx "$scene_realtime_script" >"$(log_file "$service")" 2>&1 &
+        echo $! >"$(pid_file "$service")"
+      )
+      ;;
+  esac
 
-  show_setup_notes
-  rm -f "$web_pid" "$web_log"
-  (
-    cd "$repo_root"
-    nohup node "$next_script" dev >"$web_log" 2>&1 &
-    echo $! >"$web_pid"
-  )
-
-  echo "Started Next.js (PID $(cat "$web_pid")) -> http://localhost:3000"
+  echo "Started $(service_label "$service") (PID $(cat "$(pid_file "$service")")) -> $(service_url "$service")"
 }
 
 stop_service() {
-  if ! is_running; then
-    rm -f "$web_pid"
-    echo "Next.js is not running."
+  local service="$1"
+  if ! is_running "$service"; then
+    rm -f "$(pid_file "$service")"
+    echo "$(service_label "$service") is not running."
     return
   fi
 
   local pid
-  pid="$(cat "$web_pid")"
+  pid="$(cat "$(pid_file "$service")")"
   kill "$pid" 2>/dev/null || true
 
   for _ in 1 2 3 4 5; do
@@ -177,37 +211,53 @@ stop_service() {
     kill -9 "$pid" 2>/dev/null || true
   fi
 
-  rm -f "$web_pid"
-  echo "Stopped Next.js (PID $pid)."
+  rm -f "$(pid_file "$service")"
+  echo "Stopped $(service_label "$service") (PID $pid)."
 }
 
 show_status() {
-  if is_running; then
-    echo "Next.js: running (PID $(cat "$web_pid")) -> http://localhost:3000"
-  else
-    echo "Next.js: stopped"
-  fi
+  for service in "${service_names[@]}"; do
+    if is_running "$service"; then
+      echo "$(service_label "$service"): running (PID $(cat "$(pid_file "$service")")) -> $(service_url "$service")"
+    else
+      echo "$(service_label "$service"): stopped"
+    fi
+  done
 }
 
 show_logs() {
-  touch "$web_log"
+  local files=()
+  for service in "${service_names[@]}"; do
+    touch "$(log_file "$service")"
+    files+=("$(log_file "$service")")
+  done
   echo "Streaming logs from $runtime_dir"
-  tail -n 40 -f "$web_log"
+  tail -n 40 -f "${files[@]}"
 }
 
 import_local_env
 
 case "$action" in
   start)
-    start_service
+    show_setup_notes
+    for service in "${service_names[@]}"; do
+      start_service "$service"
+    done
     show_status
     ;;
   stop)
-    stop_service
+    for service in "${service_names[@]}"; do
+      stop_service "$service"
+    done
     ;;
   restart)
-    stop_service
-    start_service
+    for service in "${service_names[@]}"; do
+      stop_service "$service"
+    done
+    show_setup_notes
+    for service in "${service_names[@]}"; do
+      start_service "$service"
+    done
     show_status
     ;;
   status)

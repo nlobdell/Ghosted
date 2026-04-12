@@ -7,6 +7,7 @@ import type {
   CompanionAnimationFrame,
   CompanionItemRenderMetadata,
   CompanionLayerAnimation,
+  CompanionMotionAccent,
   CompanionMotionChannel,
   CompanionRepoImportCandidate,
   CompanionRenderManifest,
@@ -15,6 +16,7 @@ import type {
   CompanionRenderSlice,
   CompanionSlotKey,
 } from '@/lib/types';
+import { resolveStageShadowRect } from '@/lib/companion-motion';
 import { AppError, envText, humanizeIdentifier, slugify } from '@/lib/server/core';
 import {
   COMPANION_DEFAULT_BASE_ASSET_PATH,
@@ -96,6 +98,7 @@ export type CompanionRig = {
   slotGroups: Partial<Record<CompanionSlotKey, string>>;
   slotAnchors: Partial<Record<CompanionSlotKey, CompanionRenderPoint>>;
   motionChannels: Record<string, CompanionMotionChannel>;
+  motionAccents: CompanionMotionAccent[];
 };
 
 export type CompanionAnimation = CompanionLayerAnimation & {
@@ -259,6 +262,110 @@ function defaultMotionChannels(): Record<string, CompanionMotionChannel> {
       offsetY: { amplitude: 0.92, durationMs: 1820, phase: 0.72 },
     },
   };
+}
+
+function defaultMotionAccents(): CompanionMotionAccent[] {
+  return [
+    {
+      key: 'head-tilt',
+      groups: ['head'],
+      intervalMsMin: 3600,
+      intervalMsMax: 6200,
+      durationMs: 1040,
+      overrides: {
+        head: {
+          rotateDeg: { amplitude: 4.2, durationMs: 1040, phase: 0.06 },
+          offsetY: { amplitude: 0.28, durationMs: 1040, phase: 0.54 },
+          scaleY: { amplitude: 0.018, durationMs: 1040, phase: 0.24 },
+        },
+      },
+    },
+    {
+      key: 'spirit-pulse',
+      groups: ['body', 'head'],
+      intervalMsMin: 5200,
+      intervalMsMax: 8600,
+      durationMs: 1320,
+      overrides: {
+        body: {
+          offsetY: { amplitude: 0.22, durationMs: 1320, phase: 0.28 },
+          scaleX: { amplitude: 0.012, durationMs: 1320, phase: 0.66 },
+          scaleY: { amplitude: 0.026, durationMs: 1320, phase: 0.18 },
+        },
+        head: {
+          offsetY: { amplitude: 0.34, durationMs: 1320, phase: 0.32 },
+          rotateDeg: { amplitude: 2.1, durationMs: 1320, phase: 0.08 },
+          scaleX: { amplitude: 0.018, durationMs: 1320, phase: 0.52 },
+          scaleY: { amplitude: 0.028, durationMs: 1320, phase: 0.16 },
+        },
+      },
+    },
+  ];
+}
+
+function normalizeMotionWave(value: unknown) {
+  if (!value || typeof value !== 'object') return null;
+  const shape = value as Record<string, unknown>;
+  const amplitude = Number(shape.amplitude ?? 0);
+  const durationMs = Number(shape.durationMs ?? 1000);
+  const phase = Number(shape.phase ?? 0);
+  if (!Number.isFinite(amplitude) || !Number.isFinite(durationMs) || durationMs <= 0 || !Number.isFinite(phase)) {
+    return null;
+  }
+
+  return {
+    amplitude,
+    durationMs: Math.max(1, Math.trunc(durationMs)),
+    phase,
+  };
+}
+
+function normalizeMotionChannel(value: unknown) {
+  if (!value || typeof value !== 'object') return null;
+  const channel = value as Record<string, unknown>;
+  const normalized: CompanionMotionChannel = {};
+
+  for (const axisKey of ['offsetX', 'offsetY', 'rotateDeg', 'scaleX', 'scaleY'] as const) {
+    const wave = normalizeMotionWave(channel[axisKey]);
+    if (wave) normalized[axisKey] = wave;
+  }
+
+  if (normalized.offsetX || normalized.offsetY || normalized.rotateDeg || normalized.scaleX || normalized.scaleY) {
+    return normalized;
+  }
+  return null;
+}
+
+function normalizeMotionAccent(value: unknown, fallbackKey: string) {
+  if (!value || typeof value !== 'object') return null;
+  const accent = value as Record<string, unknown>;
+  const groups = Array.isArray(accent.groups)
+    ? accent.groups.map((group) => String(group ?? '').trim()).filter(Boolean)
+    : [];
+  if (!groups.length) return null;
+
+  const intervalMsMin = Math.max(1, Math.trunc(Number(accent.intervalMsMin ?? 0) || 0));
+  const intervalMsMax = Math.max(intervalMsMin, Math.trunc(Number(accent.intervalMsMax ?? intervalMsMin) || intervalMsMin));
+  const durationMs = Math.max(1, Math.trunc(Number(accent.durationMs ?? 0) || 0));
+  const overrides: Record<string, CompanionMotionChannel> = {};
+
+  if (accent.overrides && typeof accent.overrides === 'object') {
+    for (const [groupKey, channelValue] of Object.entries(accent.overrides as Record<string, unknown>)) {
+      const normalizedChannel = normalizeMotionChannel(channelValue);
+      if (normalizedChannel) overrides[String(groupKey)] = normalizedChannel;
+    }
+  }
+
+  if (!Object.keys(overrides).length) return null;
+
+  return {
+    key: String(accent.key ?? fallbackKey),
+    groups,
+    intervalMsMin,
+    intervalMsMax,
+    durationMs,
+    overrides,
+  } satisfies CompanionMotionAccent;
 }
 
 export function companionAssetDir() {
@@ -1027,6 +1134,7 @@ export function companionAssetRig(
     slotGroups: { ...COMPANION_DEFAULT_SLOT_GROUPS },
     slotAnchors: { ...COMPANION_DEFAULT_SLOT_ANCHORS },
     motionChannels: defaultMotionChannels(),
+    motionAccents: defaultMotionAccents(),
   };
 
   if (!relativePath) return fallback;
@@ -1083,28 +1191,19 @@ export function companionAssetRig(
   const motionChannels = defaultMotionChannels();
   if (payload.motionChannels && typeof payload.motionChannels === 'object') {
     for (const [channelKey, channelValue] of Object.entries(payload.motionChannels as Record<string, unknown>)) {
-      if (!channelValue || typeof channelValue !== 'object') continue;
-      const channel = channelValue as Record<string, unknown>;
-      const normalized: CompanionMotionChannel = {};
-      for (const axisKey of ['offsetX', 'offsetY'] as const) {
-        const axis = channel[axisKey];
-        if (!axis || typeof axis !== 'object') continue;
-        const axisShape = axis as Record<string, unknown>;
-        const amplitude = Number(axisShape.amplitude ?? 0);
-        const durationMs = Number(axisShape.durationMs ?? 1000);
-        const phase = Number(axisShape.phase ?? 0);
-        if (!Number.isFinite(amplitude) || !Number.isFinite(durationMs) || !Number.isFinite(phase)) continue;
-        normalized[axisKey] = {
-          amplitude,
-          durationMs: Math.max(1, Math.trunc(durationMs)),
-          phase,
-        };
-      }
-      if (normalized.offsetX || normalized.offsetY) {
+      const normalized = normalizeMotionChannel(channelValue);
+      if (normalized) {
         motionChannels[String(channelKey)] = normalized;
       }
     }
   }
+
+  const rawMotionAccents = payload.motionAccents ?? payload.accents;
+  const motionAccents = Array.isArray(rawMotionAccents)
+    ? rawMotionAccents
+      .map((accent, index) => normalizeMotionAccent(accent, `accent-${index + 1}`))
+      .filter((accent): accent is CompanionMotionAccent => Boolean(accent))
+    : fallback.motionAccents;
 
   const slotGroups: Partial<Record<CompanionSlotKey, string>> = { ...COMPANION_DEFAULT_SLOT_GROUPS };
   if (payload.slotGroups && typeof payload.slotGroups === 'object') {
@@ -1136,6 +1235,7 @@ export function companionAssetRig(
     slotGroups,
     slotAnchors,
     motionChannels,
+    motionAccents,
   };
 }
 
@@ -1431,6 +1531,11 @@ export function companionRenderManifest(
       rootGroup: 'root',
       channels: scene.baseConfig.rig.motionChannels,
       slotGroups: scene.baseConfig.rig.slotGroups,
+      accents: scene.baseConfig.rig.motionAccents,
+    },
+    debug: {
+      slotAnchors: scene.baseConfig.rig.slotAnchors,
+      shadowRect: resolveStageShadowRect(scene.width, scene.height),
     },
     layers,
   } satisfies CompanionRenderManifest;

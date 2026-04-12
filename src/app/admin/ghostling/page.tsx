@@ -2,18 +2,9 @@
 
 /* eslint-disable @next/next/no-img-element -- Ghostling asset previews are stored and rendered dynamically. */
 import Link from 'next/link';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { AnimatedCompanionStage } from '@/components/companion/AnimatedCompanionStage';
-import {
-  AppContext,
-  AppGrid,
-  Banner,
-  EmptyState,
-  FormField,
-  Panel,
-  SectionHeading,
-  StatStrip,
-} from '@/components/ui/AppUI';
+import { Banner, EmptyState, FormField } from '@/components/ui/AppUI';
 import { getJSON } from '@/lib/api';
 import type {
   CompanionAdminData,
@@ -21,6 +12,16 @@ import type {
   CompanionRepoImportCandidate,
   CompanionSlotKey,
 } from '@/lib/types';
+import {
+  AdminKeyValueList,
+  AdminPageHeader,
+  AdminPaneSection,
+  AdminRailSection,
+  AdminStatStrip,
+  AdminWorkspace,
+  InlineConfirmBar,
+} from '../admin-ui';
+import sharedStyles from '../admin-surface.module.css';
 import styles from './page.module.css';
 
 type AdminMutationResponse = {
@@ -35,6 +36,18 @@ type RepoImportDraft = CompanionRepoImportCandidate & {
   rarity: string;
   cost: string;
   description: string;
+  active: boolean;
+};
+
+type ReplaceReviewState = {
+  slug: string;
+  name: string;
+  files: string[];
+};
+
+type VisibilityReviewState = {
+  slug: string;
+  name: string;
   active: boolean;
 };
 
@@ -68,6 +81,10 @@ export default function GhostlingAdminPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; variant: 'info' | 'error' } | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [showDebugOverlay, setShowDebugOverlay] = useState(false);
+  const [replaceReview, setReplaceReview] = useState<ReplaceReviewState | null>(null);
+  const [visibilityReview, setVisibilityReview] = useState<VisibilityReviewState | null>(null);
+  const replaceSubmissionRef = useRef<{ form: HTMLFormElement; formData: FormData } | null>(null);
 
   useEffect(() => {
     getJSON<CompanionAdminData>('/api/companion/admin/library')
@@ -110,7 +127,7 @@ export default function GhostlingAdminPage() {
         method: 'POST',
         body: formData,
       });
-      applyLibrary(result, 'Ghostling base updated. Check the preview before you leave this page.');
+      applyLibrary(result, 'Ghostling base updated. Check the preview and live paths.');
       form.reset();
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling base upload failed.', variant: 'error' });
@@ -130,7 +147,7 @@ export default function GhostlingAdminPage() {
         method: 'POST',
         body: formData,
       });
-      applyLibrary(result, 'Ghostling cosmetic created. Confirm it appears in the slot list below.');
+      applyLibrary(result, 'Ghostling cosmetic created. Check the catalog row below.');
       form.reset();
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Custom Ghostling cosmetic upload failed.', variant: 'error' });
@@ -143,15 +160,40 @@ export default function GhostlingAdminPage() {
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
+    setMessage(null);
+    const slug = String(formData.get('slug') ?? '').trim();
+    const item = library?.items.find((entry) => entry.slug === slug);
+    const files = ['frontAsset', 'backAsset', 'metadata']
+      .map((field) => formData.get(field))
+      .flatMap((entry) => (entry instanceof File && entry.name ? [entry.name] : []));
+
+    if (!slug || !files.length) {
+      setMessage({ text: 'Choose a live cosmetic and at least one file before review.', variant: 'error' });
+      return;
+    }
+
+    replaceSubmissionRef.current = { form, formData };
+    setReplaceReview({
+      slug,
+      name: item?.name ?? slug,
+      files,
+    });
+  }
+
+  async function confirmReplaceAssets() {
+    const submission = replaceSubmissionRef.current;
+    if (!submission) return;
     setPendingKey('replace');
     setMessage(null);
     try {
       const result = await getJSON<AdminMutationResponse>('/api/companion/admin/items/replace-assets', {
         method: 'POST',
-        body: formData,
+        body: submission.formData,
       });
-      applyLibrary(result, 'Ghostling art replaced. Check the preview and member studio after this update.');
-      form.reset();
+      applyLibrary(result, 'Ghostling art replaced. Check preview and live files.');
+      submission.form.reset();
+      replaceSubmissionRef.current = null;
+      setReplaceReview(null);
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling asset replacement failed.', variant: 'error' });
     } finally {
@@ -159,7 +201,12 @@ export default function GhostlingAdminPage() {
     }
   }
 
-  async function handleToggleActive(slug: string, active: boolean) {
+  function requestToggleActive(slug: string, name: string, active: boolean) {
+    setVisibilityReview({ slug, name, active });
+    setMessage(null);
+  }
+
+  async function confirmToggleActive(slug: string, active: boolean) {
     setPendingKey(`active:${slug}`);
     setMessage(null);
     try {
@@ -169,10 +216,9 @@ export default function GhostlingAdminPage() {
       });
       applyLibrary(
         result,
-        active
-          ? 'Ghostling cosmetic restored. Verify it is visible in the member catalog again.'
-          : 'Ghostling cosmetic hidden. Verify it no longer appears in the member catalog.',
+        active ? 'Ghostling cosmetic restored. Check the live catalog row.' : 'Ghostling cosmetic hidden. Check the live catalog row.',
       );
+      setVisibilityReview(null);
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling visibility update failed.', variant: 'error' });
     } finally {
@@ -188,7 +234,7 @@ export default function GhostlingAdminPage() {
         method: 'POST',
         body: JSON.stringify({ slug, direction }),
       });
-      applyLibrary(result, 'Ghostling order updated. Confirm the slot order below.');
+      applyLibrary(result, 'Ghostling order updated. Check the slot rows.');
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Ghostling reorder failed.', variant: 'error' });
     } finally {
@@ -224,7 +270,7 @@ export default function GhostlingAdminPage() {
         method: 'POST',
         body: JSON.stringify({ items: selectedItems }),
       });
-      applyLibrary(result, 'Repo Ghostling cosmetics imported. Check visibility and slot order below.');
+      applyLibrary(result, 'Repo Ghostling cosmetics imported. Check visibility and slot rows.');
     } catch (nextError) {
       setMessage({ text: nextError instanceof Error ? toGhostlingError(nextError.message) : 'Repo Ghostling import failed.', variant: 'error' });
     } finally {
@@ -232,11 +278,7 @@ export default function GhostlingAdminPage() {
     }
   }
 
-  function updateImportDraft(
-    slug: string,
-    field: keyof RepoImportDraft,
-    value: string | boolean,
-  ) {
+  function updateImportDraft(slug: string, field: keyof RepoImportDraft, value: string | boolean) {
     setImportDrafts((current) => current.map((draft) => (draft.slug === slug ? { ...draft, [field]: value } : draft)));
   }
 
@@ -246,18 +288,18 @@ export default function GhostlingAdminPage() {
   const repoCandidates = importDrafts.length;
 
   return (
-    <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
-      <AppContext
+    <main id="main-content" className={`page-shell workspace-page ${sharedStyles.page}`}>
+      <AdminPageHeader
         breadcrumbs={[
           { label: 'Ghosted', href: '/' },
           { label: 'Admin', href: '/admin/' },
           { label: 'Ghostling' },
         ]}
-        title="Manage live Ghostling assets"
-        summary="Update the base, create cosmetics, replace files, and import repo items here. Then use the catalog controls below to hide, restore, or reorder what members can see."
+        title="Ghostling asset console"
+        summary="Run asset operations in the rail, then read preview, import, and live catalog state in the main pane."
         actions={(
           <>
-            <Link href="/admin/" className="button button--secondary button--small">Back to admin</Link>
+            <Link href="/admin/" className="button button--secondary button--small">Back to hub</Link>
             <Link href="/hall/ghostling/" className="button button--secondary button--small">Open member studio</Link>
           </>
         )}
@@ -274,126 +316,44 @@ export default function GhostlingAdminPage() {
         />
       ) : (
         <>
-          <Panel
-            className={styles.workflowPanel}
-            tier="primary"
-            eyebrow="Asset changes"
-            title="Update files before you change catalog order"
-            bodyClassName={styles.workflowBody}
-            body={(
-              <>
-                <div className={styles.workflowCopy}>
-                  <p className={styles.workflowLead}>
-                    Base uploads, art replacements, repo imports, and visibility changes update the live member studio and the admin preview immediately.
-                  </p>
-                  <div className={styles.workflowChecklist}>
-                    <div className={styles.workflowChecklistItem}>
-                      <strong>Base uploads</strong>
-                      <span>Update the default body and head used anywhere a slot has no override.</span>
-                    </div>
-                    <div className={styles.workflowChecklistItem}>
-                      <strong>Create or replace</strong>
-                      <span>Publish new cosmetics or overwrite live art for an existing slug with an explicit operator step.</span>
-                    </div>
-                    <div className={styles.workflowChecklistItem}>
-                      <strong>Hide, restore, reorder</strong>
-                      <span>Use library controls afterward to pull cosmetics from the member catalog or change their live order.</span>
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.workflowActions}>
-                  <a href="#ghostling-base" className="button button--small">Upload base files</a>
-                  <a href="#ghostling-create" className="button button--secondary button--small">Create cosmetic</a>
-                  <a href="#ghostling-replace" className="button button--secondary button--small">Replace live files</a>
-                  <a href="#ghostling-import" className="button button--secondary button--small">Import repo pieces</a>
-                  <a href="#ghostling-library" className="button button--secondary button--small">Library controls</a>
-                </div>
-              </>
-            )}
+          <AdminStatStrip
+            items={[
+              { label: 'Live library', value: String(totalItems) },
+              { label: 'Visible', value: String(activeItems) },
+              { label: 'Hidden', value: String(hiddenItems) },
+              { label: 'Repo imports', value: String(repoCandidates) },
+            ]}
           />
 
-          <AppGrid className={styles.workflowGrid}>
-            <section id="ghostling-base">
-            <Panel
-              className={styles.adminPanel}
-              tier="primary"
-              eyebrow="Base workflow"
-              title="Upload a new layered Ghostling base"
-              body={(
-                <div className={styles.basePanelBody}>
-                  <div className={styles.basePreview}>
-                    <AnimatedCompanionStage
-                      manifest={library.base.renderManifest}
-                      fallbackSrc={library.base.previewUrl}
-                      alt="Ghostling base preview"
-                      className={styles.basePreviewStage}
-                      targetSize={224}
-                    />
-                  </div>
-                  <form onSubmit={handleBaseUpload} className="app-form">
-                    <p className={styles.actionNote}>
-                      Changing these files updates the default live body and head used anywhere a Ghostling render does not have a slot override.
-                    </p>
-                    <div className={styles.assetMetaBlock}>
-                      <strong>User uploads</strong>
-                      <span>{library.storageRoot}</span>
-                    </div>
-                    <div className={styles.assetMetaBlock}>
-                      <strong>Current body file</strong>
-                      <span>{library.base.bodyAssetPath || 'No body uploaded yet'}</span>
-                    </div>
-                    <div className={styles.assetMetaBlock}>
-                      <strong>Current head file</strong>
-                      <span>{library.base.headAssetPath || 'Using the default layered head fallback'}</span>
-                    </div>
+          <AdminWorkspace
+            className={styles.workspace}
+            rail={(
+              <>
+                <AdminRailSection eyebrow="Base" title="Upload base files" description="Replace the layered Ghostling base.">
+                  <form onSubmit={handleBaseUpload} className={sharedStyles.formStack}>
                     <FormField label="Body image">
                       <input name="bodyAsset" type="file" accept={ASSET_ACCEPT} className="input-base" required />
                     </FormField>
-                    <FormField label="Head image (optional override)">
+                    <FormField label="Head image">
                       <input name="headAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
                     </FormField>
-                    <div className="app-inline-actions">
-                      <button className="button" type="submit" disabled={pendingKey === 'base'}>
-                        {pendingKey === 'base' ? 'Uploading...' : 'Upload base files'}
-                      </button>
-                      {library.base.bodyAssetUrl ? (
-                        <a href={library.base.bodyAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
-                          Open body file
-                        </a>
-                      ) : null}
-                      {library.base.headAssetUrl ? (
-                        <a href={library.base.headAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
-                          Open head file
-                        </a>
-                      ) : null}
-                    </div>
+                    <button className="button" type="submit" disabled={pendingKey === 'base'}>
+                      {pendingKey === 'base' ? 'Uploading...' : 'Upload base files'}
+                    </button>
                   </form>
-                </div>
-              )}
-            />
-            </section>
+                </AdminRailSection>
 
-            <section id="ghostling-create">
-            <Panel
-              className={styles.adminPanel}
-              tier="meta"
-              eyebrow="Create live cosmetic"
-              title="Create and publish a Ghostling cosmetic"
-              body={(
-                <div className="app-stack">
-                  <p className={styles.actionNote}>
-                    Saving here adds a new cosmetic to the member catalog. Hide it later only if it should stay off the live list after creation.
-                  </p>
-                  <form onSubmit={handleCreateItem} className="app-form">
-                    <div className="form-grid-two">
+                <AdminRailSection eyebrow="Create" title="Create cosmetic" description="Add one cosmetic to the live library.">
+                  <form onSubmit={handleCreateItem} className={sharedStyles.formStack}>
+                    <div className={sharedStyles.fieldPair}>
                       <FormField label="Name">
                         <input name="name" type="text" placeholder="Moon Hood" className="input-base" required />
                       </FormField>
-                      <FormField label="Slug (optional)">
+                      <FormField label="Slug">
                         <input name="slug" type="text" placeholder="moon-hood" className="input-base" />
                       </FormField>
                     </div>
-                    <div className="form-grid-two">
+                    <div className={sharedStyles.fieldPair}>
                       <FormField label="Slot">
                         <select name="slot" className="input-base" defaultValue="hat">
                           <option value="hat">Hat</option>
@@ -411,56 +371,39 @@ export default function GhostlingAdminPage() {
                         </select>
                       </FormField>
                     </div>
-                    <div className="form-grid-two">
+                    <div className={sharedStyles.fieldPair}>
                       <FormField label="Cost">
                         <input name="cost" type="number" min="0" defaultValue="120" className="input-base" required />
                       </FormField>
-                      <FormField label="Front asset (optional)">
+                      <FormField label="Front asset">
                         <input name="frontAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
                       </FormField>
                     </div>
-                    <FormField label="Back asset (optional)">
+                    <FormField label="Back asset">
                       <input name="backAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
                     </FormField>
-                    <FormField label="Metadata sidecar (optional)">
+                    <FormField label="Metadata sidecar">
                       <input name="metadata" type="file" accept=".json,application/json,text/json" className="input-base" />
                     </FormField>
                     <FormField label="Description">
-                      <textarea name="description" rows={3} className="input-base" placeholder="Short flavor text for the unlock card." />
+                      <textarea name="description" rows={3} className="input-base" placeholder="Flavor text" />
                     </FormField>
                     <button className="button" type="submit" disabled={pendingKey === 'create'}>
                       {pendingKey === 'create' ? 'Creating...' : 'Create cosmetic'}
                     </button>
                   </form>
-                </div>
-              )}
-            />
-            </section>
-          </AppGrid>
+                </AdminRailSection>
 
-          <AppGrid className={styles.workflowGrid}>
-            <section id="ghostling-replace">
-            <Panel
-              className={styles.adminPanel}
-              tier="meta"
-              eyebrow="Replace live files"
-              title="Replace files on a live Ghostling cosmetic"
-              body={(
-                <div className="app-stack">
-                  <p className={styles.actionNote}>
-                    Replacing files overwrites the live art for the selected slug and changes current member previews that use it.
-                  </p>
-                  <form onSubmit={handleReplaceAssets} className="app-form">
+                <AdminRailSection eyebrow="Replace" title="Replace live files" description="Overwrite live art on one cosmetic.">
+                  <form onSubmit={handleReplaceAssets} className={sharedStyles.formStack}>
                     <FormField label="Cosmetic">
                       <select name="slug" className="input-base" defaultValue={library.items[0]?.slug ?? ''} required>
                         {library.items.map((item) => (
-                          <option key={item.slug} value={item.slug}>
-                            {item.name}
-                          </option>
+                          <option key={item.slug} value={item.slug}>{item.name}</option>
                         ))}
                       </select>
                     </FormField>
-                    <div className="form-grid-two">
+                    <div className={sharedStyles.fieldPair}>
                       <FormField label="Front asset">
                         <input name="frontAsset" type="file" accept={ASSET_ACCEPT} className="input-base" />
                       </FormField>
@@ -472,41 +415,100 @@ export default function GhostlingAdminPage() {
                       <input name="metadata" type="file" accept=".json,application/json,text/json" className="input-base" />
                     </FormField>
                     <button className="button" type="submit" disabled={pendingKey === 'replace'}>
-                      {pendingKey === 'replace' ? 'Replacing...' : 'Replace files'}
+                      {pendingKey === 'replace' ? 'Replacing...' : 'Review replacement'}
                     </button>
                   </form>
-                </div>
-              )}
-            />
-            </section>
 
-            <section id="ghostling-import">
-            <Panel
-              className={styles.adminPanel}
-              tier="meta"
-              eyebrow="Repo import"
-              title="Import repo cosmetics into the live library"
-              body={repoCandidates ? (
-                <div className="app-stack">
-                  <p className={styles.actionNote}>
-                    Selected repo items import with the visibility setting you choose here and join the current slot order immediately.
-                  </p>
-                  <div className={styles.importStack}>
-                    {importDrafts.map((draft) => (
-                      <article key={draft.slug} className={styles.importRow}>
+                  {replaceReview ? (
+                    <InlineConfirmBar
+                      title="Confirm live replacement"
+                      detail="The selected files will replace the current live art immediately."
+                      meta={[
+                        { label: 'Cosmetic', value: replaceReview.name },
+                        { label: 'Files', value: replaceReview.files.join(', ') },
+                      ]}
+                      confirmLabel="Confirm replacement"
+                      pendingLabel="Replacing..."
+                      busy={pendingKey === 'replace'}
+                      onConfirm={() => void confirmReplaceAssets()}
+                      onCancel={() => {
+                        replaceSubmissionRef.current = null;
+                        setReplaceReview(null);
+                      }}
+                    />
+                  ) : null}
+                </AdminRailSection>
+              </>
+            )}
+          >
+            <AdminPaneSection eyebrow="Preview" title="Live preview and state" className={styles.previewPanel}>
+              <div className={styles.previewLayout}>
+                <div className={styles.previewStage}>
+                  <AnimatedCompanionStage
+                    manifest={library.base.renderManifest}
+                    fallbackSrc={library.base.previewUrl}
+                    alt="Ghostling base preview"
+                    className={styles.previewStageFrame}
+                    targetSize={224}
+                    presentation="admin"
+                    seedKey="admin:ghostling-preview"
+                    showDebugOverlay={showDebugOverlay}
+                  />
+                </div>
+                <div className={styles.previewState}>
+                  <AdminKeyValueList
+                    items={[
+                      ['Storage root', library.storageRoot],
+                      ['Current body file', library.base.bodyAssetPath || 'No body uploaded yet'],
+                      ['Current head file', library.base.headAssetPath || 'Using default head fallback'],
+                      ['Visible cosmetics', `${activeItems}/${totalItems}`],
+                    ]}
+                  />
+                  <div className={styles.previewActions}>
+                    <button
+                      className="button button--secondary button--small"
+                      type="button"
+                      onClick={() => setShowDebugOverlay((current) => !current)}
+                    >
+                      {showDebugOverlay ? 'Hide debug overlay' : 'Show debug overlay'}
+                    </button>
+                    {library.base.bodyAssetUrl ? (
+                      <a href={library.base.bodyAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                        Open body file
+                      </a>
+                    ) : null}
+                    {library.base.headAssetUrl ? (
+                      <a href={library.base.headAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                        Open head file
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </AdminPaneSection>
+
+            <AdminPaneSection eyebrow="Import" title="Repo import queue">
+              {repoCandidates ? (
+                <div className={styles.importList}>
+                  {importDrafts.map((draft) => (
+                    <article key={draft.slug} className={styles.importRow}>
+                      <div className={styles.importThumbWrap}>
+                        {draft.frontAssetUrl ? <img src={draft.frontAssetUrl} alt={`${draft.name} front asset`} className={styles.importThumb} /> : null}
+                      </div>
+                      <div className={styles.importBody}>
                         <div className={styles.importHeader}>
-                          <label className={styles.importToggle}>
+                          <label className={styles.inlineToggle}>
                             <input
                               type="checkbox"
                               checked={draft.selected}
                               onChange={(event) => updateImportDraft(draft.slug, 'selected', event.target.checked)}
                             />
-                            <span>{draft.name}</span>
+                            <span className={styles.importTitle}>{draft.name}</span>
                           </label>
-                          <span className="app-chip">{draft.frontAssetPath ?? draft.backAssetPath ?? 'No asset path'}</span>
+                          <span className={sharedStyles.metaToken}>{draft.frontAssetPath ?? draft.backAssetPath ?? 'No asset path'}</span>
                         </div>
                         <div className={styles.importGrid}>
-                          <FormField label="Name" className={styles.compactField}>
+                          <FormField label="Name">
                             <input
                               type="text"
                               className="input-base"
@@ -514,7 +516,7 @@ export default function GhostlingAdminPage() {
                               onChange={(event) => updateImportDraft(draft.slug, 'name', event.target.value)}
                             />
                           </FormField>
-                          <FormField label="Slug" className={styles.compactField}>
+                          <FormField label="Slug">
                             <input
                               type="text"
                               className="input-base"
@@ -522,7 +524,7 @@ export default function GhostlingAdminPage() {
                               onChange={(event) => updateImportDraft(draft.slug, 'slug', event.target.value)}
                             />
                           </FormField>
-                          <FormField label="Slot" className={styles.compactField}>
+                          <FormField label="Slot">
                             <select
                               className="input-base"
                               value={draft.slot}
@@ -534,7 +536,7 @@ export default function GhostlingAdminPage() {
                               <option value="body">Body</option>
                             </select>
                           </FormField>
-                          <FormField label="Rarity" className={styles.compactField}>
+                          <FormField label="Rarity">
                             <select
                               className="input-base"
                               value={draft.rarity}
@@ -546,7 +548,7 @@ export default function GhostlingAdminPage() {
                               <option value="legendary">Legendary</option>
                             </select>
                           </FormField>
-                          <FormField label="Cost" className={styles.compactField}>
+                          <FormField label="Cost">
                             <input
                               type="number"
                               min="0"
@@ -555,8 +557,8 @@ export default function GhostlingAdminPage() {
                               onChange={(event) => updateImportDraft(draft.slug, 'cost', event.target.value)}
                             />
                           </FormField>
-                          <FormField label="Visible on import" className={styles.compactField}>
-                            <label className={styles.activeToggle}>
+                          <FormField label="Visible on import">
+                            <label className={styles.inlineToggle}>
                               <input
                                 type="checkbox"
                                 checked={draft.active}
@@ -566,7 +568,7 @@ export default function GhostlingAdminPage() {
                             </label>
                           </FormField>
                         </div>
-                        <FormField label="Description" className={styles.compactField}>
+                        <FormField label="Description">
                           <textarea
                             rows={2}
                             className="input-base"
@@ -574,126 +576,122 @@ export default function GhostlingAdminPage() {
                             onChange={(event) => updateImportDraft(draft.slug, 'description', event.target.value)}
                           />
                         </FormField>
-                        <div className={styles.importAssets}>
-                          {draft.frontAssetUrl ? <img src={draft.frontAssetUrl} alt={`${draft.name} front asset`} className={styles.importPreview} /> : null}
-                          <div className={styles.assetMetaList}>
-                            <span>{draft.frontAssetPath ?? 'No front asset'}</span>
-                            {draft.backAssetPath ? <span>{draft.backAssetPath}</span> : null}
-                            {draft.renderMetadataPath ? <span>{draft.renderMetadataPath}</span> : null}
-                            {draft.renderMetadata ? <span>Anchor metadata ready</span> : null}
-                            {(draft.renderMetadataErrors ?? []).map((error) => (
-                              <span key={`${draft.slug}:${error}`} className={styles.importErrorText}>{error}</span>
-                            ))}
-                          </div>
+                        <div className={styles.fileMeta}>
+                          <span>{draft.frontAssetPath ?? 'No front asset'}</span>
+                          {draft.backAssetPath ? <span>{draft.backAssetPath}</span> : null}
+                          {draft.renderMetadataPath ? <span>{draft.renderMetadataPath}</span> : null}
+                          {draft.renderMetadata ? <span>Anchor metadata ready</span> : null}
+                          {(draft.renderMetadataErrors ?? []).map((entry) => (
+                            <span key={`${draft.slug}:${entry}`} className={sharedStyles.dangerText}>{entry}</span>
+                          ))}
                         </div>
-                      </article>
-                    ))}
-                    <button className="button" type="button" onClick={() => void handleImportRepoItems()} disabled={pendingKey === 'import'}>
-                      {pendingKey === 'import' ? 'Importing...' : 'Import selected cosmetics'}
-                    </button>
-                  </div>
+                      </div>
+                    </article>
+                  ))}
+                  <button className="button" type="button" onClick={() => void handleImportRepoItems()} disabled={pendingKey === 'import'}>
+                    {pendingKey === 'import' ? 'Importing...' : 'Import selected'}
+                  </button>
                 </div>
               ) : (
-                <EmptyState message="No repo Ghostling assets are ready to import." />
+                <p className={sharedStyles.emptyNote}>No repo Ghostling assets are ready to import.</p>
               )}
-            />
-            </section>
-          </AppGrid>
+            </AdminPaneSection>
 
-          <StatStrip
-            className={styles.scoreboard}
-            leadIndex={0}
-            stats={[
-              { label: 'Live library', value: String(totalItems) },
-              { label: 'Visible', value: String(activeItems) },
-              { label: 'Hidden', value: String(hiddenItems) },
-              { label: 'Repo imports', value: String(repoCandidates) },
-            ]}
-          />
+            <AdminPaneSection eyebrow="Catalog" title="Live catalog controls">
+              <div className={styles.slotGroups}>
+                {SLOT_ORDER.map((slot) => {
+                  const items = groupedItems.get(slot) ?? [];
+                  if (!items.length) return null;
 
-          <section id="ghostling-library" className={styles.librarySection}>
-            <SectionHeading
-              eyebrow="Catalog controls"
-              title="Hide, restore, and reorder live cosmetics"
-              copy="Use this section after uploads or imports. Hide removes a cosmetic from the member catalog without deleting files, restore brings it back, and reorder changes the order members see in the studio."
-            />
-            <div className={styles.slotGroups}>
-              {SLOT_ORDER.map((slot) => {
-                const items = groupedItems.get(slot) ?? [];
-                if (!items.length) return null;
-
-                return (
-                  <section key={slot} className={styles.slotGroup}>
-                    <div className={styles.slotHeading}>
-                      <h3>{slot}</h3>
-                      <span>{items.length} items</span>
-                    </div>
-                    <div className={styles.libraryGrid}>
-                      {items.map((item, index) => (
-                        <article key={item.slug} className={styles.libraryCard}>
-                          <div className={styles.libraryPreview}>
-                            <img src={item.previewUrl} alt={item.name} className={styles.libraryPreviewImage} />
-                          </div>
-                          <div className={styles.libraryCopy}>
-                            <div className={styles.libraryHeader}>
-                              <strong>{item.name}</strong>
-                              <div className={styles.itemChips}>
-                                <span className="app-chip">{item.rarity}</span>
-                                <span className="app-chip">{item.active ? 'Visible' : 'Hidden'}</span>
-                                <span className="app-chip">#{item.sortOrder}</span>
+                  return (
+                    <section key={slot} className={styles.slotGroup}>
+                      <div className={styles.slotHeader}>
+                        <h3>{slot}</h3>
+                        <span className={sharedStyles.metaToken}>{items.length} items</span>
+                      </div>
+                      <div className={styles.assetRows}>
+                        {items.map((item, index) => (
+                          <article key={item.slug} className={styles.assetRow}>
+                            <div className={styles.assetThumbWrap}>
+                              <img src={item.previewUrl} alt={item.name} className={styles.assetThumb} />
+                            </div>
+                            <div className={styles.assetBody}>
+                              <div className={styles.assetHeader}>
+                                <strong className={styles.assetTitle}>{item.name}</strong>
+                                <div className={styles.assetTokens}>
+                                  <span className={sharedStyles.metaToken}>{item.rarity}</span>
+                                  <span className={sharedStyles.metaToken}>{item.active ? 'Visible' : 'Hidden'}</span>
+                                  <span className={sharedStyles.metaToken}>#{item.sortOrder}</span>
+                                </div>
                               </div>
-                            </div>
-                            <p>{item.description}</p>
-                            <div className={styles.assetMetaList}>
-                              <span>{item.frontAssetPath ?? 'No front asset'}</span>
-                              {item.backAssetPath ? <span>{item.backAssetPath}</span> : null}
-                              {item.renderMetadata ? <span>Anchor metadata attached</span> : <span>Legacy full-canvas placement</span>}
-                            </div>
-                            <div className="app-inline-actions">
-                              <button
-                                type="button"
-                                className="button button--secondary button--small"
-                                onClick={() => void handleToggleActive(item.slug, !item.active)}
-                                disabled={pendingKey === `active:${item.slug}`}
-                              >
-                                {pendingKey === `active:${item.slug}` ? 'Saving...' : item.active ? 'Hide' : 'Show'}
-                              </button>
-                              <button
-                                type="button"
-                                className="button button--secondary button--small"
-                                onClick={() => void handleMove(item.slug, 'up')}
-                                disabled={index === 0 || pendingKey === `move:${item.slug}:up`}
-                              >
-                                Up
-                              </button>
-                              <button
-                                type="button"
-                                className="button button--secondary button--small"
-                                onClick={() => void handleMove(item.slug, 'down')}
-                                disabled={index === items.length - 1 || pendingKey === `move:${item.slug}:down`}
-                              >
-                                Down
-                              </button>
-                              {item.frontAssetUrl ? (
-                                <a href={item.frontAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
-                                  Front file
-                                </a>
+                              <p className={sharedStyles.note}>{item.description}</p>
+                              <div className={styles.fileMeta}>
+                                <span>{item.frontAssetPath ?? 'No front asset'}</span>
+                                {item.backAssetPath ? <span>{item.backAssetPath}</span> : null}
+                                {item.renderMetadata ? <span>Anchor metadata attached</span> : <span>Legacy full-canvas placement</span>}
+                              </div>
+                              <div className={styles.assetActions}>
+                                <button
+                                  type="button"
+                                  className="button button--secondary button--small"
+                                  onClick={() => requestToggleActive(item.slug, item.name, !item.active)}
+                                  disabled={pendingKey === `active:${item.slug}`}
+                                >
+                                  {pendingKey === `active:${item.slug}` ? 'Saving...' : item.active ? 'Hide' : 'Show'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="button button--secondary button--small"
+                                  onClick={() => void handleMove(item.slug, 'up')}
+                                  disabled={index === 0 || pendingKey === `move:${item.slug}:up`}
+                                >
+                                  Up
+                                </button>
+                                <button
+                                  type="button"
+                                  className="button button--secondary button--small"
+                                  onClick={() => void handleMove(item.slug, 'down')}
+                                  disabled={index === items.length - 1 || pendingKey === `move:${item.slug}:down`}
+                                >
+                                  Down
+                                </button>
+                                {item.frontAssetUrl ? (
+                                  <a href={item.frontAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                                    Front file
+                                  </a>
+                                ) : null}
+                                {item.backAssetUrl ? (
+                                  <a href={item.backAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                                    Back file
+                                  </a>
+                                ) : null}
+                              </div>
+                              {visibilityReview?.slug === item.slug ? (
+                                <InlineConfirmBar
+                                  title={visibilityReview.active ? 'Confirm restore' : 'Confirm hide'}
+                                  detail={
+                                    visibilityReview.active
+                                      ? 'Restoring this cosmetic makes it visible in the member Ghostling catalog again.'
+                                      : 'Hiding this cosmetic removes it from the member Ghostling catalog without deleting files.'
+                                  }
+                                  confirmLabel={visibilityReview.active ? 'Confirm restore' : 'Confirm hide'}
+                                  pendingLabel="Saving..."
+                                  tone={visibilityReview.active ? 'default' : 'danger'}
+                                  busy={pendingKey === `active:${item.slug}`}
+                                  onConfirm={() => void confirmToggleActive(visibilityReview.slug, visibilityReview.active)}
+                                  onCancel={() => setVisibilityReview(null)}
+                                />
                               ) : null}
-                              {item.backAssetUrl ? (
-                                <a href={item.backAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
-                                  Back file
-                                </a>
-                              ) : null}
                             </div>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  </section>
-                );
-              })}
-            </div>
-          </section>
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            </AdminPaneSection>
+          </AdminWorkspace>
         </>
       )}
     </main>
