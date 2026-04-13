@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ServerTestContext } from './test-utils';
 import { cleanupServerTestEnvironment, insertUser, setupServerTestEnvironment } from './test-utils';
 import { AppError } from '@/lib/server/core';
+import { exportGhostlingSceneLabSession } from '@/lib/ghostling-scene-lab';
+import { createDefaultGhostlingSceneTuningSpec } from '@/lib/ghostling-scene-tuning';
 import { SHARED_COMMONS_WORLD, ghostlingWorldPackageFromSpec } from '@/lib/ghostling-world';
 
 const { requireAdminUserMock } = vi.hoisted(() => ({
@@ -189,6 +191,53 @@ describe('admin worlds routes', () => {
     expect(payload.world.layers.find((layer: { key: string }) => layer.key === 'midground')?.draftSrc)
       .toContain('/api/world-assets/worlds/shared-commons/draft/');
     expect(auditRow?.action).toBe('replace_world_draft_package');
+  });
+
+  it('uploads a Scene editor session file through the admin route and imports both world and tuning', async () => {
+    const worldExport = ghostlingWorldPackageFromSpec(SHARED_COMMONS_WORLD);
+    worldExport.guides.safeArea = {
+      ...worldExport.guides.safeArea,
+      x: worldExport.guides.safeArea.x + 16,
+    };
+    const tuning = createDefaultGhostlingSceneTuningSpec();
+    tuning.buckets.desktop.maxVisible = 17;
+    tuning.shared.anchorHopChance = 0.41;
+    const session = exportGhostlingSceneLabSession(
+      SHARED_COMMONS_WORLD,
+      tuning,
+      {
+        mode: 'sandbox',
+        playing: false,
+        ghostCount: 6,
+        bucket: 'desktop',
+      },
+    );
+    session.world = worldExport;
+
+    const formData = new FormData();
+    formData.set('worldId', 'shared-commons');
+    formData.set('package', new File([
+      JSON.stringify(session),
+    ], 'scene-lab-session.json', { type: 'application/json' }));
+
+    const response = await postDraftPackageRoute(new Request('http://localhost', {
+      method: 'POST',
+      body: formData,
+    }));
+    const payload = await response.json();
+    const auditRows = context.db.prepare(`
+      SELECT action
+      FROM audit_log
+      WHERE action IN ('replace_world_draft_package', 'replace_world_draft_tuning')
+      ORDER BY id ASC
+    `).all() as Array<{ action: string }>;
+
+    expect(response.status).toBe(200);
+    expect(payload.message).toBe('Scene editor session imported into draft world and tuning.');
+    expect(payload.world.draftWorld.guides.safeArea.x).toBe(SHARED_COMMONS_WORLD.guides.safeArea.x + 16);
+    expect(payload.world.draftTuning.buckets.desktop.maxVisible).toBe(17);
+    expect(payload.world.draftTuning.shared.anchorHopChance).toBe(0.41);
+    expect(auditRows.map((row) => row.action)).toEqual(['replace_world_draft_package', 'replace_world_draft_tuning']);
   });
 
   it('rejects empty pasted world package text through the admin route', async () => {

@@ -116,6 +116,11 @@ describe('AdminWorldsPage', () => {
     expect(screen.getAllByText(`${SHARED_COMMONS_WORLD.guides.heroCrop?.x}, ${SHARED_COMMONS_WORLD.guides.heroCrop?.y}, ${SHARED_COMMONS_WORLD.guides.heroCrop?.width}x${SHARED_COMMONS_WORLD.guides.heroCrop?.height}`).length).toBeGreaterThan(0);
     expect(screen.getByText('Published hero crop')).not.toBeNull();
     expect(screen.getByTestId('world-layer-upload-midground')).not.toBeNull();
+    expect(screen.getByText('Movement tuning readback')).not.toBeNull();
+    expect(screen.getByText('Jam breakout (ms)')).not.toBeNull();
+    expect(screen.getByText('Facing flip velocity')).not.toBeNull();
+    expect(screen.getByText('Time before jammed actors are forced to break free.')).not.toBeNull();
+    expect(screen.getByText('Minimum spacing to keep between active Ghostlings.')).not.toBeNull();
     expect(screen.getByText('Archived draft override recovery')).not.toBeNull();
     expect(screen.getByText('Layer overrides and file readback')).not.toBeNull();
     expect(screen.getByText('Archived the foreground layer override and restored the live draft to the published source.')).not.toBeNull();
