@@ -67,6 +67,15 @@ function normalizeSceneDisplayName(displayName: string) {
   return displayName.trim().toLowerCase();
 }
 
+function normalizeSceneVoiceAlias(value: string) {
+  const normalized = value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+  return normalized.replace(/[^a-z0-9]/g, '');
+}
+
 function buildSceneMemberKey(source: ScenePresenceMemberSource, userId: number | null, username: string) {
   if (userId !== null) return `user:${userId}`;
   return `${source}:${normalizeSceneUsername(username)}`;
@@ -96,10 +105,13 @@ function mergeIdentityForMember(
   member: ScenePresenceMemberSeed,
   identityByUserId: Map<number, string>,
   identityByUsername: Map<string, string>,
-  voiceIdentityByUsername: Map<string, VoiceIdentityEntry>,
-  voiceAliasIdentityByName: Map<string, VoiceIdentityEntry>,
+  voiceIdentityByAlias: Map<string, VoiceIdentityEntry>,
+  linkedIdentityByAlias: Map<string, string>,
+  botVoiceDisplayIdentityByAlias: Map<string, string>,
 ) {
   const normalizedUsername = normalizeSceneUsername(member.username);
+  const normalizedUsernameAlias = normalizeSceneVoiceAlias(member.username);
+  const normalizedDisplayAlias = normalizeSceneVoiceAlias(member.displayName);
   const normalizedDisplayName = normalizeSceneDisplayName(member.displayName);
 
   if (member.userId !== null) {
@@ -112,9 +124,31 @@ function mergeIdentityForMember(
     if (existingByUsername) return existingByUsername;
   }
 
-  if (member.source === 'voice') {
+  if (normalizedUsername) {
+    const existingByLinkedAlias = linkedIdentityByAlias.get(normalizedUsername);
+    if (existingByLinkedAlias) return existingByLinkedAlias;
+  }
+
+  if (normalizedDisplayName) {
+    const existingByLinkedDisplayAlias = linkedIdentityByAlias.get(normalizedDisplayName);
+    if (existingByLinkedDisplayAlias) return existingByLinkedDisplayAlias;
+  }
+
+  if (member.source === 'wom') {
     if (normalizedUsername) {
-      const existingByVoiceAlias = voiceAliasIdentityByName.get(normalizedUsername);
+      const existingByBotVoiceAlias = botVoiceDisplayIdentityByAlias.get(normalizedUsername);
+      if (existingByBotVoiceAlias) return existingByBotVoiceAlias;
+    }
+
+    if (normalizedDisplayName) {
+      const existingByBotVoiceDisplayAlias = botVoiceDisplayIdentityByAlias.get(normalizedDisplayName);
+      if (existingByBotVoiceDisplayAlias) return existingByBotVoiceDisplayAlias;
+    }
+  }
+
+  if (member.source === 'voice') {
+    if (normalizedUsernameAlias) {
+      const existingByVoiceAlias = voiceIdentityByAlias.get(normalizedUsernameAlias);
       if (
         existingByVoiceAlias
         && member.voiceSource
@@ -124,8 +158,8 @@ function mergeIdentityForMember(
       }
     }
 
-    if (normalizedDisplayName) {
-      const existingByVoiceUsername = voiceIdentityByUsername.get(normalizedDisplayName);
+    if (normalizedDisplayAlias) {
+      const existingByVoiceUsername = voiceIdentityByAlias.get(normalizedDisplayAlias);
       if (
         existingByVoiceUsername
         && member.voiceSource
@@ -177,8 +211,9 @@ function registerMergedIdentity(
   identity: string,
   identityByUserId: Map<number, string>,
   identityByUsername: Map<string, string>,
-  voiceIdentityByUsername: Map<string, VoiceIdentityEntry>,
-  voiceAliasIdentityByName: Map<string, VoiceIdentityEntry>,
+  voiceIdentityByAlias: Map<string, VoiceIdentityEntry>,
+  linkedIdentityByAlias: Map<string, string>,
+  botVoiceDisplayIdentityByAlias: Map<string, string>,
 ) {
   if (member.userId !== null) {
     identityByUserId.set(member.userId, identity);
@@ -187,20 +222,58 @@ function registerMergedIdentity(
   const normalizedUsername = normalizeSceneUsername(member.username);
   if (normalizedUsername) {
     identityByUsername.set(normalizedUsername, identity);
-    if (member.source === 'voice' && member.voiceSource) {
-      voiceIdentityByUsername.set(normalizedUsername, {
+  }
+
+  if (member.userId !== null) {
+    const linkedAliases = new Set<string>();
+    const normalizedDisplayName = normalizeSceneDisplayName(member.displayName);
+    if (normalizedDisplayName) linkedAliases.add(normalizedDisplayName);
+
+    const linkedDisplayName = normalizeSceneDisplayName(member.companion?.user?.displayName ?? '');
+    if (linkedDisplayName) linkedAliases.add(linkedDisplayName);
+
+    const linkedUsername = normalizeSceneUsername(member.companion?.user?.username ?? '');
+    if (linkedUsername) linkedAliases.add(linkedUsername);
+
+    for (const alias of linkedAliases) {
+      linkedIdentityByAlias.set(alias, identity);
+    }
+  }
+
+  if (member.source === 'voice' && member.voiceSource) {
+    const aliases = new Set<string>();
+    const usernameAlias = normalizeSceneVoiceAlias(member.username);
+    if (usernameAlias) aliases.add(usernameAlias);
+
+    for (const alias of voiceAliasNames(member)) {
+      const normalizedAlias = normalizeSceneVoiceAlias(alias);
+      if (!normalizedAlias) continue;
+      aliases.add(normalizedAlias);
+    }
+
+    for (const alias of aliases) {
+      voiceIdentityByAlias.set(alias, {
         identity,
         voiceSource: member.voiceSource,
       });
     }
   }
 
-  if (member.source === 'voice' && member.voiceSource) {
-    for (const alias of voiceAliasNames(member)) {
-      voiceAliasIdentityByName.set(alias, {
-        identity,
-        voiceSource: member.voiceSource,
-      });
+  if (member.source === 'voice' && member.voiceSource === 'bot') {
+    const displayAliases = new Set<string>();
+    const normalizedUsername = normalizeSceneUsername(member.username);
+    const normalizedDisplayName = normalizeSceneDisplayName(member.displayName);
+    if (normalizedDisplayName && normalizedDisplayName !== normalizedUsername) {
+      displayAliases.add(normalizedDisplayName);
+    }
+
+    const linkedDisplayName = normalizeSceneDisplayName(member.companion?.user?.displayName ?? '');
+    if (linkedDisplayName && linkedDisplayName !== normalizedUsername) {
+      displayAliases.add(linkedDisplayName);
+    }
+
+    for (const alias of displayAliases) {
+      botVoiceDisplayIdentityByAlias.set(alias, identity);
     }
   }
 }
@@ -240,8 +313,9 @@ function mergePresenceMembers(
   const merged = new Map<string, ScenePresenceMemberSeed>();
   const identityByUserId = new Map<number, string>();
   const identityByUsername = new Map<string, string>();
-  const voiceIdentityByUsername = new Map<string, VoiceIdentityEntry>();
-  const voiceAliasIdentityByName = new Map<string, VoiceIdentityEntry>();
+  const voiceIdentityByAlias = new Map<string, VoiceIdentityEntry>();
+  const linkedIdentityByAlias = new Map<string, string>();
+  const botVoiceDisplayIdentityByAlias = new Map<string, string>();
 
   for (const group of groups) {
     for (const member of group) {
@@ -249,8 +323,9 @@ function mergePresenceMembers(
         member,
         identityByUserId,
         identityByUsername,
-        voiceIdentityByUsername,
-        voiceAliasIdentityByName,
+        voiceIdentityByAlias,
+        linkedIdentityByAlias,
+        botVoiceDisplayIdentityByAlias,
       );
       const existing = merged.get(identity);
       const preferred = !existing || memberPriority(member) > memberPriority(existing)
@@ -263,8 +338,9 @@ function mergePresenceMembers(
         identity,
         identityByUserId,
         identityByUsername,
-        voiceIdentityByUsername,
-        voiceAliasIdentityByName,
+        voiceIdentityByAlias,
+        linkedIdentityByAlias,
+        botVoiceDisplayIdentityByAlias,
       );
     }
   }

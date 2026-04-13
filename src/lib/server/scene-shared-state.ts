@@ -201,6 +201,7 @@ function advanceSharedHeroSceneEntities(
         profile,
         peers: peerPositions,
         fallback: entity.fallback,
+        source: entity.source,
       });
       Object.assign(entity, next);
     }
@@ -222,15 +223,17 @@ function createSharedHeroSceneEntity(
     profile,
     memberIndex,
     member.source === 'fallback',
+    member.source,
   );
   const motion = createGhostlingSceneMotionState(
     member.key,
     world,
     profile,
     preferredPointKey,
-    {
-      fallback: member.source === 'fallback',
-      peers: Array.from(entities.values()).map((entity) => ({
+      {
+        fallback: member.source === 'fallback',
+        source: member.source,
+        peers: Array.from(entities.values()).map((entity) => ({
         key: entity.key,
         x: entity.x,
         y: entity.y,
@@ -297,6 +300,7 @@ function syncSharedHeroSceneMembers(
       profile,
       memberIndex,
       member.source === 'fallback',
+      member.source,
     );
 
     if (!existing) {
@@ -314,6 +318,7 @@ function syncSharedHeroSceneMembers(
           preferredPointKey,
           {
             fallback: member.source === 'fallback',
+            source: member.source,
             peers: Array.from(entities.values())
               .filter((entity) => entity.key !== existing.key)
               .map((entity) => ({

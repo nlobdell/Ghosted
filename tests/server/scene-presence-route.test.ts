@@ -407,6 +407,51 @@ describe('scene presence route', () => {
     });
   });
 
+  it('dedupes bot and widget voice entries when the nickname only differs by spacing or punctuation', async () => {
+    buildRuntimeAuthConfigMock.mockReturnValue({
+      guildId: 'ghosted-guild',
+      botToken: 'bot-token',
+    });
+    womGroupIdMock.mockReturnValue(null);
+    replaceScenePresenceChannelAllowlist(context.db, 'ghosted-guild', [
+      { channelId: 'voice-1', channelName: 'Lounge', channelType: 'voice' },
+    ]);
+    upsertDiscordPresenceWorkerState(context.db, {
+      guildId: 'ghosted-guild',
+      runtimeStatus: 'running',
+      botInstallStatus: 'installed',
+      lastHeartbeatAt: '2026-04-10T11:59:58.000Z',
+      lastSyncAt: '2026-04-10T11:59:58.000Z',
+      lastError: null,
+    });
+    upsertDiscordVoicePresence(context.db, {
+      guildId: 'ghosted-guild',
+      discordId: 'discord-1',
+      channelId: 'voice-1',
+      displayName: 'Ghosted Smirk',
+      username: 'cptsmirk',
+      joinedAt: '2026-04-10T11:59:55.000Z',
+      lastSeenAt: '2026-04-10T11:59:58.000Z',
+    });
+
+    vi.stubGlobal('fetch', mockVoiceWidget([
+      { username: 'GhostedSmirk', channel_id: 'voice-1', display_name: 'Ghosted Smirk' },
+    ]));
+
+    const response = await GET();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.members).toHaveLength(1);
+    expect(payload.members[0]).toMatchObject({
+      key: 'voice:cptsmirk',
+      username: 'cptsmirk',
+      displayName: 'Ghosted Smirk',
+      source: 'voice',
+      voiceSource: 'bot',
+    });
+  });
+
   it('keeps unrelated same-display-name voice members separate when usernames differ', async () => {
     buildRuntimeAuthConfigMock.mockReturnValue({ guildId: 'ghosted-guild' });
     womGroupIdMock.mockReturnValue(null);
@@ -445,6 +490,101 @@ describe('scene presence route', () => {
       'voice:alpha',
       'wom:shared name',
     ]);
+  });
+
+  it('dedupes WOM and bot voice members when the WOM name matches the bot nickname alias', async () => {
+    buildRuntimeAuthConfigMock.mockReturnValue({
+      guildId: 'ghosted-guild',
+      botToken: 'bot-token',
+    });
+    womGroupIdMock.mockReturnValue('123');
+    replaceScenePresenceChannelAllowlist(context.db, 'ghosted-guild', [
+      { channelId: 'voice-1', channelName: 'Lounge', channelType: 'voice' },
+    ]);
+    upsertDiscordPresenceWorkerState(context.db, {
+      guildId: 'ghosted-guild',
+      runtimeStatus: 'running',
+      botInstallStatus: 'installed',
+      lastHeartbeatAt: '2026-04-10T11:59:58.000Z',
+      lastSyncAt: '2026-04-10T11:59:58.000Z',
+      lastError: null,
+    });
+    upsertDiscordVoicePresence(context.db, {
+      guildId: 'ghosted-guild',
+      discordId: 'discord-1',
+      channelId: 'voice-1',
+      displayName: 'Ghosted Kami',
+      username: 'justromeplz',
+      joinedAt: '2026-04-10T11:59:55.000Z',
+      lastSeenAt: '2026-04-10T11:59:58.000Z',
+    });
+    womRequestJsonMock.mockResolvedValue([
+      { player: { displayName: 'Ghosted Kami' } },
+    ]);
+
+    const response = await GET();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.members).toHaveLength(1);
+    expect(payload.members[0]).toMatchObject({
+      key: 'voice:justromeplz',
+      username: 'justromeplz',
+      displayName: 'Ghosted Kami',
+      source: 'voice',
+      voiceSource: 'bot',
+    });
+  });
+
+  it('dedupes WOM and voice members when a linked voice user corroborates the WOM display name', async () => {
+    const linkedUserId = insertUser(context.db, {
+      discordId: 'discord-1',
+      username: 'kami',
+      globalName: 'Ghosted Kami',
+    });
+
+    buildRuntimeAuthConfigMock.mockReturnValue({
+      guildId: 'ghosted-guild',
+      botToken: 'bot-token',
+    });
+    womGroupIdMock.mockReturnValue('123');
+    replaceScenePresenceChannelAllowlist(context.db, 'ghosted-guild', [
+      { channelId: 'voice-1', channelName: 'Lounge', channelType: 'voice' },
+    ]);
+    upsertDiscordPresenceWorkerState(context.db, {
+      guildId: 'ghosted-guild',
+      runtimeStatus: 'running',
+      botInstallStatus: 'installed',
+      lastHeartbeatAt: '2026-04-10T11:59:58.000Z',
+      lastSyncAt: '2026-04-10T11:59:58.000Z',
+      lastError: null,
+    });
+    upsertDiscordVoicePresence(context.db, {
+      guildId: 'ghosted-guild',
+      discordId: 'discord-1',
+      channelId: 'voice-1',
+      displayName: 'Ghosted Kami',
+      username: 'kami-alt',
+      joinedAt: '2026-04-10T11:59:55.000Z',
+      lastSeenAt: '2026-04-10T11:59:58.000Z',
+    });
+    womRequestJsonMock.mockResolvedValue([
+      { player: { displayName: 'Ghosted Kami' } },
+    ]);
+
+    const response = await GET();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.members).toHaveLength(1);
+    expect(payload.members[0]).toMatchObject({
+      key: `user:${linkedUserId}`,
+      userId: linkedUserId,
+      username: 'kami-alt',
+      displayName: 'Ghosted Kami',
+      source: 'voice',
+      voiceSource: 'bot',
+    });
   });
 
   it('rehomes persisted shared-scene entities back onto canonical hero points after a restart', async () => {
@@ -513,7 +653,7 @@ describe('scene presence route', () => {
     expect(payload.sharedScene?.hero?.entities[0]).toMatchObject({
       key: 'voice:alpha',
       safeZoneKey: 'shared-floor',
-      pointKey: 'floor-left-outer',
+      pointKey: 'floor-mid-left',
       scaleTier: 2,
       renderScale: 2,
     });
@@ -593,10 +733,25 @@ describe('scene presence route', () => {
     const refreshedResponse = await GET();
     const refreshedPayload = await refreshedResponse.json();
     expect(refreshedPayload.members[0]?.activity.firstSeenAt).toBe(firstSeenAt);
-    expect(refreshedPayload.members[0]?.activity.lastSeenAt).not.toBe(cachedLastSeenAt);
+    expect(refreshedPayload.members[0]?.activity.lastSeenAt).toBe(cachedLastSeenAt);
     expect(refreshedPayload.members[0]?.activity.freshness).toBe('new');
 
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const refreshedSettledResponse = await GET();
+    const refreshedSettledPayload = await refreshedSettledResponse.json();
+    expect(refreshedSettledPayload.members[0]?.activity.firstSeenAt).toBe(firstSeenAt);
+    expect(refreshedSettledPayload.members[0]?.activity.lastSeenAt).not.toBe(cachedLastSeenAt);
+    expect(refreshedSettledPayload.members[0]?.activity.freshness).toBe('new');
+
     vi.setSystemTime(new Date('2026-04-10T12:00:40.000Z'));
+    const steadyRefreshResponse = await GET();
+    await steadyRefreshResponse.json();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
     const steadyResponse = await GET();
     const steadyPayload = await steadyResponse.json();
     expect(steadyPayload.members[0]?.activity.firstSeenAt).toBe(firstSeenAt);

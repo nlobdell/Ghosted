@@ -56,6 +56,12 @@
       "width": 3150,
       "height": 314
     },
+    "heroCrop": {
+      "x": 480,
+      "y": 95,
+      "width": 2000,
+      "height": 250
+    },
     "labelSafeTop": {
       "x": 0,
       "y": 0,

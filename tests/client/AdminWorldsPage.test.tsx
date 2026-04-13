@@ -76,6 +76,9 @@ describe('AdminWorldsPage', () => {
     expect(screen.getByText('Replace draft layers')).not.toBeNull();
     expect(screen.getByText('Replace draft world JSON')).not.toBeNull();
     expect(screen.getByText('Draft runtime caps')).not.toBeNull();
+    expect(screen.getByText('Hero crop')).not.toBeNull();
+    expect(screen.getAllByText(`${SHARED_COMMONS_WORLD.guides.heroCrop?.x}, ${SHARED_COMMONS_WORLD.guides.heroCrop?.y}, ${SHARED_COMMONS_WORLD.guides.heroCrop?.width}x${SHARED_COMMONS_WORLD.guides.heroCrop?.height}`).length).toBeGreaterThan(0);
+    expect(screen.getByText('Published hero crop')).not.toBeNull();
     expect(screen.getByTestId('world-layer-upload-midground')).not.toBeNull();
     expect(screen.getByText('Published vs draft layer previews')).not.toBeNull();
   });

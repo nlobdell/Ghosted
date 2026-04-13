@@ -37,6 +37,7 @@ describe('ghostling world sidecar', () => {
         debugFloorBand,
         centerSafe,
         ultrawideBleed,
+        heroCrop,
         labelSafeTop,
       },
     } = SHARED_COMMONS_WORLD;
@@ -60,6 +61,11 @@ describe('ghostling world sidecar', () => {
     expect(ultrawideBleed.y).toBeGreaterThanOrEqual(0);
     expect(ultrawideBleed.x + ultrawideBleed.width).toBeLessThanOrEqual(sourceWidth);
     expect(ultrawideBleed.y + ultrawideBleed.height).toBeLessThanOrEqual(sourceHeight);
+
+    expect(heroCrop?.x).toBeGreaterThanOrEqual(0);
+    expect(heroCrop?.y).toBeGreaterThanOrEqual(0);
+    expect((heroCrop?.x ?? 0) + (heroCrop?.width ?? 0)).toBeLessThanOrEqual(sourceWidth);
+    expect((heroCrop?.y ?? 0) + (heroCrop?.height ?? 0)).toBeLessThanOrEqual(sourceHeight);
 
     expect(labelSafeTop?.x).toBeGreaterThanOrEqual(0);
     expect(labelSafeTop?.y).toBeGreaterThanOrEqual(0);
@@ -107,6 +113,7 @@ describe('ghostling world sidecar', () => {
         debugFloorBand: { x: 0, y: 70, width: 280, height: 70 },
         centerSafe: { x: 28, y: 12, width: 224, height: 104 },
         ultrawideBleed: { x: 8, y: 8, width: 264, height: 116 },
+        heroCrop: { x: 50, y: 20, width: 180, height: 84 },
         labelSafeTop: { x: 0, y: 0, width: 280, height: 26 },
       },
       fallbackAnchor: {
@@ -165,5 +172,6 @@ describe('ghostling world sidecar', () => {
     expect(loaded.viewports.desktop.pointOrder).toEqual(['rear-main']);
     expect(loaded.guides.centerSafe.width).toBe(224);
     expect(loaded.guides.ultrawideBleed.width).toBe(264);
+    expect(loaded.guides.heroCrop?.width).toBe(180);
   });
 });

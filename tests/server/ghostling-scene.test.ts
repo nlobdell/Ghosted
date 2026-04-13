@@ -65,6 +65,7 @@ describe('ghostling scene logic', () => {
     expect(preferredGhostlingScenePointKey(profile, 0)).toBe('floor-mid-left');
     expect(preferredGhostlingScenePointKey(profile, 4)).toBe('floor-left-mid');
     expect(preferredGhostlingScenePointKey(profile, 9)).toBe('floor-right-outer');
+    expect(preferredGhostlingScenePointKey(profile, 0, false, 'wom')).toBe('floor-right-outer');
     expect(preferredGhostlingScenePointKey(profile, 0, true)).toBe(SHARED_COMMONS_WORLD.fallbackAnchor.key);
   });
 
@@ -100,6 +101,26 @@ describe('ghostling scene logic', () => {
     expect(resolveGhostlingSceneDisplaySize(right.scaleTier, 1)).toBe(140);
     expect(Math.abs(left.targetX - pointX('floor-mid-left'))).toBeLessThanOrEqual(48);
     expect(Math.abs(right.targetX - pointX('floor-right-inner'))).toBeLessThanOrEqual(48);
+  });
+
+  it('starts WOM ghosts slower than voice ghosts for the same seeded motion profile', () => {
+    const profile = resolveGhostlingSceneProfile(1200, 'hero');
+    const voice = createGhostlingSceneMotionState(
+      'user:tempo',
+      SHARED_COMMONS_WORLD,
+      profile,
+      'floor-mid-left',
+      { source: 'voice' },
+    );
+    const wom = createGhostlingSceneMotionState(
+      'user:tempo',
+      SHARED_COMMONS_WORLD,
+      profile,
+      'floor-mid-left',
+      { source: 'wom' },
+    );
+
+    expect(wom.speed).toBeLessThan(voice.speed);
   });
 
   it('keeps roaming inside authored world bounds while steering away from crowding', () => {
@@ -339,6 +360,64 @@ describe('ghostling scene logic', () => {
     expect(['floor-center-left', 'floor-mid-right']).toContain(next.pointKey);
     expect(next.safeZoneKey).toBe('shared-floor');
     expect(Math.hypot(next.targetX - next.x, next.targetY - next.y)).toBeGreaterThanOrEqual(20);
+  });
+
+  it('biases voice hops toward center anchors and WOM hops toward the edges', () => {
+    const profile = {
+      ...resolveGhostlingSceneProfile(1200, 'hero'),
+      anchorHopChance: 1,
+    };
+    const voice = createGhostlingSceneMotionState(
+      'user:voice-cluster',
+      SHARED_COMMONS_WORLD,
+      profile,
+      'floor-center-left',
+      { source: 'voice' },
+    );
+    voice.x = pointX('floor-center-left');
+    voice.y = pointY('floor-center-left');
+    voice.targetX = pointX('floor-center-left');
+    voice.targetY = pointY('floor-center-left');
+    voice.pointKey = 'floor-center-left';
+    voice.pauseRemainingMs = 1;
+    voice.opacity = 1;
+
+    const wom = createGhostlingSceneMotionState(
+      'user:wom-drift',
+      SHARED_COMMONS_WORLD,
+      profile,
+      'floor-center-left',
+      { source: 'wom' },
+    );
+    wom.x = pointX('floor-center-left');
+    wom.y = pointY('floor-center-left');
+    wom.targetX = pointX('floor-center-left');
+    wom.targetY = pointY('floor-center-left');
+    wom.pointKey = 'floor-center-left';
+    wom.pauseRemainingMs = 1;
+    wom.opacity = 1;
+
+    const nextVoice = advanceGhostlingSceneEntity(voice, {
+      dtMs: 16,
+      world: SHARED_COMMONS_WORLD,
+      profile,
+      peers: [],
+      source: 'voice',
+    });
+    const nextWom = advanceGhostlingSceneEntity(wom, {
+      dtMs: 16,
+      world: SHARED_COMMONS_WORLD,
+      profile,
+      peers: [],
+      source: 'wom',
+    });
+
+    const centerX = SHARED_COMMONS_WORLD.fallbackAnchor.x;
+    expect(['floor-mid-left', 'floor-left-mid']).toContain(nextVoice.pointKey);
+    expect(['floor-mid-left', 'floor-left-mid']).toContain(nextWom.pointKey);
+    expect(Math.abs(pointX(nextVoice.pointKey) - centerX)).toBeLessThanOrEqual(
+      Math.abs(pointX(nextWom.pointKey) - centerX),
+    );
   });
 
   it('damps vertical approach without wobbling away from the destination lane', () => {

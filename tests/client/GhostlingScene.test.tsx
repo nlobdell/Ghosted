@@ -634,7 +634,132 @@ describe('GhostlingScene', () => {
     flushFrame(16);
 
     expect(container.querySelector('[data-scene-state="live-active"]')).not.toBeNull();
+    const wrap = container.querySelector('[data-source="voice"]');
+    if (!(wrap instanceof HTMLDivElement)) {
+      throw new Error('Expected live-active Ghostling wrapper.');
+    }
+    expect(wrap.dataset.presenceActive).toBe('true');
+    expect(parseFloat(wrap.style.getPropertyValue('--ghost-presence-opacity'))).toBeCloseTo(1, 4);
+    expect(parseFloat(wrap.style.getPropertyValue('--ghost-presence-grayscale'))).toBeCloseTo(0, 4);
     expect(screen.getByTestId('animated-stage').getAttribute('data-presentation')).toBe('studio');
+  });
+
+  it('slightly dims non-voice ghostlings without dimming the username label', () => {
+    const payload = makePayload([
+      makeMember('user:1', 'Member One', {
+        source: 'wom',
+        activity: {
+          firstSeenAt: '2026-04-10T12:00:00.000Z',
+          lastSeenAt: '2026-04-10T12:00:00.000Z',
+          freshness: 'steady',
+          strength: 'high',
+        },
+      }),
+    ]);
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const wrap = container.querySelector('[data-source="wom"]');
+    if (!(wrap instanceof HTMLDivElement)) {
+      throw new Error('Expected WOM Ghostling wrapper.');
+    }
+    const visual = wrap.children.item(1);
+    const nameplate = wrap.children.item(2);
+    if (!(visual instanceof HTMLDivElement) || !(nameplate instanceof HTMLSpanElement)) {
+      throw new Error('Expected Ghostling visual and nameplate.');
+    }
+
+    expect(wrap.dataset.presenceActive).toBe('false');
+    expect(parseFloat(wrap.style.getPropertyValue('--ghost-presence-opacity'))).toBeCloseTo(0.85, 4);
+    expect(parseFloat(wrap.style.getPropertyValue('--ghost-presence-grayscale'))).toBeGreaterThan(0.3);
+    expect(parseFloat(wrap.style.getPropertyValue('--ghost-presence-saturate'))).toBeLessThan(0.6);
+    expect(visual.style.opacity).toBe('');
+    expect(window.getComputedStyle(nameplate).opacity).toBe('1');
+  });
+
+  it('restores full opacity for inactive ghostlings on hover', () => {
+    const payload = makePayload([
+      makeMember('user:1', 'Member One', {
+        source: 'wom',
+      }),
+    ]);
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const wrap = container.querySelector('[data-source="wom"]');
+    if (!(wrap instanceof HTMLDivElement)) {
+      throw new Error('Expected inactive Ghostling wrapper.');
+    }
+
+    expect(wrap.style.getPropertyValue('--ghost-presence-opacity')).toBe('0.85');
+    fireEvent.mouseEnter(wrap);
+    expect(wrap.dataset.sceneState).toBe('hovered');
+    expect(wrap.style.getPropertyValue('--ghost-presence-opacity')).toBe('1');
+    expect(parseFloat(wrap.style.getPropertyValue('--ghost-presence-grayscale'))).toBeCloseTo(0, 4);
+  });
+
+  it('keeps fallback and scene-lab ghostlings fully opaque', () => {
+    const payload = makePayload([
+      makeMember('user:1', 'Member One', {
+        source: 'wom',
+      }),
+      makeMember('fallback:house', 'Ghosted House', {
+        userId: null,
+        source: 'fallback',
+      }),
+    ]);
+    const { container, rerender } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const fallbackWrap = container.querySelector('[data-source="fallback"]');
+    if (!(fallbackWrap instanceof HTMLDivElement)) {
+      throw new Error('Expected fallback Ghostling wrapper.');
+    }
+    expect(fallbackWrap.dataset.presenceActive).toBe('true');
+    expect(parseFloat(fallbackWrap.style.getPropertyValue('--ghost-presence-opacity'))).toBeCloseTo(1, 4);
+
+    rerender(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One', { source: 'wom' })])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(32);
+    flushFrame(48);
+
+    const editorWrap = container.querySelector('[data-source="wom"]');
+    if (!(editorWrap instanceof HTMLDivElement)) {
+      throw new Error('Expected scene-lab Ghostling wrapper.');
+    }
+    expect(editorWrap.dataset.presenceActive).toBe('true');
+    expect(parseFloat(editorWrap.style.getPropertyValue('--ghost-presence-opacity'))).toBeCloseTo(1, 4);
   });
 
   it('condenses the crowd on mobile by capping visible members', () => {
@@ -1385,6 +1510,23 @@ describe('GhostlingScene', () => {
     expect(screen.getByTestId('scene-lab-object-browser')).not.toBeNull();
   });
 
+  it('defaults the scene lab to live preview when the homepage already has a live payload', () => {
+    render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    expect(screen.getByText('mode=live bucket=desktop playing=yes')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Refresh live' })).not.toBeNull();
+  });
+
   it('lets the scene lab toggle overlay guide visibility while keeping safe zones editable from the browser', () => {
     const { container } = render(
       <GhostlingScene
@@ -1411,6 +1553,99 @@ describe('GhostlingScene', () => {
 
     expect(screen.getByDisplayValue(String(SHARED_COMMONS_WORLD.safeZones[0]?.bounds.x))).not.toBeNull();
     expect(screen.getByDisplayValue(String(SHARED_COMMONS_WORLD.safeZones[0]?.roamRadius))).not.toBeNull();
+  });
+
+  it('shows a dedicated export-frame preview for hero crop and updates it visually for world export', () => {
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    expect(container.querySelector('[data-scene-lab-role="hero-crop-stage-frame"]')).not.toBeNull();
+    fireEvent.click(within(screen.getByTestId('scene-lab-object-browser')).getByText('Hero crop'));
+
+    const guideX = screen.getByLabelText('Guide X') as HTMLInputElement;
+    expect(screen.getByTestId('scene-lab-hero-crop-preview')).not.toBeNull();
+    expect(guideX.value).toBe(String(SHARED_COMMONS_WORLD.guides.heroCrop?.x));
+
+    const previewRect = document.querySelector('[data-scene-lab-role="hero-crop-preview-rect"]');
+    if (!(previewRect instanceof Element)) {
+      throw new Error('Expected hero crop preview rect.');
+    }
+
+    fireEvent.pointerDown(previewRect, { clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(window, { clientX: 124, clientY: 112 });
+    fireEvent.pointerUp(window, { clientX: 124, clientY: 112 });
+
+    expect(Number(guideX.value)).toBe((SHARED_COMMONS_WORLD.guides.heroCrop?.x ?? 0) + 24);
+  });
+
+  it('materializes editable hero crop values in the scene lab even when the loaded world omitted them', () => {
+    const worldWithoutHeroCrop = {
+      ...SHARED_COMMONS_WORLD,
+      guides: {
+        ...SHARED_COMMONS_WORLD.guides,
+        heroCrop: undefined,
+      },
+    };
+
+    render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+        worldSpec={worldWithoutHeroCrop}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    fireEvent.click(within(screen.getByTestId('scene-lab-object-browser')).getByText('Hero crop'));
+
+    expect(screen.getByLabelText('Guide X')).not.toBeNull();
+    expect(screen.getByLabelText('Guide Width')).not.toBeNull();
+    expect(screen.getByTestId('scene-lab-hero-crop-preview')).not.toBeNull();
+  });
+
+  it('matches the hero stage aspect ratio to the authored hero crop', () => {
+    const customWorld = {
+      ...SHARED_COMMONS_WORLD,
+      guides: {
+        ...SHARED_COMMONS_WORLD.guides,
+        heroCrop: {
+          x: 820,
+          y: 54,
+          width: 840,
+          height: 420,
+        },
+      },
+    };
+
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={{ members: [], source: 'empty' }}
+        realtimeDisabled
+        worldSpec={customWorld}
+      />,
+    );
+
+    const stage = container.querySelector('div[data-world="shared-commons"][data-preset="public-hero"]');
+
+    if (!(stage instanceof HTMLElement)) {
+      throw new Error('Expected hero scene stage.');
+    }
+
+    expect(stage.getAttribute('data-hero-crop-aspect')).toBe('840 / 420');
   });
 
   it('updates anchor values from the scene lab controls and supports keyboard nudging', () => {
@@ -1465,6 +1700,31 @@ describe('GhostlingScene', () => {
     fireEvent.pointerUp(window, { clientX: 128, clientY: 112 });
 
     expect(Number(anchorX.value)).toBe(originX + expectedDelta.x);
+  });
+
+  it('adds and removes anchors from the scene lab authored browser', () => {
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const initialAnchorCount = container.querySelectorAll('[data-scene-lab-role="anchor"]').length;
+    fireEvent.click(screen.getByTestId('scene-lab-add-anchor'));
+
+    expect(container.querySelectorAll('[data-scene-lab-role="anchor"]').length).toBe(initialAnchorCount + 1);
+    expect(screen.getByTestId('scene-lab-anchor-x')).not.toBeNull();
+    expect((screen.getByTestId('scene-lab-remove-anchor') as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(screen.getByTestId('scene-lab-remove-anchor'));
+
+    expect(container.querySelectorAll('[data-scene-lab-role="anchor"]').length).toBe(initialAnchorCount);
   });
 
   it('copies a world draft from the scene lab export controls', async () => {
@@ -1522,7 +1782,7 @@ describe('GhostlingScene', () => {
     flushFrame(16);
 
     fireEvent.click(screen.getByTestId('scene-lab-tab-members'));
-    fireEvent.click(within(screen.getByTestId('scene-lab-object-browser')).getByText('Ritual Watch'));
+    fireEvent.click(within(screen.getByTestId('scene-lab-object-browser')).getByText('Member One'));
 
     expect(screen.getByTestId('scene-lab-member-diagnostics')).not.toBeNull();
     expect(screen.queryByTestId('scene-lab-anchor-x')).toBeNull();
@@ -1648,9 +1908,17 @@ describe('GhostlingScene', () => {
     flushFrame(16);
 
     const overlay = container.querySelector('svg');
+    const profile = resolveGhostlingSceneProfile(viewportWidth, 'hero');
+    const camera = createGhostlingSceneCameraMetrics(
+      SHARED_COMMONS_WORLD,
+      viewportWidth,
+      viewportHeight,
+      profile.bucket,
+      'fixed-crop',
+    );
     expect(overlay).not.toBeNull();
     expect(overlay?.getAttribute('viewBox')).toBe(`0 0 ${SHARED_COMMONS_WORLD.sourceWidth} ${SHARED_COMMONS_WORLD.sourceHeight}`);
-    expect((overlay as SVGElement | null)?.style.left).toBe('50%');
+    expect((overlay as SVGElement | null)?.style.left).toBe(`${camera.offsetX}px`);
   });
 
   it('suppresses the world debug overlay in production even if the flag is set', () => {
