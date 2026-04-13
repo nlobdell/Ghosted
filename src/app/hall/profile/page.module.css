@@ -56,6 +56,64 @@
   max-width: 46ch;
 }
 
+.claimControls {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(160, 132, 242, 0.14);
+  background: linear-gradient(180deg, rgba(160, 132, 242, 0.07), rgba(255, 255, 255, 0.02));
+}
+
+.claimHeader {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.claimHeader strong,
+.claimCurrentLabel {
+  color: var(--color-text-strong);
+}
+
+.claimHeader span,
+.claimCurrentMeta,
+.claimHint {
+  color: var(--color-text-muted);
+  line-height: 1.65;
+}
+
+.claimCurrent {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.claimCurrentLabel {
+  font-size: 1.02rem;
+}
+
+.claimToggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.claimFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.94rem;
+}
+
+.claimFacts strong {
+  color: var(--color-text-strong);
+}
+
+.claimActions {
+  display: grid;
+  gap: 0.45rem;
+}
+
 .page :global(.profile-scoreboard),
 .page :global(.profile-scoreboard .app-summary-grid__secondary) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -93,5 +151,11 @@
   .page :global(.profile-identity-panel .app-metric-grid),
   .page :global(.profile-link-state .app-metric-grid) {
     grid-template-columns: 1fr;
+  }
+
+  .claimToggle,
+  .claimFacts {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

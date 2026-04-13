@@ -749,7 +749,7 @@ function presentationForState(state: SceneEntityState): StagePresentation {
 }
 
 function preferredSceneLabel(entity: Pick<RenderGhostlingEntity, 'source' | 'displayName' | 'username'>) {
-  if (entity.source === 'voice' && entity.displayName.trim()) {
+  if (entity.displayName.trim()) {
     return entity.displayName.trim();
   }
   return entity.username;

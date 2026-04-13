@@ -1,11 +1,15 @@
 import type { GhostlingSceneTuningSpec } from '@/lib/ghostling-scene-tuning';
 import type { GhostlingWorldId, GhostlingWorldPreset, GhostlingWorldSpec } from '@/lib/ghostling-world';
 
+export type PublicNameSource = 'discord' | 'osrs';
+export type OsrsClaimSource = 'manual_wom' | 'runelite_plugin';
+
 export interface ShellUser {
   id: number;
   discordId: string;
   username: string;
   displayName: string;
+  publicNameSource: PublicNameSource;
   avatarUrl?: string;
   balance: number;
   isAdmin: boolean;
@@ -20,6 +24,9 @@ export interface WomLink {
   playerId?: number | null;
   username?: string;
   displayName?: string;
+  publicNameSource?: PublicNameSource;
+  claimSource?: OsrsClaimSource | null;
+  verifiedAt?: string | null;
   inGroup?: boolean;
   lastSyncedAt?: string | null;
   status?: string;
@@ -44,6 +51,9 @@ export interface ShellData {
     linked: boolean;
     username?: string | null;
     displayName?: string | null;
+    publicNameSource?: PublicNameSource;
+    claimSource?: OsrsClaimSource | null;
+    verifiedAt?: string | null;
     inGroup: boolean;
     lastSyncedAt?: string | null;
     membership?: { rankLabel?: string; role?: string; groupName?: string };

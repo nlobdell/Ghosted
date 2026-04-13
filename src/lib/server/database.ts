@@ -34,6 +34,7 @@ function ensureSchema(db: Database.Database) {
       avatar_hash TEXT,
       roles_json TEXT NOT NULL DEFAULT '[]',
       is_admin INTEGER NOT NULL DEFAULT 0,
+      public_name_source TEXT NOT NULL DEFAULT 'discord',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -160,6 +161,9 @@ function ensureSchema(db: Database.Database) {
       wom_player_id INTEGER NOT NULL UNIQUE,
       username TEXT NOT NULL,
       display_name TEXT NOT NULL,
+      claim_source TEXT NOT NULL DEFAULT 'manual_wom',
+      claimed_at TEXT,
+      verified_at TEXT,
       status TEXT NOT NULL,
       is_primary INTEGER NOT NULL DEFAULT 1,
       linked_at TEXT NOT NULL,
@@ -284,8 +288,25 @@ function ensureSchema(db: Database.Database) {
       archived_by_user_id INTEGER REFERENCES users(id),
       PRIMARY KEY (world_id, layer_key)
     );
+
+    CREATE TABLE IF NOT EXISTS osrs_claim_challenges (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      requested_username TEXT NOT NULL,
+      wom_player_id INTEGER,
+      code_hash TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      redeemed_at TEXT,
+      redeemed_username TEXT
+    );
   `);
 
+  ensureTableColumn(db, 'users', 'public_name_source', "TEXT NOT NULL DEFAULT 'discord'");
+  ensureTableColumn(db, 'user_game_accounts', 'claim_source', "TEXT NOT NULL DEFAULT 'manual_wom'");
+  ensureTableColumn(db, 'user_game_accounts', 'claimed_at', 'TEXT');
+  ensureTableColumn(db, 'user_game_accounts', 'verified_at', 'TEXT');
   ensureTableColumn(db, 'companion_catalog', 'front_asset_path', 'TEXT');
   ensureTableColumn(db, 'companion_catalog', 'back_asset_path', 'TEXT');
   ensureTableColumn(db, 'companion_catalog', 'render_metadata_json', 'TEXT');
@@ -295,6 +316,21 @@ function ensureSchema(db: Database.Database) {
   ensureTableColumn(db, 'companion_settings', 'base_head_asset_path', 'TEXT');
   ensureTableColumn(db, 'scene_world_variants', 'draft_tuning_json', 'TEXT');
   ensureTableColumn(db, 'scene_world_variants', 'published_tuning_json', 'TEXT');
+  db.exec(`
+    UPDATE users
+    SET public_name_source = 'discord'
+    WHERE public_name_source IS NULL OR TRIM(public_name_source) = ''
+  `);
+  db.exec(`
+    UPDATE user_game_accounts
+    SET claim_source = 'manual_wom'
+    WHERE claim_source IS NULL OR TRIM(claim_source) = ''
+  `);
+  db.exec(`
+    UPDATE user_game_accounts
+    SET claimed_at = linked_at
+    WHERE claimed_at IS NULL
+  `);
   db.exec(`
     UPDATE companion_catalog
     SET updated_at = COALESCE(updated_at, created_at)

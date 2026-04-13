@@ -55,6 +55,32 @@ function discordHeaders(extra?: HeadersInit) {
   };
 }
 
+async function discordRequestJson<T>(
+  path: string,
+  options: {
+    method?: 'GET' | 'POST';
+    body?: Record<string, unknown>;
+    botToken: string;
+  },
+) {
+  const response = await fetch(`https://discord.com/api${path}`, {
+    method: options.method ?? 'GET',
+    headers: discordHeaders({
+      Authorization: `Bot ${options.botToken}`,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    }),
+    body: options.body ? JSON.stringify(options.body) : undefined,
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(body || `Discord request failed with HTTP ${response.status}.`);
+  }
+
+  return await response.json() as T;
+}
+
 function roleLabelOverrides() {
   return jsonLoad<Record<string, string>>(envText('DISCORD_ROLE_LABELS_JSON') ?? '', {});
 }
@@ -158,4 +184,40 @@ export async function postWebhook(content: string, config = buildRuntimeAuthConf
   } catch {
     return;
   }
+}
+
+export async function sendDiscordDirectMessage(
+  discordId: string,
+  content: string,
+  config = buildRuntimeAuthConfig(),
+) {
+  const recipientId = String(discordId ?? '').trim();
+  const message = String(content ?? '').trim();
+  if (!recipientId || !message) return;
+  if (!config.botToken) {
+    throw new Error('Discord bot token is not configured.');
+  }
+
+  const dmChannel = await discordRequestJson<{ id: string }>(
+    '/users/@me/channels',
+    {
+      method: 'POST',
+      body: { recipient_id: recipientId },
+      botToken: config.botToken,
+    },
+  );
+
+  const channelId = String(dmChannel.id ?? '').trim();
+  if (!channelId) {
+    throw new Error('Discord DM channel could not be created.');
+  }
+
+  await discordRequestJson(
+    `/channels/${channelId}/messages`,
+    {
+      method: 'POST',
+      body: { content: message },
+      botToken: config.botToken,
+    },
+  );
 }

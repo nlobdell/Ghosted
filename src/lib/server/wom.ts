@@ -3,6 +3,7 @@ import 'server-only';
 import type { Database } from 'better-sqlite3';
 import { recordAudit } from '@/lib/server/audit';
 import { AppError, clamp, envInt, envText, humanizeIdentifier, jsonLoad, parseIso, utcIso, utcNow } from '@/lib/server/core';
+import { normalizePublicNameSource, setUserPublicNameSource, type PublicNameSource, type OsrsClaimSource } from '@/lib/server/osrs-identity';
 
 const DEFAULT_WOM_API_BASE = 'https://api.wiseoldman.net/v2';
 const DEFAULT_WOM_CACHE_TTL_SECONDS = 900;
@@ -17,6 +18,9 @@ type GameAccountRow = {
   wom_player_id: number;
   username: string;
   display_name: string;
+  claim_source: OsrsClaimSource;
+  claimed_at: string | null;
+  verified_at: string | null;
   status: string;
   is_primary: number;
   linked_at: string;
@@ -231,17 +235,23 @@ export function saveUserGameAccount(
 ) {
   const existing = getUserGameAccount(db, userId, game);
   const now = utcIso();
+  const nextClaimSource = existing?.claim_source === 'runelite_plugin' ? 'runelite_plugin' : 'manual_wom';
+  const nextClaimedAt = existing?.claimed_at ?? existing?.linked_at ?? now;
+  const nextVerifiedAt = existing?.verified_at ?? null;
 
   try {
     db.prepare(`
       INSERT INTO user_game_accounts (
-        user_id, game, wom_player_id, username, display_name, status, is_primary, linked_at, updated_at
+        user_id, game, wom_player_id, username, display_name, claim_source, claimed_at, verified_at, status, is_primary, linked_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
       ON CONFLICT(user_id, game) DO UPDATE SET
         wom_player_id = excluded.wom_player_id,
         username = excluded.username,
         display_name = excluded.display_name,
+        claim_source = excluded.claim_source,
+        claimed_at = COALESCE(user_game_accounts.claimed_at, excluded.claimed_at),
+        verified_at = COALESCE(user_game_accounts.verified_at, excluded.verified_at),
         status = excluded.status,
         is_primary = 1,
         updated_at = excluded.updated_at
@@ -251,6 +261,9 @@ export function saveUserGameAccount(
       Number(player.id),
       String(player.username ?? '').trim(),
       String(player.displayName ?? player.username ?? '').trim(),
+      nextClaimSource,
+      nextClaimedAt,
+      nextVerifiedAt,
       String(player.status ?? 'unknown').trim() || 'unknown',
       existing?.linked_at ?? now,
       now,
@@ -262,6 +275,49 @@ export function saveUserGameAccount(
     }
     throw error;
   }
+
+  return getUserGameAccount(db, userId, game)!;
+}
+
+export function getUserPublicNameSource(db: Database, userId: number): PublicNameSource {
+  const row = db.prepare(`
+    SELECT public_name_source
+    FROM users
+    WHERE id = ?
+  `).get(userId) as { public_name_source: string | null } | undefined;
+  return normalizePublicNameSource(row?.public_name_source);
+}
+
+export function updateUserGameAccountClaimMetadata(
+  db: Database,
+  userId: number,
+  game: string,
+  input: {
+    claimSource?: OsrsClaimSource;
+    claimedAt?: string | null;
+    verifiedAt?: string | null;
+  },
+) {
+  const existing = getUserGameAccount(db, userId, game);
+  if (!existing) {
+    throw new AppError('Link a Wise Old Man RuneScape account first.', 404);
+  }
+
+  db.prepare(`
+    UPDATE user_game_accounts
+    SET claim_source = ?,
+        claimed_at = ?,
+        verified_at = ?,
+        updated_at = ?
+    WHERE user_id = ? AND game = ?
+  `).run(
+    input.claimSource ?? existing.claim_source,
+    input.claimedAt ?? existing.claimed_at ?? existing.linked_at,
+    input.verifiedAt ?? existing.verified_at,
+    utcIso(),
+    userId,
+    game,
+  );
 
   return getUserGameAccount(db, userId, game)!;
 }
@@ -671,12 +727,16 @@ export async function womMembershipPayload(db: Database, account: GameAccountRow
 
 export async function womLinkPayload(db: Database, userId: number) {
   const account = getUserGameAccount(db, userId, 'osrs');
+  const publicNameSource = getUserPublicNameSource(db, userId);
   if (!account) {
     return {
       linked: false,
       playerId: null,
       username: null,
       displayName: null,
+      publicNameSource,
+      claimSource: null,
+      verifiedAt: null,
       inGroup: false,
       membership: null,
       lastSyncedAt: null,
@@ -698,6 +758,9 @@ export async function womLinkPayload(db: Database, userId: number) {
     playerId: Number(account.wom_player_id),
     username: account.username,
     displayName: account.display_name,
+    publicNameSource,
+    claimSource: account.claim_source,
+    verifiedAt: account.verified_at,
     inGroup: womGroupId() !== undefined ? Boolean(membership) : true,
     membership,
     lastSyncedAt: account.updated_at,
@@ -720,10 +783,13 @@ export async function linkWomAccount(db: Database, user: CurrentUserLike, userna
   }
 
   const account = saveUserGameAccount(db, user.id, 'osrs', player);
+  setUserPublicNameSource(db, user.id, 'osrs');
   recordAudit(user.id, 'link_wom_account', 'user_game_account', String(account.id), {
     game: 'osrs',
     womPlayerId: Number(account.wom_player_id),
     username: account.username,
+    claimSource: account.claim_source,
+    publicNameSource: 'osrs',
   });
 
   return womLinkPayload(db, user.id);
@@ -733,6 +799,7 @@ export async function unlinkWomAccount(db: Database, user: CurrentUserLike) {
   const account = getUserGameAccount(db, user.id, 'osrs');
   if (account) {
     deleteUserGameAccount(db, user.id, 'osrs');
+    setUserPublicNameSource(db, user.id, 'discord');
     recordAudit(user.id, 'unlink_wom_account', 'user_game_account', String(account.id), {
       game: 'osrs',
       womPlayerId: Number(account.wom_player_id),
