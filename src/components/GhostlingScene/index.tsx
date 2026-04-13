@@ -169,6 +169,12 @@ type RenderGhostlingEntity = Pick<
 type SharedSceneCorrectionMode = 'snap' | 'smooth' | 'intent';
 type SceneLabDraftUpdate<T> = T | ((current: T) => T);
 type SceneLabHistoryMode = 'none' | 'immediate';
+type HeroPanDragState = {
+  pointerId: number;
+  startClientX: number;
+  startPanXWorld: number;
+  thresholdExceeded: boolean;
+};
 
 const POLL_MS = 15_000;
 const LIVE_ACTIVE_MS = 3_200;
@@ -186,6 +192,11 @@ const SOFT_SYNC_TARGET_FACTOR = 0.34;
 const SOFT_SYNC_VELOCITY_FACTOR = 0.2;
 const SOFT_SYNC_RENDER_SCALE_FACTOR = 0.26;
 const SOFT_SYNC_OPACITY_FACTOR = 0.4;
+const HERO_PAN_DRAG_THRESHOLD_PX = 8;
+const HERO_PAN_WHEEL_LINE_PX = 18;
+const HERO_PAN_SMOOTHING_MS = 120;
+const HERO_PAN_SETTLE_EPSILON = 0.18;
+const HERO_RECENTER_VISIBILITY_THRESHOLD = 1.5;
 const DEFAULT_SRC = '/api/companion/render-animated';
 const FALLBACK_NAMES = ['Ghosted House', 'Hall Lantern', 'Night Watch'];
 
@@ -208,6 +219,27 @@ function resolveDraftUpdate<T>(
 
 function blend(current: number, next: number, factor: number) {
   return current + ((next - current) * factor);
+}
+
+function normalizeHeroWheelDelta(
+  delta: number,
+  deltaMode: number,
+  pageWidthPx: number,
+) {
+  if (deltaMode === 1) {
+    return delta * HERO_PAN_WHEEL_LINE_PX;
+  }
+  if (deltaMode === 2) {
+    return delta * pageWidthPx;
+  }
+  return delta;
+}
+
+function detectHeroMobileViewport() {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(pointer: coarse)').matches
+    || window.matchMedia('(hover: none)').matches
+    || window.innerWidth <= 640;
 }
 
 function isSharedHeroVariant(
@@ -1096,7 +1128,11 @@ export function GhostlingScene({
   const [sceneLabUndoStack, setSceneLabUndoStack] = useState<GhostlingSceneLabSnapshot[]>([]);
   const [sceneLabRedoStack, setSceneLabRedoStack] = useState<GhostlingSceneLabSnapshot[]>([]);
   const [sceneLabLivePayload, setSceneLabLivePayload] = useState<ScenePresencePayload | null>(initialPayload);
+  const [heroPanDragging, setHeroPanDragging] = useState(false);
+  const [heroPanCanRecenter, setHeroPanCanRecenter] = useState(false);
+  const [heroPanMobileUi, setHeroPanMobileUi] = useState(() => detectHeroMobileViewport());
   const containerRef = useRef<HTMLDivElement>(null);
+  const layerRefs = useRef<Map<string, HTMLImageElement | null>>(new Map());
   const entitiesRef = useRef<Map<string, GhostlingEntity>>(new Map());
   const wrapRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const visualRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -1116,6 +1152,13 @@ export function GhostlingScene({
   const renderMembersStateRef = useRef<RenderGhostlingEntity[]>([]);
   const sceneLabEnabled = sceneEditorEnabled
     && isSharedHeroVariant(variant, world, preset);
+  const heroPanEnabled = variant === 'hero' && !sceneLabEnabled;
+  const heroMobilePerformanceMode = heroPanEnabled && heroPanMobileUi;
+  const heroPanCurrentXWorldRef = useRef(0);
+  const heroPanTargetXWorldRef = useRef(0);
+  const heroPanDragRef = useRef<HeroPanDragState | null>(null);
+  const heroPanDraggingRef = useRef(false);
+  const heroPanCanRecenterRef = useRef(false);
   const sceneWorldSpec = sceneLabEnabled ? sceneLabWorldDraft : worldSpec;
   const heroStageAspectRatio = variant === 'hero' && sceneWorldSpec.guides.heroCrop
     ? `${Math.max(1, sceneWorldSpec.guides.heroCrop.width)} / ${Math.max(1, sceneWorldSpec.guides.heroCrop.height)}`
@@ -1192,6 +1235,73 @@ export function GhostlingScene({
     if (!sceneLabEnabled) return;
     setSceneLabPreviewMode(initialPayload ? 'live' : 'sandbox');
   }, [initialPayload, sceneLabEnabled]);
+
+  const clearHoveredGhostling = useCallback(() => {
+    hoveredKeyRef.current = null;
+    setHoveredKey(null);
+  }, []);
+
+  const triggerHeroPanRecenter = useCallback(() => {
+    if (!heroPanEnabled) return;
+    if (heroPanDraggingRef.current) return;
+    const currentPanX = heroPanCurrentXWorldRef.current;
+    if (Math.abs(currentPanX) < 0.5) return;
+    heroPanTargetXWorldRef.current = 0;
+    clearHoveredGhostling();
+  }, [clearHoveredGhostling, heroPanEnabled]);
+
+  useEffect(() => {
+    heroPanDraggingRef.current = heroPanDragging;
+  }, [heroPanDragging]);
+
+  useEffect(() => {
+    heroPanCanRecenterRef.current = heroPanCanRecenter;
+  }, [heroPanCanRecenter]);
+
+  useEffect(() => {
+    if (heroPanEnabled) return;
+    heroPanCurrentXWorldRef.current = 0;
+    heroPanTargetXWorldRef.current = 0;
+    heroPanDragRef.current = null;
+    heroPanDraggingRef.current = false;
+    heroPanCanRecenterRef.current = false;
+    setHeroPanDragging(false);
+    setHeroPanCanRecenter(false);
+    setHeroPanMobileUi(false);
+  }, [heroPanEnabled]);
+
+  useEffect(() => {
+    if (!heroPanEnabled || typeof window === 'undefined') return undefined;
+    const coarsePointerQuery = window.matchMedia('(pointer: coarse)');
+    const noHoverQuery = window.matchMedia('(hover: none)');
+    const sync = () => {
+      setHeroPanMobileUi(detectHeroMobileViewport());
+    };
+
+    sync();
+    window.addEventListener('resize', sync);
+
+    if (
+      typeof coarsePointerQuery.addEventListener === 'function'
+      && typeof noHoverQuery.addEventListener === 'function'
+    ) {
+      coarsePointerQuery.addEventListener('change', sync);
+      noHoverQuery.addEventListener('change', sync);
+      return () => {
+        window.removeEventListener('resize', sync);
+        coarsePointerQuery.removeEventListener('change', sync);
+        noHoverQuery.removeEventListener('change', sync);
+      };
+    }
+
+    coarsePointerQuery.addListener(sync);
+    noHoverQuery.addListener(sync);
+    return () => {
+      window.removeEventListener('resize', sync);
+      coarsePointerQuery.removeListener(sync);
+      noHoverQuery.removeListener(sync);
+    };
+  }, [heroPanEnabled]);
 
   const createSceneLabSnapshot = useCallback(() => cloneGhostlingSceneLabSnapshot({
     worldDraft: sceneLabWorldDraftRef.current,
@@ -1460,6 +1570,97 @@ export function GhostlingScene({
     };
   }, [sceneWorldSpec]);
 
+  const onHeroStagePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!heroPanEnabled) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    heroPanDragRef.current = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startPanXWorld: heroPanCurrentXWorldRef.current,
+      thresholdExceeded: false,
+    };
+
+    if (typeof event.currentTarget.setPointerCapture === 'function') {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+  }, [heroPanEnabled]);
+
+  const onHeroStagePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!heroPanEnabled) return;
+    const drag = heroPanDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - drag.startClientX;
+    if (!drag.thresholdExceeded && Math.abs(deltaX) < HERO_PAN_DRAG_THRESHOLD_PX) {
+      return;
+    }
+
+    if (!drag.thresholdExceeded) {
+      drag.thresholdExceeded = true;
+      heroPanDraggingRef.current = true;
+      setHeroPanDragging(true);
+      clearHoveredGhostling();
+    }
+
+    const scaleX = Math.max(0.001, renderMetricsStateRef.current.scaleX);
+    const nextPanXWorld = drag.startPanXWorld - (deltaX / scaleX);
+    heroPanCurrentXWorldRef.current = nextPanXWorld;
+    heroPanTargetXWorldRef.current = nextPanXWorld;
+  }, [clearHoveredGhostling, heroPanEnabled]);
+
+  const endHeroStagePointerDrag = useCallback((pointerId: number) => {
+    const drag = heroPanDragRef.current;
+    if (!drag || drag.pointerId !== pointerId) return;
+    heroPanDragRef.current = null;
+    if (heroPanDraggingRef.current) {
+      heroPanDraggingRef.current = false;
+      setHeroPanDragging(false);
+    }
+  }, []);
+
+  const onHeroStagePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    endHeroStagePointerDrag(event.pointerId);
+    if (
+      typeof event.currentTarget.hasPointerCapture === 'function'
+      && typeof event.currentTarget.releasePointerCapture === 'function'
+      && event.currentTarget.hasPointerCapture(event.pointerId)
+    ) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }, [endHeroStagePointerDrag]);
+
+  const onHeroStagePointerCancel = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    endHeroStagePointerDrag(event.pointerId);
+  }, [endHeroStagePointerDrag]);
+
+  const onHeroStageDoubleClick = useCallback(() => {
+    triggerHeroPanRecenter();
+  }, [triggerHeroPanRecenter]);
+
+  const onHeroStageWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    if (!heroPanEnabled) return;
+    if (heroPanDraggingRef.current) return;
+
+    const dominantDelta = Math.abs(event.deltaX) >= 0.5
+      ? event.deltaX
+      : event.deltaY;
+    if (Math.abs(dominantDelta) < 0.5) return;
+
+    const normalizedDelta = normalizeHeroWheelDelta(
+      dominantDelta,
+      event.deltaMode,
+      Math.max(1, event.currentTarget.clientWidth),
+    );
+    if (Math.abs(normalizedDelta) < 0.5) return;
+
+    event.preventDefault();
+    clearHoveredGhostling();
+
+    const scaleX = Math.max(0.001, renderMetricsStateRef.current.scaleX);
+    heroPanTargetXWorldRef.current += normalizedDelta / scaleX;
+  }, [clearHoveredGhostling, heroPanEnabled]);
+
   const syncMembers = useCallback((
     payload: ScenePresencePayload | null,
     options: { correctionMode?: SharedSceneCorrectionMode } = {},
@@ -1479,7 +1680,17 @@ export function GhostlingScene({
       size.height,
       profile.bucket,
       cameraLayoutForVariant(variant),
+      heroPanEnabled ? { panXWorld: heroPanCurrentXWorldRef.current } : undefined,
     );
+    if (heroPanEnabled) {
+      heroPanCurrentXWorldRef.current = metrics.panXWorld;
+      heroPanTargetXWorldRef.current = metrics.panXWorld;
+      const nextCanRecenter = Math.abs(metrics.panXWorld) > HERO_RECENTER_VISIBILITY_THRESHOLD;
+      if (nextCanRecenter !== heroPanCanRecenterRef.current) {
+        heroPanCanRecenterRef.current = nextCanRecenter;
+        setHeroPanCanRecenter(nextCanRecenter);
+      }
+    }
     const sharedSnapshot = sceneLabEnabled ? null : sharedSnapshotForPayload(payload, variant);
     const sharedSnapshotEntities = sharedSnapshot
       ? new Map(sharedSnapshot.entities.map((entity) => [entity.key, entity]))
@@ -1765,6 +1976,7 @@ export function GhostlingScene({
     stageSize,
     variant,
     motionDebugEnabled,
+    heroPanEnabled,
     sceneLabEnabled,
     sceneLabTuningDraft,
     runtimeTuningSpec,
@@ -2093,6 +2305,7 @@ export function GhostlingScene({
 
   useEffect(() => {
     const entities = entitiesRef.current;
+    const layers = layerRefs.current;
     const wraps = wrapRefs.current;
     const visuals = visualRefs.current;
 
@@ -2122,13 +2335,62 @@ export function GhostlingScene({
         sceneLabEnabled ? sceneLabTuningDraft : runtimeTuningSpec,
         sceneWorldSpec,
       );
+      if (heroPanEnabled) {
+        const clampedTarget = createGhostlingSceneCameraMetrics(
+          sceneWorldSpec,
+          size.width,
+          size.height,
+          profile.bucket,
+          cameraLayoutForVariant(variant),
+          { panXWorld: heroPanTargetXWorldRef.current },
+        ).panXWorld;
+        heroPanTargetXWorldRef.current = clampedTarget;
+
+        if (heroPanDraggingRef.current) {
+          heroPanCurrentXWorldRef.current = clampedTarget;
+        } else {
+          const easingFactor = dtMs > 0
+            ? 1 - Math.exp(-dtMs / HERO_PAN_SMOOTHING_MS)
+            : 1;
+          const nextCurrentPan = blend(
+            heroPanCurrentXWorldRef.current,
+            clampedTarget,
+            easingFactor,
+          );
+          heroPanCurrentXWorldRef.current = Math.abs(clampedTarget - nextCurrentPan) <= HERO_PAN_SETTLE_EPSILON
+            ? clampedTarget
+            : nextCurrentPan;
+        }
+      }
+
       const metrics = createGhostlingSceneCameraMetrics(
         sceneWorldSpec,
         size.width,
         size.height,
         profile.bucket,
         cameraLayoutForVariant(variant),
+        heroPanEnabled ? { panXWorld: heroPanCurrentXWorldRef.current } : undefined,
       );
+      if (heroPanEnabled) {
+        heroPanCurrentXWorldRef.current = metrics.panXWorld;
+        if (Math.abs(heroPanTargetXWorldRef.current - heroPanCurrentXWorldRef.current) <= HERO_PAN_SETTLE_EPSILON) {
+          heroPanTargetXWorldRef.current = heroPanCurrentXWorldRef.current;
+        }
+        const nextCanRecenter = Math.abs(heroPanCurrentXWorldRef.current) > HERO_RECENTER_VISIBILITY_THRESHOLD;
+        if (nextCanRecenter !== heroPanCanRecenterRef.current) {
+          heroPanCanRecenterRef.current = nextCanRecenter;
+          setHeroPanCanRecenter(nextCanRecenter);
+        }
+      }
+
+      for (const layer of sceneWorldSpec.layers) {
+        const layerEl = layers.get(layer.key) ?? null;
+        if (!layerEl) continue;
+        layerEl.style.width = `${metrics.renderWidth}px`;
+        layerEl.style.height = `${metrics.renderHeight}px`;
+        layerEl.style.transform = `translate3d(${metrics.offsetX.toFixed(2)}px, ${metrics.offsetY.toFixed(2)}px, 0)`;
+      }
+
       const removals: string[] = [];
       const nowTs = Date.now();
       const peerPositions = authoritativeHeroMode
@@ -2293,6 +2555,7 @@ export function GhostlingScene({
     densityCaps,
     prefersReducedMotion,
     authoritativeHeroMode,
+    heroPanEnabled,
     sceneLabEnabled,
     sceneLabPlaying,
     sceneLabTuningDraft,
@@ -2374,14 +2637,31 @@ export function GhostlingScene({
         data-live={hasLiveMembers ? 'true' : 'false'}
         data-reduced-motion={prefersReducedMotion ? 'true' : 'false'}
         data-scene-lab={sceneLabEnabled ? 'true' : 'false'}
+        data-pan-enabled={heroPanEnabled ? 'true' : 'false'}
+        data-pan-dragging={heroPanDragging ? 'true' : 'false'}
+        data-pan-offset={heroPanCanRecenter ? 'true' : 'false'}
         data-hero-crop-aspect={heroStageAspectRatio ?? undefined}
         style={heroStageAspectRatio
           ? { aspectRatio: heroStageAspectRatio }
           : undefined}
+        onPointerDown={onHeroStagePointerDown}
+        onPointerMove={onHeroStagePointerMove}
+        onPointerUp={onHeroStagePointerUp}
+        onPointerCancel={onHeroStagePointerCancel}
+        onLostPointerCapture={onHeroStagePointerCancel}
+        onDoubleClick={onHeroStageDoubleClick}
+        onWheel={onHeroStageWheel}
       >
         {sceneWorldSpec.layers.map((layer) => (
           <img
             key={layer.key}
+            ref={(node) => {
+              if (node) {
+                layerRefs.current.set(layer.key, node);
+              } else {
+                layerRefs.current.delete(layer.key);
+              }
+            }}
             src={layer.src}
             alt=""
             aria-hidden="true"
@@ -2389,10 +2669,9 @@ export function GhostlingScene({
             data-layer={layer.key}
             style={{
               zIndex: layer.zIndex,
-              left: `${metrics.offsetX}px`,
-              top: `${metrics.offsetY}px`,
               width: `${metrics.renderWidth}px`,
               height: `${metrics.renderHeight}px`,
+              transform: `translate3d(${metrics.offsetX.toFixed(2)}px, ${metrics.offsetY.toFixed(2)}px, 0)`,
             }}
           />
         ))}
@@ -2401,6 +2680,17 @@ export function GhostlingScene({
           <div className={styles.sceneOverlay}>
             {overlay}
           </div>
+        ) : null}
+
+        {heroPanEnabled && heroPanMobileUi && heroPanCanRecenter ? (
+          <button
+            type="button"
+            className={styles.heroPanRecenter}
+            aria-label="Recenter scene"
+            onClick={triggerHeroPanRecenter}
+          >
+            Center
+          </button>
         ) : null}
 
         <div
@@ -2422,6 +2712,8 @@ export function GhostlingScene({
               wrapperTopPx: wrapTop,
             });
             const stageMetrics = stageRenderMetrics(desiredGhostSize, entity.companion?.renderManifest);
+            const useStaticGhostlingVisual = heroMobilePerformanceMode;
+            const ghostlingVisualSrc = entity.companion?.animatedRenderUrl ?? entity.imgSrc;
 
             return (
               <div
@@ -2447,16 +2739,26 @@ export function GhostlingScene({
                   opacity: entity.opacity,
                   transform: `translate3d(${wrapLeft.toFixed(2)}px, ${wrapTop.toFixed(2)}px, 0)`,
                 }}
-                onMouseEnter={() => { if (isInteractive) setHoveredKey(entity.key); }}
-                onMouseLeave={() => { if (hoveredKeyRef.current === entity.key) setHoveredKey(null); }}
-                onFocus={() => { if (isInteractive) setHoveredKey(entity.key); }}
-                onBlur={() => { if (hoveredKeyRef.current === entity.key) setHoveredKey(null); }}
+                onMouseEnter={() => {
+                  if (!isInteractive || heroPanDraggingRef.current) return;
+                  setHoveredKey(entity.key);
+                }}
+                onMouseLeave={() => {
+                  if (hoveredKeyRef.current === entity.key) setHoveredKey(null);
+                }}
+                onFocus={() => {
+                  if (!isInteractive || heroPanDraggingRef.current) return;
+                  setHoveredKey(entity.key);
+                }}
+                onBlur={() => {
+                  if (hoveredKeyRef.current === entity.key) setHoveredKey(null);
+                }}
                 onTouchStart={() => {
-                  if (!isInteractive) return;
+                  if (!isInteractive || heroPanDraggingRef.current) return;
                   setHoveredKey((current) => (current === entity.key ? null : entity.key));
                 }}
                 onKeyDown={(event) => {
-                  if (!isInteractive) return;
+                  if (!isInteractive || heroPanDraggingRef.current) return;
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     setHoveredKey((current) => (current === entity.key ? null : entity.key));
@@ -2479,7 +2781,7 @@ export function GhostlingScene({
                     transform: `scale(${(stageMetrics.residualScale * (entity.facingLeft ? 1 : -1)).toFixed(4)}, ${stageMetrics.residualScale.toFixed(4)})`,
                   }}
                 >
-                  {entity.companion ? (
+                  {entity.companion && !useStaticGhostlingVisual ? (
                     <AnimatedCompanionStage
                       manifest={entity.companion.renderManifest}
                       fallbackSrc={entity.companion.animatedRenderUrl}
@@ -2490,12 +2792,13 @@ export function GhostlingScene({
                     />
                   ) : (
                     <img
-                      src={entity.imgSrc}
+                      src={ghostlingVisualSrc}
                       alt={`${entity.displayName}'s Ghostling`}
                       width={desiredGhostSize}
                       height={desiredGhostSize}
                       className={styles.ghostImg}
                       loading="lazy"
+                      decoding="async"
                     />
                   )}
                 </div>

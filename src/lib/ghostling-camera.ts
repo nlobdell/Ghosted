@@ -22,6 +22,12 @@ export interface GhostlingSceneCameraMetrics {
   offsetY: number;
   guideMode: GhostlingSceneCameraGuideMode;
   labelSafeTopPx: number | null;
+  panXWorld: number;
+  defaultWorldViewportX: number;
+}
+
+export interface GhostlingSceneCameraOverrides {
+  panXWorld?: number;
 }
 
 export interface GhostlingSceneLabelClampOptions {
@@ -89,6 +95,7 @@ function createFixedCropCameraMetrics(
   width: number,
   height: number,
   bucket: GhostlingSceneDensityBucket,
+  overrides?: GhostlingSceneCameraOverrides,
 ): GhostlingSceneCameraMetrics {
   const cropRect = world.guides.heroCrop;
   if (!cropRect) {
@@ -122,6 +129,8 @@ function createFixedCropCameraMetrics(
       offsetY,
       guideMode: 'fixed-crop',
       labelSafeTopPx,
+      panXWorld: 0,
+      defaultWorldViewportX: worldViewport.x,
     };
   }
 
@@ -139,8 +148,13 @@ function createFixedCropCameraMetrics(
   // Preserve the authored crop bottom as the stable floor anchor so tighter
   // zooms don't unexpectedly cut the scene off below the Ghostlings.
   const desiredViewportY = (cropRect.y + cropRect.height) - viewportHeightInWorld;
+  const maxViewportX = Math.max(0, world.sourceWidth - viewportWidthInWorld);
+  const defaultWorldViewportX = clamp(desiredViewportX, 0, maxViewportX);
+  const minPanXWorld = -defaultWorldViewportX;
+  const maxPanXWorld = maxViewportX - defaultWorldViewportX;
+  const panXWorld = clamp(overrides?.panXWorld ?? 0, minPanXWorld, maxPanXWorld);
   const worldViewport: GhostlingWorldRect = {
-    x: clamp(desiredViewportX, 0, Math.max(0, world.sourceWidth - viewportWidthInWorld)),
+    x: clamp(defaultWorldViewportX + panXWorld, 0, maxViewportX),
     y: clamp(desiredViewportY, 0, Math.max(0, world.sourceHeight - viewportHeightInWorld)),
     width: viewportWidthInWorld,
     height: viewportHeightInWorld,
@@ -170,6 +184,8 @@ function createFixedCropCameraMetrics(
     offsetY,
     guideMode: 'hero-crop',
     labelSafeTopPx,
+    panXWorld: worldViewport.x - defaultWorldViewportX,
+    defaultWorldViewportX,
   };
 }
 
@@ -179,12 +195,13 @@ export function createGhostlingSceneCameraMetrics(
   viewportHeight: number,
   bucket: GhostlingSceneDensityBucket,
   layout: GhostlingSceneCameraLayout = 'responsive-fit',
+  overrides?: GhostlingSceneCameraOverrides,
 ): GhostlingSceneCameraMetrics {
   const width = Math.max(1, viewportWidth);
   const height = Math.max(1, viewportHeight);
   const viewportAspect = width / height;
   if (layout === 'fixed-crop') {
-    return createFixedCropCameraMetrics(world, width, height, bucket);
+    return createFixedCropCameraMetrics(world, width, height, bucket, overrides);
   }
 
   const guideViewport = resolveGuideViewport(world, viewportAspect);
@@ -224,6 +241,8 @@ export function createGhostlingSceneCameraMetrics(
     offsetY,
     guideMode: guideViewport.guideMode,
     labelSafeTopPx,
+    panXWorld: 0,
+    defaultWorldViewportX: worldViewport.x,
   };
 }
 
