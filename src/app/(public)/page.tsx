@@ -57,13 +57,14 @@ export default async function HomePage({
   searchParams: Promise<{ sceneDebug?: string; sceneEditor?: string; sceneFixture?: string; worldPreview?: string }>;
 }) {
   const params = await searchParams;
+  const sceneEditorRequested = params.sceneEditor === '1';
   const fixtureId = process.env.NODE_ENV !== 'production'
     && params.sceneFixture === 'visual-baseline'
     ? 'visual-baseline'
     : null;
   const previewRequested = process.env.NODE_ENV !== 'production'
     && params.worldPreview === 'shared-commons:draft';
-  const currentUser = previewRequested ? await getCurrentUser() : null;
+  const currentUser = (previewRequested || sceneEditorRequested) ? await getCurrentUser() : null;
   const worldPreviewEnabled = Boolean(previewRequested && currentUser?.is_admin);
   const db = getDatabase();
   const runtimeWorld = worldPreviewEnabled
@@ -97,7 +98,8 @@ export default async function HomePage({
   const hallHref = getHallHref(shellData);
   const signal = heroSignal(presencePayload);
   const debugWorldOverlay = process.env.NODE_ENV !== 'production' && params.sceneDebug === '1';
-  const sceneEditorEnabled = process.env.NODE_ENV !== 'production' && params.sceneEditor === '1';
+  const sceneEditorEnabled = sceneEditorRequested
+    && (process.env.NODE_ENV !== 'production' || Boolean(currentUser?.is_admin));
   const sandboxPayload = sceneEditorEnabled
     ? buildHomePageSceneFixture('visual-baseline', fallbackCompanion, undefined, runtimeWorld)
     : null;
