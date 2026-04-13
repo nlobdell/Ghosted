@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { Database } from 'better-sqlite3';
 import { resolveGhostlingActorMetrics } from '@/lib/ghostling-actor';
 import type {
+  AdminAuditEntry,
   CompanionActorMetrics,
   CompanionAdminData,
   CompanionData,
@@ -59,6 +60,9 @@ type CompanionCatalogRow = {
   active: number;
   sort_order: number;
   created_at: string;
+  updated_at: string | null;
+  archived_at: string | null;
+  archived_by_user_id: number | null;
 };
 
 type CompanionLoadoutRow = {
@@ -83,6 +87,19 @@ type RepoCompanionImportInput = {
 };
 
 const companionActorMetricsCache = new Map<string, CompanionActorMetrics>();
+
+const COMPANION_ADMIN_AUDIT_ACTIONS = [
+  'upload_companion_base_asset',
+  'create_companion_item',
+  'update_companion_item',
+  'replace_companion_item_assets',
+  'import_repo_companion_items',
+  'set_companion_item_active',
+  'reorder_companion_item',
+  'archive_companion_item',
+  'restore_companion_item',
+  'delete_companion_item',
+] as const;
 
 function companionDisplayName(user: CompanionUserRow) {
   return user.global_name || user.username;
@@ -130,9 +147,9 @@ export function companionInventorySlugs(db: Database, userId: number) {
 }
 
 export function companionCatalogRows(db: Database, activeOnly = true) {
-  const visibility = activeOnly ? 'WHERE active = 1' : '';
+  const visibility = activeOnly ? 'WHERE active = 1 AND archived_at IS NULL' : '';
   return db.prepare(`
-    SELECT slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, render_metadata_json, active, sort_order, created_at
+    SELECT slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, render_metadata_json, active, sort_order, created_at, updated_at, archived_at, archived_by_user_id
     FROM companion_catalog
     ${visibility}
     ORDER BY slot_key ASC, sort_order ASC, name ASC
@@ -147,7 +164,7 @@ export function companionCatalogRow(db: Database, slug: string) {
   return db.prepare(`
     SELECT *
     FROM companion_catalog
-    WHERE slug = ? AND active = 1
+    WHERE slug = ? AND active = 1 AND archived_at IS NULL
   `).get(slug) as CompanionCatalogRow | undefined;
 }
 
@@ -163,7 +180,7 @@ export function nextCompanionSortOrder(db: Database, slotKey: CompanionSlotKey) 
   const row = db.prepare(`
     SELECT COALESCE(MAX(sort_order), 0) AS value
     FROM companion_catalog
-    WHERE slot_key = ?
+    WHERE slot_key = ? AND archived_at IS NULL
   `).get(slotKey) as { value: number };
   return Number(row.value ?? 0) + 10;
 }
@@ -212,12 +229,25 @@ function companionSlotOptions(
     }));
 }
 
+function companionItemIsArchived(row: Pick<CompanionCatalogRow, 'archived_at'>) {
+  return Boolean(String(row.archived_at ?? '').trim());
+}
+
+function companionItemState(row: Pick<CompanionCatalogRow, 'active' | 'archived_at'>): 'visible' | 'hidden' | 'archived' {
+  if (companionItemIsArchived(row)) return 'archived';
+  return Boolean(row.active) ? 'visible' : 'hidden';
+}
+
 function visibleCompanionCatalogRows(
   catalogRows: CompanionCatalogRow[],
   ownedSlugs: Set<string>,
   loadout: Record<CompanionSlotKey, string | null>,
 ) {
-  return catalogRows.filter((row) => Boolean(row.active) || ownedSlugs.has(row.slug) || loadout[row.slot_key] === row.slug);
+  return catalogRows.filter((row) => (
+    (Boolean(row.active) && !companionItemIsArchived(row))
+    || ownedSlugs.has(row.slug)
+    || loadout[row.slot_key] === row.slug
+  ));
 }
 
 function companionItemPayload(
@@ -233,7 +263,8 @@ function companionItemPayload(
     rarity: row.rarity,
     cost: Number(row.cost),
     description: row.description,
-    active: Boolean(row.active),
+    active: Boolean(row.active) && !companionItemIsArchived(row),
+    archived: companionItemIsArchived(row),
     owned: ownedSlugs.has(row.slug),
     equipped: loadout[row.slot_key] === row.slug,
     previewUrl: `/api/companion/render-animated?preview=${encodeURIComponent(row.slug)}`,
@@ -246,6 +277,117 @@ function companionItemPayload(
       row.back_asset_path,
     ),
   };
+}
+
+function companionAuditActionLabel(action: string) {
+  switch (action) {
+    case 'upload_companion_base_asset':
+      return 'Upload base files';
+    case 'create_companion_item':
+      return 'Create cosmetic';
+    case 'update_companion_item':
+      return 'Edit cosmetic';
+    case 'replace_companion_item_assets':
+      return 'Replace cosmetic files';
+    case 'import_repo_companion_items':
+      return 'Import repo cosmetics';
+    case 'set_companion_item_active':
+      return 'Update visibility';
+    case 'reorder_companion_item':
+      return 'Reorder catalog';
+    case 'archive_companion_item':
+      return 'Archive cosmetic';
+    case 'restore_companion_item':
+      return 'Restore cosmetic';
+    case 'delete_companion_item':
+      return 'Delete cosmetic';
+    default:
+      return action.replaceAll('_', ' ');
+  }
+}
+
+function companionAuditSummary(action: string, targetId: string, payloadJson: string) {
+  let payload: Record<string, unknown> = {};
+  try {
+    payload = payloadJson ? JSON.parse(payloadJson) as Record<string, unknown> : {};
+  } catch {
+    payload = {};
+  }
+
+  switch (action) {
+    case 'upload_companion_base_asset':
+      return 'Uploaded new Ghostling base files.';
+    case 'create_companion_item':
+      return `Created Ghostling cosmetic "${String(payload.name ?? targetId)}".`;
+    case 'update_companion_item': {
+      const previousSlug = String(payload.previousSlug ?? '').trim();
+      return previousSlug && previousSlug !== targetId
+        ? `Updated Ghostling cosmetic "${previousSlug}" to "${targetId}".`
+        : `Updated Ghostling cosmetic "${targetId}".`;
+    }
+    case 'replace_companion_item_assets':
+      return `Replaced live files for Ghostling item "${targetId}".`;
+    case 'import_repo_companion_items':
+      return 'Imported repo Ghostling cosmetics into the live library.';
+    case 'set_companion_item_active':
+      return Boolean(payload.active)
+        ? `Restored Ghostling item "${targetId}" to the live catalog.`
+        : `Hid Ghostling item "${targetId}" from the live catalog.`;
+    case 'reorder_companion_item':
+      return `Changed the live order for Ghostling item "${targetId}".`;
+    case 'archive_companion_item':
+      return `Archived Ghostling item "${targetId}" without deleting its files.`;
+    case 'restore_companion_item':
+      return `Restored Ghostling item "${targetId}" to the operator catalog.`;
+    case 'delete_companion_item': {
+      const inventoryPurged = Number(payload.inventoryPurged ?? 0);
+      const loadoutCleared = Number(payload.loadoutCleared ?? 0);
+      return `Permanently deleted archived Ghostling item "${targetId}" and cleared ${inventoryPurged} ownership ${inventoryPurged === 1 ? 'entry' : 'entries'} plus ${loadoutCleared} equipped ${loadoutCleared === 1 ? 'slot' : 'slots'}.`;
+    }
+    default:
+      return `${companionAuditActionLabel(action)} on ${targetId}.`;
+  }
+}
+
+function recentCompanionAuditFeed(db: Database, limit = 8): AdminAuditEntry[] {
+  const placeholders = COMPANION_ADMIN_AUDIT_ACTIONS.map(() => '?').join(', ');
+  const rows = db.prepare(`
+    SELECT
+      audit_log.id,
+      audit_log.action,
+      audit_log.target_type,
+      audit_log.target_id,
+      audit_log.payload_json,
+      audit_log.created_at,
+      users.username AS actor_username,
+      users.global_name AS actor_global_name
+    FROM audit_log
+    LEFT JOIN users ON users.id = audit_log.actor_user_id
+    WHERE audit_log.action IN (${placeholders})
+    ORDER BY audit_log.created_at DESC, audit_log.id DESC
+    LIMIT ?
+  `).all(...COMPANION_ADMIN_AUDIT_ACTIONS, Math.max(1, Math.min(limit, 20))) as Array<{
+    id: number;
+    action: string;
+    target_type: string;
+    target_id: string;
+    payload_json: string;
+    created_at: string;
+    actor_username: string | null;
+    actor_global_name: string | null;
+  }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    action: row.action,
+    actionLabel: companionAuditActionLabel(row.action),
+    section: 'ghostling',
+    targetType: row.target_type,
+    targetId: row.target_id,
+    actorDisplayName: row.actor_global_name || row.actor_username || 'System',
+    createdAt: row.created_at,
+    summary: companionAuditSummary(row.action, row.target_id, row.payload_json),
+  }));
 }
 
 function companionPreviewUser(user: CompanionUserRow | null | undefined) {
@@ -407,6 +549,50 @@ export function buildHallCompanionSummaryPayload(db: Database, user: CompanionUs
 export function buildCompanionAdminPayload(db: Database): CompanionAdminData {
   const baseConfig = resolveCompanionBaseConfig(db);
   const rows = companionCatalogRows(db, false);
+  const archivedByUserIds = [...new Set(
+    rows
+      .map((row) => row.archived_by_user_id)
+      .filter((value): value is number => Number.isInteger(value) && Number(value) > 0),
+  )];
+  const archivedByMap = archivedByUserIds.length
+    ? new Map((db.prepare(`
+      SELECT id, username, global_name
+      FROM users
+      WHERE id IN (${archivedByUserIds.map(() => '?').join(', ')})
+    `).all(...archivedByUserIds) as Array<{ id: number; username: string; global_name: string | null }>)
+      .map((row) => [row.id, row.global_name || row.username]))
+    : new Map<number, string>();
+  const baseRow = db.prepare(`
+    SELECT updated_at
+    FROM companion_settings
+    WHERE singleton_key = 'default'
+  `).get() as { updated_at: string | null } | undefined;
+  const adminItems = rows.map((row) => ({
+    slug: row.slug,
+    name: row.name,
+    slot: row.slot_key,
+    rarity: row.rarity,
+    cost: Number(row.cost),
+    description: row.description,
+    active: Boolean(row.active) && !companionItemIsArchived(row),
+    archived: companionItemIsArchived(row),
+    state: companionItemState(row),
+    sortOrder: Number(row.sort_order ?? 0),
+    frontAssetPath: row.front_asset_path,
+    frontAssetUrl: companionAssetUrl(row.front_asset_path),
+    backAssetPath: row.back_asset_path,
+    backAssetUrl: companionAssetUrl(row.back_asset_path),
+    renderMetadata: companionStoredItemRenderMetadata(
+      row.render_metadata_json,
+      row.slot_key,
+      row.front_asset_path,
+      row.back_asset_path,
+    ),
+    previewUrl: `/api/companion/render-animated?preview=${encodeURIComponent(row.slug)}`,
+    updatedAt: row.updated_at,
+    archivedAt: row.archived_at,
+    archivedByDisplayName: row.archived_by_user_id ? archivedByMap.get(row.archived_by_user_id) ?? null : null,
+  }));
 
   return {
     storageRoot: companionAssetDir(),
@@ -419,36 +605,26 @@ export function buildCompanionAdminPayload(db: Database): CompanionAdminData {
       headAssetPath: baseConfig.headAssetPath,
       headAssetUrl: baseConfig.headAssetUrl,
       previewUrl: baseConfig.animatedRenderUrl,
+      updatedAt: baseRow?.updated_at ?? null,
       renderManifest: companionRenderManifest(db, emptyCompanionLoadout()),
     },
-    items: rows.map((row) => ({
-      slug: row.slug,
-      name: row.name,
-      slot: row.slot_key,
-      rarity: row.rarity,
-      cost: Number(row.cost),
-      description: row.description,
-      active: Boolean(row.active),
-      sortOrder: Number(row.sort_order ?? 0),
-      frontAssetPath: row.front_asset_path,
-      frontAssetUrl: companionAssetUrl(row.front_asset_path),
-      backAssetPath: row.back_asset_path,
-      backAssetUrl: companionAssetUrl(row.back_asset_path),
-      renderMetadata: companionStoredItemRenderMetadata(
-        row.render_metadata_json,
-        row.slot_key,
-        row.front_asset_path,
-        row.back_asset_path,
-      ),
-      previewUrl: `/api/companion/render-animated?preview=${encodeURIComponent(row.slug)}`,
-    })),
+    items: adminItems.filter((row) => !row.archived),
+    archivedItems: adminItems
+      .filter((row) => row.archived)
+      .sort((left, right) => (
+        String(right.archivedAt ?? '').localeCompare(String(left.archivedAt ?? ''))
+        || left.slot.localeCompare(right.slot)
+        || left.sortOrder - right.sortOrder
+        || left.name.localeCompare(right.name)
+      )),
     repoCandidates: repoCompanionImportCandidates(db),
+    recentAudit: recentCompanionAuditFeed(db),
   };
 }
 
 function normalizeCompanionSlotOrder(db: Database, slotKey: CompanionSlotKey, orderedSlugs: string[]) {
   for (const [index, slug] of orderedSlugs.entries()) {
-    db.prepare('UPDATE companion_catalog SET sort_order = ? WHERE slug = ?').run((index + 1) * 10, slug);
+    db.prepare('UPDATE companion_catalog SET sort_order = ?, updated_at = ? WHERE slug = ?').run((index + 1) * 10, utcIso(), slug);
   }
 }
 
@@ -536,6 +712,10 @@ function repoMetadataJsonForImport(
 export function purchaseCompanionItem(db: Database, user: CompanionUserRow, slug: string) {
   const item = companionCatalogRow(db, slug);
   if (!item) {
+    const archivedItem = companionCatalogAnyRow(db, slug);
+    if (archivedItem && companionItemIsArchived(archivedItem)) {
+      throw new AppError('That companion cosmetic is archived and cannot be unlocked right now.', 400);
+    }
     throw new AppError('That companion item does not exist.', 404);
   }
 
@@ -635,8 +815,11 @@ export function setCompanionItemActive(
   if (!item) {
     throw new AppError('That companion cosmetic does not exist.', 404);
   }
+  if (companionItemIsArchived(item)) {
+    throw new AppError('Restore the archived cosmetic before changing its visibility.', 400);
+  }
 
-  db.prepare('UPDATE companion_catalog SET active = ? WHERE slug = ?').run(active ? 1 : 0, slug);
+  db.prepare('UPDATE companion_catalog SET active = ?, updated_at = ? WHERE slug = ?').run(active ? 1 : 0, utcIso(), slug);
   recordAudit(actor.id, 'set_companion_item_active', 'companion_catalog', slug, { active: Boolean(active) });
   return buildCompanionAdminPayload(db);
 }
@@ -651,6 +834,9 @@ export function reorderCompanionItem(
   if (!item) {
     throw new AppError('That companion cosmetic does not exist.', 404);
   }
+  if (companionItemIsArchived(item)) {
+    throw new AppError('Restore the archived cosmetic before changing its live order.', 400);
+  }
 
   const normalizedDirection = String(direction ?? '').trim().toLowerCase();
   if (!['up', 'down'].includes(normalizedDirection)) {
@@ -658,7 +844,7 @@ export function reorderCompanionItem(
   }
 
   const orderedSlugs = companionCatalogRows(db, false)
-    .filter((row) => row.slot_key === item.slot_key)
+    .filter((row) => row.slot_key === item.slot_key && !companionItemIsArchived(row))
     .map((row) => row.slug);
   const currentIndex = orderedSlugs.indexOf(slug);
   if (currentIndex < 0) return buildCompanionAdminPayload(db);
@@ -704,6 +890,310 @@ export function uploadCompanionBaseAsset(
     headAssetPath,
   });
   return buildCompanionAdminPayload(db);
+}
+
+export function updateCompanionItem(
+  db: Database,
+  actor: CompanionUserRow,
+  slug: string,
+  input: {
+    name: string;
+    slug?: string | null;
+    rarity: string;
+    cost: number;
+    description: string;
+    metadataJson?: string | null;
+  },
+) {
+  const item = companionCatalogAnyRow(db, slug);
+  if (!item) {
+    throw new AppError('That companion cosmetic does not exist.', 404);
+  }
+
+  const normalizedName = String(input.name ?? '').trim();
+  if (!normalizedName) {
+    throw new AppError('A cosmetic name is required.', 400);
+  }
+
+  const nextSlug = slugify(input.slug || normalizedName);
+  if (nextSlug !== slug && companionCatalogAnyRow(db, nextSlug)) {
+    throw new AppError('That cosmetic slug already exists.', 409);
+  }
+
+  const normalizedRarity = normalizeCompanionRarity(input.rarity);
+  if (!Number.isInteger(input.cost)) {
+    throw new AppError('Companion cosmetic cost must be a whole number.', 400);
+  }
+  if (input.cost < 0) {
+    throw new AppError('Companion cosmetic cost cannot be negative.', 400);
+  }
+
+  const renderMetadataJson = normalizeCompanionItemMetadataJson(input.metadataJson, {
+    slot: item.slot_key,
+    frontAssetPresent: Boolean(item.front_asset_path),
+    backAssetPresent: Boolean(item.back_asset_path),
+  });
+  const nextUpdatedAt = utcIso();
+
+  const transaction = db.transaction(() => {
+    if (nextSlug !== slug) {
+      db.prepare(`
+        INSERT INTO companion_catalog (
+          slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, render_metadata_json, active, sort_order, created_at, updated_at, archived_at, archived_by_user_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        nextSlug,
+        normalizedName,
+        item.slot_key,
+        normalizedRarity,
+        input.cost,
+        String(input.description ?? '').trim() || 'Custom uploaded companion cosmetic.',
+        item.front_asset_path,
+        item.back_asset_path,
+        renderMetadataJson,
+        item.active,
+        item.sort_order,
+        item.created_at,
+        nextUpdatedAt,
+        item.archived_at,
+        item.archived_by_user_id,
+      );
+      db.prepare(`
+        UPDATE user_companion_inventory
+        SET item_slug = ?
+        WHERE item_slug = ?
+      `).run(nextSlug, slug);
+      for (const column of Object.values(COMPANION_LOADOUT_COLUMNS)) {
+        db.prepare(`
+          UPDATE user_companion_loadout
+          SET ${column} = ?, updated_at = ?
+          WHERE ${column} = ?
+        `).run(nextSlug, nextUpdatedAt, slug);
+      }
+      db.prepare('DELETE FROM companion_catalog WHERE slug = ?').run(slug);
+      return;
+    }
+
+    db.prepare(`
+      UPDATE companion_catalog
+      SET name = ?, rarity = ?, cost = ?, description = ?, render_metadata_json = ?, updated_at = ?
+      WHERE slug = ?
+    `).run(
+      normalizedName,
+      normalizedRarity,
+      input.cost,
+      String(input.description ?? '').trim() || 'Custom uploaded companion cosmetic.',
+      renderMetadataJson,
+      nextUpdatedAt,
+      slug,
+    );
+  });
+
+  transaction();
+  recordAudit(actor.id, 'update_companion_item', 'companion_catalog', nextSlug, {
+    previousSlug: nextSlug !== slug ? slug : null,
+    name: normalizedName,
+    rarity: normalizedRarity,
+    cost: input.cost,
+    description: String(input.description ?? '').trim() || 'Custom uploaded companion cosmetic.',
+    renderMetadataJson,
+  });
+  return buildCompanionAdminPayload(db);
+}
+
+export function archiveCompanionItem(
+  db: Database,
+  actor: CompanionUserRow,
+  slug: string,
+) {
+  const item = companionCatalogAnyRow(db, slug);
+  if (!item) {
+    throw new AppError('That companion cosmetic does not exist.', 404);
+  }
+  if (companionItemIsArchived(item)) {
+    throw new AppError('That companion cosmetic is already archived.', 400);
+  }
+
+  const archivedAt = utcIso();
+  db.prepare(`
+    UPDATE companion_catalog
+    SET archived_at = ?, archived_by_user_id = ?, updated_at = ?
+    WHERE slug = ?
+  `).run(archivedAt, actor.id, archivedAt, slug);
+
+  recordAudit(actor.id, 'archive_companion_item', 'companion_catalog', slug, {
+    archivedAt,
+    active: Boolean(item.active),
+  });
+  return buildCompanionAdminPayload(db);
+}
+
+export function restoreCompanionItem(
+  db: Database,
+  actor: CompanionUserRow,
+  slug: string,
+) {
+  const item = companionCatalogAnyRow(db, slug);
+  if (!item) {
+    throw new AppError('That companion cosmetic does not exist.', 404);
+  }
+  if (!companionItemIsArchived(item)) {
+    throw new AppError('That companion cosmetic is not archived.', 400);
+  }
+
+  const restoredAt = utcIso();
+  db.prepare(`
+    UPDATE companion_catalog
+    SET archived_at = NULL,
+        archived_by_user_id = NULL,
+        sort_order = ?,
+        updated_at = ?
+    WHERE slug = ?
+  `).run(nextCompanionSortOrder(db, item.slot_key), restoredAt, slug);
+
+  recordAudit(actor.id, 'restore_companion_item', 'companion_catalog', slug, {
+    restoredAt,
+    active: Boolean(item.active),
+  });
+  return buildCompanionAdminPayload(db);
+}
+
+type DeleteCompanionItemResult = {
+  library: CompanionAdminData;
+  warning: string | null;
+};
+
+function companionItemAssetPaths(item: Pick<CompanionCatalogRow, 'front_asset_path' | 'back_asset_path'>) {
+  return [...new Set(
+    [item.front_asset_path, item.back_asset_path]
+      .map((value) => String(value ?? '').trim())
+      .filter(Boolean),
+  )];
+}
+
+function companionCatalogReferencesAssetPath(
+  db: Database,
+  assetPath: string,
+  deletingSlug: string,
+) {
+  const normalizedPath = normalizeCompanionAssetPath(assetPath);
+  const row = db.prepare(`
+    SELECT EXISTS(
+      SELECT 1
+      FROM companion_catalog
+      WHERE slug != ?
+        AND (front_asset_path = ? OR back_asset_path = ?)
+    ) AS in_use,
+    EXISTS(
+      SELECT 1
+      FROM companion_settings
+      WHERE singleton_key = 'default'
+        AND (base_asset_path = ? OR base_head_asset_path = ?)
+    ) AS used_by_base
+  `).get(deletingSlug, normalizedPath, normalizedPath, normalizedPath, normalizedPath) as {
+    in_use: number;
+    used_by_base: number;
+  };
+  return Boolean(row.in_use) || Boolean(row.used_by_base);
+}
+
+function unlinkCompanionUploadAsset(relativePath: string) {
+  const normalizedPath = normalizeCompanionAssetPath(relativePath);
+  if (!normalizedPath.startsWith('uploads/')) return null;
+
+  const assetFile = companionAssetPath(normalizedPath);
+  try {
+    if (!fs.existsSync(assetFile)) return null;
+    fs.rmSync(assetFile, { force: true });
+    return normalizedPath;
+  } catch (error) {
+    throw new AppError(
+      error instanceof Error
+        ? `Uploaded cosmetic file "${normalizedPath}" could not be removed: ${error.message}`
+        : `Uploaded cosmetic file "${normalizedPath}" could not be removed.`,
+      500,
+    );
+  }
+}
+
+function purgeCompanionUploadAssets(
+  db: Database,
+  deletingSlug: string,
+  assetPaths: string[],
+) {
+  const skippedPaths: string[] = [];
+  const warnings: string[] = [];
+
+  for (const assetPath of assetPaths) {
+    try {
+      const normalizedPath = normalizeCompanionAssetPath(assetPath);
+      if (!normalizedPath.startsWith('uploads/')) continue;
+      if (companionCatalogReferencesAssetPath(db, normalizedPath, deletingSlug)) {
+        skippedPaths.push(normalizedPath);
+        continue;
+      }
+      unlinkCompanionUploadAsset(normalizedPath);
+    } catch (error) {
+      warnings.push(error instanceof Error ? error.message : `Uploaded cosmetic file "${assetPath}" could not be removed.`);
+    }
+  }
+
+  return { skippedPaths, warnings };
+}
+
+export function deleteCompanionItem(
+  db: Database,
+  actor: CompanionUserRow,
+  slug: string,
+): DeleteCompanionItemResult {
+  const item = companionCatalogAnyRow(db, slug);
+  if (!item) {
+    throw new AppError('That companion cosmetic does not exist.', 404);
+  }
+  if (!companionItemIsArchived(item)) {
+    throw new AppError('Archive the cosmetic before permanently deleting it.', 400);
+  }
+
+  const assetPaths = companionItemAssetPaths(item);
+  const counts = db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM user_companion_inventory WHERE item_slug = ?) AS inventory_purged,
+      (
+        SELECT
+          SUM(CASE WHEN hat_item_slug = ? THEN 1 ELSE 0 END)
+          + SUM(CASE WHEN face_item_slug = ? THEN 1 ELSE 0 END)
+          + SUM(CASE WHEN neck_item_slug = ? THEN 1 ELSE 0 END)
+          + SUM(CASE WHEN body_item_slug = ? THEN 1 ELSE 0 END)
+        FROM user_companion_loadout
+      ) AS loadout_cleared
+  `).get(slug, slug, slug, slug, slug) as {
+    inventory_purged: number | null;
+    loadout_cleared: number | null;
+  };
+
+  db.transaction(() => {
+    db.prepare(`
+      DELETE FROM companion_catalog
+      WHERE slug = ?
+    `).run(slug);
+  })();
+
+  const cleanup = purgeCompanionUploadAssets(db, slug, assetPaths);
+  recordAudit(actor.id, 'delete_companion_item', 'companion_catalog', slug, {
+    inventoryPurged: Number(counts.inventory_purged ?? 0),
+    loadoutCleared: Number(counts.loadout_cleared ?? 0),
+    assetPaths,
+    skippedAssetPaths: cleanup.skippedPaths,
+    cleanupWarnings: cleanup.warnings,
+  });
+
+  return {
+    library: buildCompanionAdminPayload(db),
+    warning: cleanup.warnings.length
+      ? cleanup.warnings.join(' ')
+      : null,
+  };
 }
 
 export function createCompanionItem(
@@ -761,9 +1251,9 @@ export function createCompanionItem(
   });
   db.prepare(`
     INSERT INTO companion_catalog (
-      slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, render_metadata_json, active, sort_order, created_at
+      slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, render_metadata_json, active, sort_order, created_at, updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
   `).run(
     normalizedSlug,
     normalizedName,
@@ -776,9 +1266,11 @@ export function createCompanionItem(
     renderMetadataJson,
     nextCompanionSortOrder(db, normalizedSlot as CompanionSlotKey),
     utcIso(),
+    utcIso(),
   );
 
   recordAudit(actor.id, 'create_companion_item', 'companion_catalog', normalizedSlug, {
+    name: normalizedName,
     slot: normalizedSlot,
     frontAssetPath,
     backAssetPath,
@@ -821,9 +1313,9 @@ export function replaceCompanionItemAssets(
 
   db.prepare(`
     UPDATE companion_catalog
-    SET front_asset_path = ?, back_asset_path = ?, render_metadata_json = ?
+    SET front_asset_path = ?, back_asset_path = ?, render_metadata_json = ?, updated_at = ?
     WHERE slug = ?
-  `).run(nextFrontAssetPath, nextBackAssetPath, renderMetadataJson, slug);
+  `).run(nextFrontAssetPath, nextBackAssetPath, renderMetadataJson, utcIso(), slug);
 
   recordAudit(actor.id, 'replace_companion_item_assets', 'companion_catalog', slug, {
     frontAssetPath: nextFrontAssetPath,
@@ -915,9 +1407,9 @@ export function importRepoCompanionItems(
 
     db.prepare(`
       INSERT INTO companion_catalog (
-        slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, render_metadata_json, active, sort_order, created_at
+        slug, name, slot_key, rarity, cost, description, front_asset_path, back_asset_path, render_metadata_json, active, sort_order, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       normalizedSlug,
       normalizedName,
@@ -930,6 +1422,7 @@ export function importRepoCompanionItems(
       renderMetadataJson,
       rawItem.active === false ? 0 : 1,
       sortOrder,
+      utcIso(),
       utcIso(),
     );
     importedSlugs.push(normalizedSlug);

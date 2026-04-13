@@ -451,6 +451,11 @@
   gap: 0.22rem;
 }
 
+.inlineConfirmExtra {
+  display: grid;
+  gap: 0.6rem;
+}
+
 .inlineConfirmActions {
   align-items: center;
 }

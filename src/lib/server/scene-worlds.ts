@@ -17,9 +17,15 @@ import {
   type GhostlingWorldLayer,
   type GhostlingWorldPackageFile,
 } from '@/lib/ghostling-world';
-import type { AdminWorldData, AdminWorldLayerAsset, SceneWorldVariantRecord } from '@/lib/types';
+import type {
+  AdminAuditEntry,
+  AdminWorldArchivedLayer,
+  AdminWorldData,
+  AdminWorldLayerAsset,
+  SceneWorldVariantRecord,
+} from '@/lib/types';
 import { recordAudit } from '@/lib/server/audit';
-import { AppError, envText, slugify, utcIso } from '@/lib/server/core';
+import { AppError, envText, readJsonBody, slugify, utcIso } from '@/lib/server/core';
 
 const WORLD_ALLOWED_ASSET_MIME_TYPES: Record<string, string> = {
   '.svg': 'image/svg+xml',
@@ -62,6 +68,24 @@ type SceneWorldVariantRow = {
   draft_updated_by_user_id: number | null;
   published_by_user_id: number | null;
 };
+
+type SceneWorldArchivedLayerRow = {
+  world_id: GhostlingWorldId;
+  layer_key: string;
+  asset_path: string;
+  archived_at: string;
+  archived_by_user_id: number | null;
+};
+
+const WORLD_ADMIN_AUDIT_ACTIONS = [
+  'stage_world_layer_asset',
+  'replace_world_draft_package',
+  'replace_world_draft_tuning',
+  'archive_world_layer_asset',
+  'restore_world_layer_asset',
+  'publish_world_draft',
+  'discard_world_draft',
+] as const;
 
 function actorDisplayName(actor: SceneWorldAdminActor) {
   return actor.global_name || actor.username;
@@ -183,6 +207,14 @@ function copyWorldAssetFile(sourceRelativePath: string, targetRelativePath: stri
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.copyFileSync(source, target);
   return normalizedTarget;
+}
+
+function archivedWorldLayerAssetPath(worldId: GhostlingWorldId, layerKey: string, sourceRelativePath: string) {
+  const sourceFile = worldAssetPath(sourceRelativePath);
+  const extension = path.extname(sourceFile).toLowerCase() || '.png';
+  return normalizeWorldAssetPath(
+    `worlds/${worldId}/archived/${slugify(layerKey || 'layer')}-${Math.random().toString(16).slice(2, 10)}${extension}`,
+  );
 }
 
 function worldContractPackage(worldId: GhostlingWorldId) {
@@ -308,6 +340,191 @@ function currentWorldAssetPathsByKey(worldPackage: GhostlingWorldPackageFile) {
     layer.key,
     normalizeWorldAssetRoutePath(layer.src),
   ]));
+}
+
+function worldLayerHasDraftOverride(
+  layerKey: string,
+  draftLayerMap: Map<string, string>,
+  publishedLayerMap: Map<string, string>,
+) {
+  return (draftLayerMap.get(layerKey) ?? null) !== (publishedLayerMap.get(layerKey) ?? null);
+}
+
+function archivedWorldLayerRows(
+  db: Database.Database,
+  worldId: GhostlingWorldId,
+) {
+  return db.prepare(`
+    SELECT world_id, layer_key, asset_path, archived_at, archived_by_user_id
+    FROM scene_world_archived_layers
+    WHERE world_id = ?
+    ORDER BY archived_at DESC, layer_key ASC
+  `).all(worldId) as SceneWorldArchivedLayerRow[];
+}
+
+function replaceArchivedWorldLayerRow(
+  db: Database.Database,
+  row: {
+    worldId: GhostlingWorldId;
+    layerKey: string;
+    assetPath: string;
+    archivedAt: string;
+    archivedByUserId: number | null;
+  },
+) {
+  db.prepare(`
+    INSERT INTO scene_world_archived_layers (
+      world_id,
+      layer_key,
+      asset_path,
+      archived_at,
+      archived_by_user_id
+    ) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(world_id, layer_key) DO UPDATE SET
+      asset_path = excluded.asset_path,
+      archived_at = excluded.archived_at,
+      archived_by_user_id = excluded.archived_by_user_id
+  `).run(
+    row.worldId,
+    row.layerKey,
+    row.assetPath,
+    row.archivedAt,
+    row.archivedByUserId,
+  );
+}
+
+function deleteArchivedWorldLayerRow(
+  db: Database.Database,
+  worldId: GhostlingWorldId,
+  layerKey: string,
+) {
+  db.prepare(`
+    DELETE FROM scene_world_archived_layers
+    WHERE world_id = ? AND layer_key = ?
+  `).run(worldId, layerKey);
+}
+
+function clearArchivedWorldLayersForActiveDraft(
+  db: Database.Database,
+  worldId: GhostlingWorldId,
+  draftPackage: GhostlingWorldPackageFile,
+  publishedPackage: GhostlingWorldPackageFile,
+) {
+  const publishedLayerMap = currentWorldAssetPathsByKey(publishedPackage);
+  const draftLayerMap = currentWorldAssetPathsByKey(draftPackage);
+  for (const layer of draftPackage.layers) {
+    if (worldLayerHasDraftOverride(layer.key, draftLayerMap, publishedLayerMap)) {
+      deleteArchivedWorldLayerRow(db, worldId, layer.key);
+    }
+  }
+}
+
+function copyArchivedWorldLayerAsset(
+  worldId: GhostlingWorldId,
+  layerKey: string,
+  sourceRelativePath: string,
+) {
+  const normalizedSource = normalizeWorldAssetRoutePath(sourceRelativePath);
+  if (normalizedSource.startsWith('repo/')) {
+    return normalizedSource;
+  }
+
+  const archivedRelativePath = archivedWorldLayerAssetPath(worldId, layerKey, normalizedSource);
+  copyWorldAssetFile(normalizedSource, archivedRelativePath);
+  return archivedRelativePath;
+}
+
+function worldAuditActionLabel(action: string) {
+  switch (action) {
+    case 'stage_world_layer_asset':
+      return 'Stage layer';
+    case 'replace_world_draft_package':
+      return 'Replace draft package';
+    case 'replace_world_draft_tuning':
+      return 'Save draft tuning';
+    case 'archive_world_layer_asset':
+      return 'Archive layer override';
+    case 'restore_world_layer_asset':
+      return 'Restore layer override';
+    case 'publish_world_draft':
+      return 'Publish draft';
+    case 'discard_world_draft':
+      return 'Discard draft';
+    default:
+      return action.replaceAll('_', ' ');
+  }
+}
+
+function worldAuditSummary(action: string, targetId: string, payloadJson: string) {
+  let payload: Record<string, unknown> = {};
+  try {
+    payload = payloadJson ? JSON.parse(payloadJson) as Record<string, unknown> : {};
+  } catch {
+    payload = {};
+  }
+
+  switch (action) {
+    case 'stage_world_layer_asset':
+      return `Staged a draft override for the "${String(payload.layerKey ?? 'layer')}" layer.`;
+    case 'replace_world_draft_package':
+      return 'Replaced the draft world package and rebound its layer sources.';
+    case 'replace_world_draft_tuning':
+      return 'Updated runtime max-visible tuning for the draft world.';
+    case 'archive_world_layer_asset':
+      return `Archived the "${String(payload.layerKey ?? 'layer')}" draft override without deleting files.`;
+    case 'restore_world_layer_asset':
+      return `Restored the archived "${String(payload.layerKey ?? 'layer')}" draft override.`;
+    case 'publish_world_draft':
+      return 'Published the draft world to the live runtime variant.';
+    case 'discard_world_draft':
+      return 'Discarded draft-only world changes and realigned with live state.';
+    default:
+      return `${worldAuditActionLabel(action)} on ${targetId}.`;
+  }
+}
+
+function recentWorldAuditFeed(
+  db: Database.Database,
+  limit = 8,
+): AdminAuditEntry[] {
+  const placeholders = WORLD_ADMIN_AUDIT_ACTIONS.map(() => '?').join(', ');
+  const rows = db.prepare(`
+    SELECT
+      audit_log.id,
+      audit_log.action,
+      audit_log.target_type,
+      audit_log.target_id,
+      audit_log.payload_json,
+      audit_log.created_at,
+      users.username AS actor_username,
+      users.global_name AS actor_global_name
+    FROM audit_log
+    LEFT JOIN users ON users.id = audit_log.actor_user_id
+    WHERE audit_log.action IN (${placeholders})
+    ORDER BY audit_log.created_at DESC, audit_log.id DESC
+    LIMIT ?
+  `).all(...WORLD_ADMIN_AUDIT_ACTIONS, Math.max(1, Math.min(limit, 20))) as Array<{
+    id: number;
+    action: string;
+    target_type: string;
+    target_id: string;
+    payload_json: string;
+    created_at: string;
+    actor_username: string | null;
+    actor_global_name: string | null;
+  }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    action: row.action,
+    actionLabel: worldAuditActionLabel(row.action),
+    section: 'worlds',
+    targetType: row.target_type,
+    targetId: row.target_id,
+    actorDisplayName: row.actor_global_name || row.actor_username || 'System',
+    createdAt: row.created_at,
+    summary: worldAuditSummary(row.action, row.target_id, row.payload_json),
+  }));
 }
 
 function tuningSignature(tuning: GhostlingSceneTuningSpec) {
@@ -483,11 +700,30 @@ export function buildAdminWorldPayload(
   const draftWorld = bindWorldPackageUrls(draftInternal);
   const publishedLayerMap = currentWorldAssetPathsByKey(publishedInternal);
   const draftLayerMap = currentWorldAssetPathsByKey(draftInternal);
+  const archivedRows = archivedWorldLayerRows(db, worldId);
+  const archivedByUserIds = [...new Set(
+    archivedRows
+      .map((row) => row.archived_by_user_id)
+      .filter((value): value is number => Number.isInteger(value) && Number(value) > 0),
+  )];
+  const archivedByMap = archivedByUserIds.length
+    ? new Map((db.prepare(`
+      SELECT id, username, global_name
+      FROM users
+      WHERE id IN (${archivedByUserIds.map(() => '?').join(', ')})
+    `).all(...archivedByUserIds) as Array<{ id: number; username: string; global_name: string | null }>)
+      .map((row) => [row.id, row.global_name || row.username]))
+    : new Map<number, string>();
+  const archivedLayerMap = new Map(archivedRows.map((row) => [row.layer_key, row]));
   const hasDraft = worldPackageSignature(draftInternal) !== worldPackageSignature(publishedInternal)
     || tuningSignature(draftTuning) !== tuningSignature(publishedTuning);
   const draftLayerMapForUi = worldLayerKeyMap(draftWorld.layers);
 
   const layers: AdminWorldLayerAsset[] = draftInternal.layers.map((layer) => {
+    const liveAssetPath = publishedLayerMap.get(layer.key) ?? normalizeWorldAssetRoutePath(layer.src);
+    const draftAssetPath = draftLayerMap.get(layer.key) ?? liveAssetPath;
+    const hasDraftOverride = worldLayerHasDraftOverride(layer.key, draftLayerMap, publishedLayerMap);
+    const archivedLayer = archivedLayerMap.get(layer.key);
     const liveSrc = publishedWorld.layers.find((entry) => entry.key === layer.key)?.src
       ?? (worldAssetUrl(layer.src) ?? layer.src);
     const draftSrc = draftLayerMapForUi.get(layer.key)?.src ?? (worldAssetUrl(layer.src) ?? layer.src);
@@ -496,9 +732,28 @@ export function buildAdminWorldPayload(
       zIndex: layer.zIndex,
       liveSrc,
       draftSrc,
-      hasDraftOverride: (draftLayerMap.get(layer.key) ?? null) !== (publishedLayerMap.get(layer.key) ?? null),
+      liveAssetPath,
+      draftAssetPath,
+      hasDraftOverride,
+      hasArchivedOverride: Boolean(archivedLayer),
+      isArchivedDraftOnly: Boolean(archivedLayer) && !hasDraftOverride,
+      archivedAssetPath: archivedLayer?.asset_path ?? null,
+      archivedAssetUrl: archivedLayer ? worldAssetUrl(archivedLayer.asset_path) ?? null : null,
+      archivedAt: archivedLayer?.archived_at ?? null,
+      archivedByDisplayName: archivedLayer?.archived_by_user_id
+        ? archivedByMap.get(archivedLayer.archived_by_user_id) ?? null
+        : null,
     };
   });
+
+  const archivedLayers: AdminWorldArchivedLayer[] = archivedRows.map((row) => ({
+    worldId: row.world_id,
+    layerKey: row.layer_key,
+    assetPath: row.asset_path,
+    assetUrl: worldAssetUrl(row.asset_path) ?? row.asset_path,
+    archivedAt: row.archived_at,
+    archivedByDisplayName: row.archived_by_user_id ? archivedByMap.get(row.archived_by_user_id) ?? null : null,
+  }));
 
   return {
     actor: { displayName: actorDisplayName(actor) },
@@ -509,6 +764,7 @@ export function buildAdminWorldPayload(
       repoAssetRoot: repoWorldAssetDir(),
       hasDraft,
       hasPublishedVariant: Boolean(record?.publishedPackageJson || record?.publishedTuningJson),
+      archivedLayerCount: archivedLayers.length,
       draftUpdatedAt: record?.draftUpdatedAt ?? null,
       publishedAt: record?.publishedAt ?? null,
     },
@@ -517,6 +773,8 @@ export function buildAdminWorldPayload(
     publishedTuning,
     draftTuning,
     layers,
+    archivedLayers,
+    recentAudit: recentWorldAuditFeed(db),
   };
 }
 
@@ -621,6 +879,7 @@ export function stageWorldLayerAssetUpload(
   } satisfies GhostlingWorldPackageFile;
   const currentRecord = getSceneWorldVariantRecord(db, worldId);
   const draftUpdatedAt = utcIso();
+  deleteArchivedWorldLayerRow(db, worldId, layerKey);
 
   saveSceneWorldVariantRow(db, {
     worldId,
@@ -650,7 +909,9 @@ export function replaceWorldDraftPackage(
 ) {
   const nextDraftPackage = mergedDraftWorldPackageFromUpload(db, worldId, packageText);
   const currentRecord = getSceneWorldVariantRecord(db, worldId);
+  const publishedPackage = publishedWorldPackageInternal(db, worldId);
   const draftUpdatedAt = utcIso();
+  clearArchivedWorldLayersForActiveDraft(db, worldId, nextDraftPackage, publishedPackage);
 
   saveSceneWorldVariantRow(db, {
     worldId,
@@ -666,6 +927,66 @@ export function replaceWorldDraftPackage(
 
   recordAudit(actor.id, 'replace_world_draft_package', 'scene_world', worldId, {
     layerKeys: nextDraftPackage.layers.map((layer) => layer.key),
+  });
+
+  return buildAdminWorldPayload(db, actor, worldId);
+}
+
+export function archiveWorldLayerAsset(
+  db: Database.Database,
+  actor: SceneWorldAdminActor,
+  worldId: GhostlingWorldId,
+  layerKey: string,
+) {
+  const currentDraftPackage = draftWorldPackageInternal(db, worldId);
+  const currentPublishedPackage = publishedWorldPackageInternal(db, worldId);
+  const draftLayerMap = currentWorldAssetPathsByKey(currentDraftPackage);
+  const publishedLayerMap = currentWorldAssetPathsByKey(currentPublishedPackage);
+  if (!worldLayerHasDraftOverride(layerKey, draftLayerMap, publishedLayerMap)) {
+    throw new AppError(`The "${layerKey}" layer does not have a draft override to archive.`, 400);
+  }
+
+  const currentDraftLayer = currentDraftPackage.layers.find((layer) => layer.key === layerKey);
+  const publishedLayer = currentPublishedPackage.layers.find((layer) => layer.key === layerKey);
+  if (!currentDraftLayer || !publishedLayer) {
+    throw new AppError(`Unknown world layer "${layerKey}".`, 400);
+  }
+
+  const archivedAt = utcIso();
+  const archivedAssetPath = copyArchivedWorldLayerAsset(worldId, layerKey, currentDraftLayer.src);
+  const nextDraftPackage = {
+    ...currentDraftPackage,
+    layers: currentDraftPackage.layers.map((layer) => (
+      layer.key === layerKey
+        ? { ...layer, src: publishedLayer.src }
+        : layer
+    )),
+  } satisfies GhostlingWorldPackageFile;
+  const currentRecord = getSceneWorldVariantRecord(db, worldId);
+
+  replaceArchivedWorldLayerRow(db, {
+    worldId,
+    layerKey,
+    assetPath: archivedAssetPath,
+    archivedAt,
+    archivedByUserId: actor.id,
+  });
+  saveSceneWorldVariantRow(db, {
+    worldId,
+    draftPackageJson: JSON.stringify(nextDraftPackage),
+    publishedPackageJson: currentRecord?.publishedPackageJson ?? null,
+    draftTuningJson: currentRecord?.draftTuningJson ?? null,
+    publishedTuningJson: currentRecord?.publishedTuningJson ?? null,
+    draftUpdatedAt: archivedAt,
+    publishedAt: currentRecord?.publishedAt ?? null,
+    draftUpdatedByUserId: actor.id,
+    publishedByUserId: currentRecord?.publishedByUserId ?? null,
+  });
+
+  recordAudit(actor.id, 'archive_world_layer_asset', 'scene_world_layer', `${worldId}:${layerKey}`, {
+    layerKey,
+    archivedAssetPath,
+    restoredToPath: normalizeWorldAssetRoutePath(publishedLayer.src),
   });
 
   return buildAdminWorldPayload(db, actor, worldId);
@@ -699,6 +1020,63 @@ export function replaceWorldDraftTuning(
       tablet: nextDraftTuning.buckets.tablet.maxVisible,
       desktop: nextDraftTuning.buckets.desktop.maxVisible,
     },
+  });
+
+  return buildAdminWorldPayload(db, actor, worldId);
+}
+
+export function restoreWorldArchivedLayerAsset(
+  db: Database.Database,
+  actor: SceneWorldAdminActor,
+  worldId: GhostlingWorldId,
+  layerKey: string,
+) {
+  const archivedLayer = archivedWorldLayerRows(db, worldId).find((row) => row.layer_key === layerKey);
+  if (!archivedLayer) {
+    throw new AppError(`The "${layerKey}" layer does not have an archived override to restore.`, 404);
+  }
+  try {
+    if (!fileExists(worldAssetPath(archivedLayer.asset_path))) {
+      throw new AppError(`Archived asset for "${layerKey}" could not be found.`, 404);
+    }
+  } catch {
+    throw new AppError(`Archived asset for "${layerKey}" could not be found.`, 404);
+  }
+
+  const currentDraftPackage = draftWorldPackageInternal(db, worldId);
+  const currentPublishedPackage = publishedWorldPackageInternal(db, worldId);
+  const draftLayerMap = currentWorldAssetPathsByKey(currentDraftPackage);
+  const publishedLayerMap = currentWorldAssetPathsByKey(currentPublishedPackage);
+  if (worldLayerHasDraftOverride(layerKey, draftLayerMap, publishedLayerMap)) {
+    throw new AppError(`The "${layerKey}" layer already has an active draft override.`, 400);
+  }
+  const currentRecord = getSceneWorldVariantRecord(db, worldId);
+  const restoredAt = utcIso();
+  const nextDraftPackage = {
+    ...currentDraftPackage,
+    layers: currentDraftPackage.layers.map((layer) => (
+      layer.key === layerKey
+        ? { ...layer, src: archivedLayer.asset_path }
+        : layer
+    )),
+  } satisfies GhostlingWorldPackageFile;
+
+  deleteArchivedWorldLayerRow(db, worldId, layerKey);
+  saveSceneWorldVariantRow(db, {
+    worldId,
+    draftPackageJson: JSON.stringify(nextDraftPackage),
+    publishedPackageJson: currentRecord?.publishedPackageJson ?? null,
+    draftTuningJson: currentRecord?.draftTuningJson ?? null,
+    publishedTuningJson: currentRecord?.publishedTuningJson ?? null,
+    draftUpdatedAt: restoredAt,
+    publishedAt: currentRecord?.publishedAt ?? null,
+    draftUpdatedByUserId: actor.id,
+    publishedByUserId: currentRecord?.publishedByUserId ?? null,
+  });
+
+  recordAudit(actor.id, 'restore_world_layer_asset', 'scene_world_layer', `${worldId}:${layerKey}`, {
+    layerKey,
+    archivedAssetPath: archivedLayer.asset_path,
   });
 
   return buildAdminWorldPayload(db, actor, worldId);
@@ -826,6 +1204,27 @@ export async function parseStageWorldLayerAssetRequest(request: Request) {
 }
 
 export async function parseReplaceWorldDraftPackageRequest(request: Request) {
+  const contentType = request.headers.get('content-type') ?? '';
+  if (contentType.toLowerCase().includes('application/json')) {
+    const body = await readJsonBody<{
+      worldId?: GhostlingWorldId;
+      packageText?: string;
+    }>(request);
+    const worldId = String(body.worldId ?? '').trim() as GhostlingWorldId;
+    const packageText = String(body.packageText ?? '').trim();
+    if (!worldId) {
+      throw new AppError('A worldId is required.', 400);
+    }
+    if (!packageText) {
+      throw new AppError('Paste a world package JSON payload first.', 400);
+    }
+
+    return {
+      worldId,
+      packageText,
+    };
+  }
+
   const formData = await readMultipartWorldFormData(request);
   const worldId = String(formData.get('worldId') ?? '').trim() as GhostlingWorldId;
   const packageFile = await uploadedWorldAssetFromFormData(formData, 'package');

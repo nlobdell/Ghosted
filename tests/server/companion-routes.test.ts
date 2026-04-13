@@ -23,8 +23,12 @@ import { POST as postCompanionEquipRoute } from '@/app/api/companion/equip/route
 import { POST as postCompanionAdminBaseRoute } from '@/app/api/companion/admin/base/route';
 import { POST as postCompanionAdminImportRepoRoute } from '@/app/api/companion/admin/items/import-repo/route';
 import { POST as postCompanionAdminItemsRoute } from '@/app/api/companion/admin/items/route';
+import { POST as postCompanionAdminArchiveRoute } from '@/app/api/companion/admin/items/archive/route';
+import { POST as postCompanionAdminDeleteRoute } from '@/app/api/companion/admin/items/delete/route';
 import { POST as postCompanionAdminReorderRoute } from '@/app/api/companion/admin/items/reorder/route';
 import { POST as postCompanionAdminReplaceAssetsRoute } from '@/app/api/companion/admin/items/replace-assets/route';
+import { POST as postCompanionAdminRestoreRoute } from '@/app/api/companion/admin/items/restore/route';
+import { POST as postCompanionAdminUpdateRoute } from '@/app/api/companion/admin/items/update/route';
 import { POST as postCompanionAdminVisibilityRoute } from '@/app/api/companion/admin/items/visibility/route';
 import { GET as getCompanionAdminLibraryRoute } from '@/app/api/companion/admin/library/route';
 import { createCompanionItem } from '@/lib/server/companion';
@@ -409,6 +413,45 @@ describe('companion route handlers', () => {
     expect(storedRow.render_metadata_json).toContain('"kind":"ghostling-cosmetic"');
   });
 
+  it('updates companion metadata and slug through the admin route', async () => {
+    const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    authMock.mockResolvedValue({ user: { id: String(adminId) } });
+    seedCompanionItem(context, adminId, { name: 'Moon Hood', slot: 'hat', cost: 50 });
+
+    const response = await postCompanionAdminUpdateRoute(new Request('http://localhost/api/companion/admin/items/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        slug: 'moon-hood',
+        name: 'Sun Hood',
+        nextSlug: 'sun-hood',
+        rarity: 'legendary',
+        cost: 220,
+        description: 'Solar market hood.',
+        metadataJson: JSON.stringify(ghostlingMetadata('hat')),
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const payload = await response.json();
+    const auditRow = context.db.prepare(`
+      SELECT action, target_id
+      FROM audit_log
+      WHERE action = 'update_companion_item'
+      ORDER BY id DESC
+      LIMIT 1
+    `).get() as { action?: string; target_id?: string } | undefined;
+
+    expect(response.status).toBe(200);
+    expect(payload.message).toBe('Companion cosmetic updated.');
+    expect(payload.library.items.find((item: { slug: string }) => item.slug === 'sun-hood')).toMatchObject({
+      name: 'Sun Hood',
+      rarity: 'legendary',
+      cost: 220,
+      renderMetadata: { slot: 'hat' },
+    });
+    expect(payload.library.items.find((item: { slug: string }) => item.slug === 'moon-hood')).toBeUndefined();
+    expect(auditRow).toEqual({ action: 'update_companion_item', target_id: 'sun-hood' });
+  });
+
   it('replaces assets, toggles visibility, and reorders companion cosmetics', async () => {
     const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
     authMock.mockResolvedValue({ user: { id: String(adminId) } });
@@ -494,6 +537,103 @@ describe('companion route handlers', () => {
       mount: { x: 105, y: 90 },
     });
     expect(storedRow.render_metadata_json).toContain('"kind":"ghostling-cosmetic"');
+  });
+
+  it('archives and restores cosmetics through the admin routes with audit visibility', async () => {
+    const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    authMock.mockResolvedValue({ user: { id: String(adminId) } });
+    seedCompanionItem(context, adminId, { name: 'Moon Hood', slot: 'hat', cost: 50 });
+
+    const archiveResponse = await postCompanionAdminArchiveRoute(new Request('http://localhost/api/companion/admin/items/archive', {
+      method: 'POST',
+      body: JSON.stringify({ slug: 'moon-hood' }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const archivePayload = await archiveResponse.json();
+
+    expect(archiveResponse.status).toBe(200);
+    expect(archivePayload.message).toBe('Companion cosmetic archived.');
+    expect(archivePayload.library.items.find((item: { slug: string }) => item.slug === 'moon-hood')).toBeUndefined();
+    expect(archivePayload.library.archivedItems.find((item: { slug: string }) => item.slug === 'moon-hood')).toMatchObject({
+      state: 'archived',
+      archived: true,
+    });
+
+    const restoreResponse = await postCompanionAdminRestoreRoute(new Request('http://localhost/api/companion/admin/items/restore', {
+      method: 'POST',
+      body: JSON.stringify({ slug: 'moon-hood' }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const restorePayload = await restoreResponse.json();
+    const auditRows = context.db.prepare(`
+      SELECT action
+      FROM audit_log
+      WHERE action IN ('archive_companion_item', 'restore_companion_item')
+      ORDER BY id ASC
+    `).all() as Array<{ action: string }>;
+
+    expect(restoreResponse.status).toBe(200);
+    expect(restorePayload.message).toBe('Companion cosmetic restored.');
+    expect(restorePayload.library.items.find((item: { slug: string }) => item.slug === 'moon-hood')).toMatchObject({
+      state: 'visible',
+      archived: false,
+    });
+    expect(restorePayload.library.recentAudit.some((entry: { action: string }) => entry.action === 'archive_companion_item')).toBe(true);
+    expect(restorePayload.library.recentAudit.some((entry: { action: string }) => entry.action === 'restore_companion_item')).toBe(true);
+    expect(auditRows.map((row) => row.action)).toEqual(['archive_companion_item', 'restore_companion_item']);
+  });
+
+  it('hard deletes archived cosmetics through the admin route and preserves the success envelope', async () => {
+    const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    const memberId = insertUser(context.db, { username: 'member', globalName: 'Member' });
+    authMock.mockResolvedValue({ user: { id: String(adminId) } });
+    addRewardLedgerEntry(context.db, memberId, 100, 'welcome_bonus', 'Initial points');
+    seedCompanionItem(context, adminId, { name: 'Moon Hood', slot: 'hat', cost: 50 });
+    authMock.mockResolvedValueOnce({ user: { id: String(memberId) } });
+    await postCompanionPurchaseRoute(new Request('http://localhost/api/companion/purchase', {
+      method: 'POST',
+      body: JSON.stringify({ slug: 'moon-hood' }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    authMock.mockResolvedValue({ user: { id: String(adminId) } });
+    await postCompanionAdminArchiveRoute(new Request('http://localhost/api/companion/admin/items/archive', {
+      method: 'POST',
+      body: JSON.stringify({ slug: 'moon-hood' }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+
+    const response = await postCompanionAdminDeleteRoute(new Request('http://localhost/api/companion/admin/items/delete', {
+      method: 'POST',
+      body: JSON.stringify({ slug: 'moon-hood' }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const payload = await response.json();
+    const inventoryCount = context.db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM user_companion_inventory
+      WHERE item_slug = 'moon-hood'
+    `).get() as { count: number };
+    const loadoutRow = context.db.prepare(`
+      SELECT hat_item_slug
+      FROM user_companion_loadout
+      WHERE user_id = ?
+    `).get(memberId) as { hat_item_slug: string | null };
+    const auditRow = context.db.prepare(`
+      SELECT action
+      FROM audit_log
+      WHERE action = 'delete_companion_item'
+      ORDER BY id DESC
+      LIMIT 1
+    `).get() as { action?: string } | undefined;
+
+    expect(response.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(payload.message).toBe('Companion cosmetic permanently deleted.');
+    expect(payload.library.archivedItems.find((item: { slug: string }) => item.slug === 'moon-hood')).toBeUndefined();
+    expect(payload.library.recentAudit.some((entry: { action: string }) => entry.action === 'delete_companion_item')).toBe(true);
+    expect(inventoryCount.count).toBe(0);
+    expect(loadoutRow.hat_item_slug).toBeNull();
+    expect(auditRow?.action).toBe('delete_companion_item');
   });
 
   it('imports repo cosmetics and preserves the expected success envelope', async () => {

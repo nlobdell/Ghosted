@@ -300,7 +300,7 @@ export interface DiscordPresenceAdminData {
   channelFetchError?: string | null;
 }
 
-export type AdminSectionKey = 'rewards' | 'content' | 'systems' | 'ghostling';
+export type AdminSectionKey = 'rewards' | 'content' | 'systems' | 'worlds' | 'ghostling';
 export type AdminSectionStatus = 'ready' | 'warning' | 'critical';
 
 export interface AdminAlert {
@@ -431,12 +431,29 @@ export interface SceneWorldVariantRecord {
   publishedByUserId?: number | null;
 }
 
+export interface AdminWorldArchivedLayer {
+  worldId: GhostlingWorldId;
+  layerKey: string;
+  assetPath: string;
+  assetUrl: string;
+  archivedAt: string;
+  archivedByDisplayName?: string | null;
+}
+
 export interface AdminWorldLayerAsset {
   key: string;
   zIndex: number;
   liveSrc: string;
   draftSrc: string;
+  liveAssetPath: string;
+  draftAssetPath: string;
   hasDraftOverride: boolean;
+  hasArchivedOverride: boolean;
+  isArchivedDraftOnly: boolean;
+  archivedAssetPath?: string | null;
+  archivedAssetUrl?: string | null;
+  archivedAt?: string | null;
+  archivedByDisplayName?: string | null;
 }
 
 export interface AdminWorldData {
@@ -448,6 +465,7 @@ export interface AdminWorldData {
     repoAssetRoot: string;
     hasDraft: boolean;
     hasPublishedVariant: boolean;
+    archivedLayerCount: number;
     draftUpdatedAt?: string | null;
     publishedAt?: string | null;
   };
@@ -456,6 +474,8 @@ export interface AdminWorldData {
   publishedTuning: GhostlingSceneTuningSpec;
   draftTuning: GhostlingSceneTuningSpec;
   layers: AdminWorldLayerAsset[];
+  archivedLayers: AdminWorldArchivedLayer[];
+  recentAudit: AdminAuditEntry[];
 }
 
 export type ScenePresenceMemberSource = 'voice' | 'wom' | 'fallback';
@@ -549,6 +569,7 @@ export interface CompanionItem {
   cost: number;
   description: string;
   active: boolean;
+  archived: boolean;
   owned: boolean;
   equipped: boolean;
   previewUrl: string;
@@ -616,6 +637,8 @@ export interface CompanionAdminAssetItem {
   cost: number;
   description: string;
   active: boolean;
+  archived: boolean;
+  state: 'visible' | 'hidden' | 'archived';
   sortOrder: number;
   frontAssetPath?: string | null;
   frontAssetUrl?: string | null;
@@ -623,6 +646,9 @@ export interface CompanionAdminAssetItem {
   backAssetUrl?: string | null;
   renderMetadata?: CompanionItemRenderMetadata | null;
   previewUrl: string;
+  updatedAt?: string | null;
+  archivedAt?: string | null;
+  archivedByDisplayName?: string | null;
 }
 
 export interface CompanionRepoImportCandidate {
@@ -652,10 +678,13 @@ export interface CompanionAdminData {
     headAssetPath?: string | null;
     headAssetUrl?: string | null;
     previewUrl: string;
+    updatedAt?: string | null;
     renderManifest: CompanionRenderManifest;
   };
   items: CompanionAdminAssetItem[];
+  archivedItems: CompanionAdminAssetItem[];
   repoCandidates: CompanionRepoImportCandidate[];
+  recentAudit: AdminAuditEntry[];
 }
 
 export interface GiveawayItem {

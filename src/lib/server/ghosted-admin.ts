@@ -21,6 +21,7 @@ import {
   listScenePresenceChannelAllowlist,
   replaceScenePresenceChannelAllowlist,
 } from '@/lib/server/discord-presence';
+import { buildAdminWorldPayload } from '@/lib/server/scene-worlds';
 import {
   DEFAULT_WOM_PERIOD,
   countLinkedGameAccounts,
@@ -56,6 +57,7 @@ const ADMIN_SECTION_HREFS: Record<AdminSectionKey, string> = {
   rewards: '/admin/rewards/',
   content: '/admin/content/',
   systems: '/admin/systems/',
+  worlds: '/admin/worlds/',
   ghostling: '/admin/ghostling/',
 };
 
@@ -66,12 +68,23 @@ const ADMIN_AUDIT_SECTION_MAP: Partial<Record<string, AdminSectionKey>> = {
   delete_news_post: 'content',
   refresh_wom_cache: 'systems',
   update_scene_presence_allowlist: 'systems',
+  stage_world_layer_asset: 'worlds',
+  replace_world_draft_package: 'worlds',
+  replace_world_draft_tuning: 'worlds',
+  archive_world_layer_asset: 'worlds',
+  restore_world_layer_asset: 'worlds',
+  publish_world_draft: 'worlds',
+  discard_world_draft: 'worlds',
   upload_companion_base_asset: 'ghostling',
   create_companion_item: 'ghostling',
+  update_companion_item: 'ghostling',
   replace_companion_item_assets: 'ghostling',
   import_repo_companion_items: 'ghostling',
   set_companion_item_active: 'ghostling',
   reorder_companion_item: 'ghostling',
+  archive_companion_item: 'ghostling',
+  restore_companion_item: 'ghostling',
+  delete_companion_item: 'ghostling',
 };
 
 const ADMIN_AUDIT_LABELS: Partial<Record<string, string>> = {
@@ -81,12 +94,23 @@ const ADMIN_AUDIT_LABELS: Partial<Record<string, string>> = {
   delete_news_post: 'Delete dispatch',
   refresh_wom_cache: 'Refresh Wise Old Man',
   update_scene_presence_allowlist: 'Update public channels',
+  stage_world_layer_asset: 'Stage layer',
+  replace_world_draft_package: 'Replace draft package',
+  replace_world_draft_tuning: 'Save draft tuning',
+  archive_world_layer_asset: 'Archive layer override',
+  restore_world_layer_asset: 'Restore layer override',
+  publish_world_draft: 'Publish draft',
+  discard_world_draft: 'Discard draft',
   upload_companion_base_asset: 'Upload base files',
   create_companion_item: 'Create cosmetic',
+  update_companion_item: 'Edit cosmetic',
   replace_companion_item_assets: 'Replace cosmetic files',
   import_repo_companion_items: 'Import repo cosmetics',
   set_companion_item_active: 'Update visibility',
   reorder_companion_item: 'Reorder catalog',
+  archive_companion_item: 'Archive cosmetic',
+  restore_companion_item: 'Restore cosmetic',
+  delete_companion_item: 'Delete cosmetic',
 };
 
 function safeJsonLoad<T>(value: string | null | undefined, fallback: T): T {
@@ -204,16 +228,34 @@ function adminGhostlingSummary() {
   const row = db.prepare(`
     SELECT
       COUNT(*) AS total_items,
-      SUM(CASE WHEN active = 1 THEN 1 ELSE 0 END) AS active_items
+      SUM(CASE WHEN active = 1 AND archived_at IS NULL THEN 1 ELSE 0 END) AS active_items,
+      SUM(CASE WHEN archived_at IS NOT NULL THEN 1 ELSE 0 END) AS archived_items
     FROM companion_catalog
   `).get() as {
     total_items: number;
     active_items: number | null;
+    archived_items: number | null;
   };
 
   return {
     totalItems: Number(row.total_items ?? 0),
     activeItems: Number(row.active_items ?? 0),
+    archivedItems: Number(row.archived_items ?? 0),
+  };
+}
+
+function adminWorldsSummary() {
+  const payload = buildAdminWorldPayload(getDatabase(), {
+    id: 0,
+    username: 'system',
+    global_name: 'System',
+  });
+
+  return {
+    layerCount: payload.layers.length,
+    hasDraft: payload.world.hasDraft,
+    hasPublishedVariant: payload.world.hasPublishedVariant,
+    archivedLayerCount: payload.world.archivedLayerCount,
   };
 }
 
@@ -304,8 +346,33 @@ function systemsSectionSummary(input: {
   };
 }
 
-function ghostlingSectionSummary(input: { totalItems: number; activeItems: number }): AdminSectionSummary {
-  const hiddenItems = Math.max(0, input.totalItems - input.activeItems);
+function worldsSectionSummary(input: {
+  layerCount: number;
+  hasDraft: boolean;
+  hasPublishedVariant: boolean;
+  archivedLayerCount: number;
+}): AdminSectionSummary {
+  const status: AdminSectionStatus = input.hasDraft || input.archivedLayerCount > 0 ? 'warning' : 'ready';
+  return {
+    key: 'worlds',
+    label: 'Worlds',
+    href: ADMIN_SECTION_HREFS.worlds,
+    status,
+    primary: input.hasDraft ? 'Draft world changes are pending' : 'Draft and live world are aligned',
+    secondary: input.archivedLayerCount > 0
+      ? `${input.archivedLayerCount} ${input.archivedLayerCount === 1 ? 'layer override is' : 'layer overrides are'} archived and restorable.`
+      : input.hasPublishedVariant
+        ? 'The homepage is using a published runtime world variant.'
+        : 'The homepage is still using the repo fallback world package.',
+    chips: [
+      `${input.layerCount} layers`,
+      `${input.archivedLayerCount} archived overrides`,
+    ],
+  };
+}
+
+function ghostlingSectionSummary(input: { totalItems: number; activeItems: number; archivedItems: number }): AdminSectionSummary {
+  const hiddenItems = Math.max(0, input.totalItems - input.activeItems - input.archivedItems);
   const status: AdminSectionStatus = input.totalItems === 0 ? 'warning' : 'ready';
   return {
     key: 'ghostling',
@@ -314,11 +381,12 @@ function ghostlingSectionSummary(input: { totalItems: number; activeItems: numbe
     status,
     primary: input.totalItems > 0 ? `${input.activeItems} visible cosmetics live` : 'Ghostling library needs content',
     secondary: input.totalItems > 0
-      ? `${hiddenItems} ${hiddenItems === 1 ? 'item is' : 'items are'} hidden from the member catalog.`
+      ? `${hiddenItems} ${hiddenItems === 1 ? 'item is' : 'items are'} hidden and ${input.archivedItems} ${input.archivedItems === 1 ? 'item is' : 'items are'} archived.`
       : 'Upload base files or cosmetics before members rely on this library.',
     chips: [
       `${input.totalItems} total cosmetics`,
       `${hiddenItems} hidden`,
+      `${input.archivedItems} archived`,
     ],
   };
 }
@@ -426,10 +494,30 @@ function auditSummary(action: string, targetId: string, payloadJson: string) {
       const channelIds = Array.isArray(payload.channelIds) ? payload.channelIds.length : 0;
       return `Updated the public Discord allowlist for ${channelIds} ${channelIds === 1 ? 'channel' : 'channels'}.`;
     }
+    case 'stage_world_layer_asset':
+      return `Staged a draft override for the "${String(payload.layerKey ?? 'layer')}" layer.`;
+    case 'replace_world_draft_package':
+      return 'Replaced the draft world package and rebound its layer sources.';
+    case 'replace_world_draft_tuning':
+      return 'Updated runtime max-visible tuning for the draft world.';
+    case 'archive_world_layer_asset':
+      return `Archived the "${String(payload.layerKey ?? 'layer')}" draft override without deleting files.`;
+    case 'restore_world_layer_asset':
+      return `Restored the archived "${String(payload.layerKey ?? 'layer')}" draft override.`;
+    case 'publish_world_draft':
+      return 'Published the draft world to the live runtime variant.';
+    case 'discard_world_draft':
+      return 'Discarded draft-only world changes and realigned with live state.';
     case 'upload_companion_base_asset':
       return 'Uploaded new Ghostling base files.';
     case 'create_companion_item':
       return `Created Ghostling cosmetic "${String(payload.name ?? targetId)}".`;
+    case 'update_companion_item': {
+      const previousSlug = String(payload.previousSlug ?? '').trim();
+      return previousSlug && previousSlug !== targetId
+        ? `Updated Ghostling cosmetic "${previousSlug}" to "${targetId}".`
+        : `Updated Ghostling cosmetic "${targetId}".`;
+    }
     case 'replace_companion_item_assets':
       return `Replaced live files for Ghostling item "${targetId}".`;
     case 'import_repo_companion_items':
@@ -440,6 +528,12 @@ function auditSummary(action: string, targetId: string, payloadJson: string) {
         : `Hid Ghostling item "${targetId}" from the live catalog.`;
     case 'reorder_companion_item':
       return `Changed the live order for Ghostling item "${targetId}".`;
+    case 'archive_companion_item':
+      return `Archived Ghostling item "${targetId}" without deleting its files.`;
+    case 'restore_companion_item':
+      return `Restored Ghostling item "${targetId}" to the operator catalog.`;
+    case 'delete_companion_item':
+      return `Permanently deleted archived Ghostling item "${targetId}".`;
     default:
       return `${auditActionLabel(action)} on ${targetId}.`;
   }
@@ -505,6 +599,7 @@ async function buildSharedAdminState(actorOverride?: Awaited<ReturnType<typeof r
   const wom = adminWomSummary();
   const news = adminNewsCounts();
   const ghostling = adminGhostlingSummary();
+  const worlds = adminWorldsSummary();
   const recentGrantCount = countAuditActions(['grant_points'], new Date(Date.now() - 24 * 60 * 60 * 1000));
 
   return {
@@ -514,6 +609,7 @@ async function buildSharedAdminState(actorOverride?: Awaited<ReturnType<typeof r
     wom,
     news,
     ghostling,
+    worlds,
     discord,
     recentGrantCount,
   };
@@ -533,6 +629,7 @@ export async function adminOverviewPayload(): Promise<AdminOverviewData> {
     wom: shared.wom,
     discord: shared.discord,
   });
+  const worldsSummary = worldsSectionSummary(shared.worlds);
   const ghostlingSummary = ghostlingSectionSummary(shared.ghostling);
 
   return {
@@ -555,6 +652,7 @@ export async function adminOverviewPayload(): Promise<AdminOverviewData> {
       rewardsSummary,
       contentSummary,
       systemsSummary,
+      worldsSummary,
       ghostlingSummary,
     ],
     quickActionReferenceData: {

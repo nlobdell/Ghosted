@@ -186,7 +186,10 @@ function ensureSchema(db: Database.Database) {
       render_metadata_json TEXT,
       active INTEGER NOT NULL DEFAULT 1,
       sort_order INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      updated_at TEXT,
+      archived_at TEXT,
+      archived_by_user_id INTEGER REFERENCES users(id)
     );
 
     CREATE TABLE IF NOT EXISTS user_companion_inventory (
@@ -272,14 +275,31 @@ function ensureSchema(db: Database.Database) {
       draft_updated_by_user_id INTEGER REFERENCES users(id),
       published_by_user_id INTEGER REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS scene_world_archived_layers (
+      world_id TEXT NOT NULL,
+      layer_key TEXT NOT NULL,
+      asset_path TEXT NOT NULL,
+      archived_at TEXT NOT NULL,
+      archived_by_user_id INTEGER REFERENCES users(id),
+      PRIMARY KEY (world_id, layer_key)
+    );
   `);
 
   ensureTableColumn(db, 'companion_catalog', 'front_asset_path', 'TEXT');
   ensureTableColumn(db, 'companion_catalog', 'back_asset_path', 'TEXT');
   ensureTableColumn(db, 'companion_catalog', 'render_metadata_json', 'TEXT');
+  ensureTableColumn(db, 'companion_catalog', 'updated_at', 'TEXT');
+  ensureTableColumn(db, 'companion_catalog', 'archived_at', 'TEXT');
+  ensureTableColumn(db, 'companion_catalog', 'archived_by_user_id', 'INTEGER REFERENCES users(id)');
   ensureTableColumn(db, 'companion_settings', 'base_head_asset_path', 'TEXT');
   ensureTableColumn(db, 'scene_world_variants', 'draft_tuning_json', 'TEXT');
   ensureTableColumn(db, 'scene_world_variants', 'published_tuning_json', 'TEXT');
+  db.exec(`
+    UPDATE companion_catalog
+    SET updated_at = COALESCE(updated_at, created_at)
+    WHERE updated_at IS NULL
+  `);
   seedDefaultCasinoGames(db);
   ensureDefaultCompanionBase(db);
   removeLegacyDefaultCompanionAssets(db);

@@ -10,11 +10,13 @@ import { cleanupServerTestEnvironment, insertUser, setupServerTestEnvironment } 
 import { GET as getWorldAssetRoute } from '@/app/api/world-assets/[...path]/route';
 import { AppError } from '@/lib/server/core';
 import {
+  archiveWorldLayerAsset,
   buildAdminWorldPayload,
   discardWorldDraft,
   publishWorldDraft,
   replaceWorldDraftPackage,
   replaceWorldDraftTuning,
+  restoreWorldArchivedLayerAsset,
   resolveDraftGhostlingWorld,
   resolveDraftGhostlingWorldTuning,
   resolvePublishedGhostlingWorld,
@@ -199,5 +201,91 @@ describe('scene world runtime repository', () => {
     });
 
     expect(missingResponse.status).toBe(404);
+  });
+
+  it('archives and restores layer overrides without deleting the staged source file', () => {
+    const staged = stageWorldLayerAssetUpload(
+      context.db,
+      actor,
+      'shared-commons',
+      'foreground',
+      {
+        filename: 'foreground.png',
+        contentType: 'image/png',
+        data: Buffer.from('foreground-image'),
+      },
+    );
+    const stagedLayer = staged.layers.find((layer) => layer.key === 'foreground');
+    expect(stagedLayer?.hasDraftOverride).toBe(true);
+    expect(stagedLayer?.draftAssetPath).toContain('worlds/shared-commons/draft/');
+    expect(fs.existsSync(worldAssetPath(String(stagedLayer?.draftAssetPath)))).toBe(true);
+
+    const archived = archiveWorldLayerAsset(context.db, actor, 'shared-commons', 'foreground');
+    const archivedLayer = archived.layers.find((layer) => layer.key === 'foreground');
+    const archivedRecovery = archived.archivedLayers.find((layer) => layer.layerKey === 'foreground');
+
+    expect(archived.world.hasDraft).toBe(false);
+    expect(archivedLayer).toMatchObject({
+      key: 'foreground',
+      hasDraftOverride: false,
+      hasArchivedOverride: true,
+      isArchivedDraftOnly: true,
+    });
+    expect(archivedRecovery?.assetPath).toContain('worlds/shared-commons/archived/');
+    expect(fs.existsSync(worldAssetPath(String(archivedRecovery?.assetPath)))).toBe(true);
+    expect(fs.existsSync(worldAssetPath(String(stagedLayer?.draftAssetPath)))).toBe(true);
+
+    const restored = restoreWorldArchivedLayerAsset(context.db, actor, 'shared-commons', 'foreground');
+    const restoredLayer = restored.layers.find((layer) => layer.key === 'foreground');
+    const auditRows = context.db.prepare(`
+      SELECT action
+      FROM audit_log
+      WHERE action IN ('archive_world_layer_asset', 'restore_world_layer_asset')
+      ORDER BY id ASC
+    `).all() as Array<{ action: string }>;
+
+    expect(restored.world.hasDraft).toBe(true);
+    expect(restored.archivedLayers.find((layer) => layer.layerKey === 'foreground')).toBeUndefined();
+    expect(restoredLayer).toMatchObject({
+      key: 'foreground',
+      hasDraftOverride: true,
+      hasArchivedOverride: false,
+    });
+    expect(restoredLayer?.draftAssetPath).toBe(archivedRecovery?.assetPath);
+    expect(fs.existsSync(worldAssetPath(String(restoredLayer?.draftAssetPath)))).toBe(true);
+    expect(auditRows.map((row) => row.action)).toEqual(['archive_world_layer_asset', 'restore_world_layer_asset']);
+  });
+
+  it('rejects restoring an archived layer while a live draft override is active', () => {
+    stageWorldLayerAssetUpload(
+      context.db,
+      actor,
+      'shared-commons',
+      'foreground',
+      {
+        filename: 'foreground.png',
+        contentType: 'image/png',
+        data: Buffer.from('foreground-image'),
+      },
+    );
+    const archived = archiveWorldLayerAsset(context.db, actor, 'shared-commons', 'foreground');
+    const archivedRecovery = archived.archivedLayers.find((layer) => layer.layerKey === 'foreground');
+    expect(archivedRecovery?.assetPath).toContain('worlds/shared-commons/archived/');
+
+    stageWorldLayerAssetUpload(
+      context.db,
+      actor,
+      'shared-commons',
+      'foreground',
+      {
+        filename: 'foreground-v2.png',
+        contentType: 'image/png',
+        data: Buffer.from('foreground-image-v2'),
+      },
+    );
+
+    expect(() => restoreWorldArchivedLayerAsset(context.db, actor, 'shared-commons', 'foreground')).toThrowError(
+      'The "foreground" layer does not have an archived override to restore.',
+    );
   });
 });

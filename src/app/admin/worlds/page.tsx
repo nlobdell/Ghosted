@@ -5,11 +5,12 @@
 import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Banner, EmptyState, FormField } from '@/components/ui/AppUI';
-import { getJSON } from '@/lib/api';
+import { formatDate, getJSON } from '@/lib/api';
 import type { GhostlingSceneDensityBucket } from '@/lib/ghostling-world';
 import type { GhostlingSceneTuningSpec } from '@/lib/ghostling-scene-tuning';
 import type { AdminWorldData } from '@/lib/types';
 import {
+  AdminAuditFeed,
   AdminKeyValueList,
   AdminPageHeader,
   AdminPaneSection,
@@ -31,6 +32,11 @@ const WORLD_ID = 'shared-commons';
 const ASSET_ACCEPT = '.png,.svg,.gif,.webp,.jpg,.jpeg';
 const TUNING_BUCKETS: GhostlingSceneDensityBucket[] = ['mobile', 'tablet', 'desktop'];
 
+type LayerReviewState = {
+  kind: 'archive' | 'restore';
+  layerKey: string;
+};
+
 function boolLabel(value: boolean) {
   return value ? 'Yes' : 'No';
 }
@@ -40,14 +46,24 @@ function rectLabel(rect?: { x: number; y: number; width: number; height: number 
   return `${rect.x}, ${rect.y}, ${rect.width}x${rect.height}`;
 }
 
+function worldLayerStateLabel(layer: AdminWorldData['layers'][number]) {
+  if (layer.hasDraftOverride) return 'Draft override';
+  if (layer.isArchivedDraftOnly) return 'Archived recovery';
+  if (layer.hasArchivedOverride) return 'Archived recovery';
+  return 'Aligned';
+}
+
 export default function AdminWorldsPage() {
   const [data, setData] = useState<AdminWorldData | null>(null);
   const [draftTuning, setDraftTuning] = useState<GhostlingSceneTuningSpec | null>(null);
+  const [packageImportText, setPackageImportText] = useState('');
+  const [tuningImportText, setTuningImportText] = useState('');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; variant: 'info' | 'error' } | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [publishReviewOpen, setPublishReviewOpen] = useState(false);
   const [discardReviewOpen, setDiscardReviewOpen] = useState(false);
+  const [layerReview, setLayerReview] = useState<LayerReviewState | null>(null);
 
   async function loadWorldData() {
     const nextWorld = await getJSON<AdminWorldData>('/api/admin/worlds');
@@ -76,12 +92,14 @@ export default function AdminWorldsPage() {
     fallbackMessage: string,
   ) {
     setData(result.world);
+    setDraftTuning(result.world.draftTuning);
     setMessage({
       text: result.message ?? fallbackMessage,
       variant: 'info',
     });
     setPublishReviewOpen(false);
     setDiscardReviewOpen(false);
+    setLayerReview(null);
   }
 
   function updateDraftMaxVisible(bucket: GhostlingSceneDensityBucket, value: number) {
@@ -148,6 +166,40 @@ export default function AdminWorldsPage() {
     }
   }
 
+  async function handlePackageImport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextPackageText = packageImportText.trim();
+    if (!nextPackageText) {
+      setMessage({
+        text: 'Paste a world package JSON payload first.',
+        variant: 'error',
+      });
+      return;
+    }
+
+    setPendingKey('package-import');
+    setMessage(null);
+
+    try {
+      const result = await getJSON<AdminWorldMutationResponse>('/api/admin/worlds/draft/package', {
+        method: 'POST',
+        body: JSON.stringify({
+          worldId: WORLD_ID,
+          packageText: nextPackageText,
+        }),
+      });
+      applyWorldMutation(result, 'Draft world package replaced.');
+      setPackageImportText('');
+    } catch (error) {
+      setMessage({
+        text: error instanceof Error ? error.message : 'Failed to import the draft world package.',
+        variant: 'error',
+      });
+    } finally {
+      setPendingKey(null);
+    }
+  }
+
   async function handleTuningSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!draftTuning) return;
@@ -166,6 +218,40 @@ export default function AdminWorldsPage() {
     } catch (error) {
       setMessage({
         text: error instanceof Error ? error.message : 'Failed to update draft tuning.',
+        variant: 'error',
+      });
+    } finally {
+      setPendingKey(null);
+    }
+  }
+
+  async function handleTuningImport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextTuningText = tuningImportText.trim();
+    if (!nextTuningText) {
+      setMessage({
+        text: 'Paste a movement tuning JSON payload first.',
+        variant: 'error',
+      });
+      return;
+    }
+
+    setPendingKey('tuning-import');
+    setMessage(null);
+
+    try {
+      const result = await getJSON<AdminWorldMutationResponse>('/api/admin/worlds/draft/tuning', {
+        method: 'POST',
+        body: JSON.stringify({
+          worldId: WORLD_ID,
+          tuningText: nextTuningText,
+        }),
+      });
+      applyWorldMutation(result, 'Draft tuning updated.');
+      setTuningImportText('');
+    } catch (error) {
+      setMessage({
+        text: error instanceof Error ? error.message : 'Failed to import draft tuning.',
         variant: 'error',
       });
     } finally {
@@ -213,6 +299,45 @@ export default function AdminWorldsPage() {
     }
   }
 
+  function requestLayerReview(review: LayerReviewState) {
+    setLayerReview(review);
+    setMessage(null);
+  }
+
+  async function confirmLayerReview() {
+    const review = layerReview;
+    if (!review) return;
+
+    const path = review.kind === 'archive'
+      ? '/api/admin/worlds/draft/assets/archive'
+      : '/api/admin/worlds/draft/assets/restore';
+    setPendingKey(`${review.kind}:${review.layerKey}`);
+    setMessage(null);
+
+    try {
+      const result = await getJSON<AdminWorldMutationResponse>(path, {
+        method: 'POST',
+        body: JSON.stringify({
+          worldId: WORLD_ID,
+          layerKey: review.layerKey,
+        }),
+      });
+      applyWorldMutation(
+        result,
+        review.kind === 'archive'
+          ? `Archived ${review.layerKey} draft override.`
+          : `Restored ${review.layerKey} archived override.`,
+      );
+    } catch (error) {
+      setMessage({
+        text: error instanceof Error ? error.message : `Failed to ${review.kind} ${review.layerKey}.`,
+        variant: 'error',
+      });
+    } finally {
+      setPendingKey(null);
+    }
+  }
+
   if (loading) {
     return (
       <main className={`page-shell workspace-page ${sharedStyles.page}`}>
@@ -235,6 +360,8 @@ export default function AdminWorldsPage() {
 
   const draftLayerOrder = data.draftWorld.layers.map((layer) => layer.key).join(', ');
   const draftHasChanges = data.world.hasDraft;
+  const draftOverrideCount = data.layers.filter((layer) => layer.hasDraftOverride).length;
+  const layerByKey = new Map(data.layers.map((layer) => [layer.key, layer]));
 
   return (
     <main id="main-content" className={`page-shell workspace-page ${sharedStyles.page}`}>
@@ -245,7 +372,7 @@ export default function AdminWorldsPage() {
           { label: 'Worlds' },
         ]}
         title="World asset console"
-        summary="Stage layer files and world package JSON in draft, then verify the draft against the published runtime world before you publish."
+        summary="Stage layer files, archive or restore per-layer overrides, tune draft runtime limits, and verify current file state plus recent audit before publishing."
         actions={(
           <>
             <Link href="/" className="button button--secondary button--small">Open live homepage</Link>
@@ -259,6 +386,8 @@ export default function AdminWorldsPage() {
       <AdminStatStrip
         items={[
           { label: 'Layers', value: String(data.draftWorld.layers.length) },
+          { label: 'Draft overrides', value: String(draftOverrideCount) },
+          { label: 'Archived recovery', value: String(data.world.archivedLayerCount) },
           { label: 'Draft changes', value: draftHasChanges ? 'Pending' : 'Aligned' },
           { label: 'Published variant', value: data.world.hasPublishedVariant ? 'Runtime' : 'Repo fallback' },
           { label: 'Canvas', value: `${data.draftWorld.sourceWidth}x${data.draftWorld.sourceHeight}` },
@@ -301,42 +430,84 @@ export default function AdminWorldsPage() {
               </div>
             </AdminRailSection>
 
-            <AdminRailSection eyebrow="Package" title="Replace draft world JSON" description="Upload a validated world package. Layer file paths will be rebound by layer key.">
-              <form onSubmit={handlePackageUpload} className={sharedStyles.formStack}>
-                <input type="hidden" name="worldId" value={WORLD_ID} />
-                <FormField label="World package">
-                  <input
-                    name="package"
-                    type="file"
-                    accept=".json,application/json,text/json"
-                    className="input-base"
-                    required
-                  />
-                </FormField>
-                <button className="button" type="submit" disabled={pendingKey === 'package'}>
-                  {pendingKey === 'package' ? 'Uploading...' : 'Replace draft package'}
-                </button>
-              </form>
-            </AdminRailSection>
-
-            <AdminRailSection eyebrow="Tuning" title="Draft runtime caps" description="Update the runtime max visible Ghostlings per breakpoint without changing the authored world package.">
-              <form onSubmit={handleTuningSave} className={sharedStyles.formStack}>
-                {TUNING_BUCKETS.map((bucket) => (
-                  <FormField key={bucket} label={`${bucket.charAt(0).toUpperCase()}${bucket.slice(1)} max visible`}>
+            <AdminRailSection eyebrow="Package" title="Replace draft world JSON" description="Upload or paste a validated world package. Layer file paths will be rebound by layer key.">
+              <div className={sharedStyles.formStack}>
+                <form onSubmit={handlePackageUpload} className={sharedStyles.formStack}>
+                  <input type="hidden" name="worldId" value={WORLD_ID} />
+                  <FormField label="World package">
                     <input
+                      name="package"
+                      type="file"
+                      accept=".json,application/json,text/json"
                       className="input-base"
-                      type="number"
-                      min={1}
-                      step={1}
-                      value={draftTuning?.buckets[bucket].maxVisible ?? 1}
-                      onChange={(event) => updateDraftMaxVisible(bucket, Number(event.target.value || 1))}
+                      required
                     />
                   </FormField>
-                ))}
-                <button className="button button--secondary button--small" type="submit" disabled={!draftTuning || pendingKey === 'tuning'}>
-                  {pendingKey === 'tuning' ? 'Saving...' : 'Save draft tuning'}
-                </button>
-              </form>
+                  <button className="button" type="submit" disabled={pendingKey === 'package' || pendingKey === 'package-import'}>
+                    {pendingKey === 'package' ? 'Uploading...' : 'Replace draft package'}
+                  </button>
+                </form>
+                <p className={sharedStyles.note}>Paste a complete world JSON document when you want to import draft geometry, guides, and layer ordering directly from the clipboard.</p>
+                <form onSubmit={handlePackageImport} className={sharedStyles.formStack}>
+                  <FormField label="Paste world package JSON">
+                    <textarea
+                      className="input-base"
+                      rows={10}
+                      value={packageImportText}
+                      onChange={(event) => setPackageImportText(event.target.value)}
+                      placeholder="{&quot;schemaVersion&quot;:1,&quot;worldId&quot;:&quot;shared-commons&quot;,...}"
+                    />
+                  </FormField>
+                  <button
+                    className="button button--secondary button--small"
+                    type="submit"
+                    disabled={!packageImportText.trim() || pendingKey === 'package' || pendingKey === 'package-import'}
+                  >
+                    {pendingKey === 'package-import' ? 'Importing...' : 'Import pasted package'}
+                  </button>
+                </form>
+              </div>
+            </AdminRailSection>
+
+            <AdminRailSection eyebrow="Tuning" title="Draft runtime caps" description="Paste a full movement tuning spec or update max visible Ghostlings per breakpoint without changing the authored world package.">
+              <div className={sharedStyles.formStack}>
+                <form onSubmit={handleTuningImport} className={sharedStyles.formStack}>
+                  <FormField label="Paste movement tuning JSON">
+                    <textarea
+                      className="input-base"
+                      rows={12}
+                      value={tuningImportText}
+                      onChange={(event) => setTuningImportText(event.target.value)}
+                      placeholder="{&quot;buckets&quot;:{&quot;mobile&quot;:{...}},&quot;shared&quot;:{...}}"
+                    />
+                  </FormField>
+                  <button
+                    className="button"
+                    type="submit"
+                    disabled={!tuningImportText.trim() || pendingKey === 'tuning' || pendingKey === 'tuning-import'}
+                  >
+                    {pendingKey === 'tuning-import' ? 'Importing...' : 'Import pasted tuning'}
+                  </button>
+                </form>
+                <p className={sharedStyles.note}>Pasted tuning replaces the full draft movement spec after JSON and schema validation.</p>
+                <form onSubmit={handleTuningSave} className={sharedStyles.formStack}>
+                  {TUNING_BUCKETS.map((bucket) => (
+                    <FormField key={bucket} label={`${bucket.charAt(0).toUpperCase()}${bucket.slice(1)} max visible`}>
+                      <input
+                        className="input-base"
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={draftTuning?.buckets[bucket].maxVisible ?? 1}
+                        onChange={(event) => updateDraftMaxVisible(bucket, Number(event.target.value || 1))}
+                      />
+                    </FormField>
+                  ))}
+                  <button className="button button--secondary button--small" type="submit" disabled={!draftTuning || pendingKey === 'tuning' || pendingKey === 'tuning-import'}>
+                    {pendingKey === 'tuning' ? 'Saving...' : 'Save draft tuning'}
+                  </button>
+                </form>
+              </div>
             </AdminRailSection>
 
             <AdminRailSection eyebrow="Publish" title="Publish controls" description="Publishing updates the live homepage runtime world and reseeds draft from the newly published package.">
@@ -344,8 +515,9 @@ export default function AdminWorldsPage() {
                 items={[
                   ['Draft diverged', boolLabel(draftHasChanges)],
                   ['Published variant', boolLabel(data.world.hasPublishedVariant)],
-                  ['Draft updated', data.world.draftUpdatedAt ?? 'Never'],
-                  ['Published at', data.world.publishedAt ?? 'Repo fallback'],
+                  ['Archived recovery', String(data.world.archivedLayerCount)],
+                  ['Draft updated', data.world.draftUpdatedAt ? formatDate(data.world.draftUpdatedAt) : 'Never'],
+                  ['Published at', data.world.publishedAt ? formatDate(data.world.publishedAt) : 'Repo fallback'],
                 ]}
               />
               <div className={styles.publishActions}>
@@ -407,7 +579,11 @@ export default function AdminWorldsPage() {
               ['Storage root', data.world.storageRoot],
               ['Repo asset root', data.world.repoAssetRoot],
               ['Draft changes pending', boolLabel(draftHasChanges)],
+              ['Draft overrides', String(draftOverrideCount)],
+              ['Archived recovery layers', String(data.world.archivedLayerCount)],
               ['Published variant exists', boolLabel(data.world.hasPublishedVariant)],
+              ['Draft updated', data.world.draftUpdatedAt ? formatDate(data.world.draftUpdatedAt) : 'Never'],
+              ['Published at', data.world.publishedAt ? formatDate(data.world.publishedAt) : 'Repo fallback'],
               ['Published hero crop', rectLabel(data.publishedWorld.guides.heroCrop)],
             ]}
           />
@@ -428,7 +604,52 @@ export default function AdminWorldsPage() {
           />
         </AdminPaneSection>
 
-        <AdminPaneSection eyebrow="Layers" title="Published vs draft layer previews">
+        <AdminPaneSection eyebrow="Recovery" title="Archived draft override recovery">
+          {data.archivedLayers.length ? (
+            <div className={styles.layerRecoveryGrid}>
+              {data.archivedLayers.map((layer) => {
+                const currentLayer = layerByKey.get(layer.layerKey);
+                const restoreDisabled = Boolean(currentLayer?.hasDraftOverride);
+                return (
+                  <article key={layer.layerKey} className={styles.layerRecoveryCard}>
+                    <div className={styles.layerPreviewHeader}>
+                      <strong>{layer.layerKey}</strong>
+                      <span className={sharedStyles.metaToken}>Recovery ready</span>
+                    </div>
+                    <AdminKeyValueList
+                      items={[
+                        ['Archived file', layer.assetPath],
+                        ['Archived at', formatDate(layer.archivedAt)],
+                        ['Archived by', layer.archivedByDisplayName ?? 'Unknown'],
+                      ]}
+                      className={styles.layerReadback}
+                    />
+                    <div className={styles.layerActions}>
+                      <a href={layer.assetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                        Open archived file
+                      </a>
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() => requestLayerReview({ kind: 'restore', layerKey: layer.layerKey })}
+                        disabled={restoreDisabled || pendingKey === `restore:${layer.layerKey}`}
+                      >
+                        {pendingKey === `restore:${layer.layerKey}` ? 'Restoring...' : 'Restore override'}
+                      </button>
+                    </div>
+                    {restoreDisabled ? (
+                      <p className={sharedStyles.note}>Archive or discard the active draft override before restoring this archived layer.</p>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p className={sharedStyles.emptyNote}>No archived layer overrides are waiting for recovery.</p>
+          )}
+        </AdminPaneSection>
+
+        <AdminPaneSection eyebrow="Layers" title="Layer overrides and file readback">
           <div className={styles.layerPreviewGrid}>
             {data.layers.map((layer) => (
               <article key={layer.key} className={styles.layerPreviewCard}>
@@ -436,7 +657,8 @@ export default function AdminWorldsPage() {
                   <strong>{layer.key}</strong>
                   <div className={styles.layerPreviewTokens}>
                     <span className={sharedStyles.metaToken}>z{layer.zIndex}</span>
-                    <span className={sharedStyles.metaToken}>{layer.hasDraftOverride ? 'Draft override' : 'Aligned'}</span>
+                    <span className={sharedStyles.metaToken}>{worldLayerStateLabel(layer)}</span>
+                    {layer.hasArchivedOverride ? <span className={sharedStyles.metaToken}>Archived copy</span> : null}
                   </div>
                 </div>
                 <div className={styles.layerPreviewRow}>
@@ -448,12 +670,93 @@ export default function AdminWorldsPage() {
                     <span className={styles.layerPreviewLabel}>Draft</span>
                     <img src={layer.draftSrc} alt={`${layer.key} draft layer`} className={styles.layerPreviewImage} />
                   </div>
+                  {layer.archivedAssetUrl ? (
+                    <div className={styles.layerPreviewPanel}>
+                      <span className={styles.layerPreviewLabel}>Archived</span>
+                      <img src={layer.archivedAssetUrl} alt={`${layer.key} archived layer`} className={styles.layerPreviewImage} />
+                    </div>
+                  ) : null}
                 </div>
+                <AdminKeyValueList
+                  items={[
+                    ['Published file', layer.liveAssetPath],
+                    ['Draft file', layer.draftAssetPath],
+                    ['Archived file', layer.archivedAssetPath ?? 'None'],
+                    ['Archived at', layer.archivedAt ? formatDate(layer.archivedAt) : 'Not archived'],
+                    ['Archived by', layer.archivedByDisplayName ?? 'N/A'],
+                  ]}
+                  className={styles.layerReadback}
+                />
+                <div className={styles.layerActions}>
+                  {layer.hasDraftOverride ? (
+                    <button
+                      type="button"
+                      className="button button--secondary button--small"
+                      onClick={() => requestLayerReview({ kind: 'archive', layerKey: layer.key })}
+                      disabled={pendingKey === `archive:${layer.key}`}
+                    >
+                      {pendingKey === `archive:${layer.key}` ? 'Archiving...' : 'Archive draft override'}
+                    </button>
+                  ) : null}
+                  {layer.isArchivedDraftOnly ? (
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={() => requestLayerReview({ kind: 'restore', layerKey: layer.key })}
+                      disabled={pendingKey === `restore:${layer.key}`}
+                    >
+                      {pendingKey === `restore:${layer.key}` ? 'Restoring...' : 'Restore archived override'}
+                    </button>
+                  ) : null}
+                  <a href={layer.liveSrc} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                    Open published file
+                  </a>
+                  <a href={layer.draftSrc} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                    Open draft file
+                  </a>
+                  {layer.archivedAssetUrl ? (
+                    <a href={layer.archivedAssetUrl} target="_blank" rel="noreferrer" className="button button--secondary button--small">
+                      Open archived file
+                    </a>
+                  ) : null}
+                </div>
+                {layer.hasDraftOverride ? (
+                  <p className={sharedStyles.note}>Archiving reverts the draft layer to the current published or repo-backed source without deleting the override file.</p>
+                ) : layer.isArchivedDraftOnly ? (
+                  <p className={sharedStyles.note}>This layer is aligned live, but an archived override is ready to restore into draft.</p>
+                ) : (
+                  <p className={sharedStyles.note}>Draft currently matches the published or repo-backed live layer for this key.</p>
+                )}
               </article>
             ))}
           </div>
         </AdminPaneSection>
+
+        <AdminPaneSection eyebrow="Audit" title="Recent world actions">
+          <AdminAuditFeed entries={data.recentAudit} emptyMessage="No recent world actions yet." />
+        </AdminPaneSection>
       </AdminWorkspace>
+      {layerReview ? (
+        <InlineConfirmBar
+          title={layerReview.kind === 'archive' ? 'Confirm archive' : 'Confirm restore'}
+          detail={
+            layerReview.kind === 'archive'
+              ? 'Archiving removes the active draft override from the live draft package and keeps a restorable copy for later recovery.'
+              : 'Restoring reapplies the archived layer override into the draft package without touching the currently published world.'
+          }
+          meta={[
+            { label: 'World', value: data.world.id },
+            { label: 'Layer', value: layerReview.layerKey },
+            { label: 'Action', value: layerReview.kind === 'archive' ? 'Archive override' : 'Restore override' },
+          ]}
+          confirmLabel={layerReview.kind === 'archive' ? 'Confirm archive' : 'Confirm restore'}
+          pendingLabel={layerReview.kind === 'archive' ? 'Archiving...' : 'Restoring...'}
+          tone={layerReview.kind === 'archive' ? 'danger' : 'default'}
+          busy={pendingKey === `${layerReview.kind}:${layerReview.layerKey}`}
+          onConfirm={() => void confirmLayerReview()}
+          onCancel={() => setLayerReview(null)}
+        />
+      ) : null}
     </main>
   );
 }

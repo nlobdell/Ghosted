@@ -1,16 +1,23 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ServerTestContext } from './test-utils';
 import { addRewardLedgerEntry, cleanupServerTestEnvironment, insertUser, setupServerTestEnvironment } from './test-utils';
 import {
+  archiveCompanionItem,
+  buildCompanionAdminPayload,
   buildCompanionPayload,
   buildHallCompanionSummaryPayload,
   createCompanionItem,
+  deleteCompanionItem,
   equipCompanionItem,
   purchaseCompanionItem,
+  restoreCompanionItem,
+  updateCompanionItem,
 } from '@/lib/server/companion';
 import {
   COMPANION_DEFAULT_BASE_ASSET_PATH,
+  companionAssetPath,
   companionAssetDir,
   repoCompanionImportCandidates,
 } from '@/lib/server/companion-storage';
@@ -36,13 +43,18 @@ function svgAsset(filename: string, fill = '#7c5cff') {
 
 describe('companion server module', () => {
   let context: ServerTestContext;
+  let repoFixturePaths: string[];
 
   beforeEach(() => {
     context = setupServerTestEnvironment();
+    repoFixturePaths = [];
   });
 
   afterEach(() => {
     cleanupServerTestEnvironment(context);
+    for (const fixturePath of repoFixturePaths) {
+      fs.rmSync(fixturePath, { force: true });
+    }
   });
 
   it('starts with a default base asset and no seeded cosmetics', () => {
@@ -204,5 +216,238 @@ describe('companion server module', () => {
 
   it('returns no repo import candidates when repo defaults items are absent', () => {
     expect(repoCompanionImportCandidates(context.db)).toEqual([]);
+  });
+
+  it('renames cosmetics transactionally, keeps owned archived renders intact, and blocks new archived purchases', () => {
+    const actorId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    const ownerId = insertUser(context.db, { username: 'member', globalName: 'Member' });
+    const shopperId = insertUser(context.db, { username: 'shopper', globalName: 'Shopper' });
+    addRewardLedgerEntry(context.db, ownerId, 400, 'welcome_bonus', 'Initial points');
+    addRewardLedgerEntry(context.db, shopperId, 400, 'welcome_bonus', 'Initial points');
+
+    createCompanionItem(context.db, getUser(context, actorId), {
+      name: 'Moon Hood',
+      slot: 'hat',
+      rarity: 'rare',
+      cost: 120,
+      description: 'Night market hood.',
+      frontAsset: svgAsset('moon-hood-front.svg'),
+    });
+
+    purchaseCompanionItem(context.db, getUser(context, ownerId), 'moon-hood');
+
+    const renamedLibrary = updateCompanionItem(context.db, getUser(context, actorId), 'moon-hood', {
+      name: 'Sun Hood',
+      slug: 'sun-hood',
+      rarity: 'legendary',
+      cost: 180,
+      description: 'Solar market hood.',
+      metadataJson: null,
+    });
+    const inventoryRow = context.db.prepare(`
+      SELECT item_slug
+      FROM user_companion_inventory
+      WHERE user_id = ?
+    `).get(ownerId) as { item_slug: string };
+    const loadoutRow = context.db.prepare(`
+      SELECT hat_item_slug
+      FROM user_companion_loadout
+      WHERE user_id = ?
+    `).get(ownerId) as { hat_item_slug: string | null };
+
+    expect(renamedLibrary.items.find((item) => item.slug === 'sun-hood')).toMatchObject({
+      name: 'Sun Hood',
+      rarity: 'legendary',
+      cost: 180,
+    });
+    expect(renamedLibrary.items.find((item) => item.slug === 'moon-hood')).toBeUndefined();
+    expect(inventoryRow.item_slug).toBe('sun-hood');
+    expect(loadoutRow.hat_item_slug).toBe('sun-hood');
+
+    const archivedLibrary = archiveCompanionItem(context.db, getUser(context, actorId), 'sun-hood');
+    const ownerPayload = buildCompanionPayload(context.db, getUser(context, ownerId));
+
+    expect(archivedLibrary.items.find((item) => item.slug === 'sun-hood')).toBeUndefined();
+    expect(archivedLibrary.archivedItems.find((item) => item.slug === 'sun-hood')).toMatchObject({
+      state: 'archived',
+      archived: true,
+      active: false,
+    });
+    expect(ownerPayload.items.find((item) => item.slug === 'sun-hood')).toMatchObject({
+      slug: 'sun-hood',
+      archived: true,
+      owned: true,
+      equipped: true,
+      active: false,
+    });
+    expect(() => purchaseCompanionItem(context.db, getUser(context, shopperId), 'sun-hood')).toThrowError(
+      'That companion cosmetic is archived and cannot be unlocked right now.',
+    );
+
+    const restoredLibrary = restoreCompanionItem(context.db, getUser(context, actorId), 'sun-hood');
+    expect(restoredLibrary.archivedItems.find((item) => item.slug === 'sun-hood')).toBeUndefined();
+    expect(restoredLibrary.items.find((item) => item.slug === 'sun-hood')).toMatchObject({
+      state: 'visible',
+      active: true,
+      archived: false,
+    });
+  });
+
+  it('separates visible, hidden, and archived cosmetics in the admin library payload', () => {
+    const actorId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+
+    createCompanionItem(context.db, getUser(context, actorId), {
+      name: 'Moon Hood',
+      slot: 'hat',
+      rarity: 'common',
+      cost: 0,
+      description: '',
+      frontAsset: svgAsset('moon-hood-front.svg'),
+    });
+    createCompanionItem(context.db, getUser(context, actorId), {
+      name: 'Silver Veil',
+      slot: 'face',
+      rarity: 'rare',
+      cost: 0,
+      description: '',
+      frontAsset: svgAsset('silver-veil-front.svg', '#57b8ff'),
+    });
+    createCompanionItem(context.db, getUser(context, actorId), {
+      name: 'Ember Cape',
+      slot: 'body',
+      rarity: 'epic',
+      cost: 0,
+      description: '',
+      frontAsset: svgAsset('ember-cape-front.svg', '#ff8855'),
+    });
+
+    context.db.prepare('UPDATE companion_catalog SET active = 0 WHERE slug = ?').run('silver-veil');
+    archiveCompanionItem(context.db, getUser(context, actorId), 'ember-cape');
+
+    const library = buildCompanionAdminPayload(context.db);
+
+    expect(library.items.find((item) => item.slug === 'moon-hood')).toMatchObject({ state: 'visible', archived: false });
+    expect(library.items.find((item) => item.slug === 'silver-veil')).toMatchObject({ state: 'hidden', archived: false });
+    expect(library.items.find((item) => item.slug === 'ember-cape')).toBeUndefined();
+    expect(library.archivedItems.find((item) => item.slug === 'ember-cape')).toMatchObject({ state: 'archived', archived: true });
+  });
+
+  it('hard deletes archived cosmetics, purges member refs, and removes safe uploaded files', () => {
+    const actorId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    const userId = insertUser(context.db, { username: 'member', globalName: 'Member' });
+    addRewardLedgerEntry(context.db, userId, 250, 'welcome_bonus', 'Initial points');
+
+    const created = createCompanionItem(context.db, getUser(context, actorId), {
+      name: 'Moon Hood',
+      slot: 'hat',
+      rarity: 'rare',
+      cost: 120,
+      description: 'Night market hood.',
+      frontAsset: svgAsset('moon-hood-front.svg'),
+    });
+    const item = created.items.find((entry) => entry.slug === 'moon-hood');
+    expect(item?.frontAssetPath).toContain('uploads/items/');
+    expect(fs.existsSync(companionAssetPath(String(item?.frontAssetPath)))).toBe(true);
+
+    purchaseCompanionItem(context.db, getUser(context, userId), 'moon-hood');
+    archiveCompanionItem(context.db, getUser(context, actorId), 'moon-hood');
+
+    const result = deleteCompanionItem(context.db, getUser(context, actorId), 'moon-hood');
+    const inventoryCount = context.db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM user_companion_inventory
+      WHERE item_slug = 'moon-hood'
+    `).get() as { count: number };
+    const loadoutRow = context.db.prepare(`
+      SELECT hat_item_slug
+      FROM user_companion_loadout
+      WHERE user_id = ?
+    `).get(userId) as { hat_item_slug: string | null };
+
+    expect(result.warning).toBeNull();
+    expect(result.library.archivedItems.find((entry) => entry.slug === 'moon-hood')).toBeUndefined();
+    expect(result.library.recentAudit[0]?.action).toBe('delete_companion_item');
+    expect(inventoryCount.count).toBe(0);
+    expect(loadoutRow.hat_item_slug).toBeNull();
+    expect(fs.existsSync(companionAssetPath(String(item?.frontAssetPath)))).toBe(false);
+  });
+
+  it('rejects deleting missing or non-archived cosmetics', () => {
+    const actorId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+    createCompanionItem(context.db, getUser(context, actorId), {
+      name: 'Moon Hood',
+      slot: 'hat',
+      rarity: 'common',
+      cost: 0,
+      description: '',
+      frontAsset: svgAsset('moon-hood-front.svg'),
+    });
+
+    expect(() => deleteCompanionItem(context.db, getUser(context, actorId), 'missing-slug')).toThrowError(
+      'That companion cosmetic does not exist.',
+    );
+    expect(() => deleteCompanionItem(context.db, getUser(context, actorId), 'moon-hood')).toThrowError(
+      'Archive the cosmetic before permanently deleting it.',
+    );
+  });
+
+  it('keeps shared upload files and repo files when archived cosmetics are hard-deleted', () => {
+    const actorId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
+
+    const firstLibrary = createCompanionItem(context.db, getUser(context, actorId), {
+      name: 'Moon Hood',
+      slot: 'hat',
+      rarity: 'common',
+      cost: 0,
+      description: '',
+      frontAsset: svgAsset('moon-hood-front.svg'),
+    });
+    createCompanionItem(context.db, getUser(context, actorId), {
+      name: 'Silver Veil',
+      slot: 'face',
+      rarity: 'rare',
+      cost: 0,
+      description: '',
+      frontAsset: svgAsset('silver-veil-front.svg', '#57b8ff'),
+    });
+    const sharedAssetPath = String(firstLibrary.items.find((item) => item.slug === 'moon-hood')?.frontAssetPath ?? '');
+    context.db.prepare(`
+      UPDATE companion_catalog
+      SET front_asset_path = ?
+      WHERE slug = 'silver-veil'
+    `).run(sharedAssetPath);
+
+    archiveCompanionItem(context.db, getUser(context, actorId), 'moon-hood');
+    const sharedDelete = deleteCompanionItem(context.db, getUser(context, actorId), 'moon-hood');
+
+    expect(sharedDelete.warning).toBeNull();
+    expect(fs.existsSync(companionAssetPath(sharedAssetPath))).toBe(true);
+
+    const repoItemsDir = path.join(process.cwd(), 'assets', 'companion', 'defaults', 'items');
+    fs.mkdirSync(repoItemsDir, { recursive: true });
+    const repoAssetName = `delete-guard-${Date.now()}.svg`;
+    const repoAssetPath = path.join(repoItemsDir, repoAssetName);
+    repoFixturePaths.push(repoAssetPath);
+    fs.writeFileSync(repoAssetPath, svgAsset(repoAssetName, '#ffaa55').data);
+
+    createCompanionItem(context.db, getUser(context, actorId), {
+      name: 'Repo Cape',
+      slot: 'body',
+      rarity: 'epic',
+      cost: 0,
+      description: '',
+      frontAsset: svgAsset('repo-cape-front.svg', '#ffaa55'),
+    });
+    context.db.prepare(`
+      UPDATE companion_catalog
+      SET front_asset_path = ?
+      WHERE slug = 'repo-cape'
+    `).run(`repo/defaults/items/${repoAssetName}`);
+
+    archiveCompanionItem(context.db, getUser(context, actorId), 'repo-cape');
+    const repoDelete = deleteCompanionItem(context.db, getUser(context, actorId), 'repo-cape');
+
+    expect(repoDelete.warning).toBeNull();
+    expect(fs.existsSync(repoAssetPath)).toBe(true);
   });
 });
