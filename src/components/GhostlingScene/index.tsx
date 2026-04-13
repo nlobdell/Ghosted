@@ -704,6 +704,41 @@ function presentationForState(state: SceneEntityState): StagePresentation {
   return 'ambient';
 }
 
+function preferredSceneLabel(entity: Pick<RenderGhostlingEntity, 'source' | 'displayName' | 'username'>) {
+  if (entity.source === 'voice' && entity.displayName.trim()) {
+    return entity.displayName.trim();
+  }
+  return entity.username;
+}
+
+function sourceMetadataLabel(source: ScenePresenceMember['source']) {
+  if (source === 'voice') return 'Voice';
+  if (source === 'wom') return 'Clan activity';
+  return 'House ghostling';
+}
+
+function interactionMetadata(entity: RenderGhostlingEntity, nowTs: number) {
+  const lines: string[] = [];
+  const label = preferredSceneLabel(entity);
+  if (entity.username && entity.username !== label) {
+    lines.push(`@${entity.username}`);
+  }
+
+  if (entity.displayName && entity.displayName !== label && entity.displayName !== entity.username) {
+    lines.push(entity.displayName);
+  }
+
+  lines.push(sourceMetadataLabel(entity.source));
+
+  if (entity.activeUntilTs > nowTs) {
+    lines.push('Live now');
+  } else if (entity.fallback) {
+    lines.push('Fallback');
+  }
+
+  return lines;
+}
+
 function liveBadgeLabel(source: ScenePresencePayload['source'], liveCount: number) {
   if (liveCount <= 0) return 'House mascot holding the stage';
   if (source === 'voice') return `${liveCount} live across voice and clan activity`;
@@ -2315,6 +2350,7 @@ export function GhostlingScene({
                 data-source={entity.source}
                 data-zone={entity.safeZoneKey}
                 data-scale-tier={entity.scaleTier}
+                tabIndex={isInteractive ? 0 : -1}
                 style={{
                   ['--ghost-size' as string]: `${desiredGhostSize}px`,
                   ['--ghost-label-nudge' as string]: `${labelNudge}px`,
@@ -2326,9 +2362,21 @@ export function GhostlingScene({
                 }}
                 onMouseEnter={() => { if (isInteractive) setHoveredKey(entity.key); }}
                 onMouseLeave={() => { if (hoveredKeyRef.current === entity.key) setHoveredKey(null); }}
+                onFocus={() => { if (isInteractive) setHoveredKey(entity.key); }}
+                onBlur={() => { if (hoveredKeyRef.current === entity.key) setHoveredKey(null); }}
                 onTouchStart={() => {
                   if (!isInteractive) return;
                   setHoveredKey((current) => (current === entity.key ? null : entity.key));
+                }}
+                onKeyDown={(event) => {
+                  if (!isInteractive) return;
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setHoveredKey((current) => (current === entity.key ? null : entity.key));
+                  }
+                  if (event.key === 'Escape' && hoveredKeyRef.current === entity.key) {
+                    setHoveredKey(null);
+                  }
                 }}
               >
                 <div className={styles.ghostAura} aria-hidden="true" style={{ pointerEvents: 'none' }} />
@@ -2364,7 +2412,17 @@ export function GhostlingScene({
                     />
                   )}
                 </div>
-                <span className={styles.ghostNameplate}>{entity.displayName}</span>
+                <span className={styles.ghostNameplate}>{preferredSceneLabel(entity)}</span>
+                <span
+                  className={styles.ghostMetadataCard}
+                  aria-hidden={state === 'hovered' ? 'false' : 'true'}
+                >
+                  {interactionMetadata(entity, renderNow).map((line) => (
+                    <span key={`${entity.key}:${line}`} className={styles.ghostMetadataLine}>
+                      {line}
+                    </span>
+                  ))}
+                </span>
               </div>
             );
           })}

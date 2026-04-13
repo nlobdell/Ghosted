@@ -456,7 +456,7 @@
   top: 0;
   left: var(--ghost-label-anchor-x, 50%);
   z-index: 2;
-  transform: translate(-50%, calc(-100% - 0.75rem + var(--ghost-label-nudge, 0px)));
+  transform: translate(-50%, calc(-100% - 0.45rem + var(--ghost-label-nudge, 0px)));
   padding: 0.325rem 0.725rem;
   border: 1px solid rgba(205, 198, 255, 0.16);
   border-radius: 999px;
@@ -467,11 +467,44 @@
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
+  opacity: 1;
+  pointer-events: none;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.ghostMetadataCard {
+  position: absolute;
+  top: 0;
+  left: var(--ghost-label-anchor-x, 50%);
+  z-index: 3;
+  display: grid;
+  gap: 0.24rem;
+  min-width: max-content;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(205, 198, 255, 0.18);
+  border-radius: 0.85rem;
+  background: rgba(8, 8, 11, 0.92);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+  color: rgba(250, 247, 255, 0.88);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
   opacity: 0;
   pointer-events: none;
+  transform: translate(-50%, calc(-100% - 2.45rem + var(--ghost-label-nudge, 0px)));
   transition:
     opacity 180ms ease,
     transform 180ms ease;
+}
+
+.ghostMetadataLine {
+  display: block;
 }
 
 .ghostWrap[data-scene-state='hovered'] .ghostVisual {
@@ -506,8 +539,13 @@
 .ghostWrap[data-scene-state='hovered'] .ghostNameplate,
 .ghostWrap[data-scene-state='live-active'] .ghostNameplate,
 .ghostWrap[data-scene-state='featured-mascot'] .ghostNameplate {
+  border-color: rgba(205, 198, 255, 0.28);
+  background: rgba(12, 12, 18, 0.92);
+}
+
+.ghostWrap[data-scene-state='hovered'] .ghostMetadataCard {
   opacity: 1;
-  transform: translate(-50%, calc(-100% - 0.45rem + var(--ghost-label-nudge, 0px)));
+  transform: translate(-50%, calc(-100% - 2.15rem + var(--ghost-label-nudge, 0px)));
 }
 
 .staticGrid .sceneField {
@@ -547,6 +585,12 @@
   position: static;
   transform: none;
   opacity: 1;
+  margin-top: 0.35rem;
+}
+
+.staticGrid .ghostMetadataCard {
+  position: static;
+  transform: none;
   margin-top: 0.35rem;
 }
 
