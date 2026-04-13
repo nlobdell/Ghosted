@@ -87,29 +87,31 @@ export default async function HomePage({
           sceneEditorSandboxPayload={sandboxPayload}
           realtimeDisabled={Boolean(fixtureId)}
         />
+        {!sceneEditorEnabled ? (
+          <div className={styles.heroRail}>
+            <div className={styles.heroRailInner}>
+              <div className={styles.heroSignal}>
+                <span className={styles.heroSignalChip}>{signal.chip}</span>
+                <span className={styles.heroSignalText}>{signal.text}</span>
+              </div>
 
-        <div className={styles.heroRail}>
-          <div className={styles.heroRailInner}>
-            <div className={styles.heroSignal}>
-              <span className={styles.heroSignalChip}>{signal.chip}</span>
-              <span className={styles.heroSignalText}>{signal.text}</span>
-            </div>
-
-            <div className={styles.heroActions}>
-              <a className="button" href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer">
-                Join Discord
-              </a>
-              <Link className="button button--secondary" href={hallHref}>
-                Enter the Hall
-              </Link>
+              <div className={styles.heroActions}>
+                <a className="button" href={GHOSTED_CONTENT.links.discord} target="_blank" rel="noopener noreferrer">
+                  Join Discord
+                </a>
+                <Link className="button button--secondary" href={hallHref}>
+                  Enter the Hall
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
+        ) : null}
       </section>
-
-      <div className={styles.contentShell}>
-        <NewsPreview posts={previewPosts} />
-      </div>
+      {!sceneEditorEnabled ? (
+        <div className={styles.contentShell}>
+          <NewsPreview posts={previewPosts} />
+        </div>
+      ) : null}
     </main>
   );
 }

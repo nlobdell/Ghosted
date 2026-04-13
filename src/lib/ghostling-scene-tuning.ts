@@ -19,6 +19,7 @@ export interface GhostlingSceneTuningSharedSettings {
   verticalTravelFactor: number;
   settleDamping: number;
   minTargetTravelRatio: number;
+  anchorHopChance: number;
 }
 
 export interface GhostlingSceneTuningSpec {
@@ -38,7 +39,7 @@ export function createDefaultGhostlingSceneTuningSpec(): GhostlingSceneTuningSpe
   return {
     buckets: {
       mobile: {
-        maxVisible: 4,
+        maxVisible: 6,
         speedMin: 14,
         speedMax: 18,
         pauseMinMs: 320,
@@ -50,7 +51,7 @@ export function createDefaultGhostlingSceneTuningSpec(): GhostlingSceneTuningSpe
         facingFlipDistance: 14,
       },
       tablet: {
-        maxVisible: 6,
+        maxVisible: 8,
         speedMin: 17,
         speedMax: 24,
         pauseMinMs: 360,
@@ -62,7 +63,7 @@ export function createDefaultGhostlingSceneTuningSpec(): GhostlingSceneTuningSpe
         facingFlipDistance: 15,
       },
       desktop: {
-        maxVisible: 8,
+        maxVisible: 10,
         speedMin: 18,
         speedMax: 26,
         pauseMinMs: 420,
@@ -79,6 +80,7 @@ export function createDefaultGhostlingSceneTuningSpec(): GhostlingSceneTuningSpe
       verticalTravelFactor: 0.72,
       settleDamping: 5.4,
       minTargetTravelRatio: 0.55,
+      anchorHopChance: 0.35,
     },
   };
 }
@@ -129,5 +131,6 @@ export function resolveGhostlingSceneTuning(
     verticalTravelFactor: tuning.shared.verticalTravelFactor,
     settleDamping: tuning.shared.settleDamping,
     minTargetTravelRatio: tuning.shared.minTargetTravelRatio,
+    anchorHopChance: tuning.shared.anchorHopChance,
   };
 }

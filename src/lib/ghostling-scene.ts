@@ -570,7 +570,7 @@ function resolveNextPlacement(
   if (!profile.allowedPointKeys.has(currentPoint.key)) {
     return resolvePlacement(world, profile, undefined, profile.pointOrder, false);
   }
-  if (crowding <= 0.06 || currentPoint.adjacent.length === 0) {
+  if (currentPoint.adjacent.length === 0) {
     return placementForPoint(state, world, currentPoint);
   }
 
@@ -580,6 +580,12 @@ function resolveNextPlacement(
     .filter((point) => profile.allowedPointKeys.has(point.key));
 
   if (adjacentPoints.length === 0) {
+    return placementForPoint(state, world, currentPoint);
+  }
+
+  const shouldHop = crowding > 0.06
+    || seededRange(`${state.key}:anchor-hop:${state.targetSerial}`, 0, 1) < profile.anchorHopChance;
+  if (!shouldHop) {
     return placementForPoint(state, world, currentPoint);
   }
 

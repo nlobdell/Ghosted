@@ -40,6 +40,7 @@ import {
 import {
   cloneGhostlingSceneTuningSpec,
   createDefaultGhostlingSceneTuningSpec,
+  type GhostlingSceneTuningSpec,
 } from '@/lib/ghostling-scene-tuning';
 import { resolveSceneRealtimeClientUrl } from '@/lib/scene-realtime';
 import {
@@ -49,7 +50,16 @@ import {
   type GhostlingWorldPreset,
   type GhostlingWorldSpec,
 } from '@/lib/ghostling-world';
-import { cloneGhostlingWorldDraft, type GhostlingSceneLabPreviewMode } from '@/lib/ghostling-scene-lab';
+import {
+  cloneGhostlingSceneLabSnapshot,
+  cloneGhostlingWorldDraft,
+  ghostlingSceneLabSnapshotEquals,
+  type GhostlingSceneLabPreviewMode,
+  type GhostlingSceneLabSearchQuery,
+  type GhostlingSceneLabSelection,
+  type GhostlingSceneLabSnapshot,
+  type GhostlingSceneLabTab,
+} from '@/lib/ghostling-scene-lab';
 import type {
   CompanionPreviewSummary,
   ScenePresenceActivity,
@@ -155,11 +165,14 @@ type RenderGhostlingEntity = Pick<
 >;
 
 type SharedSceneCorrectionMode = 'snap' | 'smooth' | 'intent';
+type SceneLabDraftUpdate<T> = T | ((current: T) => T);
+type SceneLabHistoryMode = 'none' | 'immediate';
 
 const POLL_MS = 15_000;
 const LIVE_ACTIVE_MS = 3_200;
 const SOCKET_RECONNECT_BASE_MS = 1_000;
 const SOCKET_RECONNECT_MAX_MS = 15_000;
+const SCENE_LAB_HISTORY_LIMIT = 100;
 const HERO_INTERPOLATION_DELAY_MS = 300;
 const HERO_SAMPLE_MAX_AGE_MS = 4_000;
 const HERO_MAX_SAMPLE_COUNT = 12;
@@ -184,6 +197,15 @@ function usesFixedCropCamera(variant: GhostlingSceneVariant) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function resolveDraftUpdate<T>(
+  update: SceneLabDraftUpdate<T>,
+  current: T,
+) {
+  return typeof update === 'function'
+    ? (update as (draft: T) => T)(current)
+    : update;
 }
 
 function blend(current: number, next: number, factor: number) {
@@ -977,10 +999,17 @@ export function GhostlingScene({
   const worldSpec = useMemo(() => ghostlingWorldById(world), [world]);
   const [sceneLabPreviewMode, setSceneLabPreviewMode] = useState<GhostlingSceneLabPreviewMode>('sandbox');
   const [sceneLabPlaying, setSceneLabPlaying] = useState(true);
-  const [sceneLabGhostCount, setSceneLabGhostCount] = useState(6);
+  const [sceneLabGhostCount, setSceneLabGhostCount] = useState(
+    () => createDefaultGhostlingSceneTuningSpec().buckets.desktop.maxVisible,
+  );
   const [sceneLabResetSerial, setSceneLabResetSerial] = useState(0);
   const [sceneLabWorldDraft, setSceneLabWorldDraft] = useState<GhostlingWorldSpec>(() => cloneGhostlingWorldDraft(worldSpec));
   const [sceneLabTuningDraft, setSceneLabTuningDraft] = useState(() => cloneGhostlingSceneTuningSpec(createDefaultGhostlingSceneTuningSpec()));
+  const [sceneLabSelection, setSceneLabSelection] = useState<GhostlingSceneLabSelection | null>(null);
+  const [sceneLabActiveTab, setSceneLabActiveTab] = useState<GhostlingSceneLabTab>('authored');
+  const [sceneLabSearchQuery, setSceneLabSearchQuery] = useState<GhostlingSceneLabSearchQuery>('');
+  const [sceneLabUndoStack, setSceneLabUndoStack] = useState<GhostlingSceneLabSnapshot[]>([]);
+  const [sceneLabRedoStack, setSceneLabRedoStack] = useState<GhostlingSceneLabSnapshot[]>([]);
   const [sceneLabLivePayload, setSceneLabLivePayload] = useState<ScenePresencePayload | null>(initialPayload);
   const containerRef = useRef<HTMLDivElement>(null);
   const entitiesRef = useRef<Map<string, GhostlingEntity>>(new Map());
@@ -989,6 +1018,11 @@ export function GhostlingScene({
   const frameRef = useRef<number>(0);
   const lastTimestampRef = useRef<number>(0);
   const sceneLabStepFramesRef = useRef(0);
+  const sceneLabWorldDraftRef = useRef(sceneLabWorldDraft);
+  const sceneLabTuningDraftRef = useRef(sceneLabTuningDraft);
+  const sceneLabUndoStackRef = useRef<GhostlingSceneLabSnapshot[]>([]);
+  const sceneLabRedoStackRef = useRef<GhostlingSceneLabSnapshot[]>([]);
+  const sceneLabPendingHistoryRef = useRef<GhostlingSceneLabSnapshot | null>(null);
   const hoveredKeyRef = useRef<string | null>(null);
   const liveCountRef = useRef<number>(initialPayload?.members.length ?? 0);
   const lastPayloadRef = useRef<ScenePresencePayload | null>(initialPayload);
@@ -1020,7 +1054,10 @@ export function GhostlingScene({
   const [renderNow, setRenderNow] = useState(0);
   const [renderMetrics, setRenderMetrics] = useState<GhostlingSceneCameraMetrics>(defaultCameraMetrics);
 
-  const worldDebugEnabled = process.env.NODE_ENV !== 'production' && (debugWorldOverlay || sceneLabEnabled);
+  const worldDebugOverlayEnabled = process.env.NODE_ENV !== 'production'
+    && debugWorldOverlay
+    && !sceneLabEnabled;
+  const motionDebugEnabled = worldDebugOverlayEnabled || sceneLabEnabled;
   const hasLiveMembers = liveCount > 0;
   const authoritativeHeroMode = isSharedHeroVariant(variant, world, preset) && !sceneLabEnabled;
   const realtimeEnabled = !sceneLabEnabled && !realtimeDisabled && variant === 'hero' && world === 'shared-commons' && preset === 'public-hero';
@@ -1039,14 +1076,220 @@ export function GhostlingScene({
       ? (sceneLabLivePayload ?? initialPayload ?? sceneLabSandboxPayload)
       : sceneLabSandboxPayload
   ), [initialPayload, sceneLabLivePayload, sceneLabPreviewMode, sceneLabSandboxPayload]);
+  const sceneLabGhostCountMax = useMemo(
+    () => Math.max(
+      1,
+      sceneWorldSpec.viewports.desktop.pointOrder.length,
+      sceneLabTuningDraft.buckets.desktop.maxVisible,
+    ),
+    [sceneLabTuningDraft.buckets.desktop.maxVisible, sceneWorldSpec.viewports.desktop.pointOrder.length],
+  );
 
   useEffect(() => {
-    setSceneLabWorldDraft(cloneGhostlingWorldDraft(worldSpec));
+    sceneLabWorldDraftRef.current = sceneLabWorldDraft;
+  }, [sceneLabWorldDraft]);
+
+  useEffect(() => {
+    sceneLabTuningDraftRef.current = sceneLabTuningDraft;
+  }, [sceneLabTuningDraft]);
+
+  useEffect(() => {
+    sceneLabUndoStackRef.current = sceneLabUndoStack;
+  }, [sceneLabUndoStack]);
+
+  useEffect(() => {
+    sceneLabRedoStackRef.current = sceneLabRedoStack;
+  }, [sceneLabRedoStack]);
+
+  const createSceneLabSnapshot = useCallback(() => cloneGhostlingSceneLabSnapshot({
+    worldDraft: sceneLabWorldDraftRef.current,
+    tuningDraft: sceneLabTuningDraftRef.current,
+  }), []);
+
+  const applySceneLabSnapshot = useCallback((snapshot: GhostlingSceneLabSnapshot) => {
+    const nextSnapshot = cloneGhostlingSceneLabSnapshot(snapshot);
+    sceneLabWorldDraftRef.current = nextSnapshot.worldDraft;
+    sceneLabTuningDraftRef.current = nextSnapshot.tuningDraft;
+    setSceneLabWorldDraft(nextSnapshot.worldDraft);
+    setSceneLabTuningDraft(nextSnapshot.tuningDraft);
+  }, []);
+
+  const resetSceneLabRedoStack = useCallback(() => {
+    sceneLabRedoStackRef.current = [];
+    setSceneLabRedoStack([]);
+  }, []);
+
+  const pushSceneLabUndoSnapshot = useCallback((snapshot: GhostlingSceneLabSnapshot) => {
+    const nextUndo = [
+      ...sceneLabUndoStackRef.current,
+      cloneGhostlingSceneLabSnapshot(snapshot),
+    ].slice(-SCENE_LAB_HISTORY_LIMIT);
+    sceneLabUndoStackRef.current = nextUndo;
+    setSceneLabUndoStack(nextUndo);
+    resetSceneLabRedoStack();
+  }, [resetSceneLabRedoStack]);
+
+  const applySceneLabDrafts = useCallback((options: {
+    worldUpdate?: SceneLabDraftUpdate<GhostlingWorldSpec>;
+    tuningUpdate?: SceneLabDraftUpdate<GhostlingSceneTuningSpec>;
+    history?: SceneLabHistoryMode;
+  }) => {
+    const currentSnapshot = createSceneLabSnapshot();
+    const nextSnapshot = {
+      worldDraft: options.worldUpdate
+        ? resolveDraftUpdate(options.worldUpdate, currentSnapshot.worldDraft)
+        : currentSnapshot.worldDraft,
+      tuningDraft: options.tuningUpdate
+        ? resolveDraftUpdate(options.tuningUpdate, currentSnapshot.tuningDraft)
+        : currentSnapshot.tuningDraft,
+    } satisfies GhostlingSceneLabSnapshot;
+
+    if (ghostlingSceneLabSnapshotEquals(currentSnapshot, nextSnapshot)) {
+      return false;
+    }
+
+    if (options.history === 'immediate') {
+      pushSceneLabUndoSnapshot(currentSnapshot);
+    }
+
+    sceneLabWorldDraftRef.current = nextSnapshot.worldDraft;
+    sceneLabTuningDraftRef.current = nextSnapshot.tuningDraft;
+    setSceneLabWorldDraft(nextSnapshot.worldDraft);
+    setSceneLabTuningDraft(nextSnapshot.tuningDraft);
+    return true;
+  }, [createSceneLabSnapshot, pushSceneLabUndoSnapshot]);
+
+  const beginSceneLabHistoryCapture = useCallback(() => {
+    if (!sceneLabPendingHistoryRef.current) {
+      sceneLabPendingHistoryRef.current = createSceneLabSnapshot();
+    }
+  }, [createSceneLabSnapshot]);
+
+  const commitSceneLabHistoryCapture = useCallback(() => {
+    const pendingSnapshot = sceneLabPendingHistoryRef.current;
+    sceneLabPendingHistoryRef.current = null;
+    if (!pendingSnapshot) return;
+
+    const currentSnapshot = createSceneLabSnapshot();
+    if (ghostlingSceneLabSnapshotEquals(pendingSnapshot, currentSnapshot)) {
+      return;
+    }
+
+    pushSceneLabUndoSnapshot(pendingSnapshot);
+  }, [createSceneLabSnapshot, pushSceneLabUndoSnapshot]);
+
+  const cancelSceneLabHistoryCapture = useCallback(() => {
+    sceneLabPendingHistoryRef.current = null;
+  }, []);
+
+  const undoSceneLabEdit = useCallback(() => {
+    const previousSnapshot = sceneLabUndoStackRef.current.at(-1);
+    if (!previousSnapshot) return;
+
+    const presentSnapshot = createSceneLabSnapshot();
+    const nextUndo = sceneLabUndoStackRef.current.slice(0, -1);
+    const nextRedo = [
+      ...sceneLabRedoStackRef.current,
+      cloneGhostlingSceneLabSnapshot(presentSnapshot),
+    ].slice(-SCENE_LAB_HISTORY_LIMIT);
+
+    sceneLabUndoStackRef.current = nextUndo;
+    sceneLabRedoStackRef.current = nextRedo;
+    setSceneLabUndoStack(nextUndo);
+    setSceneLabRedoStack(nextRedo);
+    sceneLabPendingHistoryRef.current = null;
+    applySceneLabSnapshot(previousSnapshot);
+  }, [applySceneLabSnapshot, createSceneLabSnapshot]);
+
+  const redoSceneLabEdit = useCallback(() => {
+    const nextSnapshot = sceneLabRedoStackRef.current.at(-1);
+    if (!nextSnapshot) return;
+
+    const presentSnapshot = createSceneLabSnapshot();
+    const nextRedo = sceneLabRedoStackRef.current.slice(0, -1);
+    const nextUndo = [
+      ...sceneLabUndoStackRef.current,
+      cloneGhostlingSceneLabSnapshot(presentSnapshot),
+    ].slice(-SCENE_LAB_HISTORY_LIMIT);
+
+    sceneLabUndoStackRef.current = nextUndo;
+    sceneLabRedoStackRef.current = nextRedo;
+    setSceneLabUndoStack(nextUndo);
+    setSceneLabRedoStack(nextRedo);
+    sceneLabPendingHistoryRef.current = null;
+    applySceneLabSnapshot(nextSnapshot);
+  }, [applySceneLabSnapshot, createSceneLabSnapshot]);
+
+  const selectSceneLabItem = useCallback((selection: GhostlingSceneLabSelection | null) => {
+    setSceneLabSelection(selection);
+    if (!selection) return;
+    setSceneLabActiveTab(selection.kind === 'member' ? 'members' : 'authored');
+  }, []);
+
+  const updateSceneLabWorldDraft = useCallback((
+    update: SceneLabDraftUpdate<GhostlingWorldSpec>,
+    options?: { history?: SceneLabHistoryMode },
+  ) => applySceneLabDrafts({
+    worldUpdate: update,
+    history: options?.history ?? 'immediate',
+  }), [applySceneLabDrafts]);
+
+  const updateSceneLabTuningDraft = useCallback((
+    update: SceneLabDraftUpdate<GhostlingSceneTuningSpec>,
+    options?: { history?: SceneLabHistoryMode },
+  ) => applySceneLabDrafts({
+    tuningUpdate: update,
+    history: options?.history ?? 'immediate',
+  }), [applySceneLabDrafts]);
+
+  useEffect(() => {
+    const nextWorldDraft = cloneGhostlingWorldDraft(worldSpec);
+    const nextTuningDraft = cloneGhostlingSceneTuningSpec(createDefaultGhostlingSceneTuningSpec());
+    sceneLabWorldDraftRef.current = nextWorldDraft;
+    sceneLabTuningDraftRef.current = nextTuningDraft;
+    sceneLabUndoStackRef.current = [];
+    sceneLabRedoStackRef.current = [];
+    sceneLabPendingHistoryRef.current = null;
+    setSceneLabWorldDraft(nextWorldDraft);
+    setSceneLabTuningDraft(nextTuningDraft);
+    setSceneLabSelection(null);
+    setSceneLabActiveTab('authored');
+    setSceneLabSearchQuery('');
+    setSceneLabUndoStack([]);
+    setSceneLabRedoStack([]);
   }, [worldSpec]);
+
+  useEffect(() => {
+    setSceneLabGhostCount((current) => Math.min(current, sceneLabGhostCountMax));
+  }, [sceneLabGhostCountMax]);
 
   useEffect(() => {
     setSceneLabLivePayload(initialPayload);
   }, [initialPayload]);
+
+  useEffect(() => {
+    if (!sceneLabEnabled) return undefined;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const modifierPressed = event.ctrlKey || event.metaKey;
+      if (!modifierPressed || event.altKey) return;
+
+      const key = event.key.toLowerCase();
+      if (key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        undoSceneLabEdit();
+        return;
+      }
+
+      if ((key === 'z' && event.shiftKey) || key === 'y') {
+        event.preventDefault();
+        redoSceneLabEdit();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [redoSceneLabEdit, sceneLabEnabled, undoSceneLabEdit]);
 
   const commitMemberKeys = useCallback((nextKeys: string[]) => {
     if (sameStringArray(memberKeysStateRef.current, nextKeys)) {
@@ -1404,8 +1647,8 @@ export function GhostlingScene({
     const metricsChanged = commitRenderMetrics(metrics);
     const keysChanged = commitMemberKeys(Array.from(entities.keys()));
 
-    if (renderStateChanged || metricsChanged || keysChanged || worldDebugEnabled) {
-      commitRenderMembers(snapshotRenderMembers(), worldDebugEnabled);
+    if (renderStateChanged || metricsChanged || keysChanged || motionDebugEnabled) {
+      commitRenderMembers(snapshotRenderMembers(), motionDebugEnabled);
     }
 
     if (renderStateChanged || keysChanged) {
@@ -1422,7 +1665,7 @@ export function GhostlingScene({
     snapshotRenderMembers,
     stageSize,
     variant,
-    worldDebugEnabled,
+    motionDebugEnabled,
     sceneLabEnabled,
     sceneLabTuningDraft,
     sceneWorldSpec,
@@ -1481,6 +1724,8 @@ export function GhostlingScene({
 
     let initialFetchTimeout = 0;
     let pollId = 0;
+    let fallbackPollTimeoutId = 0;
+    let fallbackPollingActive = false;
     let reconnectTimeoutId = 0;
     let socket: WebSocket | null = null;
     let reconnectAttempts = 0;
@@ -1494,6 +1739,7 @@ export function GhostlingScene({
     };
 
     const stopFallbackPolling = () => {
+      fallbackPollingActive = false;
       if (initialFetchTimeout > 0) {
         window.clearTimeout(initialFetchTimeout);
         initialFetchTimeout = 0;
@@ -1502,21 +1748,31 @@ export function GhostlingScene({
         window.clearInterval(pollId);
         pollId = 0;
       }
+      if (fallbackPollTimeoutId > 0) {
+        window.clearTimeout(fallbackPollTimeoutId);
+        fallbackPollTimeoutId = 0;
+      }
+    };
+
+    const queueFallbackPoll = (delayMs: number) => {
+      if (!fallbackPollingActive || fallbackPollTimeoutId > 0) {
+        return;
+      }
+
+      fallbackPollTimeoutId = window.setTimeout(() => {
+        fallbackPollTimeoutId = 0;
+        void fetchPresence({ clearOnFailure: false }).finally(() => {
+          if (!disposed && fallbackPollingActive) {
+            queueFallbackPoll(POLL_MS);
+          }
+        });
+      }, delayMs);
     };
 
     const startFallbackPolling = (immediate = false) => {
-      if (pollId > 0) return;
-
-      if (immediate || !lastPayloadRef.current) {
-        initialFetchTimeout = window.setTimeout(() => {
-          initialFetchTimeout = 0;
-          void fetchPresence({ clearOnFailure: false });
-        }, 0);
-      }
-
-      pollId = window.setInterval(() => {
-        void fetchPresence({ clearOnFailure: false });
-      }, POLL_MS);
+      if (fallbackPollingActive) return;
+      fallbackPollingActive = true;
+      queueFallbackPoll(immediate || !lastPayloadRef.current ? 0 : POLL_MS);
     };
 
     const scheduleReconnect = () => {
@@ -1904,10 +2160,10 @@ export function GhostlingScene({
           visuals.delete(key);
         }
         commitMemberKeys(Array.from(entities.keys()));
-        commitRenderMembers(snapshotRenderMembers(), worldDebugEnabled);
+        commitRenderMembers(snapshotRenderMembers(), motionDebugEnabled);
       }
 
-      if (worldDebugEnabled) {
+      if (motionDebugEnabled) {
         commitRenderMembers(snapshotRenderMembers(), true);
       }
 
@@ -1928,7 +2184,7 @@ export function GhostlingScene({
     snapshotRenderMembers,
     stageSize,
     variant,
-    worldDebugEnabled,
+    motionDebugEnabled,
     sceneWorldSpec,
   ]);
 
@@ -2099,7 +2355,7 @@ export function GhostlingScene({
           })}
         </div>
 
-        {worldDebugEnabled ? (
+        {worldDebugOverlayEnabled ? (
           <WorldDebugOverlay
             world={sceneWorldSpec}
             camera={metrics}
@@ -2111,14 +2367,28 @@ export function GhostlingScene({
         {sceneLabEnabled ? (
           <GhostlingSceneLab
             worldDraft={sceneLabWorldDraft}
-            setWorldDraft={setSceneLabWorldDraft}
+            updateWorldDraft={updateSceneLabWorldDraft}
             tuningDraft={sceneLabTuningDraft}
-            setTuningDraft={setSceneLabTuningDraft}
+            updateTuningDraft={updateSceneLabTuningDraft}
+            selection={sceneLabSelection}
+            onSelectionChange={selectSceneLabItem}
+            activeTab={sceneLabActiveTab}
+            onActiveTabChange={setSceneLabActiveTab}
+            searchQuery={sceneLabSearchQuery}
+            onSearchQueryChange={setSceneLabSearchQuery}
+            canUndo={sceneLabUndoStack.length > 0}
+            canRedo={sceneLabRedoStack.length > 0}
+            onUndo={undoSceneLabEdit}
+            onRedo={redoSceneLabEdit}
+            onBeginHistoryCapture={beginSceneLabHistoryCapture}
+            onCommitHistoryCapture={commitSceneLabHistoryCapture}
+            onCancelHistoryCapture={cancelSceneLabHistoryCapture}
             camera={metrics}
             bucket={metrics.bucket}
             previewMode={sceneLabPreviewMode}
             playing={sceneLabPlaying}
             ghostCount={sceneLabGhostCount}
+            ghostCountMax={sceneLabGhostCountMax}
             memberDiagnostics={sceneLabMemberDiagnostics}
             onPreviewModeChange={(mode) => {
               setSceneLabPreviewMode(mode);
@@ -2126,7 +2396,7 @@ export function GhostlingScene({
             }}
             onPlayingChange={setSceneLabPlaying}
             onGhostCountChange={(count) => {
-              setSceneLabGhostCount(count);
+              setSceneLabGhostCount(clamp(count, 1, sceneLabGhostCountMax));
               setSceneLabResetSerial((current) => current + 1);
             }}
             onStep={() => {

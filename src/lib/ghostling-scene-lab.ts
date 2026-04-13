@@ -4,9 +4,23 @@ import type {
   GhostlingWorldSafeZone,
   GhostlingWorldSpec,
 } from '@/lib/ghostling-world';
-import type { GhostlingSceneTuningSpec } from '@/lib/ghostling-scene-tuning';
+import {
+  cloneGhostlingSceneTuningSpec,
+  type GhostlingSceneTuningSpec,
+} from '@/lib/ghostling-scene-tuning';
 
 export type GhostlingSceneLabPreviewMode = 'sandbox' | 'live';
+export type GhostlingSceneLabTab = 'authored' | 'members';
+export type GhostlingSceneLabSearchQuery = string;
+export type GhostlingSceneLabEditorMutationKind = 'world' | 'tuning';
+export type GhostlingSceneLabOverlayKey =
+  | 'safe-zones'
+  | 'guide-rects'
+  | 'guide-lines'
+  | 'anchors'
+  | 'fallback-anchor'
+  | 'members';
+export type GhostlingSceneLabOverlayVisibility = Record<GhostlingSceneLabOverlayKey, boolean>;
 
 export type GhostlingSceneLabSelection =
   | { kind: 'anchor'; key: string }
@@ -21,6 +35,20 @@ export interface GhostlingSceneLabPreviewState {
   ghostCount: number;
   bucket: GhostlingSceneDensityBucket;
 }
+
+export interface GhostlingSceneLabSnapshot {
+  worldDraft: GhostlingWorldSpec;
+  tuningDraft: GhostlingSceneTuningSpec;
+}
+
+export const DEFAULT_GHOSTLING_SCENE_LAB_OVERLAY_VISIBILITY: GhostlingSceneLabOverlayVisibility = {
+  'safe-zones': true,
+  'guide-rects': true,
+  'guide-lines': true,
+  anchors: true,
+  'fallback-anchor': true,
+  members: true,
+};
 
 type GhostlingWorldPackageExport = {
   kind: 'ghostling-world';
@@ -143,6 +171,28 @@ export function exportGhostlingSceneLabSession(
     tuning,
     preview,
   };
+}
+
+export function cloneGhostlingSceneLabSnapshot(
+  snapshot: GhostlingSceneLabSnapshot,
+): GhostlingSceneLabSnapshot {
+  return {
+    worldDraft: cloneGhostlingWorldDraft(snapshot.worldDraft),
+    tuningDraft: cloneGhostlingSceneTuningSpec(snapshot.tuningDraft),
+  };
+}
+
+export function ghostlingSceneLabSnapshotEquals(
+  left: GhostlingSceneLabSnapshot,
+  right: GhostlingSceneLabSnapshot,
+) {
+  return JSON.stringify({
+    world: exportGhostlingWorldDraft(left.worldDraft),
+    tuning: left.tuningDraft,
+  }) === JSON.stringify({
+    world: exportGhostlingWorldDraft(right.worldDraft),
+    tuning: right.tuningDraft,
+  });
 }
 
 export function clampGhostlingWorldRect(

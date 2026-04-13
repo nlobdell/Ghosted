@@ -67,6 +67,26 @@ describe('ghostling world sidecar', () => {
     expect((labelSafeTop?.y ?? 0) + (labelSafeTop?.height ?? 0)).toBeLessThanOrEqual(sourceHeight);
   });
 
+  it('keeps canonical hero anchors inside the center-safe walk field', () => {
+    const sharedFloor = SHARED_COMMONS_WORLD.safeZones.find((safeZone) => safeZone.key === 'shared-floor');
+    expect(sharedFloor).toBeTruthy();
+
+    const centerSafe = SHARED_COMMONS_WORLD.guides.centerSafe;
+
+    for (const pointKey of SHARED_COMMONS_WORLD.viewports.desktop.pointOrder) {
+      const point = SHARED_COMMONS_WORLD.points.find((candidate) => candidate.key === pointKey);
+      expect(point).toBeTruthy();
+      expect(point!.x).toBeGreaterThanOrEqual(sharedFloor!.bounds.x);
+      expect(point!.x).toBeLessThanOrEqual(sharedFloor!.bounds.x + sharedFloor!.bounds.width);
+      expect(point!.y).toBeGreaterThanOrEqual(sharedFloor!.bounds.y);
+      expect(point!.y).toBeLessThanOrEqual(sharedFloor!.bounds.y + sharedFloor!.bounds.height);
+      expect(point!.x).toBeGreaterThanOrEqual(centerSafe.x);
+      expect(point!.x).toBeLessThanOrEqual(centerSafe.x + centerSafe.width);
+      expect(point!.y).toBeGreaterThanOrEqual(centerSafe.y);
+      expect(point!.y).toBeLessThanOrEqual(centerSafe.y + centerSafe.height);
+    }
+  });
+
   it('normalizes an aseprite-friendly package with anchors into runtime points', () => {
     const loaded = loadGhostlingWorldSpec({
       kind: 'ghostling-world',

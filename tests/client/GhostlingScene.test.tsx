@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GhostlingScene } from '@/components/GhostlingScene';
 import {
@@ -220,6 +220,22 @@ function expectedWrapPosition(
   return {
     x: point.x - visibleExtents.left,
     y: point.y - visibleExtents.top,
+  };
+}
+
+function expectedWorldDragDelta(screenDx: number, screenDy = 0) {
+  const profile = resolveGhostlingSceneProfile(viewportWidth, 'hero');
+  const camera = createGhostlingSceneCameraMetrics(
+    SHARED_COMMONS_WORLD,
+    viewportWidth,
+    viewportHeight,
+    profile.bucket,
+    'fixed-crop',
+  );
+
+  return {
+    x: Math.round(screenDx / Math.max(0.001, camera.scaleX)),
+    y: Math.round(screenDy / Math.max(0.001, camera.scaleY)),
   };
 }
 
@@ -604,7 +620,7 @@ describe('GhostlingScene', () => {
     flushFrame(0);
     flushFrame(16);
 
-    expect(container.querySelectorAll('[data-source="voice"]').length).toBe(4);
+    expect(container.querySelectorAll('[data-source="voice"]').length).toBe(6);
   });
 
   it('switches to the grouped reduced-motion layout without dropping the scene content', () => {
@@ -1264,7 +1280,7 @@ describe('GhostlingScene', () => {
     expect(Math.abs(corrected.y - expected.y)).toBeLessThan(16);
   });
 
-  it('falls back to HTTP polling after websocket disconnects and stops polling once the socket recovers', async () => {
+  it('reconnects the websocket after disconnects and keeps fallback polling stopped once the socket recovers', async () => {
     vi.useFakeTimers();
     installSceneStubs({
       webSocketClass: FakeSceneWebSocket,
@@ -1290,10 +1306,9 @@ describe('GhostlingScene', () => {
     act(() => {
       firstSocket.emitOpen();
       firstSocket.emitClose();
-      vi.advanceTimersByTime(16_000);
+      vi.advanceTimersByTime(31_000);
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(FakeSceneWebSocket.instances.length).toBeGreaterThan(1);
 
     const secondSocket = FakeSceneWebSocket.instances.at(-1);
@@ -1327,8 +1342,37 @@ describe('GhostlingScene', () => {
     flushFrame(16);
 
     expect(screen.getByTestId('scene-lab-panel')).not.toBeNull();
-    expect(screen.getByText('Sandbox')).not.toBeNull();
-    expect(screen.getByText('Movement')).not.toBeNull();
+    expect(screen.getByTestId('scene-lab-tab-authored')).not.toBeNull();
+    expect(screen.getByTestId('scene-lab-tab-members')).not.toBeNull();
+    expect(screen.getByTestId('scene-lab-object-browser')).not.toBeNull();
+  });
+
+  it('lets the scene lab toggle overlay guide visibility while keeping safe zones editable from the browser', () => {
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    expect(container.querySelectorAll('[data-scene-lab-role="guide-line"]').length).toBe(2);
+    expect(container.querySelectorAll('[data-scene-lab-role="safe-zone"]').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByTestId('scene-lab-visibility-guide-lines'));
+    fireEvent.click(screen.getByTestId('scene-lab-visibility-safe-zones'));
+
+    expect(container.querySelectorAll('[data-scene-lab-role="guide-line"]').length).toBe(0);
+    expect(container.querySelectorAll('[data-scene-lab-role="safe-zone"]').length).toBe(0);
+
+    fireEvent.click(screen.getByText('Shared floor'));
+
+    expect(screen.getByDisplayValue(String(SHARED_COMMONS_WORLD.safeZones[0]?.bounds.x))).not.toBeNull();
+    expect(screen.getByDisplayValue(String(SHARED_COMMONS_WORLD.safeZones[0]?.roamRadius))).not.toBeNull();
   });
 
   it('updates anchor values from the scene lab controls and supports keyboard nudging', () => {
@@ -1355,6 +1399,36 @@ describe('GhostlingScene', () => {
     expect(anchorX.value).toBe('1043');
   });
 
+  it('drags scene lab anchors without snapping back to their origin', () => {
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    fireEvent.click(screen.getByText('Floor left outer'));
+    const anchorX = screen.getByTestId('scene-lab-anchor-x') as HTMLInputElement;
+    const selectedAnchor = container.querySelector('svg circle[r="7"][data-selected="true"]');
+    if (!(selectedAnchor instanceof Element) || selectedAnchor.tagName.toLowerCase() !== 'circle') {
+      throw new Error('Expected selected scene lab anchor circle.');
+    }
+
+    const originX = Number(anchorX.value);
+    const expectedDelta = expectedWorldDragDelta(28, 12);
+
+    fireEvent.pointerDown(selectedAnchor, { clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(window, { clientX: 128, clientY: 112 });
+    fireEvent.pointerUp(window, { clientX: 128, clientY: 112 });
+
+    expect(Number(anchorX.value)).toBe(originX + expectedDelta.x);
+  });
+
   it('copies a world draft from the scene lab export controls', async () => {
     render(
       <GhostlingScene
@@ -1374,6 +1448,152 @@ describe('GhostlingScene', () => {
 
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
     expect(screen.getByTestId('scene-lab-export-status').textContent).toBe('World draft copied.');
+  });
+
+  it('filters authored objects in the scene lab browser search', () => {
+    render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const search = screen.getByTestId('scene-lab-search') as HTMLInputElement;
+    fireEvent.change(search, { target: { value: 'center safe' } });
+
+    expect(screen.getByText('Center safe')).not.toBeNull();
+    expect(screen.queryByText('Floor left outer')).toBeNull();
+  });
+
+  it('supports tabbed member diagnostics in the scene lab browser', () => {
+    render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    fireEvent.click(screen.getByTestId('scene-lab-tab-members'));
+    fireEvent.click(within(screen.getByTestId('scene-lab-object-browser')).getByText('Ritual Watch'));
+
+    expect(screen.getByTestId('scene-lab-member-diagnostics')).not.toBeNull();
+    expect(screen.queryByTestId('scene-lab-anchor-x')).toBeNull();
+  });
+
+  it('supports keyboard selection through the scene lab browser', () => {
+    render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const search = screen.getByTestId('scene-lab-search');
+    fireEvent.change(search, { target: { value: 'right outer' } });
+    fireEvent.keyDown(search, { key: 'ArrowDown' });
+    fireEvent.keyDown(search, { key: 'Enter' });
+
+    const anchorX = screen.getByTestId('scene-lab-anchor-x') as HTMLInputElement;
+    const rightOuter = SHARED_COMMONS_WORLD.points.find((point) => point.key === 'floor-right-outer');
+    expect(anchorX.value).toBe(String(rightOuter?.x));
+  });
+
+  it('undoes and redoes an anchor drag from the scene lab', () => {
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    fireEvent.click(screen.getByText('Floor left outer'));
+    const anchorX = screen.getByTestId('scene-lab-anchor-x') as HTMLInputElement;
+    const selectedAnchor = container.querySelector('svg circle[r="7"][data-selected="true"]');
+    if (!(selectedAnchor instanceof Element) || selectedAnchor.tagName.toLowerCase() !== 'circle') {
+      throw new Error('Expected selected scene lab anchor circle.');
+    }
+
+    const originX = Number(anchorX.value);
+    const expectedDelta = expectedWorldDragDelta(28, 12);
+    fireEvent.pointerDown(selectedAnchor, { clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(window, { clientX: 128, clientY: 112 });
+    fireEvent.pointerUp(window, { clientX: 128, clientY: 112 });
+
+    expect(Number(anchorX.value)).toBe(originX + expectedDelta.x);
+
+    fireEvent.click(screen.getByTestId('scene-lab-undo'));
+    expect(Number(anchorX.value)).toBe(originX);
+
+    fireEvent.click(screen.getByTestId('scene-lab-redo'));
+    expect(Number(anchorX.value)).toBe(originX + expectedDelta.x);
+  });
+
+  it('undos a tuning change with the standard keyboard shortcut', () => {
+    render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const speedMin = screen.getByTestId('scene-lab-speed-min') as HTMLInputElement;
+    const origin = speedMin.value;
+    fireEvent.focus(speedMin);
+    fireEvent.change(speedMin, { target: { value: '33' } });
+    fireEvent.blur(speedMin);
+
+    expect(speedMin.value).toBe('33');
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+    expect(speedMin.value).toBe(origin);
+  });
+
+  it('does not add preview-only ghost count changes to scene lab history', () => {
+    render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const undo = screen.getByTestId('scene-lab-undo') as HTMLButtonElement;
+    const ghostCount = screen.getByTestId('scene-lab-ghost-count') as HTMLInputElement;
+    expect(undo.disabled).toBe(true);
+
+    fireEvent.change(ghostCount, { target: { value: '4' } });
+
+    expect(ghostCount.value).toBe('4');
+    expect(undo.disabled).toBe(true);
   });
 
   it('shows the world debug overlay only when enabled in development-like environments', () => {

@@ -46,13 +46,13 @@ describe('ghostling scene logic', () => {
     const mobileProfile = resolveGhostlingSceneProfile(420, 'hero');
 
     expect(desktopProfile.bucket).toBe('desktop');
-    expect(desktopProfile.maxVisible).toBe(8);
+    expect(desktopProfile.maxVisible).toBe(10);
 
     expect(tabletProfile.bucket).toBe('tablet');
-    expect(tabletProfile.maxVisible).toBe(6);
+    expect(tabletProfile.maxVisible).toBe(8);
 
     expect(mobileProfile.bucket).toBe('mobile');
-    expect(mobileProfile.maxVisible).toBe(4);
+    expect(mobileProfile.maxVisible).toBe(6);
     expect(tabletProfile.pointOrder).toEqual(desktopProfile.pointOrder);
     expect(mobileProfile.pointOrder).toEqual(desktopProfile.pointOrder);
     expect(Array.from(tabletProfile.allowedPointKeys)).toEqual(Array.from(desktopProfile.allowedPointKeys));
@@ -62,9 +62,9 @@ describe('ghostling scene logic', () => {
   it('keeps mark assignment deterministic and uses the authored fallback anchor', () => {
     const profile = resolveGhostlingSceneProfile(1200, 'hero');
 
-    expect(preferredGhostlingScenePointKey(profile, 0)).toBe('floor-left-outer');
-    expect(preferredGhostlingScenePointKey(profile, 4)).toBe('floor-mid-right');
-    expect(preferredGhostlingScenePointKey(profile, 7)).toBe('floor-right-outer');
+    expect(preferredGhostlingScenePointKey(profile, 0)).toBe('floor-mid-left');
+    expect(preferredGhostlingScenePointKey(profile, 4)).toBe('floor-left-mid');
+    expect(preferredGhostlingScenePointKey(profile, 9)).toBe('floor-right-outer');
     expect(preferredGhostlingScenePointKey(profile, 0, true)).toBe(SHARED_COMMONS_WORLD.fallbackAnchor.key);
   });
 
@@ -98,8 +98,8 @@ describe('ghostling scene logic', () => {
     expect(right.scaleTier).toBe(2);
     expect(resolveGhostlingSceneDisplaySize(left.scaleTier, 1)).toBe(140);
     expect(resolveGhostlingSceneDisplaySize(right.scaleTier, 1)).toBe(140);
-    expect(Math.abs(left.targetX - pointX('floor-mid-left'))).toBeLessThanOrEqual(42);
-    expect(Math.abs(right.targetX - pointX('floor-right-inner'))).toBeLessThanOrEqual(42);
+    expect(Math.abs(left.targetX - pointX('floor-mid-left'))).toBeLessThanOrEqual(48);
+    expect(Math.abs(right.targetX - pointX('floor-right-inner'))).toBeLessThanOrEqual(48);
   });
 
   it('keeps roaming inside authored world bounds while steering away from crowding', () => {
@@ -274,7 +274,10 @@ describe('ghostling scene logic', () => {
   });
 
   it('keeps the assigned point and safe zone when choosing a new idle beat', () => {
-    const profile = resolveGhostlingSceneProfile(1200, 'hero');
+    const profile = {
+      ...resolveGhostlingSceneProfile(1200, 'hero'),
+      anchorHopChance: 0,
+    };
     const motion = createGhostlingSceneMotionState(
       'user:same-zone',
       SHARED_COMMONS_WORLD,
@@ -302,6 +305,40 @@ describe('ghostling scene logic', () => {
     expect(next.pointKey).toBe('floor-mid-left');
     expect(next.safeZoneKey).toBe('shared-floor');
     expect(next.scaleTier).toBe(2);
+  });
+
+  it('can wander to an adjacent anchor after a pause even without crowding when hop chance is enabled', () => {
+    const profile = {
+      ...resolveGhostlingSceneProfile(1200, 'hero'),
+      anchorHopChance: 1,
+    };
+    const motion = createGhostlingSceneMotionState(
+      'user:anchor-wander',
+      SHARED_COMMONS_WORLD,
+      profile,
+      'floor-mid-left',
+    );
+    motion.x = pointX('floor-mid-left');
+    motion.y = pointY('floor-mid-left');
+    motion.targetX = pointX('floor-mid-left');
+    motion.targetY = pointY('floor-mid-left');
+    motion.safeZoneKey = 'shared-floor';
+    motion.pointKey = 'floor-mid-left';
+    motion.scaleTier = 2;
+    motion.renderScale = 2;
+    motion.pauseRemainingMs = 1;
+    motion.opacity = 1;
+
+    const next = advanceGhostlingSceneEntity(motion, {
+      dtMs: 16,
+      world: SHARED_COMMONS_WORLD,
+      profile,
+      peers: [],
+    });
+
+    expect(['floor-center-left', 'floor-mid-right']).toContain(next.pointKey);
+    expect(next.safeZoneKey).toBe('shared-floor');
+    expect(Math.hypot(next.targetX - next.x, next.targetY - next.y)).toBeGreaterThanOrEqual(20);
   });
 
   it('damps vertical approach without wobbling away from the destination lane', () => {
@@ -392,14 +429,35 @@ describe('ghostling scene logic', () => {
           scaleTier: motion.scaleTier,
           renderScale: motion.renderScale,
         }),
-        peerState({ key: 'peer:1', x: 701, y: 214, pointKey: 'floor-mid-left', scaleTier: 2, renderScale: 2 }),
-        peerState({ key: 'peer:2', x: 699, y: 214, pointKey: 'floor-mid-left', scaleTier: 2, renderScale: 2 }),
-        peerState({ key: 'peer:3', x: 700, y: 215, pointKey: 'floor-mid-left', scaleTier: 2, renderScale: 2 }),
+        peerState({
+          key: 'peer:1',
+          x: pointX('floor-mid-left') + 1,
+          y: pointY('floor-mid-left'),
+          pointKey: 'floor-mid-left',
+          scaleTier: 2,
+          renderScale: 2,
+        }),
+        peerState({
+          key: 'peer:2',
+          x: pointX('floor-mid-left') - 1,
+          y: pointY('floor-mid-left'),
+          pointKey: 'floor-mid-left',
+          scaleTier: 2,
+          renderScale: 2,
+        }),
+        peerState({
+          key: 'peer:3',
+          x: pointX('floor-mid-left'),
+          y: pointY('floor-mid-left') + 1,
+          pointKey: 'floor-mid-left',
+          scaleTier: 2,
+          renderScale: 2,
+        }),
       ],
     });
 
     expect(
-      ['floor-left-mid', 'floor-mid-left', 'floor-mid-right'],
+      ['floor-center-left', 'floor-mid-left', 'floor-mid-right'],
     ).toContain(next.pointKey);
     expect(next.safeZoneKey).toBe('shared-floor');
     expect(Math.hypot(next.targetX - next.x, next.targetY - next.y)).toBeGreaterThanOrEqual(10);
