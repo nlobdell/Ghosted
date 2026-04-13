@@ -13,7 +13,7 @@ import {
   womCachedJson,
   womGroupId,
   womLinkPayload,
-  womRequestJson,
+  womResolvePlayerForLink,
 } from '@/lib/server/wom';
 
 const RUNELITE_PAIRING_TTL_MS = 15 * 60 * 1000;
@@ -499,7 +499,7 @@ export async function confirmRunelitePairing(
     throw new AppError('That RuneLite account is already linked to a different Ghosted user.', 409);
   }
 
-  const player = asRecord(await womRequestJson(`/players/${encodeURIComponent(pairing.requested_username)}`, { method: 'POST' }));
+  const player = asRecord(await womResolvePlayerForLink(db, pairing.requested_username));
   const playerUsername = normalizeUsername(player.username ?? pairing.requested_username);
   const memberships = asArrayOfRecords(await womCachedJson(db, `/players/${encodeURIComponent(playerUsername)}/groups`));
 

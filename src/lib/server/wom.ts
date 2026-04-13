@@ -124,6 +124,47 @@ function womCacheKey(path: string, query?: Record<string, unknown>) {
   return `${path.replace(/^\/+/, '')}${queryString ? `?${queryString}` : ''}`;
 }
 
+function formatWomError(body: string, status: number) {
+  const payload = jsonLoad<Record<string, unknown> | null>(body, null);
+  const code = typeof payload?.code === 'string' ? payload.code.trim() : '';
+  const message = typeof payload?.message === 'string'
+    ? payload.message.trim()
+    : typeof payload?.error === 'string'
+      ? payload.error.trim()
+      : '';
+
+  if (code && message) {
+    return `${code}: ${message}`;
+  }
+
+  if (message) {
+    return message;
+  }
+
+  const trimmed = body.trim();
+  return trimmed || `HTTP ${status}`;
+}
+
+function isTransientWomHiscoresFailure(error: unknown) {
+  if (!(error instanceof AppError)) {
+    return false;
+  }
+
+  return /HISCORES_/i.test(error.message) || /hiscores connection refused/i.test(error.message);
+}
+
+function cachePlayerLookup(db: Database, username: string, player: Record<string, unknown>) {
+  const normalizedUsername = String(username ?? '').trim();
+  if (normalizedUsername) {
+    setWomCacheEntry(db, womCacheKey(`/players/${encodeURIComponent(normalizedUsername)}`), player);
+  }
+
+  const canonicalUsername = String(player.username ?? '').trim();
+  if (canonicalUsername && canonicalUsername !== normalizedUsername) {
+    setWomCacheEntry(db, womCacheKey(`/players/${encodeURIComponent(canonicalUsername)}`), player);
+  }
+}
+
 export function womGroupId() {
   const value = envText('WOM_GROUP_ID');
   if (!value) return undefined;
@@ -148,10 +189,43 @@ export async function womRequestJson(
 
   if (!response.ok) {
     const body = await response.text().catch(() => '');
-    throw new AppError(`Wise Old Man request failed: ${body || response.statusText || `HTTP ${response.status}`}`, 502);
+    throw new AppError(`Wise Old Man request failed: ${formatWomError(body, response.status)}`, 502);
   }
 
   return await response.json();
+}
+
+export async function womResolvePlayerForLink(db: Database, username: string) {
+  const normalizedUsername = String(username ?? '').trim();
+  if (!normalizedUsername) {
+    throw new AppError('Runescape username is required.', 400);
+  }
+
+  const playerPath = `/players/${encodeURIComponent(normalizedUsername)}`;
+
+  try {
+    const player = asRecord(await womRequestJson(playerPath, { method: 'POST' }));
+    cachePlayerLookup(db, normalizedUsername, player);
+    return player;
+  } catch (error) {
+    if (!isTransientWomHiscoresFailure(error)) {
+      throw error;
+    }
+  }
+
+  try {
+    const player = asRecord(await womCachedJson(db, playerPath, { allowStale: true }));
+    if (Object.keys(player).length > 0) {
+      cachePlayerLookup(db, normalizedUsername, player);
+      return player;
+    }
+  } catch {
+  }
+
+  throw new AppError(
+    'Wise Old Man is temporarily unable to refresh that player from the hiscores. Try again in a few minutes.',
+    503,
+  );
 }
 
 function getWomCacheEntry(db: Database, cacheKey: string) {
@@ -775,7 +849,7 @@ export async function linkWomAccount(db: Database, user: CurrentUserLike, userna
   }
 
   const groupId = requireWomGroupId();
-  const player = asRecord(await womRequestJson(`/players/${encodeURIComponent(normalizedUsername)}`, { method: 'POST' }));
+  const player = await womResolvePlayerForLink(db, normalizedUsername);
   const memberships = asArrayOfRecords(await womCachedJson(db, `/players/${encodeURIComponent(String(player.username ?? ''))}/groups`));
 
   if (!playerInGroup(groupId, memberships)) {
