@@ -8,6 +8,14 @@ import {
   buildHomePageSceneFixture,
   type HomePageSceneFixtureId,
 } from '@/lib/homepage-scene-fixtures';
+import { getDatabase } from '@/lib/server/database';
+import { getCurrentUser } from '@/lib/server/ghosted-api';
+import {
+  resolveDraftGhostlingWorld,
+  resolveDraftGhostlingWorldTuning,
+  resolvePublishedGhostlingWorld,
+  resolvePublishedGhostlingWorldTuning,
+} from '@/lib/server/scene-worlds';
 import { getServerJSON } from '@/lib/server-api';
 import type { CompanionPreviewSummary, NewsPost, ScenePresencePayload, ShellData } from '@/lib/types';
 import styles from '../page.module.css';
@@ -46,22 +54,44 @@ function heroSignal(payload: ScenePresencePayload | null) {
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ sceneDebug?: string; sceneEditor?: string; sceneFixture?: string }>;
+  searchParams: Promise<{ sceneDebug?: string; sceneEditor?: string; sceneFixture?: string; worldPreview?: string }>;
 }) {
   const params = await searchParams;
   const fixtureId = process.env.NODE_ENV !== 'production'
     && params.sceneFixture === 'visual-baseline'
     ? 'visual-baseline'
     : null;
+  const previewRequested = process.env.NODE_ENV !== 'production'
+    && params.worldPreview === 'shared-commons:draft';
+  const currentUser = previewRequested ? await getCurrentUser() : null;
+  const worldPreviewEnabled = Boolean(previewRequested && currentUser?.is_admin);
+  const db = getDatabase();
+  const runtimeWorld = worldPreviewEnabled
+    ? resolveDraftGhostlingWorld(db, 'shared-commons')
+    : resolvePublishedGhostlingWorld(db, 'shared-commons');
+  const runtimeTuning = worldPreviewEnabled
+    ? resolveDraftGhostlingWorldTuning(db, 'shared-commons')
+    : resolvePublishedGhostlingWorldTuning(db, 'shared-commons');
   const [newsPayload, shellData, livePresencePayload, fallbackCompanion] = await Promise.all([
     getServerJSON<{ posts: NewsPost[] }>('/api/news?limit=3'),
     getServerJSON<ShellData>('/api/site-shell?next=%2Fhall%2F'),
     fixtureId ? Promise.resolve<ScenePresencePayload | null>(null) : getServerJSON<ScenePresencePayload>('/api/scene/presence'),
     getServerJSON<CompanionPreviewSummary>('/api/companion/preview'),
   ]);
-  const presencePayload = fixtureId
-    ? buildHomePageSceneFixture(fixtureId as HomePageSceneFixtureId, fallbackCompanion)
+  const liveOrFixturePayload = fixtureId
+    ? buildHomePageSceneFixture(
+        fixtureId as HomePageSceneFixtureId,
+        fallbackCompanion,
+        undefined,
+        runtimeWorld,
+      )
     : livePresencePayload;
+  const presencePayload = worldPreviewEnabled && liveOrFixturePayload
+    ? {
+        ...liveOrFixturePayload,
+        sharedScene: undefined,
+      }
+    : liveOrFixturePayload;
 
   const previewPosts = newsPayload?.posts?.slice(0, 3) ?? [];
   const hallHref = getHallHref(shellData);
@@ -69,7 +99,7 @@ export default async function HomePage({
   const debugWorldOverlay = process.env.NODE_ENV !== 'production' && params.sceneDebug === '1';
   const sceneEditorEnabled = process.env.NODE_ENV !== 'production' && params.sceneEditor === '1';
   const sandboxPayload = sceneEditorEnabled
-    ? buildHomePageSceneFixture('visual-baseline', fallbackCompanion)
+    ? buildHomePageSceneFixture('visual-baseline', fallbackCompanion, undefined, runtimeWorld)
     : null;
 
   return (
@@ -82,10 +112,12 @@ export default async function HomePage({
           fallbackCompanion={fallbackCompanion}
           world="shared-commons"
           preset="public-hero"
+          worldSpec={runtimeWorld}
+          tuningSpec={runtimeTuning}
           debugWorldOverlay={debugWorldOverlay}
           sceneEditorEnabled={sceneEditorEnabled}
           sceneEditorSandboxPayload={sandboxPayload}
-          realtimeDisabled={Boolean(fixtureId)}
+          realtimeDisabled={Boolean(fixtureId || worldPreviewEnabled)}
         />
         {!sceneEditorEnabled ? (
           <div className={styles.heroRail}>

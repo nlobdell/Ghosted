@@ -209,7 +209,7 @@ export function resolveGhostlingLabelClampOffset(
 ) {
   if (camera.labelSafeTopPx === null) return 0;
 
-  const labelHeightPx = options.labelHeightPx ?? 24;
+  const labelHeightPx = options.labelHeightPx ?? 30;
   const gapPx = options.gapPx ?? 8;
   const paddingPx = options.paddingPx ?? 4;
   const defaultTop = options.wrapperTopPx - gapPx - labelHeightPx;

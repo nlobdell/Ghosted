@@ -8,6 +8,7 @@ const ADMIN_LINKS = [
   { href: '/admin/rewards/', label: 'Rewards', marker: 'PTS' },
   { href: '/admin/content/', label: 'Content', marker: 'PUB' },
   { href: '/admin/systems/', label: 'Systems', marker: 'SYS' },
+  { href: '/admin/worlds/', label: 'Worlds', marker: 'WRL' },
   { href: '/admin/ghostling/', label: 'Ghostling', marker: 'AST' },
 ];
 

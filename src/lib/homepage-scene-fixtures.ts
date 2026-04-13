@@ -1,4 +1,4 @@
-import { SHARED_COMMONS_WORLD } from '@/lib/ghostling-world';
+import { SHARED_COMMONS_WORLD, type GhostlingWorldSpec } from '@/lib/ghostling-world';
 import { DEFAULT_GHOSTLING_ACTOR_METRICS } from '@/lib/ghostling-actor';
 import type {
   CompanionPreviewSummary,
@@ -54,6 +54,7 @@ export function buildHomePageSceneFixture(
   fixtureId: HomePageSceneFixtureId,
   previewSummary?: CompanionPreviewSummary | null,
   memberCount?: number,
+  worldSpec: GhostlingWorldSpec = SHARED_COMMONS_WORLD,
 ): ScenePresencePayload {
   if (fixtureId !== 'visual-baseline') {
     throw new Error(`Unsupported homepage scene fixture "${fixtureId}".`);
@@ -68,8 +69,8 @@ export function buildHomePageSceneFixture(
     'floor-mid-right',
     'floor-right-mid',
     'floor-right-outer',
-  ].map((pointKey) => SHARED_COMMONS_WORLD.points.find((point) => point.key === pointKey))
-    .filter((point): point is NonNullable<(typeof SHARED_COMMONS_WORLD.points)[number]> => Boolean(point));
+  ].map((pointKey) => worldSpec.points.find((point) => point.key === pointKey))
+    .filter((point): point is NonNullable<(typeof worldSpec.points)[number]> => Boolean(point));
 
   const limitedPoints = points.slice(0, Math.max(1, Math.min(memberCount ?? points.length, points.length)));
 
@@ -118,8 +119,8 @@ export function buildHomePageSceneFixture(
       hero: {
         version: 1,
         variant: 'hero',
-        width: SHARED_COMMONS_WORLD.sourceWidth,
-        height: SHARED_COMMONS_WORLD.sourceHeight,
+        width: worldSpec.sourceWidth,
+        height: worldSpec.sourceHeight,
         savedAt: Date.now(),
         payloadSource: 'voice',
         liveCount: members.length,

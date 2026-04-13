@@ -80,6 +80,8 @@ type GhostlingSceneProps = {
   fallbackCompanion?: CompanionPreviewSummary | null;
   world?: GhostlingWorldId;
   preset?: GhostlingWorldPreset;
+  worldSpec?: GhostlingWorldSpec | null;
+  tuningSpec?: GhostlingSceneTuningSpec | null;
   debugWorldOverlay?: boolean;
   sceneEditorEnabled?: boolean;
   sceneEditorSandboxPayload?: ScenePresencePayload | null;
@@ -991,20 +993,29 @@ export function GhostlingScene({
   fallbackCompanion,
   world = 'shared-commons',
   preset = 'public-hero',
+  worldSpec: injectedWorldSpec = null,
+  tuningSpec: injectedTuningSpec = null,
   debugWorldOverlay = false,
   sceneEditorEnabled = false,
   sceneEditorSandboxPayload = null,
   realtimeDisabled = false,
 }: GhostlingSceneProps) {
-  const worldSpec = useMemo(() => ghostlingWorldById(world), [world]);
+  const worldSpec = useMemo(
+    () => injectedWorldSpec ?? ghostlingWorldById(world),
+    [injectedWorldSpec, world],
+  );
+  const runtimeTuningSpec = useMemo(
+    () => cloneGhostlingSceneTuningSpec(injectedTuningSpec ?? createDefaultGhostlingSceneTuningSpec()),
+    [injectedTuningSpec],
+  );
   const [sceneLabPreviewMode, setSceneLabPreviewMode] = useState<GhostlingSceneLabPreviewMode>('sandbox');
   const [sceneLabPlaying, setSceneLabPlaying] = useState(true);
   const [sceneLabGhostCount, setSceneLabGhostCount] = useState(
-    () => createDefaultGhostlingSceneTuningSpec().buckets.desktop.maxVisible,
+    () => runtimeTuningSpec.buckets.desktop.maxVisible,
   );
   const [sceneLabResetSerial, setSceneLabResetSerial] = useState(0);
   const [sceneLabWorldDraft, setSceneLabWorldDraft] = useState<GhostlingWorldSpec>(() => cloneGhostlingWorldDraft(worldSpec));
-  const [sceneLabTuningDraft, setSceneLabTuningDraft] = useState(() => cloneGhostlingSceneTuningSpec(createDefaultGhostlingSceneTuningSpec()));
+  const [sceneLabTuningDraft, setSceneLabTuningDraft] = useState(() => cloneGhostlingSceneTuningSpec(runtimeTuningSpec));
   const [sceneLabSelection, setSceneLabSelection] = useState<GhostlingSceneLabSelection | null>(null);
   const [sceneLabActiveTab, setSceneLabActiveTab] = useState<GhostlingSceneLabTab>('authored');
   const [sceneLabSearchQuery, setSceneLabSearchQuery] = useState<GhostlingSceneLabSearchQuery>('');
@@ -1059,8 +1070,8 @@ export function GhostlingScene({
     && !sceneLabEnabled;
   const motionDebugEnabled = worldDebugOverlayEnabled || sceneLabEnabled;
   const hasLiveMembers = liveCount > 0;
-  const authoritativeHeroMode = isSharedHeroVariant(variant, world, preset) && !sceneLabEnabled;
   const realtimeEnabled = !sceneLabEnabled && !realtimeDisabled && variant === 'hero' && world === 'shared-commons' && preset === 'public-hero';
+  const authoritativeHeroMode = isSharedHeroVariant(variant, world, preset) && !sceneLabEnabled && !realtimeDisabled;
   const fixedCropCamera = usesFixedCropCamera(variant);
   const sceneLabSandboxPayload = useMemo(() => (
     sceneEditorSandboxPayload && sceneLabGhostCount === (sceneEditorSandboxPayload.members.length || 0)
@@ -1069,8 +1080,9 @@ export function GhostlingScene({
           'visual-baseline',
           fallbackCompanion,
           sceneLabGhostCount,
+          worldSpec,
         )
-  ), [fallbackCompanion, sceneEditorSandboxPayload, sceneLabGhostCount]);
+  ), [fallbackCompanion, sceneEditorSandboxPayload, sceneLabGhostCount, worldSpec]);
   const sceneLabActivePayload = useMemo(() => (
     sceneLabPreviewMode === 'live'
       ? (sceneLabLivePayload ?? initialPayload ?? sceneLabSandboxPayload)
@@ -1244,7 +1256,7 @@ export function GhostlingScene({
 
   useEffect(() => {
     const nextWorldDraft = cloneGhostlingWorldDraft(worldSpec);
-    const nextTuningDraft = cloneGhostlingSceneTuningSpec(createDefaultGhostlingSceneTuningSpec());
+    const nextTuningDraft = cloneGhostlingSceneTuningSpec(runtimeTuningSpec);
     sceneLabWorldDraftRef.current = nextWorldDraft;
     sceneLabTuningDraftRef.current = nextTuningDraft;
     sceneLabUndoStackRef.current = [];
@@ -1252,12 +1264,13 @@ export function GhostlingScene({
     sceneLabPendingHistoryRef.current = null;
     setSceneLabWorldDraft(nextWorldDraft);
     setSceneLabTuningDraft(nextTuningDraft);
+    setSceneLabGhostCount(nextTuningDraft.buckets.desktop.maxVisible);
     setSceneLabSelection(null);
     setSceneLabActiveTab('authored');
     setSceneLabSearchQuery('');
     setSceneLabUndoStack([]);
     setSceneLabRedoStack([]);
-  }, [worldSpec]);
+  }, [runtimeTuningSpec, worldSpec]);
 
   useEffect(() => {
     setSceneLabGhostCount((current) => Math.min(current, sceneLabGhostCountMax));
@@ -1377,7 +1390,7 @@ export function GhostlingScene({
       size.width,
       variant,
       densityCaps,
-      sceneLabEnabled ? sceneLabTuningDraft : undefined,
+      sceneLabEnabled ? sceneLabTuningDraft : runtimeTuningSpec,
       sceneWorldSpec,
     );
     const metrics = createGhostlingSceneCameraMetrics(
@@ -1668,6 +1681,7 @@ export function GhostlingScene({
     motionDebugEnabled,
     sceneLabEnabled,
     sceneLabTuningDraft,
+    runtimeTuningSpec,
     sceneWorldSpec,
   ]);
 
@@ -2019,7 +2033,7 @@ export function GhostlingScene({
         size.width,
         variant,
         densityCaps,
-        sceneLabEnabled ? sceneLabTuningDraft : undefined,
+        sceneLabEnabled ? sceneLabTuningDraft : runtimeTuningSpec,
         sceneWorldSpec,
       );
       const metrics = createGhostlingSceneCameraMetrics(
@@ -2181,6 +2195,7 @@ export function GhostlingScene({
     sceneLabEnabled,
     sceneLabPlaying,
     sceneLabTuningDraft,
+    runtimeTuningSpec,
     snapshotRenderMembers,
     stageSize,
     variant,

@@ -26,9 +26,10 @@ describe('AdminSidebar', () => {
 
     expect(screen.getByText('Operator nav')).not.toBeNull();
     expect(screen.getByRole('heading', { name: 'Ops' })).not.toBeNull();
-    expect(within(nav).getAllByRole('link')).toHaveLength(5);
+    expect(within(nav).getAllByRole('link')).toHaveLength(6);
     expect(screen.getByText('HUB')).not.toBeNull();
     expect(screen.getByText('PUB')).not.toBeNull();
+    expect(screen.getByText('WRL')).not.toBeNull();
     expect(screen.getByRole('link', { name: /Content/i }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('link', { name: /Overview/i }).getAttribute('aria-current')).toBeNull();
     expect(screen.getByRole('link', { name: /Systems/i }).getAttribute('aria-current')).toBeNull();

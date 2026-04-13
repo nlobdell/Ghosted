@@ -73,7 +73,7 @@ export interface GhostlingWorldSpec {
   viewports: Record<GhostlingSceneDensityBucket, GhostlingWorldViewport>;
 }
 
-type GhostlingWorldLegacyFile = {
+export type GhostlingWorldLegacyFile = {
   id: GhostlingWorldId;
   preset: GhostlingWorldPreset;
   canvas: {
@@ -88,7 +88,7 @@ type GhostlingWorldLegacyFile = {
   viewports: Record<GhostlingSceneDensityBucket, GhostlingWorldViewport>;
 };
 
-type GhostlingWorldPackageFile = {
+export type GhostlingWorldPackageFile = {
   kind: 'ghostling-world';
   schemaVersion: 1;
   worldId: GhostlingWorldId;
@@ -225,6 +225,56 @@ export function loadGhostlingWorldSpec(
     points: file.points,
     viewports: file.viewports,
   });
+}
+
+export function ghostlingWorldPackageFromSpec(
+  spec: GhostlingWorldSpec,
+): GhostlingWorldPackageFile {
+  return {
+    kind: 'ghostling-world',
+    schemaVersion: 1,
+    worldId: spec.id,
+    preset: spec.preset,
+    canvas: {
+      width: spec.sourceWidth,
+      height: spec.sourceHeight,
+    },
+    layers: spec.layers.map((layer) => ({ ...layer })),
+    guides: {
+      ...spec.guides,
+      safeArea: { ...spec.guides.safeArea },
+      debugFloorBand: { ...spec.guides.debugFloorBand },
+      centerSafe: { ...spec.guides.centerSafe },
+      ultrawideBleed: { ...spec.guides.ultrawideBleed },
+      labelSafeTop: spec.guides.labelSafeTop ? { ...spec.guides.labelSafeTop } : undefined,
+    },
+    fallbackAnchor: {
+      ...spec.fallbackAnchor,
+      adjacent: [...spec.fallbackAnchor.adjacent],
+    },
+    safeZones: spec.safeZones.map((safeZone) => ({
+      ...safeZone,
+      bounds: { ...safeZone.bounds },
+    })),
+    anchors: spec.points.map((point) => ({
+      ...point,
+      adjacent: [...point.adjacent],
+    })),
+    viewports: {
+      desktop: {
+        ...spec.viewports.desktop,
+        pointOrder: [...spec.viewports.desktop.pointOrder],
+      },
+      tablet: {
+        ...spec.viewports.tablet,
+        pointOrder: [...spec.viewports.tablet.pointOrder],
+      },
+      mobile: {
+        ...spec.viewports.mobile,
+        pointOrder: [...spec.viewports.mobile.pointOrder],
+      },
+    },
+  };
 }
 
 export const SHARED_COMMONS_WORLD = loadGhostlingWorldSpec(

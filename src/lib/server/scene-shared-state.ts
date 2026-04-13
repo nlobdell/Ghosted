@@ -9,7 +9,11 @@ import {
   rehomeGhostlingSceneEntity,
   type GhostlingSceneMotionState,
 } from '@/lib/ghostling-scene';
-import { SHARED_COMMONS_WORLD } from '@/lib/ghostling-world';
+import {
+  createDefaultGhostlingSceneTuningSpec,
+  type GhostlingSceneTuningSpec,
+} from '@/lib/ghostling-scene-tuning';
+import { SHARED_COMMONS_WORLD, type GhostlingWorldSpec } from '@/lib/ghostling-world';
 import type {
   ScenePresenceMember,
   ScenePresencePayloadSource,
@@ -62,6 +66,16 @@ export function resetSharedSceneStateForTests() {
   sharedHeroSceneState = null;
 }
 
+export function resetSharedHeroSceneSnapshot(
+  db: Database.Database,
+) {
+  sharedHeroSceneState = null;
+  db.prepare(`
+    DELETE FROM scene_shared_snapshots
+    WHERE scene_key = ?
+  `).run(HERO_SCENE_KEY);
+}
+
 function loadSharedHeroSceneState(
   db: Database.Database,
 ): SharedHeroSceneRuntimeState | null {
@@ -112,6 +126,7 @@ function resolveSharedHeroSceneState(
 function persistSharedHeroSceneState(
   db: Database.Database,
   state: SharedHeroSceneRuntimeState,
+  world: GhostlingWorldSpec,
 ) {
   db.prepare(`
     INSERT INTO scene_shared_snapshots (
@@ -140,8 +155,8 @@ function persistSharedHeroSceneState(
     HERO_SCENE_KEY,
     SHARED_SCENE_VERSION,
     HERO_SCENE_VARIANT,
-    SHARED_COMMONS_WORLD.sourceWidth,
-    SHARED_COMMONS_WORLD.sourceHeight,
+    world.sourceWidth,
+    world.sourceHeight,
     state.updatedAt,
     state.payloadSource,
     state.liveCount,
@@ -157,10 +172,12 @@ function snapshotMembers(members: ScenePresenceMember[]): ScenePresenceMember[] 
 function advanceSharedHeroSceneEntities(
   entities: Map<string, SceneSharedEntityState>,
   elapsedMs: number,
+  world: GhostlingWorldSpec,
+  tuning: GhostlingSceneTuningSpec,
 ) {
   if (elapsedMs <= 0 || entities.size === 0) return;
 
-  const profile = resolveGhostlingSceneProfile(HERO_SCENE_PROFILE_WIDTH, HERO_SCENE_VARIANT);
+  const profile = resolveGhostlingSceneProfile(HERO_SCENE_PROFILE_WIDTH, HERO_SCENE_VARIANT, {}, tuning, world);
 
   let remainingMs = elapsedMs;
   while (remainingMs > 0) {
@@ -180,7 +197,7 @@ function advanceSharedHeroSceneEntities(
     for (const entity of entities.values()) {
       const next = advanceGhostlingSceneEntity(entity as GhostlingSceneMotionState, {
         dtMs: stepMs,
-        world: SHARED_COMMONS_WORLD,
+        world,
         profile,
         peers: peerPositions,
         fallback: entity.fallback,
@@ -197,8 +214,10 @@ function createSharedHeroSceneEntity(
   memberIndex: number,
   entities: Map<string, SceneSharedEntityState>,
   now: number,
+  world: GhostlingWorldSpec,
+  tuning: GhostlingSceneTuningSpec,
 ) {
-  const profile = resolveGhostlingSceneProfile(HERO_SCENE_PROFILE_WIDTH, HERO_SCENE_VARIANT);
+  const profile = resolveGhostlingSceneProfile(HERO_SCENE_PROFILE_WIDTH, HERO_SCENE_VARIANT, {}, tuning, world);
   const preferredPointKey = preferredGhostlingScenePointKey(
     profile,
     memberIndex,
@@ -206,7 +225,7 @@ function createSharedHeroSceneEntity(
   );
   const motion = createGhostlingSceneMotionState(
     member.key,
-    SHARED_COMMONS_WORLD,
+    world,
     profile,
     preferredPointKey,
     {
@@ -258,6 +277,8 @@ function syncSharedHeroSceneMembers(
   entities: Map<string, SceneSharedEntityState>,
   members: ScenePresenceMember[],
   now: number,
+  world: GhostlingWorldSpec,
+  tuning: GhostlingSceneTuningSpec,
 ) {
   const effectiveMembers = snapshotMembers(members);
   const incomingKeys = new Set(effectiveMembers.map((member) => member.key));
@@ -271,7 +292,7 @@ function syncSharedHeroSceneMembers(
   for (const [memberIndex, member] of effectiveMembers.entries()) {
     const signature = `${member.activity.lastSeenAt}:${member.source}`;
     const existing = entities.get(member.key);
-    const profile = resolveGhostlingSceneProfile(HERO_SCENE_PROFILE_WIDTH, HERO_SCENE_VARIANT);
+    const profile = resolveGhostlingSceneProfile(HERO_SCENE_PROFILE_WIDTH, HERO_SCENE_VARIANT, {}, tuning, world);
     const preferredPointKey = preferredGhostlingScenePointKey(
       profile,
       memberIndex,
@@ -279,7 +300,7 @@ function syncSharedHeroSceneMembers(
     );
 
     if (!existing) {
-      entities.set(member.key, createSharedHeroSceneEntity(member, memberIndex, entities, now));
+      entities.set(member.key, createSharedHeroSceneEntity(member, memberIndex, entities, now, world, tuning));
       continue;
     }
 
@@ -288,7 +309,7 @@ function syncSharedHeroSceneMembers(
         existing,
         rehomeGhostlingSceneEntity(
           existing as GhostlingSceneMotionState,
-          SHARED_COMMONS_WORLD,
+          world,
           profile,
           preferredPointKey,
           {
@@ -326,25 +347,29 @@ export function buildSharedHeroSceneSnapshot(
   members: ScenePresenceMember[],
   payloadSource: ScenePresencePayloadSource,
   now: number,
+  world: GhostlingWorldSpec = SHARED_COMMONS_WORLD,
+  tuning: GhostlingSceneTuningSpec = createDefaultGhostlingSceneTuningSpec(),
 ) {
   sharedHeroSceneState = resolveSharedHeroSceneState(db, now);
 
   advanceSharedHeroSceneEntities(
     sharedHeroSceneState.entities,
     Math.max(0, now - sharedHeroSceneState.updatedAt),
+    world,
+    tuning,
   );
-  syncSharedHeroSceneMembers(sharedHeroSceneState.entities, members, now);
+  syncSharedHeroSceneMembers(sharedHeroSceneState.entities, members, now, world, tuning);
 
   sharedHeroSceneState.updatedAt = now;
   sharedHeroSceneState.liveCount = members.length;
   sharedHeroSceneState.payloadSource = payloadSource;
-  persistSharedHeroSceneState(db, sharedHeroSceneState);
+  persistSharedHeroSceneState(db, sharedHeroSceneState, world);
 
   return {
     version: SHARED_SCENE_VERSION,
     variant: HERO_SCENE_VARIANT,
-    width: SHARED_COMMONS_WORLD.sourceWidth,
-    height: SHARED_COMMONS_WORLD.sourceHeight,
+    width: world.sourceWidth,
+    height: world.sourceHeight,
     savedAt: now,
     payloadSource,
     liveCount: members.length,
