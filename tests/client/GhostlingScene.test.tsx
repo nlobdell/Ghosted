@@ -321,6 +321,7 @@ function makePreview(
 
   return {
     user: null,
+    renderUrl: '/api/companion/render',
     animatedRenderUrl: '/api/companion/render-animated',
     renderManifest,
     actorMetrics: resolveGhostlingActorMetrics(renderManifest),
@@ -578,8 +579,13 @@ describe('GhostlingScene', () => {
     flushFrame(0);
     flushFrame(16);
 
+    const stage = screen.getByRole('img', { name: 'Ghostlings representing live members and recent clan activity' }).closest('div[data-world="shared-commons"][data-preset="public-hero"]');
+    expect(stage?.getAttribute('data-mobile-performance')).toBe('true');
     expect(screen.queryByTestId('animated-stage')).toBeNull();
-    expect(screen.getByAltText("Member One's Ghostling")).not.toBeNull();
+    const ghostImg = screen.getByAltText("Member One's Ghostling");
+    expect(ghostImg).not.toBeNull();
+    expect((ghostImg as HTMLImageElement).src).toContain('/api/companion/render');
+    expect((ghostImg as HTMLImageElement).src).not.toContain('/api/companion/render-animated');
     expect(animatedStageMock).not.toHaveBeenCalled();
   });
 
@@ -2168,6 +2174,7 @@ describe('GhostlingScene', () => {
     flushFrame(16);
 
     const stage = getHeroStage(container);
+    expect(stage.getAttribute('data-mobile-performance')).toBe('false');
     fireEvent.wheel(stage, {
       deltaY: 180,
       deltaMode: 0,

@@ -667,6 +667,21 @@
   transform: translate(-50%, calc(-100% - 2.15rem + var(--ghost-label-nudge, 0px)));
 }
 
+.sceneStage[data-mobile-performance='true'] .ghostAura {
+  display: none;
+}
+
+.sceneStage[data-mobile-performance='true'] .ghostVisual,
+.sceneStage[data-mobile-performance='true'] .ghostWrap[data-scene-state='hovered'] .ghostVisual {
+  filter: none;
+}
+
+.sceneStage[data-mobile-performance='true'] .ghostVisual,
+.sceneStage[data-mobile-performance='true'] .ghostNameplate,
+.sceneStage[data-mobile-performance='true'] .ghostMetadataCard {
+  transition-duration: 0ms;
+}
+
 .staticGrid .sceneField {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(9rem, max-content));

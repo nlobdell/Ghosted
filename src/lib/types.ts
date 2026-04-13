@@ -224,6 +224,7 @@ export interface CompanionPreviewSummary {
     displayName: string;
     username: string;
   } | null;
+  renderUrl: string;
   animatedRenderUrl: string;
   renderManifest: CompanionRenderManifest;
   actorMetrics: CompanionActorMetrics;
