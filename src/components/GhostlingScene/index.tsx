@@ -668,6 +668,10 @@ function renderSrc(userId: number | null) {
   return userId !== null ? `/api/companion/render?user=${userId}` : DEFAULT_RENDER_SRC;
 }
 
+function rasterizedRenderSrc(src: string) {
+  return `${src}${src.includes('?') ? '&' : '?'}format=png`;
+}
+
 function companionRenderSignature(companion?: CompanionPreviewSummary) {
   if (!companion) return 'none';
 
@@ -2765,7 +2769,9 @@ export function GhostlingScene({
             });
             const stageMetrics = stageRenderMetrics(desiredGhostSize, entity.companion?.renderManifest);
             const useStaticGhostlingVisual = heroMobilePerformanceMode;
-            const ghostlingVisualSrc = entity.companion?.renderUrl ?? entity.imgSrc;
+            const ghostlingVisualSrc = useStaticGhostlingVisual
+              ? rasterizedRenderSrc(entity.companion?.renderUrl ?? entity.imgSrc)
+              : (entity.companion?.renderUrl ?? entity.imgSrc);
 
             return (
               <div

@@ -586,6 +586,7 @@ describe('GhostlingScene', () => {
     expect(ghostImg).not.toBeNull();
     expect((ghostImg as HTMLImageElement).src).toContain('/api/companion/render');
     expect((ghostImg as HTMLImageElement).src).not.toContain('/api/companion/render-animated');
+    expect((ghostImg as HTMLImageElement).src).toContain('format=png');
     expect(animatedStageMock).not.toHaveBeenCalled();
   });
 

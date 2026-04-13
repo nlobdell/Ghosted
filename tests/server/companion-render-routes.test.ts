@@ -150,6 +150,17 @@ describe('companion render and dev-login routes', () => {
     expect(payload).toContain('data:image/svg+xml;base64');
   });
 
+  it('renders raster PNGs when the static companion format=png variant is requested', async () => {
+    const response = await getCompanionRenderRoute(new Request('http://localhost/api/companion/render?base=1&format=png'));
+    const payload = Buffer.from(await response.arrayBuffer());
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('image/png');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(payload.subarray(1, 4).toString('ascii')).toBe('PNG');
+    expect(payload.length).toBeGreaterThan(128);
+  });
+
   it('preserves the layered head fallback for body-only base uploads across static and animated renders', async () => {
     const adminId = insertUser(context.db, { username: 'admin', globalName: 'Admin', isAdmin: 1 });
     authMock.mockResolvedValue({ user: { id: String(adminId) } });
