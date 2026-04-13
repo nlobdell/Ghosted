@@ -268,21 +268,25 @@ export function InlineConfirmBar({
   title,
   detail,
   meta,
+  children,
   confirmLabel,
   pendingLabel,
   onConfirm,
   onCancel,
   busy,
+  confirmDisabled,
   tone = 'default',
 }: {
   title: string;
   detail: string;
   meta?: Array<{ label: string; value: ReactNode }>;
+  children?: ReactNode;
   confirmLabel: string;
   pendingLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
   busy?: boolean;
+  confirmDisabled?: boolean;
   tone?: 'default' | 'danger';
 }) {
   return (
@@ -301,8 +305,9 @@ export function InlineConfirmBar({
           ))}
         </div>
       ) : null}
+      {children ? <div className={styles.inlineConfirmExtra}>{children}</div> : null}
       <div className={styles.inlineConfirmActions}>
-        <button type="button" className="button" disabled={busy} onClick={onConfirm}>
+        <button type="button" className="button" disabled={busy || confirmDisabled} onClick={onConfirm}>
           {busy ? (pendingLabel ?? confirmLabel) : confirmLabel}
         </button>
         <button type="button" className="button button--secondary button--small" onClick={onCancel}>

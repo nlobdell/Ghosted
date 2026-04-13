@@ -12,6 +12,7 @@
 .importList,
 .importBody,
 .fileMeta,
+.stateSections,
 .slotGroups,
 .slotGroup,
 .assetRows,
@@ -121,6 +122,32 @@
   flex-wrap: wrap;
 }
 
+.stateSections {
+  gap: 1rem;
+}
+
+.editCard {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 0.35rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(236, 241, 244, 0.08);
+  border-radius: 0.85rem;
+  background: rgba(18, 22, 28, 0.9);
+}
+
+.editGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.editActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
 @media (max-width: 1240px) {
   .workspace,
   .previewLayout {
@@ -141,7 +168,8 @@
 @media (max-width: 760px) {
   .importRow,
   .assetRow,
-  .importGrid {
+  .importGrid,
+  .editGrid {
     grid-template-columns: 1fr;
   }
 
@@ -149,7 +177,8 @@
   .importHeader,
   .slotHeader,
   .assetHeader,
-  .assetActions {
+  .assetActions,
+  .editActions {
     flex-direction: column;
     align-items: flex-start;
   }

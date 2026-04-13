@@ -21,6 +21,7 @@ function makePayload(): CompanionAdminData {
       headAssetPath: 'base/head.png',
       headAssetUrl: 'https://example.com/base/head.png',
       previewUrl: 'https://example.com/base/preview.png',
+      updatedAt: '2026-04-12T21:30:00.000Z',
       renderManifest: {
         width: 256,
         height: 256,
@@ -42,6 +43,8 @@ function makePayload(): CompanionAdminData {
         cost: 120,
         description: 'Lunar hood',
         active: true,
+        archived: false,
+        state: 'visible',
         sortOrder: 10,
         frontAssetPath: 'items/moon-hood/front.png',
         frontAssetUrl: 'https://example.com/items/moon-hood/front.png',
@@ -49,6 +52,32 @@ function makePayload(): CompanionAdminData {
         backAssetUrl: 'https://example.com/items/moon-hood/back.png',
         renderMetadata: null,
         previewUrl: 'https://example.com/items/moon-hood/preview.png',
+        updatedAt: '2026-04-12T21:30:00.000Z',
+        archivedAt: null,
+        archivedByDisplayName: null,
+      },
+    ],
+    archivedItems: [
+      {
+        slug: 'ember-scarf',
+        name: 'Ember Scarf',
+        slot: 'neck',
+        rarity: 'epic',
+        cost: 240,
+        description: 'Stored for recovery.',
+        active: false,
+        archived: true,
+        state: 'archived',
+        sortOrder: 20,
+        frontAssetPath: 'items/ember-scarf/front.png',
+        frontAssetUrl: 'https://example.com/items/ember-scarf/front.png',
+        backAssetPath: null,
+        backAssetUrl: null,
+        renderMetadata: null,
+        previewUrl: 'https://example.com/items/ember-scarf/preview.png',
+        updatedAt: '2026-04-12T20:00:00.000Z',
+        archivedAt: '2026-04-12T20:00:00.000Z',
+        archivedByDisplayName: 'Admin User',
       },
     ],
     repoCandidates: [
@@ -66,6 +95,40 @@ function makePayload(): CompanionAdminData {
         renderMetadataPath: 'repo/star-visor/render.json',
         renderMetadata: null,
         renderMetadataErrors: [],
+      },
+    ],
+    recentAudit: [
+      {
+        id: 1,
+        action: 'archive_companion_item',
+        actionLabel: 'Archive Ghostling item',
+        section: 'ghostling',
+        targetType: 'companion_catalog',
+        targetId: 'ember-scarf',
+        actorDisplayName: 'Admin User',
+        createdAt: '2026-04-12T20:00:00.000Z',
+        summary: 'Archived Ember Scarf for later recovery.',
+      },
+    ],
+  };
+}
+
+function makeDeletedPayload(): CompanionAdminData {
+  const payload = makePayload();
+  return {
+    ...payload,
+    archivedItems: [],
+    recentAudit: [
+      {
+        id: 2,
+        action: 'delete_companion_item',
+        actionLabel: 'Delete Ghostling item',
+        section: 'ghostling',
+        targetType: 'companion_catalog',
+        targetId: 'ember-scarf',
+        actorDisplayName: 'Admin User',
+        createdAt: '2026-04-12T20:05:00.000Z',
+        summary: 'Permanently deleted archived Ghostling item "ember-scarf".',
       },
     ],
   };
@@ -94,6 +157,8 @@ describe('GhostlingAdminPage', () => {
     expect(screen.getByRole('heading', { name: 'Repo import queue' })).not.toBeNull();
     expect(screen.getByText('Star Visor')).not.toBeNull();
     expect(screen.getAllByText('Moon Hood').length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'Archived cosmetics' })).not.toBeNull();
+    expect(screen.getByText('Archived Ember Scarf for later recovery.')).not.toBeNull();
 
     const rail = screen.getByLabelText('Primary admin actions');
     const replaceSection = within(rail).getByRole('heading', { name: 'Replace live files' }).closest('section');
@@ -115,5 +180,48 @@ describe('GhostlingAdminPage', () => {
 
     expect((await screen.findAllByText('Confirm hide')).length).toBeGreaterThan(0);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('requires typed slug confirmation before permanently deleting an archived cosmetic', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(makePayload()), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        ok: true,
+        message: 'Companion cosmetic permanently deleted.',
+        library: makeDeletedPayload(),
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<GhostlingAdminPage />);
+
+    await screen.findByRole('heading', { name: 'Ghostling asset console' });
+
+    const deleteButtons = screen.getAllByRole('button', { name: 'Delete permanently' });
+    expect(deleteButtons).toHaveLength(1);
+    fireEvent.click(deleteButtons[0]!);
+
+    expect(screen.getByLabelText('Type slug to confirm')).not.toBeNull();
+    const confirmButton = screen.getByRole('button', { name: 'Confirm permanent delete' }) as HTMLButtonElement;
+    expect(confirmButton.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('Type slug to confirm'), { target: { value: 'wrong-slug' } });
+    expect(confirmButton.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('Type slug to confirm'), { target: { value: 'ember-scarf' } });
+    expect(confirmButton.disabled).toBe(false);
+
+    fireEvent.click(confirmButton);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const deleteCall = fetchMock.mock.calls[1];
+    expect(deleteCall?.[0]).toBe('/api/companion/admin/items/delete');
+    expect(deleteCall?.[1]).toMatchObject({ method: 'POST' });
+    expect(JSON.parse(String(deleteCall?.[1]?.body))).toEqual({ slug: 'ember-scarf' });
   });
 });

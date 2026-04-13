@@ -63,8 +63,17 @@ function makePayload(): AdminOverviewData {
         href: '/admin/ghostling/',
         status: 'ready',
         primary: '4 visible cosmetics live',
-        secondary: '1 item is hidden from the member catalog.',
-        chips: ['5 total cosmetics', '1 hidden'],
+        secondary: '1 item is hidden from the member catalog and 1 is archived for recovery.',
+        chips: ['6 total cosmetics', '1 hidden', '1 archived'],
+      },
+      {
+        key: 'worlds',
+        label: 'Worlds',
+        href: '/admin/worlds/',
+        status: 'warning',
+        primary: '1 draft override is staged',
+        secondary: '1 archived layer override is ready to restore.',
+        chips: ['1 archived recovery', 'published variant live'],
       },
     ],
     quickActionReferenceData: {
@@ -122,6 +131,7 @@ describe('AdminPage', () => {
     expect(await screen.findByText('Discord worker needs attention. The worker heartbeat is stale. Recheck the worker before trusting the public homepage scene.')).not.toBeNull();
     expect(await screen.findByText('Saved dispatch "Welcome back" as published.')).not.toBeNull();
     expect((await screen.findAllByText('1 live drop')).length).toBeGreaterThan(0);
+    expect(await screen.findByText('1 draft override is staged')).not.toBeNull();
   });
 
   it('requires an inline review step before publishing a dispatch from the hub', async () => {
