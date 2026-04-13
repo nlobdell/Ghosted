@@ -28,7 +28,7 @@ export const GET = withRouteErrorHandling(async (request: Request) => {
 
   if (responseFormat === 'png') {
     const png = await sharp(Buffer.from(await markup)).png().toBuffer();
-    return new Response(png, {
+    return new Response(new Uint8Array(png), {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
