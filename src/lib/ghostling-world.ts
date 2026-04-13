@@ -20,6 +20,7 @@ export interface GhostlingWorldGuides {
   debugFloorBand: GhostlingWorldRect;
   centerSafe: GhostlingWorldRect;
   ultrawideBleed: GhostlingWorldRect;
+  heroCrop?: GhostlingWorldRect;
   labelSafeTop?: GhostlingWorldRect;
 }
 
@@ -137,6 +138,9 @@ function validateGhostlingWorldSpec(spec: GhostlingWorldSpec) {
   assertRectInsideCanvas(spec.guides.debugFloorBand, spec.sourceWidth, spec.sourceHeight, 'debug floor band');
   assertRectInsideCanvas(spec.guides.centerSafe, spec.sourceWidth, spec.sourceHeight, 'center safe guide');
   assertRectInsideCanvas(spec.guides.ultrawideBleed, spec.sourceWidth, spec.sourceHeight, 'ultrawide bleed guide');
+  if (spec.guides.heroCrop) {
+    assertRectInsideCanvas(spec.guides.heroCrop, spec.sourceWidth, spec.sourceHeight, 'hero crop guide');
+  }
   if (spec.guides.labelSafeTop) {
     assertRectInsideCanvas(spec.guides.labelSafeTop, spec.sourceWidth, spec.sourceHeight, 'label safe top guide');
   }
@@ -246,6 +250,7 @@ export function ghostlingWorldPackageFromSpec(
       debugFloorBand: { ...spec.guides.debugFloorBand },
       centerSafe: { ...spec.guides.centerSafe },
       ultrawideBleed: { ...spec.guides.ultrawideBleed },
+      heroCrop: spec.guides.heroCrop ? { ...spec.guides.heroCrop } : undefined,
       labelSafeTop: spec.guides.labelSafeTop ? { ...spec.guides.labelSafeTop } : undefined,
     },
     fallbackAnchor: {

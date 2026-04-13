@@ -13,12 +13,14 @@ const {
   resolveDraftGhostlingWorldTuningMock,
   resolvePublishedGhostlingWorldMock,
   resolvePublishedGhostlingWorldTuningMock,
+  resolveRepoGhostlingWorldMock,
 } = vi.hoisted(() => ({
   getCurrentUserMock: vi.fn(),
   resolveDraftGhostlingWorldMock: vi.fn(),
   resolveDraftGhostlingWorldTuningMock: vi.fn(),
   resolvePublishedGhostlingWorldMock: vi.fn(),
   resolvePublishedGhostlingWorldTuningMock: vi.fn(),
+  resolveRepoGhostlingWorldMock: vi.fn(),
 }));
 
 vi.mock('@/lib/server-api', () => ({
@@ -41,6 +43,7 @@ vi.mock('@/lib/server/scene-worlds', async () => {
     resolveDraftGhostlingWorldTuning: resolveDraftGhostlingWorldTuningMock,
     resolvePublishedGhostlingWorld: resolvePublishedGhostlingWorldMock,
     resolvePublishedGhostlingWorldTuning: resolvePublishedGhostlingWorldTuningMock,
+    resolveRepoGhostlingWorld: resolveRepoGhostlingWorldMock,
   };
 });
 
@@ -102,6 +105,8 @@ describe('home page', () => {
     resolvePublishedGhostlingWorldMock.mockReturnValue(SHARED_COMMONS_WORLD);
     resolvePublishedGhostlingWorldTuningMock.mockReset();
     resolvePublishedGhostlingWorldTuningMock.mockReturnValue(defaultTuning);
+    resolveRepoGhostlingWorldMock.mockReset();
+    resolveRepoGhostlingWorldMock.mockReturnValue(SHARED_COMMONS_WORLD);
     resolveDraftGhostlingWorldMock.mockReset();
     resolveDraftGhostlingWorldMock.mockReturnValue(SHARED_COMMONS_WORLD);
     resolveDraftGhostlingWorldTuningMock.mockReset();
@@ -266,6 +271,20 @@ describe('home page', () => {
     expect(resolveDraftGhostlingWorldTuningMock).toHaveBeenCalled();
     expect(markup).toContain('data-realtime-disabled="true"');
     expect(markup).toContain('Join Discord');
+    expect(markup).toContain('data-world-width="3150"');
+  });
+
+  it('loads the repo world preview in development without requiring admin access', async () => {
+    installPayloads();
+
+    const markup = renderToStaticMarkup(await HomePage({
+      searchParams: Promise.resolve({ worldPreview: 'shared-commons:repo' }),
+    }));
+
+    expect(resolveRepoGhostlingWorldMock).toHaveBeenCalled();
+    expect(resolveDraftGhostlingWorldMock).not.toHaveBeenCalled();
+    expect(resolvePublishedGhostlingWorldMock).not.toHaveBeenCalled();
+    expect(markup).toContain('data-realtime-disabled="true"');
     expect(markup).toContain('data-world-width="3150"');
   });
 

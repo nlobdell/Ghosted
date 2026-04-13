@@ -193,10 +193,6 @@ function cameraLayoutForVariant(variant: GhostlingSceneVariant) {
   return variant === 'hero' ? 'fixed-crop' : 'responsive-fit';
 }
 
-function usesFixedCropCamera(variant: GhostlingSceneVariant) {
-  return cameraLayoutForVariant(variant) === 'fixed-crop';
-}
-
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
@@ -739,6 +735,41 @@ function interactionMetadata(entity: RenderGhostlingEntity, nowTs: number) {
   return lines;
 }
 
+function isScenePresenceActive(
+  entity: Pick<RenderGhostlingEntity, 'fallback' | 'source'>,
+  sceneLabEnabled: boolean,
+) {
+  if (sceneLabEnabled || entity.fallback) return true;
+  return entity.source === 'voice';
+}
+
+function scenePresenceVisualOpacity(options: {
+  active: boolean;
+  hovered: boolean;
+}) {
+  if (options.active || options.hovered) return 1;
+  return 0.85;
+}
+
+function scenePresenceVisualTone(options: {
+  active: boolean;
+  hovered: boolean;
+}) {
+  if (options.active || options.hovered) {
+    return {
+      grayscale: 0,
+      saturate: 1,
+      brightness: 1,
+    };
+  }
+
+  return {
+    grayscale: 0.34,
+    saturate: 0.58,
+    brightness: 0.82,
+  };
+}
+
 function liveBadgeLabel(source: ScenePresencePayload['source'], liveCount: number) {
   if (liveCount <= 0) return 'House mascot holding the stage';
   if (source === 'voice') return `${liveCount} live across voice and clan activity`;
@@ -768,13 +799,11 @@ function WorldDebugOverlay({
   camera,
   bucket,
   members,
-  fixedCrop,
 }: {
   world: GhostlingWorldSpec;
   camera: GhostlingSceneCameraMetrics;
   bucket: GhostlingSceneCameraMetrics['bucket'];
   members: RenderGhostlingEntity[];
-  fixedCrop: boolean;
 }) {
   const safeZoneCounts = members.reduce<Record<string, number>>((counts, member) => {
     counts[member.safeZoneKey] = (counts[member.safeZoneKey] ?? 0) + 1;
@@ -788,11 +817,10 @@ function WorldDebugOverlay({
       viewBox={`0 0 ${world.sourceWidth} ${world.sourceHeight}`}
       preserveAspectRatio="xMidYMax meet"
       style={{
-        left: fixedCrop ? '50%' : `${camera.offsetX}px`,
+        left: `${camera.offsetX}px`,
         top: `${camera.offsetY}px`,
         width: `${camera.renderWidth}px`,
         height: `${camera.renderHeight}px`,
-        transform: fixedCrop ? 'translateX(-50%)' : undefined,
       }}
     >
       <rect
@@ -834,6 +862,18 @@ function WorldDebugOverlay({
         strokeDasharray="12 6"
         strokeWidth="1"
       />
+      {world.guides.heroCrop ? (
+        <rect
+          x={world.guides.heroCrop.x}
+          y={world.guides.heroCrop.y}
+          width={world.guides.heroCrop.width}
+          height={world.guides.heroCrop.height}
+          fill="rgba(255, 112, 154, 0.05)"
+          stroke="rgba(255, 112, 154, 0.78)"
+          strokeDasharray="8 4"
+          strokeWidth="1.2"
+        />
+      ) : null}
       {world.guides.labelSafeTop ? (
         <rect
           x={world.guides.labelSafeTop.x}
@@ -1035,15 +1075,14 @@ export function GhostlingScene({
   sceneEditorSandboxPayload = null,
   realtimeDisabled = false,
 }: GhostlingSceneProps) {
-  const worldSpec = useMemo(
-    () => injectedWorldSpec ?? ghostlingWorldById(world),
-    [injectedWorldSpec, world],
-  );
+  const worldSpec = injectedWorldSpec ?? ghostlingWorldById(world);
   const runtimeTuningSpec = useMemo(
     () => cloneGhostlingSceneTuningSpec(injectedTuningSpec ?? createDefaultGhostlingSceneTuningSpec()),
     [injectedTuningSpec],
   );
-  const [sceneLabPreviewMode, setSceneLabPreviewMode] = useState<GhostlingSceneLabPreviewMode>('sandbox');
+  const [sceneLabPreviewMode, setSceneLabPreviewMode] = useState<GhostlingSceneLabPreviewMode>(
+    () => (initialPayload ? 'live' : 'sandbox'),
+  );
   const [sceneLabPlaying, setSceneLabPlaying] = useState(true);
   const [sceneLabGhostCount, setSceneLabGhostCount] = useState(
     () => runtimeTuningSpec.buckets.desktop.maxVisible,
@@ -1075,10 +1114,12 @@ export function GhostlingScene({
   const visibilityRef = useRef(true);
   const memberKeysStateRef = useRef<string[]>([]);
   const renderMembersStateRef = useRef<RenderGhostlingEntity[]>([]);
-  const sceneLabEnabled = process.env.NODE_ENV !== 'production'
-    && sceneEditorEnabled
+  const sceneLabEnabled = sceneEditorEnabled
     && isSharedHeroVariant(variant, world, preset);
   const sceneWorldSpec = sceneLabEnabled ? sceneLabWorldDraft : worldSpec;
+  const heroStageAspectRatio = variant === 'hero' && sceneWorldSpec.guides.heroCrop
+    ? `${Math.max(1, sceneWorldSpec.guides.heroCrop.width)} / ${Math.max(1, sceneWorldSpec.guides.heroCrop.height)}`
+    : null;
   const defaultCameraMetrics = useMemo(
     () => createGhostlingSceneCameraMetrics(
       sceneWorldSpec,
@@ -1107,7 +1148,6 @@ export function GhostlingScene({
   const hasLiveMembers = liveCount > 0;
   const realtimeEnabled = !sceneLabEnabled && !realtimeDisabled && variant === 'hero' && world === 'shared-commons' && preset === 'public-hero';
   const authoritativeHeroMode = isSharedHeroVariant(variant, world, preset) && !sceneLabEnabled && !realtimeDisabled;
-  const fixedCropCamera = usesFixedCropCamera(variant);
   const sceneLabSandboxPayload = useMemo(() => (
     sceneEditorSandboxPayload && sceneLabGhostCount === (sceneEditorSandboxPayload.members.length || 0)
       ? sceneEditorSandboxPayload
@@ -1147,6 +1187,11 @@ export function GhostlingScene({
   useEffect(() => {
     sceneLabRedoStackRef.current = sceneLabRedoStack;
   }, [sceneLabRedoStack]);
+
+  useEffect(() => {
+    if (!sceneLabEnabled) return;
+    setSceneLabPreviewMode(initialPayload ? 'live' : 'sandbox');
+  }, [initialPayload, sceneLabEnabled]);
 
   const createSceneLabSnapshot = useCallback(() => cloneGhostlingSceneLabSnapshot({
     worldDraft: sceneLabWorldDraftRef.current,
@@ -1471,6 +1516,7 @@ export function GhostlingScene({
         profile,
         memberIndex,
         member.source === 'fallback',
+        member.source,
       );
       const signature = `${member.activity.lastSeenAt}:${member.source}`;
       const restoredEntity = sharedSnapshotEntities?.get(member.key);
@@ -1503,6 +1549,7 @@ export function GhostlingScene({
               preferredPointKey,
               {
                 fallback: member.source === 'fallback',
+                source: member.source,
                 peers: scenePeers,
                 actorMetrics: member.companion?.actorMetrics,
               },
@@ -1525,6 +1572,7 @@ export function GhostlingScene({
             preferredPointKey,
             {
               fallback: member.source === 'fallback',
+              source: member.source,
               peers: scenePeers,
             },
           );
@@ -1599,6 +1647,7 @@ export function GhostlingScene({
                 preferredPointKey,
                 {
                   fallback: member.source === 'fallback',
+                  source: member.source,
                   peers: scenePeers,
                 },
               )
@@ -1623,6 +1672,7 @@ export function GhostlingScene({
             preferredPointKey,
             {
               fallback: member.source === 'fallback',
+              source: member.source,
               peers: scenePeers,
             },
           );
@@ -1664,6 +1714,7 @@ export function GhostlingScene({
             preferredPointKey,
             {
               fallback: member.source === 'fallback',
+              source: member.source,
               peers: scenePeers,
             },
           ),
@@ -2131,6 +2182,7 @@ export function GhostlingScene({
             removing: entity.removing,
             reducedMotion: prefersReducedMotion,
             fallback: entity.fallback,
+            source: entity.source,
           });
           Object.assign(entity, next);
           entity.displayX = entity.x;
@@ -2149,6 +2201,15 @@ export function GhostlingScene({
         const wrapEl = wraps.get(entity.key) ?? null;
         const visualEl = visuals.get(entity.key) ?? null;
         const state = sceneStateForEntity(entity, hoveredKeyRef.current, nowTs, liveCountRef.current > 0);
+        const presenceActive = isScenePresenceActive(entity, sceneLabEnabled);
+        const presenceOpacity = scenePresenceVisualOpacity({
+          active: presenceActive,
+          hovered: state === 'hovered',
+        });
+        const presenceTone = scenePresenceVisualTone({
+          active: presenceActive,
+          hovered: state === 'hovered',
+        });
         const displayX = authoritativeHeroMode ? entity.displayX : entity.x;
         const displayY = authoritativeHeroMode ? entity.displayY : entity.y;
         const displayRenderScale = authoritativeHeroMode ? entity.displayRenderScale : entity.renderScale;
@@ -2174,9 +2235,14 @@ export function GhostlingScene({
           wrapEl.style.setProperty('--ghost-size', `${desiredGhostSize}px`);
           wrapEl.style.setProperty('--ghost-label-nudge', `${labelNudge.toFixed(2)}px`);
           wrapEl.style.setProperty('--ghost-label-anchor-x', `${visibleExtents.left.toFixed(2)}px`);
+          wrapEl.style.setProperty('--ghost-presence-opacity', presenceOpacity.toFixed(2));
+          wrapEl.style.setProperty('--ghost-presence-grayscale', String(presenceTone.grayscale));
+          wrapEl.style.setProperty('--ghost-presence-saturate', String(presenceTone.saturate));
+          wrapEl.style.setProperty('--ghost-presence-brightness', String(presenceTone.brightness));
           wrapEl.style.width = `${visibleExtents.width}px`;
           wrapEl.style.height = `${visibleExtents.height}px`;
           wrapEl.dataset.sceneState = state;
+          wrapEl.dataset.presenceActive = presenceActive ? 'true' : 'false';
           wrapEl.dataset.source = entity.source;
           wrapEl.dataset.zone = entity.safeZoneKey;
           wrapEl.dataset.scaleTier = String(entity.scaleTier);
@@ -2238,10 +2304,23 @@ export function GhostlingScene({
     sceneWorldSpec,
   ]);
 
-  const renderedMembers = renderMembers.map((entity) => ({
-    entity,
-    state: sceneStateForRenderEntity(entity, hoveredKey, renderNow, hasLiveMembers),
-  }));
+  const renderedMembers = renderMembers.map((entity) => {
+    const state = sceneStateForRenderEntity(entity, hoveredKey, renderNow, hasLiveMembers);
+    const presenceActive = isScenePresenceActive(entity, sceneLabEnabled);
+    return {
+      entity,
+      state,
+      presenceActive,
+      presenceOpacity: scenePresenceVisualOpacity({
+        active: presenceActive,
+        hovered: state === 'hovered',
+      }),
+      presenceTone: scenePresenceVisualTone({
+        active: presenceActive,
+        hovered: state === 'hovered',
+      }),
+    };
+  });
   const metrics = renderMetrics;
   const sceneLabMemberDiagnostics: GhostlingSceneLabMemberDiagnostic[] = sceneLabEnabled
     ? renderMembers
@@ -2295,6 +2374,10 @@ export function GhostlingScene({
         data-live={hasLiveMembers ? 'true' : 'false'}
         data-reduced-motion={prefersReducedMotion ? 'true' : 'false'}
         data-scene-lab={sceneLabEnabled ? 'true' : 'false'}
+        data-hero-crop-aspect={heroStageAspectRatio ?? undefined}
+        style={heroStageAspectRatio
+          ? { aspectRatio: heroStageAspectRatio }
+          : undefined}
       >
         {sceneWorldSpec.layers.map((layer) => (
           <img
@@ -2306,11 +2389,10 @@ export function GhostlingScene({
             data-layer={layer.key}
             style={{
               zIndex: layer.zIndex,
-              left: fixedCropCamera ? '50%' : `${metrics.offsetX}px`,
+              left: `${metrics.offsetX}px`,
               top: `${metrics.offsetY}px`,
               width: `${metrics.renderWidth}px`,
               height: `${metrics.renderHeight}px`,
-              transform: fixedCropCamera ? 'translateX(-50%)' : undefined,
             }}
           />
         ))}
@@ -2327,7 +2409,7 @@ export function GhostlingScene({
           role="img"
           aria-label="Ghostlings representing live members and recent clan activity"
         >
-          {renderedMembers.map(({ entity, state }) => {
+          {renderedMembers.map(({ entity, state, presenceActive, presenceOpacity, presenceTone }) => {
             const isInteractive = !entity.fallback;
             const desiredGhostSize = resolveGhostlingSceneDisplaySize(entity.renderScale, metrics.scale);
             const actorMetrics = resolveGhostlingActorMetricsFromCompanion(entity.companion);
@@ -2350,11 +2432,16 @@ export function GhostlingScene({
                 data-source={entity.source}
                 data-zone={entity.safeZoneKey}
                 data-scale-tier={entity.scaleTier}
+                data-presence-active={presenceActive ? 'true' : 'false'}
                 tabIndex={isInteractive ? 0 : -1}
                 style={{
                   ['--ghost-size' as string]: `${desiredGhostSize}px`,
                   ['--ghost-label-nudge' as string]: `${labelNudge}px`,
                   ['--ghost-label-anchor-x' as string]: `${visibleExtents.left}px`,
+                  ['--ghost-presence-opacity' as string]: String(presenceOpacity),
+                  ['--ghost-presence-grayscale' as string]: String(presenceTone.grayscale),
+                  ['--ghost-presence-saturate' as string]: String(presenceTone.saturate),
+                  ['--ghost-presence-brightness' as string]: String(presenceTone.brightness),
                   width: `${visibleExtents.width}px`,
                   height: `${visibleExtents.height}px`,
                   opacity: entity.opacity,
@@ -2434,7 +2521,6 @@ export function GhostlingScene({
             camera={metrics}
             bucket={metrics.bucket}
             members={renderedMembers.map(({ entity }) => entity)}
-            fixedCrop={fixedCropCamera}
           />
         ) : null}
         {sceneLabEnabled ? (

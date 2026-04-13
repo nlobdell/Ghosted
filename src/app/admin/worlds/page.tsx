@@ -35,6 +35,11 @@ function boolLabel(value: boolean) {
   return value ? 'Yes' : 'No';
 }
 
+function rectLabel(rect?: { x: number; y: number; width: number; height: number } | null) {
+  if (!rect) return 'Not set';
+  return `${rect.x}, ${rect.y}, ${rect.width}x${rect.height}`;
+}
+
 export default function AdminWorldsPage() {
   const [data, setData] = useState<AdminWorldData | null>(null);
   const [draftTuning, setDraftTuning] = useState<GhostlingSceneTuningSpec | null>(null);
@@ -403,6 +408,7 @@ export default function AdminWorldsPage() {
               ['Repo asset root', data.world.repoAssetRoot],
               ['Draft changes pending', boolLabel(draftHasChanges)],
               ['Published variant exists', boolLabel(data.world.hasPublishedVariant)],
+              ['Published hero crop', rectLabel(data.publishedWorld.guides.heroCrop)],
             ]}
           />
         </AdminPaneSection>
@@ -411,6 +417,7 @@ export default function AdminWorldsPage() {
           <AdminKeyValueList
             items={[
               ['Canvas', `${data.draftWorld.sourceWidth} x ${data.draftWorld.sourceHeight}`],
+              ['Hero crop', rectLabel(data.draftWorld.guides.heroCrop)],
               ['Safe zones', String(data.draftWorld.safeZones.length)],
               ['Anchors', String(data.draftWorld.points.length)],
               ['Layer order', draftLayerOrder],

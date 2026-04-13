@@ -83,6 +83,14 @@ export function worldAssetDir() {
   return path.join(path.dirname(defaultDatabasePath()), 'world-assets');
 }
 
+function repoWorldPackagePath(worldId: GhostlingWorldId) {
+  if (worldId === 'shared-commons') {
+    return path.join(/*turbopackIgnore: true*/ process.cwd(), 'src', 'lib', 'worlds', 'shared-commons.world.json');
+  }
+
+  throw new AppError(`Unsupported world "${worldId}".`, 404);
+}
+
 export function repoWorldAssetDir() {
   return path.join(/*turbopackIgnore: true*/ process.cwd(), 'public');
 }
@@ -429,6 +437,15 @@ export function resolvePublishedGhostlingWorld(
   worldId: GhostlingWorldId,
 ) {
   return bindWorldPackageUrls(publishedWorldPackageInternal(db, worldId));
+}
+
+export function resolveRepoGhostlingWorld(
+  worldId: GhostlingWorldId,
+) {
+  const packagePath = repoWorldPackagePath(worldId);
+  const packageText = fs.readFileSync(packagePath, 'utf8');
+  const worldPackage = JSON.parse(packageText) as GhostlingWorldPackageFile;
+  return loadGhostlingWorldSpec(worldPackage);
 }
 
 export function resolveDraftGhostlingWorld(

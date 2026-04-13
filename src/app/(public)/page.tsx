@@ -15,6 +15,7 @@ import {
   resolveDraftGhostlingWorldTuning,
   resolvePublishedGhostlingWorld,
   resolvePublishedGhostlingWorldTuning,
+  resolveRepoGhostlingWorld,
 } from '@/lib/server/scene-worlds';
 import { getServerJSON } from '@/lib/server-api';
 import type { CompanionPreviewSummary, NewsPost, ScenePresencePayload, ShellData } from '@/lib/types';
@@ -62,15 +63,20 @@ export default async function HomePage({
     && params.sceneFixture === 'visual-baseline'
     ? 'visual-baseline'
     : null;
-  const previewRequested = process.env.NODE_ENV !== 'production'
+  const draftPreviewRequested = process.env.NODE_ENV !== 'production'
     && params.worldPreview === 'shared-commons:draft';
-  const currentUser = (previewRequested || sceneEditorRequested) ? await getCurrentUser() : null;
-  const worldPreviewEnabled = Boolean(previewRequested && currentUser?.is_admin);
+  const repoPreviewEnabled = process.env.NODE_ENV !== 'production'
+    && params.worldPreview === 'shared-commons:repo';
+  const currentUser = (draftPreviewRequested || sceneEditorRequested) ? await getCurrentUser() : null;
+  const draftPreviewEnabled = Boolean(draftPreviewRequested && currentUser?.is_admin);
+  const worldPreviewEnabled = draftPreviewEnabled || repoPreviewEnabled;
   const db = getDatabase();
-  const runtimeWorld = worldPreviewEnabled
-    ? resolveDraftGhostlingWorld(db, 'shared-commons')
-    : resolvePublishedGhostlingWorld(db, 'shared-commons');
-  const runtimeTuning = worldPreviewEnabled
+  const runtimeWorld = repoPreviewEnabled
+    ? resolveRepoGhostlingWorld('shared-commons')
+    : draftPreviewEnabled
+      ? resolveDraftGhostlingWorld(db, 'shared-commons')
+      : resolvePublishedGhostlingWorld(db, 'shared-commons');
+  const runtimeTuning = draftPreviewEnabled
     ? resolveDraftGhostlingWorldTuning(db, 'shared-commons')
     : resolvePublishedGhostlingWorldTuning(db, 'shared-commons');
   const [newsPayload, shellData, livePresencePayload, fallbackCompanion] = await Promise.all([

@@ -4,7 +4,7 @@ import type {
   GhostlingWorldSpec,
 } from '@/lib/ghostling-world';
 
-export type GhostlingSceneCameraGuideMode = 'safe-area' | 'center-safe' | 'ultrawide-bleed' | 'fixed-crop';
+export type GhostlingSceneCameraGuideMode = 'safe-area' | 'center-safe' | 'ultrawide-bleed' | 'fixed-crop' | 'hero-crop';
 export type GhostlingSceneCameraLayout = 'responsive-fit' | 'fixed-crop';
 
 export interface GhostlingSceneCameraMetrics {
@@ -84,18 +84,15 @@ function resolveGuideViewport(
   };
 }
 
-export function createGhostlingSceneCameraMetrics(
+function createFixedCropCameraMetrics(
   world: GhostlingWorldSpec,
-  viewportWidth: number,
-  viewportHeight: number,
+  width: number,
+  height: number,
   bucket: GhostlingSceneDensityBucket,
-  layout: GhostlingSceneCameraLayout = 'responsive-fit',
 ): GhostlingSceneCameraMetrics {
-  const width = Math.max(1, viewportWidth);
-  const height = Math.max(1, viewportHeight);
-  const viewportAspect = width / height;
-  if (layout === 'fixed-crop') {
-    const scale = 2;
+  const cropRect = world.guides.heroCrop;
+  if (!cropRect) {
+    const scale = 1;
     const renderWidth = world.sourceWidth * scale;
     const renderHeight = world.sourceHeight * scale;
     const offsetX = (width - renderWidth) / 2;
@@ -113,7 +110,7 @@ export function createGhostlingSceneCameraMetrics(
     return {
       width,
       height,
-      viewportAspect,
+      viewportAspect: width / height,
       bucket,
       worldViewport,
       scale,
@@ -123,9 +120,71 @@ export function createGhostlingSceneCameraMetrics(
       renderHeight,
       offsetX,
       offsetY,
-      guideMode: 'center-safe',
+      guideMode: 'fixed-crop',
       labelSafeTopPx,
     };
+  }
+
+  // Treat heroCrop as the authored camera target. We "cover" the stage with
+  // that rect so shrinking either crop dimension can increase the effective zoom.
+  const scale = Math.max(
+    width / Math.max(1, cropRect.width),
+    height / Math.max(1, cropRect.height),
+  );
+  const renderWidth = world.sourceWidth * scale;
+  const renderHeight = world.sourceHeight * scale;
+  const viewportWidthInWorld = Math.min(world.sourceWidth, width / scale);
+  const viewportHeightInWorld = Math.min(world.sourceHeight, height / scale);
+  const desiredViewportX = (cropRect.x + (cropRect.width / 2)) - (viewportWidthInWorld / 2);
+  // Preserve the authored crop bottom as the stable floor anchor so tighter
+  // zooms don't unexpectedly cut the scene off below the Ghostlings.
+  const desiredViewportY = (cropRect.y + cropRect.height) - viewportHeightInWorld;
+  const worldViewport: GhostlingWorldRect = {
+    x: clamp(desiredViewportX, 0, Math.max(0, world.sourceWidth - viewportWidthInWorld)),
+    y: clamp(desiredViewportY, 0, Math.max(0, world.sourceHeight - viewportHeightInWorld)),
+    width: viewportWidthInWorld,
+    height: viewportHeightInWorld,
+  };
+  const offsetX = renderWidth > width
+    ? -(worldViewport.x * scale)
+    : (width - renderWidth) / 2;
+  const offsetY = renderHeight > height
+    ? -(worldViewport.y * scale)
+    : (height - renderHeight) / 2;
+  const labelSafeTopPx = world.guides.labelSafeTop
+    ? offsetY + ((world.guides.labelSafeTop.y + world.guides.labelSafeTop.height) * scale)
+    : null;
+
+  return {
+    width,
+    height,
+    viewportAspect: width / height,
+    bucket,
+    worldViewport,
+    scale,
+    scaleX: scale,
+    scaleY: scale,
+    renderWidth,
+    renderHeight,
+    offsetX,
+    offsetY,
+    guideMode: 'hero-crop',
+    labelSafeTopPx,
+  };
+}
+
+export function createGhostlingSceneCameraMetrics(
+  world: GhostlingWorldSpec,
+  viewportWidth: number,
+  viewportHeight: number,
+  bucket: GhostlingSceneDensityBucket,
+  layout: GhostlingSceneCameraLayout = 'responsive-fit',
+): GhostlingSceneCameraMetrics {
+  const width = Math.max(1, viewportWidth);
+  const height = Math.max(1, viewportHeight);
+  const viewportAspect = width / height;
+  if (layout === 'fixed-crop') {
+    return createFixedCropCameraMetrics(world, width, height, bucket);
   }
 
   const guideViewport = resolveGuideViewport(world, viewportAspect);

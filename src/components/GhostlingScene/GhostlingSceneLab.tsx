@@ -11,9 +11,12 @@ import {
 } from 'react';
 import {
   DEFAULT_GHOSTLING_SCENE_LAB_OVERLAY_VISIBILITY,
+  addGhostlingWorldAnchor,
   clampGhostlingWorldRect,
   exportGhostlingSceneLabSession,
   exportGhostlingWorldDraft,
+  removeGhostlingWorldAnchor,
+  resolveGhostlingSceneLabHeroCrop,
   type GhostlingSceneLabOverlayKey,
   type GhostlingSceneLabOverlayVisibility,
   type GhostlingSceneLabPreviewMode,
@@ -77,6 +80,7 @@ type DragState =
       kind: 'rect';
       selection: RectSelectionKey;
       handle: DragHandle;
+      surface: 'stage' | 'world-preview';
       startClientX: number;
       startClientY: number;
       originRect: GhostlingWorldRect;
@@ -129,12 +133,13 @@ type GhostlingSceneLabProps = {
   onRefreshLive: () => void;
 };
 
-const GUIDE_RECT_KEYS = ['safeArea', 'centerSafe', 'ultrawideBleed', 'labelSafeTop'] as const;
+const GUIDE_RECT_KEYS = ['safeArea', 'centerSafe', 'ultrawideBleed', 'heroCrop', 'labelSafeTop'] as const;
 const TUNING_BUCKETS: GhostlingSceneDensityBucket[] = ['desktop', 'tablet', 'mobile'];
 const GUIDE_SELECTION_LABELS = {
   safeArea: 'Safe area',
   centerSafe: 'Center safe',
   ultrawideBleed: 'Bleed',
+  heroCrop: 'Hero crop',
   labelSafeTop: 'Label safe',
   horizonY: 'Horizon',
   floorY: 'Floor line',
@@ -177,6 +182,10 @@ function selectedRect(
 ): GhostlingWorldRect | null {
   if (selection.kind === 'safe-zone') {
     return worldDraft.safeZones.find((safeZone) => safeZone.key === selection.key)?.bounds ?? null;
+  }
+
+  if (selection.key === 'heroCrop') {
+    return resolveGhostlingSceneLabHeroCrop(worldDraft);
   }
 
   const guideValue = worldDraft.guides[selection.key];
@@ -330,6 +339,7 @@ export function GhostlingSceneLab({
   );
   const dragRef = useRef<DragState | null>(null);
   const overlayRef = useRef<SVGSVGElement | null>(null);
+  const worldPreviewRef = useRef<SVGSVGElement | null>(null);
 
   useEffect(() => {
     setTuningBucket(bucket);
@@ -368,6 +378,11 @@ export function GhostlingSceneLab({
       : null),
     [memberDiagnostics, selection],
   );
+  const effectiveHeroCrop = useMemo(
+    () => resolveGhostlingSceneLabHeroCrop(worldDraft),
+    [worldDraft],
+  );
+  const selectedFallback = selection?.kind === 'fallback-anchor';
   const bucketSettings = tuningDraft.buckets[tuningBucket];
   const authoredItems = useMemo<SceneLabObjectItem[]>(() => ([
     ...worldDraft.points.map((point) => ({
@@ -405,14 +420,16 @@ export function GhostlingSceneLab({
         meta: guideKey === 'horizonY' || guideKey === 'floorY'
           ? String(worldDraft.guides[guideKey])
           : (() => {
-              const rect = worldDraft.guides[guideKey];
+              const rect = guideKey === 'heroCrop'
+                ? effectiveHeroCrop
+                : worldDraft.guides[guideKey];
               if (!rect) {
                 return '0, 0, 0x0';
               }
               return `${rect.x}, ${rect.y}, ${rect.width}x${rect.height}`;
             })(),
       })),
-  ]), [worldDraft]);
+  ]), [effectiveHeroCrop, worldDraft]);
   const memberItems = useMemo<SceneLabObjectItem[]>(() => (
     memberDiagnostics.map((member) => ({
       id: `member:${member.key}`,
@@ -442,12 +459,56 @@ export function GhostlingSceneLab({
     return groups;
   }, []), [filteredItems]);
   const activeSelectionKey = selectionKey(selection);
+  const canRemoveAnchor = Boolean(selectedAnchor) && worldDraft.points.length > 1;
   const toggleOverlayVisibility = useCallback((key: GhostlingSceneLabOverlayKey) => {
     setOverlayVisibility((current) => ({
       ...current,
       [key]: !current[key],
     }));
   }, []);
+  const handleAddAnchor = useCallback(() => {
+    let createdKey = '';
+    const selectedAnchorPoint = selection?.kind === 'anchor'
+      ? worldDraft.points.find((point) => point.key === selection.key) ?? null
+      : null;
+    const selectedSafeZoneKey = selection?.kind === 'safe-zone'
+      ? selection.key
+      : selectedAnchorPoint?.safeZoneKey
+        ?? worldDraft.safeZones[0]?.key
+        ?? null;
+
+    if (!selectedSafeZoneKey) return;
+
+    updateWorldDraft((current) => {
+      const created = addGhostlingWorldAnchor(current, {
+        safeZoneKey: selectedSafeZoneKey,
+        afterKey: selectedAnchorPoint?.key ?? null,
+      });
+      createdKey = created.key;
+      return created.world;
+    }, { history: 'immediate' });
+
+    if (createdKey) {
+      onSelectionChange({ kind: 'anchor', key: createdKey });
+    }
+  }, [onSelectionChange, selection, updateWorldDraft, worldDraft.points, worldDraft.safeZones]);
+  const handleRemoveAnchor = useCallback(() => {
+    if (!selectedAnchor || worldDraft.points.length <= 1) return;
+
+    let nextSelectionKey: string | null = null;
+    updateWorldDraft((current) => {
+      const result = removeGhostlingWorldAnchor(current, selectedAnchor.key);
+      nextSelectionKey = result.nextSelectionKey;
+      return result.world;
+    }, { history: 'immediate' });
+
+    if (nextSelectionKey) {
+      onSelectionChange({ kind: 'anchor', key: nextSelectionKey });
+      return;
+    }
+
+    onSelectionChange({ kind: 'safe-zone', key: selectedAnchor.safeZoneKey });
+  }, [onSelectionChange, selectedAnchor, updateWorldDraft, worldDraft.points.length]);
 
   const navigateBrowser = (delta: number) => {
     if (filteredItems.length === 0) return;
@@ -481,6 +542,22 @@ export function GhostlingSceneLab({
   };
 
   const resolveWorldDragDelta = useCallback((drag: DragState, clientX: number, clientY: number) => {
+    if (drag.kind === 'rect' && drag.surface === 'world-preview') {
+      const element = worldPreviewRef.current;
+      const rect = element?.getBoundingClientRect();
+      const width = rect && rect.width > 0
+        ? rect.width
+        : element?.clientWidth || worldDraft.sourceWidth;
+      const height = rect && rect.height > 0
+        ? rect.height
+        : element?.clientHeight || worldDraft.sourceHeight;
+
+      return {
+        dx: Math.round(((clientX - drag.startClientX) / Math.max(1, width)) * worldDraft.sourceWidth),
+        dy: Math.round(((clientY - drag.startClientY) / Math.max(1, height)) * worldDraft.sourceHeight),
+      };
+    }
+
     const rect = overlayRef.current?.getBoundingClientRect();
     if (rect && rect.width > 0 && rect.height > 0) {
       const startWorld = unprojectGhostlingScreenPoint(
@@ -504,7 +581,7 @@ export function GhostlingSceneLab({
       dx: Math.round((clientX - drag.startClientX) / Math.max(0.001, camera.scaleX)),
       dy: Math.round((clientY - drag.startClientY) / Math.max(0.001, camera.scaleY)),
     };
-  }, [camera]);
+  }, [camera, worldDraft.sourceHeight, worldDraft.sourceWidth]);
 
   useEffect(() => {
     const onPointerMove = (event: PointerEvent) => {
@@ -705,6 +782,7 @@ export function GhostlingSceneLab({
     selectionKey: RectSelectionKey,
     handle: DragHandle,
     rect: GhostlingWorldRect,
+    surface: 'stage' | 'world-preview' = 'stage',
   ) => {
     event.preventDefault();
     onSelectionChange(selectionKey);
@@ -713,6 +791,7 @@ export function GhostlingSceneLab({
       kind: 'rect',
       selection: selectionKey,
       handle,
+      surface,
       startClientX: event.clientX,
       startClientY: event.clientY,
       originRect: { ...rect },
@@ -779,9 +858,37 @@ export function GhostlingSceneLab({
           );
         }) : null}
         {overlayVisibility['guide-rects'] ? GUIDE_RECT_KEYS.map((guideKey) => {
-          const rect = worldDraft.guides[guideKey];
+          const rect = guideKey === 'heroCrop'
+            ? effectiveHeroCrop
+            : worldDraft.guides[guideKey];
           if (!rect) return null;
           const selected = selection?.kind === 'guide' && selection.key === guideKey;
+          if (guideKey === 'heroCrop' && camera.guideMode === 'hero-crop') {
+            return (
+              <g key={guideKey}>
+                <rect
+                  data-scene-lab-role="hero-crop-stage-frame"
+                  x={0}
+                  y={0}
+                  width={camera.width}
+                  height={camera.height}
+                  className={`${styles.sceneLabGuideRect} ${styles.sceneLabHeroCropStageFrame}`}
+                  data-selected={selected ? 'true' : 'false'}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    onSelectionChange({ kind: 'guide', key: 'heroCrop' });
+                  }}
+                />
+                <text
+                  x={14}
+                  y={22}
+                  className={styles.sceneLabHeroCropStageLabel}
+                >
+                  Hero crop
+                </text>
+              </g>
+            );
+          }
           const projectedRect = projectGhostlingWorldRect(camera, rect);
           return (
             <g key={guideKey}>
@@ -894,6 +1001,12 @@ export function GhostlingSceneLab({
             <button type="button" data-testid="scene-lab-tab-authored" className={styles.sceneLabChip} data-selected={activeTab === 'authored' ? 'true' : 'false'} onClick={() => onActiveTabChange('authored')}>Authored</button>
             <button type="button" data-testid="scene-lab-tab-members" className={styles.sceneLabChip} data-selected={activeTab === 'members' ? 'true' : 'false'} onClick={() => onActiveTabChange('members')}>Members</button>
           </div>
+          {activeTab === 'authored' ? (
+            <div className={styles.sceneLabButtonRow}>
+              <button type="button" data-testid="scene-lab-add-anchor" className={styles.sceneLabButton} onClick={handleAddAnchor}>Add anchor</button>
+              <button type="button" data-testid="scene-lab-remove-anchor" className={styles.sceneLabButton} disabled={!canRemoveAnchor} onClick={handleRemoveAnchor}>Remove anchor</button>
+            </div>
+          ) : null}
           <div className={styles.sceneLabSearchRow}>
             <input
               data-testid="scene-lab-search"
@@ -1003,8 +1116,76 @@ export function GhostlingSceneLab({
               <div>{`distance=${selectedMember.distanceToTarget.toFixed(1)}`}</div>
               <div>{`crowding=${selectedMember.crowding.toFixed(2)}`}</div>
             </div>
-          ) : !selectedAnchor && !selectedSafeZone && !selectedGuideRect && selection?.kind !== 'fallback-anchor' ? (
+          ) : !selectedAnchor && !selectedSafeZone && !selectedGuideRect && !selectedFallback ? (
             <div className={styles.sceneLabMeta}>Select an authored object or member to inspect it.</div>
+          ) : null}
+          {effectiveHeroCrop ? (
+            <div className={styles.sceneLabCropPreviewBox}>
+              <div className={styles.sceneLabSectionTitle}>Export Frame</div>
+              <svg
+                ref={worldPreviewRef}
+                data-testid="scene-lab-hero-crop-preview"
+                className={styles.sceneLabCropPreview}
+                viewBox={`0 0 ${worldDraft.sourceWidth} ${worldDraft.sourceHeight}`}
+                preserveAspectRatio="xMidYMid meet"
+              >
+                <rect
+                  x="0"
+                  y="0"
+                  width={worldDraft.sourceWidth}
+                  height={worldDraft.sourceHeight}
+                  className={styles.sceneLabCropPreviewCanvas}
+                />
+                {worldDraft.safeZones.map((safeZone) => (
+                  <rect
+                    key={safeZone.key}
+                    x={safeZone.bounds.x}
+                    y={safeZone.bounds.y}
+                    width={safeZone.bounds.width}
+                    height={safeZone.bounds.height}
+                    className={styles.sceneLabCropPreviewZone}
+                  />
+                ))}
+                {worldDraft.points.map((point) => (
+                  <circle
+                    key={point.key}
+                    cx={point.x}
+                    cy={point.y}
+                    r="6"
+                    className={styles.sceneLabCropPreviewAnchor}
+                  />
+                ))}
+                <rect
+                  data-scene-lab-role="hero-crop-preview-rect"
+                  x={effectiveHeroCrop.x}
+                  y={effectiveHeroCrop.y}
+                  width={effectiveHeroCrop.width}
+                  height={effectiveHeroCrop.height}
+                  className={styles.sceneLabCropPreviewFrame}
+                  data-selected={selection?.kind === 'guide' && selection.key === 'heroCrop' ? 'true' : 'false'}
+                  onPointerDown={(event) => beginRectDrag(event, { kind: 'guide', key: 'heroCrop' }, 'move', effectiveHeroCrop, 'world-preview')}
+                />
+                {(['nw', 'ne', 'sw', 'se'] as const).map((handle) => {
+                  const heroCrop = effectiveHeroCrop;
+                  const x = handle.includes('w') ? heroCrop.x : heroCrop.x + heroCrop.width;
+                  const y = handle.includes('n') ? heroCrop.y : heroCrop.y + heroCrop.height;
+                  return (
+                    <rect
+                      key={`hero-crop-preview:${handle}`}
+                      data-scene-lab-role="hero-crop-preview-handle"
+                      x={x - 8}
+                      y={y - 8}
+                      width="16"
+                      height="16"
+                      className={styles.sceneLabHandle}
+                      data-selected={selection?.kind === 'guide' && selection.key === 'heroCrop' ? 'true' : 'false'}
+                      onPointerDown={(event) => beginRectDrag(event, { kind: 'guide', key: 'heroCrop' }, handle, heroCrop, 'world-preview')}
+                    />
+                  );
+                })}
+              </svg>
+              <div className={styles.sceneLabMeta}>Hero crop drives the published hero camera. Edit it here for export framing.</div>
+            </div>
           ) : null}
         </div>
 

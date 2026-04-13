@@ -55,7 +55,8 @@
 
 .sceneStage[data-variant='hero'] {
   width: 100%;
-  height: min(700px);
+  aspect-ratio: 9 / 2;
+  height: auto;
   border-top: 1px solid rgba(191, 179, 255, 0.16);
   border-bottom: 1px solid rgba(191, 179, 255, 0.16);
   box-shadow:
@@ -154,6 +155,23 @@
   stroke: rgba(132, 202, 255, 0.72);
   stroke-width: 1;
   stroke-dasharray: 6 4;
+}
+
+.sceneLabHeroCropStageFrame {
+  fill: rgba(132, 202, 255, 0.03);
+  stroke: rgba(132, 202, 255, 0.92);
+  stroke-width: 2;
+  stroke-dasharray: 10 6;
+}
+
+.sceneLabHeroCropStageLabel {
+  fill: rgba(250, 247, 255, 0.94);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  pointer-events: none;
 }
 
 .sceneLabGuideLine {
@@ -267,6 +285,55 @@
   border: 1px solid rgba(191, 179, 255, 0.12);
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.02);
+}
+
+.sceneLabCropPreviewBox {
+  display: grid;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(191, 179, 255, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sceneLabCropPreview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 9 / 2;
+  border: 1px solid rgba(191, 179, 255, 0.14);
+  border-radius: 0.9rem;
+  background: rgba(5, 5, 8, 0.92);
+  overflow: visible;
+}
+
+.sceneLabCropPreviewCanvas {
+  fill: rgba(11, 10, 16, 0.95);
+}
+
+.sceneLabCropPreviewZone {
+  fill: rgba(255, 110, 160, 0.08);
+  stroke: rgba(255, 110, 160, 0.28);
+  stroke-width: 2;
+}
+
+.sceneLabCropPreviewAnchor {
+  fill: rgba(149, 216, 255, 0.75);
+  stroke: rgba(9, 9, 12, 0.94);
+  stroke-width: 3;
+}
+
+.sceneLabCropPreviewFrame {
+  fill: rgba(132, 202, 255, 0.08);
+  stroke: rgba(132, 202, 255, 0.92);
+  stroke-width: 3;
+  stroke-dasharray: 18 12;
+  cursor: move;
+}
+
+.sceneLabCropPreviewFrame[data-selected='true'] {
+  stroke: #fff7d1;
+  stroke-width: 4;
 }
 
 .sceneLabVisibilityList {
@@ -405,6 +472,7 @@
   top: 0;
   left: 0;
   display: block;
+  --ghost-presence-opacity: 1;
   will-change: transform, opacity;
   contain: layout style;
   overflow: visible;
@@ -423,7 +491,7 @@
   border-radius: 999px;
   background: radial-gradient(circle, rgba(193, 183, 255, 0.28), transparent 74%);
   filter: blur(10px);
-  opacity: 0.12;
+  opacity: calc(0.12 * var(--ghost-presence-opacity, 1));
   transition:
     opacity 180ms ease,
     transform 180ms ease,
@@ -438,7 +506,14 @@
   display: grid;
   place-items: center;
   pointer-events: none;
-  transition: filter 180ms ease;
+  opacity: var(--ghost-presence-opacity, 1);
+  filter:
+    grayscale(var(--ghost-presence-grayscale, 0))
+    saturate(var(--ghost-presence-saturate, 1))
+    brightness(var(--ghost-presence-brightness, 1));
+  transition:
+    filter 180ms ease,
+    opacity 180ms ease;
   will-change: transform;
 }
 
@@ -508,20 +583,24 @@
 }
 
 .ghostWrap[data-scene-state='hovered'] .ghostVisual {
-  filter: drop-shadow(0 16px 24px rgba(135, 110, 255, 0.24));
+  filter:
+    grayscale(var(--ghost-presence-grayscale, 0))
+    saturate(var(--ghost-presence-saturate, 1))
+    brightness(var(--ghost-presence-brightness, 1))
+    drop-shadow(0 16px 24px rgba(135, 110, 255, 0.24));
 }
 
 .ghostWrap[data-scene-state='hovered'] .ghostAura {
-  opacity: 0.44;
+  opacity: calc(0.44 * var(--ghost-presence-opacity, 1));
   transform: translate(-50%, -54%);
 }
 
 .ghostWrap[data-scene-state='live-active'] .ghostAura {
-  opacity: 0.28;
+  opacity: calc(0.28 * var(--ghost-presence-opacity, 1));
 }
 
 .ghostWrap[data-scene-state='featured-mascot'] .ghostAura {
-  opacity: 0.34;
+  opacity: calc(0.34 * var(--ghost-presence-opacity, 1));
 }
 
 .ghostWrap[data-source='voice'] .ghostAura {
@@ -598,10 +677,6 @@
   .sceneStage[data-variant='section'] {
     min-height: 17rem;
   }
-
-  .sceneStage[data-variant='hero'] {
-    height: clamp(15rem, 26vw, 20rem);
-  }
 }
 
 @media (max-width: 640px) {
@@ -614,10 +689,6 @@
   .sceneStage[data-variant='section'] {
     min-height: 15rem;
     border-radius: 1.4rem;
-  }
-
-  .sceneStage[data-variant='hero'] {
-    height: clamp(14rem, 54vw, 18rem);
   }
 
   .sceneOverlay {

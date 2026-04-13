@@ -19,7 +19,7 @@ import {
   type GhostlingResolvedSceneTuning,
   type GhostlingSceneTuningSpec,
 } from '@/lib/ghostling-scene-tuning';
-import type { CompanionActorMetrics, GhostlingMovementPhase } from '@/lib/types';
+import type { CompanionActorMetrics, GhostlingMovementPhase, ScenePresenceMemberSource } from '@/lib/types';
 
 export type GhostlingSceneVariant = 'hero' | 'section';
 export type GhostlingSceneFallbackMode = 'single' | 'crowd';
@@ -76,6 +76,7 @@ type GhostlingSceneAdvanceOptions = {
   removing?: boolean;
   reducedMotion?: boolean;
   fallback?: boolean;
+  source?: ScenePresenceMemberSource;
 };
 
 type GhostlingPlacement = {
@@ -193,6 +194,26 @@ function pointInsideZone(
   return Math.abs(clamped.x - x) < 0.01 && Math.abs(clamped.y - y) < 0.01;
 }
 
+function sourceIsMuted(
+  source?: ScenePresenceMemberSource,
+) {
+  return source === 'wom';
+}
+
+function resolveTravelSpeed(
+  key: string,
+  targetSerial: number,
+  profile: GhostlingSceneProfile,
+  muted = false,
+) {
+  const speed = seededRange(
+    `${key}:speed:${targetSerial}`,
+    profile.speedMin,
+    profile.speedMax,
+  );
+  return muted ? speed * 0.78 : speed;
+}
+
 function roamRadii(
   placement: GhostlingPlacement,
   fallback = false,
@@ -252,12 +273,14 @@ function pauseDurationMs(
   targetSerial: number,
   profile: GhostlingSceneProfile,
   fallback = false,
+  muted = false,
 ) {
-  return Math.round(seededRange(
+  const duration = seededRange(
     `${key}:pause:${targetSerial}`,
     fallback ? 420 : profile.pauseMinMs,
     fallback ? 860 : profile.pauseMaxMs,
-  ));
+  );
+  return Math.round(muted ? duration * 1.45 : duration);
 }
 
 function fallbackZone(world: GhostlingWorldSpec): GhostlingWorldSafeZone {
@@ -561,6 +584,7 @@ function resolveNextPlacement(
   profile: GhostlingSceneProfile,
   crowding: number,
   fallback = false,
+  source: ScenePresenceMemberSource = 'voice',
 ) {
   if (fallback) {
     return fallbackPlacement(world);
@@ -583,19 +607,54 @@ function resolveNextPlacement(
     return placementForPoint(state, world, currentPoint);
   }
 
+  const effectiveAnchorHopChance = sourceIsMuted(source)
+    ? profile.anchorHopChance * 0.5
+    : profile.anchorHopChance;
   const shouldHop = crowding > 0.06
-    || seededRange(`${state.key}:anchor-hop:${state.targetSerial}`, 0, 1) < profile.anchorHopChance;
+    || seededRange(`${state.key}:anchor-hop:${state.targetSerial}`, 0, 1) < effectiveAnchorHopChance;
   if (!shouldHop) {
     return placementForPoint(state, world, currentPoint);
   }
 
-  const selectedIndex = Math.floor(
-    seededRange(`${state.key}:adjacent:${state.targetSerial}`, 0, adjacentPoints.length),
+  const centerX = world.fallbackAnchor.x;
+  const prioritizedPoints = [...adjacentPoints].sort((left, right) => {
+    const leftDistance = Math.abs(left.x - centerX);
+    const rightDistance = Math.abs(right.x - centerX);
+    return sourceIsMuted(source)
+      ? rightDistance - leftDistance
+      : leftDistance - rightDistance;
+  });
+  if (prioritizedPoints.length <= 1) {
+    return placementForPoint(
+      state,
+      world,
+      prioritizedPoints[0] ?? currentPoint,
+    );
+  }
+
+  const biasChanceBase = sourceIsMuted(source) ? 0.6 : 0.64;
+  const biasChance = clamp(
+    biasChanceBase + Math.min(0.18, crowding * 0.5),
+    0,
+    0.9,
   );
+  const biasRoll = seededRange(
+    `${state.key}:anchor-bias:${state.targetSerial}`,
+    0,
+    1,
+  );
+  const chosenPoint = biasRoll <= biasChance
+    ? prioritizedPoints[0]
+    : prioritizedPoints[
+      1 + Math.floor(
+        seededRange(`${state.key}:anchor-wander:${state.targetSerial}`, 0, prioritizedPoints.length - 1),
+      )
+    ];
+
   return placementForPoint(
     state,
     world,
-    adjacentPoints[Math.min(selectedIndex, adjacentPoints.length - 1)],
+    chosenPoint ?? currentPoint,
   );
 }
 
@@ -654,9 +713,13 @@ export function preferredGhostlingScenePointKey(
   profile: GhostlingSceneProfile,
   memberIndex: number,
   isFallback = false,
+  source: ScenePresenceMemberSource = 'voice',
 ) {
   if (isFallback) return SHARED_COMMONS_WORLD.fallbackAnchor.key;
-  return profile.pointOrder[memberIndex % Math.max(1, profile.pointOrder.length)] ?? SHARED_COMMONS_WORLD.fallbackAnchor.key;
+  const pointOrder = sourceIsMuted(source)
+    ? [...profile.pointOrder].reverse()
+    : profile.pointOrder;
+  return pointOrder[memberIndex % Math.max(1, pointOrder.length)] ?? SHARED_COMMONS_WORLD.fallbackAnchor.key;
 }
 
 export function resolveGhostlingSceneDisplaySize(
@@ -671,9 +734,15 @@ export function createGhostlingSceneMotionState(
   world: GhostlingWorldSpec,
   profile: GhostlingSceneProfile,
   preferredPointKey?: string,
-  options: { fallback?: boolean; peers?: GhostlingScenePeerState[]; actorMetrics?: CompanionActorMetrics } = {},
+  options: {
+    fallback?: boolean;
+    peers?: GhostlingScenePeerState[];
+    actorMetrics?: CompanionActorMetrics;
+    source?: ScenePresenceMemberSource;
+  } = {},
 ) {
   const actorMetrics = sceneActorMetrics(options.actorMetrics);
+  const muted = !options.fallback && sourceIsMuted(options.source);
   const placement = resolvePlacement(
     world,
     profile,
@@ -707,7 +776,7 @@ export function createGhostlingSceneMotionState(
     y: spawn.y,
     targetX: target.x,
     targetY: target.y,
-    speed: seededRange(`${key}:speed:0`, profile.speedMin, profile.speedMax),
+    speed: resolveTravelSpeed(key, 0, profile, muted),
     velocityX: 0,
     velocityY: 0,
     pauseRemainingMs: 0,
@@ -730,7 +799,7 @@ export function rehomeGhostlingSceneEntity(
   world: GhostlingWorldSpec,
   profile: GhostlingSceneProfile,
   preferredPointKey?: string,
-  options: { fallback?: boolean; peers?: GhostlingScenePeerState[] } = {},
+  options: { fallback?: boolean; peers?: GhostlingScenePeerState[]; source?: ScenePresenceMemberSource } = {},
 ) {
   const placement = resolvePlacement(
     world,
@@ -791,6 +860,7 @@ export function advanceGhostlingSceneEntity(
   next.opacity = clamp(state.opacity + (options.dtMs / fadeMs), 0, 1);
 
   const fallback = Boolean(options.fallback);
+  const muted = !fallback && sourceIsMuted(options.source);
   if (options.reducedMotion) {
     const placement = resolvePlacement(
       options.world,
@@ -880,7 +950,7 @@ export function advanceGhostlingSceneEntity(
     }
     if (next.pauseRemainingMs === 0) {
       next.targetSerial += 1;
-      const placement = resolveNextPlacement(next, options.world, options.profile, pausedCrowding, fallback);
+      const placement = resolveNextPlacement(next, options.world, options.profile, pausedCrowding, fallback, options.source);
       const target = resolveTargetPoint(
         next,
         options.world,
@@ -899,11 +969,7 @@ export function advanceGhostlingSceneEntity(
       next.phaseRemainingMs = 0;
       next.movementPhase = 'travel';
       next.jammedMs = 0;
-      next.speed = seededRange(
-        `${next.key}:speed:${next.targetSerial}`,
-        options.profile.speedMin,
-        options.profile.speedMax,
-      );
+      next.speed = resolveTravelSpeed(next.key, next.targetSerial, options.profile, muted);
     }
     if (next.pauseRemainingMs > 0) {
       next.renderScale = scaleForDepthPosition(options.world, next.y, fallback);
@@ -975,14 +1041,14 @@ export function advanceGhostlingSceneEntity(
       next.renderScale = scaleForDepthPosition(options.world, next.y, fallback);
       next.velocityX = 0;
       next.velocityY = 0;
-      next.pauseRemainingMs = pauseDurationMs(next.key, next.targetSerial, options.profile, fallback);
+      next.pauseRemainingMs = pauseDurationMs(next.key, next.targetSerial, options.profile, fallback, muted);
       next.phaseRemainingMs = next.pauseRemainingMs;
       next.movementPhase = 'paused';
       return next;
     }
 
     if (next.phaseRemainingMs === 0) {
-      next.pauseRemainingMs = pauseDurationMs(next.key, next.targetSerial, options.profile, fallback);
+      next.pauseRemainingMs = pauseDurationMs(next.key, next.targetSerial, options.profile, fallback, muted);
       next.phaseRemainingMs = next.pauseRemainingMs;
       next.movementPhase = 'paused';
       return next;
@@ -1053,7 +1119,7 @@ export function advanceGhostlingSceneEntity(
 
   if (!fallback && next.jammedMs >= options.profile.jamBreakoutMs) {
     next.targetSerial += 1;
-    const placement = resolveNextPlacement(next, options.world, options.profile, Math.max(0.16, crowding), false);
+    const placement = resolveNextPlacement(next, options.world, options.profile, Math.max(0.16, crowding), false, options.source);
     const target = resolveTargetPoint(
       next,
       options.world,
@@ -1073,11 +1139,7 @@ export function advanceGhostlingSceneEntity(
     next.phaseRemainingMs = 0;
     next.movementPhase = 'travel';
     next.jammedMs = 0;
-    next.speed = seededRange(
-      `${next.key}:speed:${next.targetSerial}`,
-      options.profile.speedMin,
-      options.profile.speedMax,
-    );
+    next.speed = resolveTravelSpeed(next.key, next.targetSerial, options.profile, muted);
     return next;
   }
 
@@ -1088,7 +1150,7 @@ export function advanceGhostlingSceneEntity(
     next.velocityX = 0;
     next.velocityY = 0;
     next.jammedMs = 0;
-    next.pauseRemainingMs = pauseDurationMs(next.key, next.targetSerial, options.profile, fallback);
+    next.pauseRemainingMs = pauseDurationMs(next.key, next.targetSerial, options.profile, fallback, muted);
     next.phaseRemainingMs = next.pauseRemainingMs;
     next.movementPhase = 'paused';
   }
