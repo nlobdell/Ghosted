@@ -235,6 +235,18 @@ function normalizeHeroWheelDelta(
   return delta;
 }
 
+function heroLayerParallaxFactor(layerKey: string) {
+  switch (layerKey) {
+    case 'sky':
+      return 0.42;
+    case 'midground':
+    case 'foreground':
+    case 'floor':
+    default:
+      return 1;
+  }
+}
+
 function detectHeroMobileViewport() {
   if (typeof window === 'undefined') return false;
   return window.matchMedia('(pointer: coarse)').matches
@@ -1130,7 +1142,9 @@ export function GhostlingScene({
   const [sceneLabLivePayload, setSceneLabLivePayload] = useState<ScenePresencePayload | null>(initialPayload);
   const [heroPanDragging, setHeroPanDragging] = useState(false);
   const [heroPanCanRecenter, setHeroPanCanRecenter] = useState(false);
-  const [heroPanMobileUi, setHeroPanMobileUi] = useState(() => detectHeroMobileViewport());
+  // Keep the first client render aligned with SSR; viewport detection runs after mount.
+  const [heroPanMobileUi, setHeroPanMobileUi] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const layerRefs = useRef<Map<string, HTMLImageElement | null>>(new Map());
   const entitiesRef = useRef<Map<string, GhostlingEntity>>(new Map());
@@ -1638,28 +1652,53 @@ export function GhostlingScene({
     triggerHeroPanRecenter();
   }, [triggerHeroPanRecenter]);
 
-  const onHeroStageWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+  const handleHeroStageWheelDelta = useCallback((options: {
+    deltaX: number;
+    deltaY: number;
+    deltaMode: number;
+    stageWidth: number;
+  }) => {
     if (!heroPanEnabled) return;
     if (heroPanDraggingRef.current) return;
 
-    const dominantDelta = Math.abs(event.deltaX) >= 0.5
-      ? event.deltaX
-      : event.deltaY;
+    const dominantDelta = Math.abs(options.deltaX) >= 0.5
+      ? options.deltaX
+      : options.deltaY;
     if (Math.abs(dominantDelta) < 0.5) return;
 
     const normalizedDelta = normalizeHeroWheelDelta(
       dominantDelta,
-      event.deltaMode,
-      Math.max(1, event.currentTarget.clientWidth),
+      options.deltaMode,
+      Math.max(1, options.stageWidth),
     );
     if (Math.abs(normalizedDelta) < 0.5) return;
 
-    event.preventDefault();
     clearHoveredGhostling();
 
     const scaleX = Math.max(0.001, renderMetricsStateRef.current.scaleX);
     heroPanTargetXWorldRef.current += normalizedDelta / scaleX;
+    return true;
   }, [clearHoveredGhostling, heroPanEnabled]);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || !heroPanEnabled) return undefined;
+
+    const onWheel = (event: WheelEvent) => {
+      const consumed = handleHeroStageWheelDelta({
+        deltaX: event.deltaX,
+        deltaY: event.deltaY,
+        deltaMode: event.deltaMode,
+        stageWidth: stage.clientWidth,
+      });
+      if (consumed) {
+        event.preventDefault();
+      }
+    };
+
+    stage.addEventListener('wheel', onWheel, { passive: false });
+    return () => stage.removeEventListener('wheel', onWheel);
+  }, [handleHeroStageWheelDelta, heroPanEnabled]);
 
   const syncMembers = useCallback((
     payload: ScenePresencePayload | null,
@@ -2386,9 +2425,13 @@ export function GhostlingScene({
       for (const layer of sceneWorldSpec.layers) {
         const layerEl = layers.get(layer.key) ?? null;
         if (!layerEl) continue;
+        const parallaxFactor = heroPanEnabled ? heroLayerParallaxFactor(layer.key) : 1;
+        const parallaxOffsetX = heroPanEnabled
+          ? metrics.panXWorld * metrics.scaleX * (1 - parallaxFactor)
+          : 0;
         layerEl.style.width = `${metrics.renderWidth}px`;
         layerEl.style.height = `${metrics.renderHeight}px`;
-        layerEl.style.transform = `translate3d(${metrics.offsetX.toFixed(2)}px, ${metrics.offsetY.toFixed(2)}px, 0)`;
+        layerEl.style.transform = `translate3d(${(metrics.offsetX + parallaxOffsetX).toFixed(2)}px, ${metrics.offsetY.toFixed(2)}px, 0)`;
       }
 
       const removals: string[] = [];
@@ -2630,6 +2673,7 @@ export function GhostlingScene({
       ) : null}
 
       <div
+        ref={stageRef}
         className={`${styles.sceneStage}${prefersReducedMotion ? ` ${styles.staticGrid}` : ''}`}
         data-variant={variant}
         data-world={world}
@@ -2650,30 +2694,37 @@ export function GhostlingScene({
         onPointerCancel={onHeroStagePointerCancel}
         onLostPointerCapture={onHeroStagePointerCancel}
         onDoubleClick={onHeroStageDoubleClick}
-        onWheel={onHeroStageWheel}
       >
         {sceneWorldSpec.layers.map((layer) => (
-          <img
-            key={layer.key}
-            ref={(node) => {
-              if (node) {
-                layerRefs.current.set(layer.key, node);
-              } else {
-                layerRefs.current.delete(layer.key);
-              }
-            }}
-            src={layer.src}
-            alt=""
-            aria-hidden="true"
-            className={styles.sceneLayer}
-            data-layer={layer.key}
-            style={{
-              zIndex: layer.zIndex,
-              width: `${metrics.renderWidth}px`,
-              height: `${metrics.renderHeight}px`,
-              transform: `translate3d(${metrics.offsetX.toFixed(2)}px, ${metrics.offsetY.toFixed(2)}px, 0)`,
-            }}
-          />
+          (() => {
+            const parallaxFactor = heroPanEnabled ? heroLayerParallaxFactor(layer.key) : 1;
+            const parallaxOffsetX = heroPanEnabled
+              ? metrics.panXWorld * metrics.scaleX * (1 - parallaxFactor)
+              : 0;
+            return (
+              <img
+                key={layer.key}
+                ref={(node) => {
+                  if (node) {
+                    layerRefs.current.set(layer.key, node);
+                  } else {
+                    layerRefs.current.delete(layer.key);
+                  }
+                }}
+                src={layer.src}
+                alt=""
+                aria-hidden="true"
+                className={styles.sceneLayer}
+                data-layer={layer.key}
+                style={{
+                  zIndex: layer.zIndex,
+                  width: `${metrics.renderWidth}px`,
+                  height: `${metrics.renderHeight}px`,
+                  transform: `translate3d(${(metrics.offsetX + parallaxOffsetX).toFixed(2)}px, ${metrics.offsetY.toFixed(2)}px, 0)`,
+                }}
+              />
+            );
+          })()
         ))}
 
         {overlay ? (

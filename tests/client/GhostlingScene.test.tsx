@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, createEvent, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GhostlingScene } from '@/components/GhostlingScene';
 import {
@@ -1755,15 +1755,20 @@ describe('GhostlingScene', () => {
 
     const stage = getHeroStage(container);
     const wrap = container.querySelector('[data-source="voice"]');
+    const skyLayer = container.querySelector('[data-layer="sky"]');
     const floorLayer = container.querySelector('[data-layer="floor"]');
     if (!(wrap instanceof HTMLDivElement)) {
       throw new Error('Expected Ghostling wrapper.');
+    }
+    if (!(skyLayer instanceof HTMLImageElement)) {
+      throw new Error('Expected sky layer.');
     }
     if (!(floorLayer instanceof HTMLImageElement)) {
       throw new Error('Expected floor layer.');
     }
 
     const initialPosition = extractTranslate3d(wrap.style.transform);
+    const initialSkyPosition = extractTranslate3d(skyLayer.style.transform);
     const initialFloorPosition = extractTranslate3d(floorLayer.style.transform);
 
     const dragPixels = 120;
@@ -1784,10 +1789,15 @@ describe('GhostlingScene', () => {
     flushFrame(32);
 
     const draggedPosition = extractTranslate3d(wrap.style.transform);
+    const draggedSkyPosition = extractTranslate3d(skyLayer.style.transform);
     const draggedFloorPosition = extractTranslate3d(floorLayer.style.transform);
     expect(stage.getAttribute('data-pan-dragging')).toBe('true');
     expect(draggedPosition.x).toBeGreaterThan(initialPosition.x + 80);
+    expect(draggedSkyPosition.x).toBeGreaterThan(initialSkyPosition.x + 20);
     expect(draggedFloorPosition.x).toBeGreaterThan(initialFloorPosition.x + 80);
+    expect(draggedFloorPosition.x - initialFloorPosition.x).toBeGreaterThan(
+      draggedSkyPosition.x - initialSkyPosition.x,
+    );
 
     fireEvent.pointerUp(stage, {
       pointerId: 1,
@@ -1803,9 +1813,11 @@ describe('GhostlingScene', () => {
     flushFrame(320);
 
     const recenteredPosition = extractTranslate3d(wrap.style.transform);
+    const recenteredSkyPosition = extractTranslate3d(skyLayer.style.transform);
     const recenteredFloorPosition = extractTranslate3d(floorLayer.style.transform);
     expect(stage.getAttribute('data-pan-dragging')).toBe('false');
     expect(Math.abs(recenteredPosition.x - initialPosition.x)).toBeLessThan(1);
+    expect(Math.abs(recenteredSkyPosition.x - initialSkyPosition.x)).toBeLessThan(1);
     expect(Math.abs(recenteredFloorPosition.x - initialFloorPosition.x)).toBeLessThan(1);
   });
 
@@ -2006,6 +2018,33 @@ describe('GhostlingScene', () => {
     const verticalWheelFloor = extractTranslate3d(floorLayer.style.transform);
     expect(verticalWheelWrap.x).toBeGreaterThan(horizontalWheelWrap.x + 16);
     expect(verticalWheelFloor.x).toBeGreaterThan(horizontalWheelFloor.x + 16);
+  });
+
+  it('prevents default page scrolling when wheel panning the desktop hero', () => {
+    const payload = makePayload([makeMember('user:1', 'Member One')]);
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const stage = getHeroStage(container);
+    const wheelEvent = createEvent.wheel(stage, {
+      deltaX: 0,
+      deltaY: 140,
+      deltaMode: 0,
+      bubbles: true,
+      cancelable: true,
+    });
+
+    fireEvent(stage, wheelEvent);
+
+    expect(wheelEvent.defaultPrevented).toBe(true);
   });
 
   it('ignores wheel panning while the scene editor owns the hero stage', () => {
