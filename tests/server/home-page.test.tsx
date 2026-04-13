@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DEFAULT_GHOSTLING_ACTOR_METRICS } from '@/lib/ghostling-actor';
 import { createDefaultGhostlingSceneTuningSpec } from '@/lib/ghostling-scene-tuning';
@@ -90,6 +90,10 @@ import HomePage from '@/app/(public)/page';
 import { SHARED_COMMONS_WORLD } from '@/lib/ghostling-world';
 
 describe('home page', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   function installPayloads() {
     getCurrentUserMock.mockReset();
     getCurrentUserMock.mockResolvedValue(null);
@@ -194,6 +198,44 @@ describe('home page', () => {
     expect(markup).not.toContain('Join Discord');
     expect(markup).not.toContain('Enter the Hall');
     expect(markup).not.toContain('data-testid="news-preview"');
+  });
+
+  it('allows the scene editor on production for admin users only', async () => {
+    installPayloads();
+    vi.stubEnv('NODE_ENV', 'production');
+    getCurrentUserMock.mockResolvedValue({
+      id: 1,
+      is_admin: 1,
+      username: 'admin',
+      global_name: 'Admin',
+    });
+
+    const markup = renderToStaticMarkup(await HomePage({
+      searchParams: Promise.resolve({ sceneEditor: '1' }),
+    }));
+
+    expect(markup).toContain('data-scene-editor-enabled="true"');
+    expect(markup).not.toContain('Join Discord');
+    expect(markup).not.toContain('data-testid="news-preview"');
+  });
+
+  it('ignores the scene editor query on production for non-admin users', async () => {
+    installPayloads();
+    vi.stubEnv('NODE_ENV', 'production');
+    getCurrentUserMock.mockResolvedValue({
+      id: 2,
+      is_admin: 0,
+      username: 'member',
+      global_name: 'Member',
+    });
+
+    const markup = renderToStaticMarkup(await HomePage({
+      searchParams: Promise.resolve({ sceneEditor: '1' }),
+    }));
+
+    expect(markup).toContain('data-scene-editor-enabled="false"');
+    expect(markup).toContain('Join Discord');
+    expect(markup).toContain('data-testid="news-preview"');
   });
 
   it('uses the deterministic visual fixture and disables realtime when requested outside production', async () => {
