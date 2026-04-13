@@ -32,7 +32,7 @@ export const DEFAULT_GHOSTLING_ACTOR_METRICS: GhostlingActorMetrics = {
   },
   visibleBounds: {
     x: 21,
-    y: 20,
+    y: 18,
     width: 28,
     height: 49,
   },

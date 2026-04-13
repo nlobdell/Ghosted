@@ -12,9 +12,10 @@ describe('ghostling scene tuning', () => {
       tuning,
     );
 
-    expect(resolved.maxVisible).toBe(8);
+    expect(resolved.maxVisible).toBe(10);
     expect(resolved.pointOrder).toEqual(SHARED_COMMONS_WORLD.viewports.desktop.pointOrder);
     expect(resolved.allowedPointKeys.has('floor-mid-left')).toBe(true);
     expect(resolved.jamBreakoutMs).toBe(tuning.shared.jamBreakoutMs);
+    expect(resolved.anchorHopChance).toBe(tuning.shared.anchorHopChance);
   });
 });

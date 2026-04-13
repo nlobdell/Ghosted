@@ -45,9 +45,9 @@
       "height": 164
     },
     "centerSafe": {
-      "x": 950,
+      "x": 900,
       "y": 24,
-      "width": 1250,
+      "width": 1350,
       "height": 286
     },
     "ultrawideBleed": {
@@ -79,19 +79,19 @@
       "label": "Shared floor",
       "layer": "front",
       "bounds": {
-        "x": 960,
+        "x": 900,
         "y": 154,
-        "width": 1230,
+        "width": 1350,
         "height": 156
       },
-      "roamRadius": 42
+      "roamRadius": 48
     }
   ],
   "anchors": [
     {
       "key": "floor-left-outer",
       "label": "Floor left outer",
-      "x": 1005,
+      "x": 990,
       "y": 238,
       "safeZoneKey": "shared-floor",
       "layer": "front",
@@ -103,7 +103,7 @@
     {
       "key": "floor-left-inner",
       "label": "Floor left inner",
-      "x": 1160,
+      "x": 1120,
       "y": 236,
       "safeZoneKey": "shared-floor",
       "layer": "front",
@@ -116,60 +116,86 @@
     {
       "key": "floor-left-mid",
       "label": "Floor left mid",
-      "x": 1315,
+      "x": 1250,
       "y": 234,
       "safeZoneKey": "shared-floor",
       "layer": "front",
       "scaleTier": 2,
       "adjacent": [
         "floor-left-inner",
+        "floor-center-left"
+      ]
+    },
+    {
+      "key": "floor-center-left",
+      "label": "Floor center left",
+      "x": 1380,
+      "y": 233,
+      "safeZoneKey": "shared-floor",
+      "layer": "front",
+      "scaleTier": 2,
+      "adjacent": [
+        "floor-left-mid",
         "floor-mid-left"
       ]
     },
     {
       "key": "floor-mid-left",
       "label": "Floor mid left",
-      "x": 1470,
+      "x": 1505,
       "y": 232,
       "safeZoneKey": "shared-floor",
       "layer": "front",
       "scaleTier": 2,
       "adjacent": [
-        "floor-left-mid",
+        "floor-center-left",
         "floor-mid-right"
       ]
     },
     {
       "key": "floor-mid-right",
       "label": "Floor mid right",
-      "x": 1680,
+      "x": 1645,
       "y": 232,
       "safeZoneKey": "shared-floor",
       "layer": "front",
       "scaleTier": 2,
       "adjacent": [
         "floor-mid-left",
+        "floor-center-right"
+      ]
+    },
+    {
+      "key": "floor-center-right",
+      "label": "Floor center right",
+      "x": 1770,
+      "y": 233,
+      "safeZoneKey": "shared-floor",
+      "layer": "front",
+      "scaleTier": 2,
+      "adjacent": [
+        "floor-mid-right",
         "floor-right-mid"
       ]
     },
     {
       "key": "floor-right-mid",
       "label": "Floor right mid",
-      "x": 1835,
+      "x": 1900,
       "y": 234,
       "safeZoneKey": "shared-floor",
       "layer": "front",
       "scaleTier": 2,
       "adjacent": [
-        "floor-mid-right",
+        "floor-center-right",
         "floor-right-inner"
       ]
     },
     {
       "key": "floor-right-inner",
       "label": "Floor right inner",
-      "x": 1990,
-      "y": 234,
+      "x": 2030,
+      "y": 236,
       "safeZoneKey": "shared-floor",
       "layer": "front",
       "scaleTier": 2,
@@ -181,7 +207,7 @@
     {
       "key": "floor-right-outer",
       "label": "Floor right outer",
-      "x": 2145,
+      "x": 2160,
       "y": 238,
       "safeZoneKey": "shared-floor",
       "layer": "front",
@@ -194,43 +220,49 @@
   "viewports": {
     "desktop": {
       "bucket": "desktop",
-      "maxVisible": 8,
+      "maxVisible": 10,
       "pointOrder": [
-        "floor-left-outer",
-        "floor-left-inner",
-        "floor-left-mid",
         "floor-mid-left",
         "floor-mid-right",
+        "floor-center-left",
+        "floor-center-right",
+        "floor-left-mid",
         "floor-right-mid",
+        "floor-left-inner",
         "floor-right-inner",
+        "floor-left-outer",
         "floor-right-outer"
       ]
     },
     "tablet": {
       "bucket": "tablet",
-      "maxVisible": 6,
+      "maxVisible": 8,
       "pointOrder": [
-        "floor-left-outer",
-        "floor-left-inner",
-        "floor-left-mid",
         "floor-mid-left",
         "floor-mid-right",
+        "floor-center-left",
+        "floor-center-right",
+        "floor-left-mid",
         "floor-right-mid",
+        "floor-left-inner",
         "floor-right-inner",
+        "floor-left-outer",
         "floor-right-outer"
       ]
     },
     "mobile": {
       "bucket": "mobile",
-      "maxVisible": 4,
+      "maxVisible": 6,
       "pointOrder": [
-        "floor-left-outer",
-        "floor-left-inner",
-        "floor-left-mid",
         "floor-mid-left",
         "floor-mid-right",
+        "floor-center-left",
+        "floor-center-right",
+        "floor-left-mid",
         "floor-right-mid",
+        "floor-left-inner",
         "floor-right-inner",
+        "floor-left-outer",
         "floor-right-outer"
       ]
     }

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cloneGhostlingSceneLabSnapshot,
   cloneGhostlingWorldDraft,
   exportGhostlingSceneLabSession,
   exportGhostlingWorldDraft,
+  ghostlingSceneLabSnapshotEquals,
 } from '@/lib/ghostling-scene-lab';
 import { createDefaultGhostlingSceneTuningSpec } from '@/lib/ghostling-scene-tuning';
 import { SHARED_COMMONS_WORLD } from '@/lib/ghostling-world';
@@ -34,6 +36,20 @@ describe('ghostling scene lab helpers', () => {
     expect(session.version).toBe(1);
     expect(session.preview.mode).toBe('sandbox');
     expect(session.world.kind).toBe('ghostling-world');
-    expect(session.tuning.buckets.desktop.maxVisible).toBe(8);
+    expect(session.tuning.buckets.desktop.maxVisible).toBe(10);
+    expect(session.tuning.shared.anchorHopChance).toBe(0.35);
+  });
+
+  it('clones and compares scene lab snapshots without mutating the original drafts', () => {
+    const original = {
+      worldDraft: cloneGhostlingWorldDraft(SHARED_COMMONS_WORLD),
+      tuningDraft: createDefaultGhostlingSceneTuningSpec(),
+    };
+    const cloned = cloneGhostlingSceneLabSnapshot(original);
+
+    expect(ghostlingSceneLabSnapshotEquals(original, cloned)).toBe(true);
+
+    cloned.worldDraft.points[0]!.x += 8;
+    expect(ghostlingSceneLabSnapshotEquals(original, cloned)).toBe(false);
   });
 });

@@ -55,7 +55,7 @@
 
 .sceneStage[data-variant='hero'] {
   width: 100%;
-  height: min(350px, max(15rem, 20vw));
+  height: min(700px);
   border-top: 1px solid rgba(191, 179, 255, 0.16);
   border-bottom: 1px solid rgba(191, 179, 255, 0.16);
   box-shadow:
@@ -228,6 +228,14 @@
   gap: 0.7rem;
 }
 
+.sceneLabHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .sceneLabSectionTitle {
   color: rgba(250, 247, 255, 0.94);
   font-family: var(--font-mono);
@@ -243,6 +251,43 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
+}
+
+.sceneLabTabs,
+.sceneLabSearchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.sceneLabVisibilityBox {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(191, 179, 255, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sceneLabVisibilityList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.8rem;
+}
+
+.sceneLabToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  color: rgba(226, 220, 255, 0.8);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.sceneLabToggle input {
+  margin: 0;
+  accent-color: rgba(191, 179, 255, 0.92);
 }
 
 .sceneLabField {
@@ -264,6 +309,10 @@
   font: inherit;
 }
 
+.sceneLabSearchRow .sceneLabInput {
+  flex: 1 1 16rem;
+}
+
 .sceneLabChip,
 .sceneLabButton {
   min-height: 2rem;
@@ -282,6 +331,65 @@
 .sceneLabButton:hover {
   background: rgba(167, 150, 255, 0.18);
   border-color: rgba(191, 179, 255, 0.34);
+}
+
+.sceneLabButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.sceneLabObjectBrowser {
+  display: grid;
+  gap: 0.7rem;
+  max-height: 18rem;
+  overflow: auto;
+  padding-right: 0.2rem;
+}
+
+.sceneLabObjectGroup {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.sceneLabObjectGroupTitle {
+  color: rgba(226, 220, 255, 0.72);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sceneLabObjectList {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.sceneLabObjectItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  min-height: 2rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid rgba(191, 179, 255, 0.14);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(250, 247, 255, 0.92);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sceneLabObjectItem[data-selected='true'] {
+  background: rgba(167, 150, 255, 0.18);
+  border-color: rgba(191, 179, 255, 0.34);
+}
+
+.sceneLabObjectItemMeta {
+  color: rgba(226, 220, 255, 0.62);
+  font-size: 0.64rem;
 }
 
 .sceneLabDiagnostics,

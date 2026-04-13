@@ -97,7 +97,7 @@ describe('home page', () => {
     });
   }
 
-  it('renders the full-bleed world hero first and keeps the action rail below it', async () => {
+  it('renders the full-bleed world hero with the default rail and content shell', async () => {
     installPayloads();
 
     const markup = renderToStaticMarkup(await HomePage({
@@ -113,6 +113,7 @@ describe('home page', () => {
     expect(markup).toContain('House mascot live');
     expect(markup).toContain('Join Discord');
     expect(markup).toContain('Enter the Hall');
+    expect(markup).toContain('data-testid="news-preview"');
     expect(markup).not.toContain('data-backdrop-mode');
     expect(markup).not.toContain('Your Ghostling preview');
   });
@@ -135,6 +136,10 @@ describe('home page', () => {
     }));
 
     expect(markup).toContain('data-scene-editor-enabled="true"');
+    expect(markup).not.toContain('House mascot live');
+    expect(markup).not.toContain('Join Discord');
+    expect(markup).not.toContain('Enter the Hall');
+    expect(markup).not.toContain('data-testid="news-preview"');
   });
 
   it('uses the deterministic visual fixture and disables realtime when requested outside production', async () => {

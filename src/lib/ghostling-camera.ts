@@ -95,7 +95,7 @@ export function createGhostlingSceneCameraMetrics(
   const height = Math.max(1, viewportHeight);
   const viewportAspect = width / height;
   if (layout === 'fixed-crop') {
-    const scale = 1;
+    const scale = 2;
     const renderWidth = world.sourceWidth * scale;
     const renderHeight = world.sourceHeight * scale;
     const offsetX = (width - renderWidth) / 2;
