@@ -301,6 +301,40 @@ function ensureSchema(db: Database.Database) {
       redeemed_at TEXT,
       redeemed_username TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS runelite_pairings (
+      id TEXT PRIMARY KEY,
+      user_code TEXT NOT NULL UNIQUE,
+      poll_token_hash TEXT NOT NULL UNIQUE,
+      requested_account_hash TEXT NOT NULL,
+      requested_username TEXT NOT NULL,
+      launcher_display_name TEXT,
+      plugin_version TEXT,
+      status TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      approved_at TEXT,
+      approved_by_user_id INTEGER REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_runelite_pairings_status
+    ON runelite_pairings(status, expires_at);
+
+    CREATE TABLE IF NOT EXISTS runelite_account_links (
+      account_hash TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      current_username TEXT NOT NULL,
+      launcher_display_name TEXT,
+      plugin_version TEXT,
+      linked_at TEXT NOT NULL,
+      last_verified_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_runelite_account_links_user
+    ON runelite_account_links(user_id);
   `);
 
   ensureTableColumn(db, 'users', 'public_name_source', "TEXT NOT NULL DEFAULT 'discord'");
