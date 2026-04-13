@@ -1,15 +1,48 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DEFAULT_GHOSTLING_ACTOR_METRICS } from '@/lib/ghostling-actor';
+import { createDefaultGhostlingSceneTuningSpec } from '@/lib/ghostling-scene-tuning';
 import type { CompanionPreviewSummary, NewsPost, ScenePresencePayload, ShellData } from '@/lib/types';
 
 const { getServerJSONMock } = vi.hoisted(() => ({
   getServerJSONMock: vi.fn(),
 }));
+const {
+  getCurrentUserMock,
+  resolveDraftGhostlingWorldMock,
+  resolveDraftGhostlingWorldTuningMock,
+  resolvePublishedGhostlingWorldMock,
+  resolvePublishedGhostlingWorldTuningMock,
+} = vi.hoisted(() => ({
+  getCurrentUserMock: vi.fn(),
+  resolveDraftGhostlingWorldMock: vi.fn(),
+  resolveDraftGhostlingWorldTuningMock: vi.fn(),
+  resolvePublishedGhostlingWorldMock: vi.fn(),
+  resolvePublishedGhostlingWorldTuningMock: vi.fn(),
+}));
 
 vi.mock('@/lib/server-api', () => ({
   getServerJSON: getServerJSONMock,
 }));
+
+vi.mock('@/lib/server/database', () => ({
+  getDatabase: () => ({ mocked: true }),
+}));
+
+vi.mock('@/lib/server/ghosted-api', () => ({
+  getCurrentUser: getCurrentUserMock,
+}));
+
+vi.mock('@/lib/server/scene-worlds', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/server/scene-worlds')>('@/lib/server/scene-worlds');
+  return {
+    ...actual,
+    resolveDraftGhostlingWorld: resolveDraftGhostlingWorldMock,
+    resolveDraftGhostlingWorldTuning: resolveDraftGhostlingWorldTuningMock,
+    resolvePublishedGhostlingWorld: resolvePublishedGhostlingWorldMock,
+    resolvePublishedGhostlingWorldTuning: resolvePublishedGhostlingWorldTuningMock,
+  };
+});
 
 vi.mock('@/components/GhostlingScene', () => ({
   GhostlingScene: ({
@@ -17,6 +50,8 @@ vi.mock('@/components/GhostlingScene', () => ({
     fallbackMode,
     world,
     preset,
+    worldSpec,
+    tuningSpec,
     debugWorldOverlay,
     sceneEditorEnabled,
     realtimeDisabled,
@@ -25,6 +60,8 @@ vi.mock('@/components/GhostlingScene', () => ({
     fallbackMode?: string;
     world?: string;
     preset?: string;
+    worldSpec?: { sourceWidth?: number; sourceHeight?: number } | null;
+    tuningSpec?: { buckets?: { desktop?: { maxVisible?: number } } } | null;
     debugWorldOverlay?: boolean;
     sceneEditorEnabled?: boolean;
     realtimeDisabled?: boolean;
@@ -35,6 +72,9 @@ vi.mock('@/components/GhostlingScene', () => ({
       data-fallback-mode={fallbackMode}
       data-world={world}
       data-preset={preset}
+      data-world-width={worldSpec?.sourceWidth}
+      data-world-height={worldSpec?.sourceHeight}
+      data-desktop-cap={tuningSpec?.buckets?.desktop?.maxVisible}
       data-debug-world-overlay={debugWorldOverlay ? 'true' : 'false'}
       data-scene-editor-enabled={sceneEditorEnabled ? 'true' : 'false'}
       data-realtime-disabled={realtimeDisabled ? 'true' : 'false'}
@@ -47,9 +87,21 @@ vi.mock('@/components/home/NewsPreview', () => ({
 }));
 
 import HomePage from '@/app/(public)/page';
+import { SHARED_COMMONS_WORLD } from '@/lib/ghostling-world';
 
 describe('home page', () => {
   function installPayloads() {
+    getCurrentUserMock.mockReset();
+    getCurrentUserMock.mockResolvedValue(null);
+    const defaultTuning = createDefaultGhostlingSceneTuningSpec();
+    resolvePublishedGhostlingWorldMock.mockReset();
+    resolvePublishedGhostlingWorldMock.mockReturnValue(SHARED_COMMONS_WORLD);
+    resolvePublishedGhostlingWorldTuningMock.mockReset();
+    resolvePublishedGhostlingWorldTuningMock.mockReturnValue(defaultTuning);
+    resolveDraftGhostlingWorldMock.mockReset();
+    resolveDraftGhostlingWorldMock.mockReturnValue(SHARED_COMMONS_WORLD);
+    resolveDraftGhostlingWorldTuningMock.mockReset();
+    resolveDraftGhostlingWorldTuningMock.mockReturnValue(defaultTuning);
     const shellData: ShellData = {
       authenticated: false,
       brand: { label: 'Ghosted', href: '/' },
@@ -110,6 +162,8 @@ describe('home page', () => {
     expect(markup).toContain('data-fallback-mode="single"');
     expect(markup).toContain('data-world="shared-commons"');
     expect(markup).toContain('data-preset="public-hero"');
+    expect(markup).toContain(`data-world-width="${SHARED_COMMONS_WORLD.sourceWidth}"`);
+    expect(markup).toContain(`data-desktop-cap="${createDefaultGhostlingSceneTuningSpec().buckets.desktop.maxVisible}"`);
     expect(markup).toContain('House mascot live');
     expect(markup).toContain('Join Discord');
     expect(markup).toContain('Enter the Hall');
@@ -151,5 +205,45 @@ describe('home page', () => {
 
     expect(getServerJSONMock).not.toHaveBeenCalledWith('/api/scene/presence');
     expect(markup).toContain('data-realtime-disabled="true"');
+  });
+
+  it('loads the admin-only draft world preview with local hero motion when requested by an admin', async () => {
+    installPayloads();
+    getCurrentUserMock.mockResolvedValue({
+      id: 1,
+      is_admin: 1,
+      username: 'admin',
+      global_name: 'Admin',
+    });
+
+    const markup = renderToStaticMarkup(await HomePage({
+      searchParams: Promise.resolve({ worldPreview: 'shared-commons:draft' }),
+    }));
+
+    expect(resolveDraftGhostlingWorldMock).toHaveBeenCalled();
+    expect(resolveDraftGhostlingWorldTuningMock).toHaveBeenCalled();
+    expect(markup).toContain('data-realtime-disabled="true"');
+    expect(markup).toContain('Join Discord');
+    expect(markup).toContain('data-world-width="3150"');
+  });
+
+  it('ignores the draft world preview query for non-admin users', async () => {
+    installPayloads();
+    getCurrentUserMock.mockResolvedValue({
+      id: 2,
+      is_admin: 0,
+      username: 'member',
+      global_name: 'Member',
+    });
+
+    const markup = renderToStaticMarkup(await HomePage({
+      searchParams: Promise.resolve({ worldPreview: 'shared-commons:draft' }),
+    }));
+
+    expect(resolveDraftGhostlingWorldMock).not.toHaveBeenCalled();
+    expect(resolveDraftGhostlingWorldTuningMock).not.toHaveBeenCalled();
+    expect(resolvePublishedGhostlingWorldMock).toHaveBeenCalled();
+    expect(resolvePublishedGhostlingWorldTuningMock).toHaveBeenCalled();
+    expect(markup).toContain('data-realtime-disabled="false"');
   });
 });

@@ -260,12 +260,26 @@ function ensureSchema(db: Database.Database) {
       entities_json TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS scene_world_variants (
+      world_id TEXT PRIMARY KEY,
+      draft_package_json TEXT,
+      published_package_json TEXT,
+      draft_tuning_json TEXT,
+      published_tuning_json TEXT,
+      draft_updated_at TEXT,
+      published_at TEXT,
+      draft_updated_by_user_id INTEGER REFERENCES users(id),
+      published_by_user_id INTEGER REFERENCES users(id)
+    );
   `);
 
   ensureTableColumn(db, 'companion_catalog', 'front_asset_path', 'TEXT');
   ensureTableColumn(db, 'companion_catalog', 'back_asset_path', 'TEXT');
   ensureTableColumn(db, 'companion_catalog', 'render_metadata_json', 'TEXT');
   ensureTableColumn(db, 'companion_settings', 'base_head_asset_path', 'TEXT');
+  ensureTableColumn(db, 'scene_world_variants', 'draft_tuning_json', 'TEXT');
+  ensureTableColumn(db, 'scene_world_variants', 'published_tuning_json', 'TEXT');
   seedDefaultCasinoGames(db);
   ensureDefaultCompanionBase(db);
   removeLegacyDefaultCompanionAssets(db);

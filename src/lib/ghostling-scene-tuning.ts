@@ -98,6 +98,86 @@ export function cloneGhostlingSceneTuningSpec(
   };
 }
 
+function assertFiniteNumber(value: unknown, label: string) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`${label} must be a finite number.`);
+  }
+  return value;
+}
+
+function assertPositiveNumber(value: unknown, label: string) {
+  const parsed = assertFiniteNumber(value, label);
+  if (parsed <= 0) {
+    throw new Error(`${label} must be greater than zero.`);
+  }
+  return parsed;
+}
+
+function assertPositiveInteger(value: unknown, label: string) {
+  const parsed = assertPositiveNumber(value, label);
+  if (!Number.isInteger(parsed)) {
+    throw new Error(`${label} must be an integer.`);
+  }
+  return parsed;
+}
+
+export function loadGhostlingSceneTuningSpec(value: unknown): GhostlingSceneTuningSpec {
+  const tuning = value as Partial<GhostlingSceneTuningSpec> | null | undefined;
+  const buckets = tuning?.buckets;
+  const shared = tuning?.shared;
+  if (!buckets || !shared) {
+    throw new Error('Ghostling scene tuning must include buckets and shared settings.');
+  }
+
+  return {
+    buckets: {
+      mobile: {
+        maxVisible: assertPositiveInteger(buckets.mobile?.maxVisible, 'mobile maxVisible'),
+        speedMin: assertPositiveNumber(buckets.mobile?.speedMin, 'mobile speedMin'),
+        speedMax: assertPositiveNumber(buckets.mobile?.speedMax, 'mobile speedMax'),
+        pauseMinMs: assertPositiveNumber(buckets.mobile?.pauseMinMs, 'mobile pauseMinMs'),
+        pauseMaxMs: assertPositiveNumber(buckets.mobile?.pauseMaxMs, 'mobile pauseMaxMs'),
+        arrivalRadius: assertPositiveNumber(buckets.mobile?.arrivalRadius, 'mobile arrivalRadius'),
+        settleRadius: assertPositiveNumber(buckets.mobile?.settleRadius, 'mobile settleRadius'),
+        minGap: assertPositiveNumber(buckets.mobile?.minGap, 'mobile minGap'),
+        facingFlipVelocity: assertPositiveNumber(buckets.mobile?.facingFlipVelocity, 'mobile facingFlipVelocity'),
+        facingFlipDistance: assertPositiveNumber(buckets.mobile?.facingFlipDistance, 'mobile facingFlipDistance'),
+      },
+      tablet: {
+        maxVisible: assertPositiveInteger(buckets.tablet?.maxVisible, 'tablet maxVisible'),
+        speedMin: assertPositiveNumber(buckets.tablet?.speedMin, 'tablet speedMin'),
+        speedMax: assertPositiveNumber(buckets.tablet?.speedMax, 'tablet speedMax'),
+        pauseMinMs: assertPositiveNumber(buckets.tablet?.pauseMinMs, 'tablet pauseMinMs'),
+        pauseMaxMs: assertPositiveNumber(buckets.tablet?.pauseMaxMs, 'tablet pauseMaxMs'),
+        arrivalRadius: assertPositiveNumber(buckets.tablet?.arrivalRadius, 'tablet arrivalRadius'),
+        settleRadius: assertPositiveNumber(buckets.tablet?.settleRadius, 'tablet settleRadius'),
+        minGap: assertPositiveNumber(buckets.tablet?.minGap, 'tablet minGap'),
+        facingFlipVelocity: assertPositiveNumber(buckets.tablet?.facingFlipVelocity, 'tablet facingFlipVelocity'),
+        facingFlipDistance: assertPositiveNumber(buckets.tablet?.facingFlipDistance, 'tablet facingFlipDistance'),
+      },
+      desktop: {
+        maxVisible: assertPositiveInteger(buckets.desktop?.maxVisible, 'desktop maxVisible'),
+        speedMin: assertPositiveNumber(buckets.desktop?.speedMin, 'desktop speedMin'),
+        speedMax: assertPositiveNumber(buckets.desktop?.speedMax, 'desktop speedMax'),
+        pauseMinMs: assertPositiveNumber(buckets.desktop?.pauseMinMs, 'desktop pauseMinMs'),
+        pauseMaxMs: assertPositiveNumber(buckets.desktop?.pauseMaxMs, 'desktop pauseMaxMs'),
+        arrivalRadius: assertPositiveNumber(buckets.desktop?.arrivalRadius, 'desktop arrivalRadius'),
+        settleRadius: assertPositiveNumber(buckets.desktop?.settleRadius, 'desktop settleRadius'),
+        minGap: assertPositiveNumber(buckets.desktop?.minGap, 'desktop minGap'),
+        facingFlipVelocity: assertPositiveNumber(buckets.desktop?.facingFlipVelocity, 'desktop facingFlipVelocity'),
+        facingFlipDistance: assertPositiveNumber(buckets.desktop?.facingFlipDistance, 'desktop facingFlipDistance'),
+      },
+    },
+    shared: {
+      jamBreakoutMs: assertPositiveNumber(shared.jamBreakoutMs, 'shared jamBreakoutMs'),
+      verticalTravelFactor: assertPositiveNumber(shared.verticalTravelFactor, 'shared verticalTravelFactor'),
+      settleDamping: assertPositiveNumber(shared.settleDamping, 'shared settleDamping'),
+      minTargetTravelRatio: assertPositiveNumber(shared.minTargetTravelRatio, 'shared minTargetTravelRatio'),
+      anchorHopChance: assertFiniteNumber(shared.anchorHopChance, 'shared anchorHopChance'),
+    },
+  };
+}
+
 export function resolveGhostlingSceneTuning(
   world: GhostlingWorldSpec,
   bucket: GhostlingSceneDensityBucket,

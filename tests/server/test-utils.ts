@@ -17,7 +17,8 @@ type EnvKey =
   | 'SESSION_COOKIE_SECURE'
   | 'WOM_API_BASE'
   | 'WOM_CACHE_TTL_SECONDS'
-  | 'WOM_GROUP_ID';
+  | 'WOM_GROUP_ID'
+  | 'WORLD_ASSET_DIR';
 
 const ENV_KEYS: EnvKey[] = [
   'ADMIN_DISCORD_IDS',
@@ -32,6 +33,7 @@ const ENV_KEYS: EnvKey[] = [
   'WOM_API_BASE',
   'WOM_CACHE_TTL_SECONDS',
   'WOM_GROUP_ID',
+  'WORLD_ASSET_DIR',
 ];
 
 export type ServerTestContext = {
@@ -58,6 +60,7 @@ export function setupServerTestEnvironment(overrides: Partial<Record<EnvKey, str
   process.env.ENABLE_DEV_AUTH = overrides.ENABLE_DEV_AUTH ?? 'false';
   process.env.SESSION_COOKIE_SECURE = overrides.SESSION_COOKIE_SECURE ?? '';
   process.env.ADMIN_DISCORD_IDS = overrides.ADMIN_DISCORD_IDS ?? '';
+  process.env.WORLD_ASSET_DIR = overrides.WORLD_ASSET_DIR ?? path.join(tempDir, 'world-assets');
 
   resetDatabaseForTests();
   const db = getDatabase();

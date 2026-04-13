@@ -15,6 +15,7 @@ import {
   listDiscordVoicePresence,
   listScenePresenceChannelAllowlist,
 } from '@/lib/server/discord-presence';
+import { resolvePublishedGhostlingWorld, resolvePublishedGhostlingWorldTuning } from '@/lib/server/scene-worlds';
 import { buildSharedHeroSceneSnapshot, resetSharedSceneStateForTests } from '@/lib/server/scene-shared-state';
 import { womGroupId, womRequestJson } from '@/lib/server/wom';
 
@@ -556,6 +557,8 @@ export async function buildScenePresencePayload(options: {
 } = {}): Promise<ScenePresencePayload> {
   const now = options.now ?? Date.now();
   const db = options.db ?? getDatabase();
+  const runtimeWorld = resolvePublishedGhostlingWorld(db, 'shared-commons');
+  const runtimeTuning = resolvePublishedGhostlingWorldTuning(db, 'shared-commons');
   let payloadBase = payloadCache?.value ?? null;
 
   if (options.forceRefresh || !payloadBase || !payloadCache) {
@@ -567,7 +570,7 @@ export async function buildScenePresencePayload(options: {
   return {
     ...payloadBase,
     sharedScene: {
-      hero: buildSharedHeroSceneSnapshot(db, payloadBase.members, payloadBase.source, now),
+      hero: buildSharedHeroSceneSnapshot(db, payloadBase.members, payloadBase.source, now, runtimeWorld, runtimeTuning),
     },
   } satisfies ScenePresencePayload;
 }

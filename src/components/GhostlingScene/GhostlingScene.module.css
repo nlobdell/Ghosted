@@ -456,14 +456,14 @@
   top: 0;
   left: var(--ghost-label-anchor-x, 50%);
   z-index: 2;
-  transform: translate(-50%, calc(-100% - 0.45rem + var(--ghost-label-nudge, 0px)));
-  padding: 0.26rem 0.58rem;
+  transform: translate(-50%, calc(-100% - 0.75rem + var(--ghost-label-nudge, 0px)));
+  padding: 0.325rem 0.725rem;
   border: 1px solid rgba(205, 198, 255, 0.16);
   border-radius: 999px;
   background: rgba(8, 8, 11, 0.84);
   color: rgba(250, 247, 255, 0.92);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.85rem;
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;

@@ -1,3 +1,6 @@
+import type { GhostlingSceneTuningSpec } from '@/lib/ghostling-scene-tuning';
+import type { GhostlingWorldId, GhostlingWorldPreset, GhostlingWorldSpec } from '@/lib/ghostling-world';
+
 export interface ShellUser {
   id: number;
   discordId: string;
@@ -414,6 +417,45 @@ export interface AdminSystemsData {
   wom: AdminWomSummary;
   discord: DiscordPresenceAdminData;
   recentAudit: AdminAuditEntry[];
+}
+
+export interface SceneWorldVariantRecord {
+  worldId: GhostlingWorldId;
+  draftPackageJson?: string | null;
+  publishedPackageJson?: string | null;
+  draftTuningJson?: string | null;
+  publishedTuningJson?: string | null;
+  draftUpdatedAt?: string | null;
+  publishedAt?: string | null;
+  draftUpdatedByUserId?: number | null;
+  publishedByUserId?: number | null;
+}
+
+export interface AdminWorldLayerAsset {
+  key: string;
+  zIndex: number;
+  liveSrc: string;
+  draftSrc: string;
+  hasDraftOverride: boolean;
+}
+
+export interface AdminWorldData {
+  actor: { displayName: string };
+  world: {
+    id: GhostlingWorldId;
+    preset: GhostlingWorldPreset;
+    storageRoot: string;
+    repoAssetRoot: string;
+    hasDraft: boolean;
+    hasPublishedVariant: boolean;
+    draftUpdatedAt?: string | null;
+    publishedAt?: string | null;
+  };
+  publishedWorld: GhostlingWorldSpec;
+  draftWorld: GhostlingWorldSpec;
+  publishedTuning: GhostlingSceneTuningSpec;
+  draftTuning: GhostlingSceneTuningSpec;
+  layers: AdminWorldLayerAsset[];
 }
 
 export type ScenePresenceMemberSource = 'voice' | 'wom' | 'fallback';
