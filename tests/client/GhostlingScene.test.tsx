@@ -448,6 +448,44 @@ describe('GhostlingScene', () => {
     expect(screen.getByTestId('animated-stage').getAttribute('data-presentation')).toBe('hero');
   });
 
+  it('prefers the Discord display name for voice labels and reveals the raw handle in metadata', () => {
+    const payload = makePayload([
+      makeMember('user:1', 'smirk', {
+        displayName: 'Ghosted Smirk',
+      }),
+    ]);
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const wrap = container.querySelector('[data-source="voice"]');
+    if (!(wrap instanceof HTMLDivElement)) {
+      throw new Error('Expected voice Ghostling wrapper.');
+    }
+
+    const nameplate = wrap.children.item(2);
+    const metadata = wrap.children.item(3);
+    if (!(nameplate instanceof HTMLSpanElement) || !(metadata instanceof HTMLSpanElement)) {
+      throw new Error('Expected nameplate and metadata elements.');
+    }
+
+    expect(nameplate.textContent).toBe('Ghosted Smirk');
+    expect(metadata.getAttribute('aria-hidden')).toBe('true');
+
+    fireEvent.mouseEnter(wrap);
+
+    expect(metadata.getAttribute('aria-hidden')).toBe('false');
+    expect(metadata.textContent).toContain('@smirk');
+    expect(metadata.textContent).toContain('Voice');
+  });
+
   it('renders live unmatched members through the base companion preview summary', () => {
     const payload = makePayload([
       makeMember('voice:wanderer', 'wanderer', {
