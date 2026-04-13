@@ -69,6 +69,12 @@ type SceneWorldVariantRow = {
   published_by_user_id: number | null;
 };
 
+type ParsedWorldDraftImport = {
+  importedFrom: 'world-package' | 'scene-lab-session';
+  worldPackage: GhostlingWorldPackageFile;
+  tuning: GhostlingSceneTuningSpec | null;
+};
+
 type SceneWorldArchivedLayerRow = {
   world_id: GhostlingWorldId;
   layer_key: string;
@@ -837,19 +843,63 @@ function parseUploadedWorldPackageText(upload: UploadedWorldAsset) {
   return upload.data.toString('utf8');
 }
 
+function parseSceneLabSessionTuning(value: unknown) {
+  if (value === undefined || value === null) return null;
+  try {
+    return loadGhostlingSceneTuningSpec(value);
+  } catch (error) {
+    throw new AppError(
+      error instanceof Error
+        ? `Scene editor session tuning is invalid: ${error.message}`
+        : 'Scene editor session tuning is invalid.',
+      400,
+    );
+  }
+}
+
+function parseWorldDraftImport(
+  worldId: GhostlingWorldId,
+  uploadedPackageText: string,
+): ParsedWorldDraftImport {
+  let uploadedPackage: unknown;
+  try {
+    uploadedPackage = JSON.parse(uploadedPackageText) as unknown;
+  } catch {
+    throw new AppError('World package must be valid JSON.', 400);
+  }
+
+  if (uploadedPackage && typeof uploadedPackage === 'object' && 'world' in uploadedPackage) {
+    const session = uploadedPackage as {
+      world?: unknown;
+      tuning?: unknown;
+    };
+    if (!session.world || typeof session.world !== 'object') {
+      throw new AppError('Scene editor session must include a world export.', 400);
+    }
+    const worldPackage = session.world as GhostlingWorldPackageFile;
+    assertWorldPackageContract(worldId, worldPackage);
+    return {
+      importedFrom: 'scene-lab-session',
+      worldPackage,
+      tuning: parseSceneLabSessionTuning(session.tuning),
+    };
+  }
+
+  const worldPackage = uploadedPackage as GhostlingWorldPackageFile;
+  assertWorldPackageContract(worldId, worldPackage);
+  return {
+    importedFrom: 'world-package',
+    worldPackage,
+    tuning: null,
+  };
+}
+
 function mergedDraftWorldPackageFromUpload(
   db: Database.Database,
   worldId: GhostlingWorldId,
   uploadedPackageText: string,
 ) {
-  let uploadedPackage: GhostlingWorldPackageFile;
-  try {
-    uploadedPackage = JSON.parse(uploadedPackageText) as GhostlingWorldPackageFile;
-  } catch {
-    throw new AppError('World package must be valid JSON.', 400);
-  }
-
-  assertWorldPackageContract(worldId, uploadedPackage);
+  const uploadedPackage = parseWorldDraftImport(worldId, uploadedPackageText).worldPackage;
   const currentDraftPackage = draftWorldPackageInternal(db, worldId);
   const assetSrcByKey = currentWorldAssetPathsByKey(currentDraftPackage);
   return bindWorldPackageLayerSources(uploadedPackage, assetSrcByKey);
@@ -1219,9 +1269,13 @@ export async function parseReplaceWorldDraftPackageRequest(request: Request) {
       throw new AppError('Paste a world package JSON payload first.', 400);
     }
 
+    const parsedImport = parseWorldDraftImport(worldId, packageText);
+
     return {
       worldId,
-      packageText,
+      packageText: JSON.stringify(parsedImport.worldPackage),
+      tuning: parsedImport.tuning,
+      importedFrom: parsedImport.importedFrom,
     };
   }
 
@@ -1235,8 +1289,12 @@ export async function parseReplaceWorldDraftPackageRequest(request: Request) {
     throw new AppError('Upload a world package JSON file first.', 400);
   }
 
+  const parsedImport = parseWorldDraftImport(worldId, parseUploadedWorldPackageText(packageFile));
+
   return {
     worldId,
-    packageText: parseUploadedWorldPackageText(packageFile),
+    packageText: JSON.stringify(parsedImport.worldPackage),
+    tuning: parsedImport.tuning,
+    importedFrom: parsedImport.importedFrom,
   };
 }

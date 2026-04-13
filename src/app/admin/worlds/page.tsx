@@ -5,12 +5,17 @@
 import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Banner, EmptyState, FormField } from '@/components/ui/AppUI';
-import { formatDate, getJSON } from '@/lib/api';
+import { formatDate, formatMaybeNumber, getJSON } from '@/lib/api';
 import type { GhostlingSceneDensityBucket } from '@/lib/ghostling-world';
-import type { GhostlingSceneTuningSpec } from '@/lib/ghostling-scene-tuning';
+import type {
+  GhostlingSceneTuningBucketSettings,
+  GhostlingSceneTuningSharedSettings,
+  GhostlingSceneTuningSpec,
+} from '@/lib/ghostling-scene-tuning';
 import type { AdminWorldData } from '@/lib/types';
 import {
   AdminAuditFeed,
+  AdminDataTable,
   AdminKeyValueList,
   AdminPageHeader,
   AdminPaneSection,
@@ -31,6 +36,59 @@ type AdminWorldMutationResponse = {
 const WORLD_ID = 'shared-commons';
 const ASSET_ACCEPT = '.png,.svg,.gif,.webp,.jpg,.jpeg';
 const TUNING_BUCKETS: GhostlingSceneDensityBucket[] = ['mobile', 'tablet', 'desktop'];
+const TUNING_BUCKET_FIELDS: Array<keyof GhostlingSceneTuningBucketSettings> = [
+  'maxVisible',
+  'speedMin',
+  'speedMax',
+  'pauseMinMs',
+  'pauseMaxMs',
+  'arrivalRadius',
+  'settleRadius',
+  'minGap',
+  'facingFlipVelocity',
+  'facingFlipDistance',
+];
+const TUNING_SHARED_FIELDS: Array<keyof GhostlingSceneTuningSharedSettings> = [
+  'jamBreakoutMs',
+  'verticalTravelFactor',
+  'settleDamping',
+  'minTargetTravelRatio',
+  'anchorHopChance',
+];
+const TUNING_FIELD_LABELS: Record<string, string> = {
+  maxVisible: 'Max visible',
+  speedMin: 'Speed min',
+  speedMax: 'Speed max',
+  pauseMinMs: 'Pause min (ms)',
+  pauseMaxMs: 'Pause max (ms)',
+  arrivalRadius: 'Arrival radius',
+  settleRadius: 'Settle radius',
+  minGap: 'Min gap',
+  facingFlipVelocity: 'Facing flip velocity',
+  facingFlipDistance: 'Facing flip distance',
+  jamBreakoutMs: 'Jam breakout (ms)',
+  verticalTravelFactor: 'Vertical travel factor',
+  settleDamping: 'Settle damping',
+  minTargetTravelRatio: 'Min target travel ratio',
+  anchorHopChance: 'Anchor hop chance',
+};
+const TUNING_FIELD_DESCRIPTIONS: Record<string, string> = {
+  maxVisible: 'Maximum concurrent Ghostlings for that viewport.',
+  speedMin: 'Slowest travel speed picked for roaming motion.',
+  speedMax: 'Fastest travel speed picked for roaming motion.',
+  pauseMinMs: 'Shortest idle pause after reaching a target.',
+  pauseMaxMs: 'Longest idle pause after reaching a target.',
+  arrivalRadius: 'Distance from a target that counts as arrived.',
+  settleRadius: 'Tight final radius used during settle motion.',
+  minGap: 'Minimum spacing to keep between active Ghostlings.',
+  facingFlipVelocity: 'Velocity threshold before the sprite flips facing.',
+  facingFlipDistance: 'Distance threshold before facing changes are allowed.',
+  jamBreakoutMs: 'Time before jammed actors are forced to break free.',
+  verticalTravelFactor: 'How much vertical travel contributes to path cost.',
+  settleDamping: 'How strongly settle motion eases toward rest.',
+  minTargetTravelRatio: 'Minimum retarget distance as a ratio of scene span.',
+  anchorHopChance: 'Chance to jump to a different anchor cluster on retarget.',
+};
 
 type LayerReviewState = {
   kind: 'archive' | 'restore';
@@ -51,6 +109,10 @@ function worldLayerStateLabel(layer: AdminWorldData['layers'][number]) {
   if (layer.isArchivedDraftOnly) return 'Archived recovery';
   if (layer.hasArchivedOverride) return 'Archived recovery';
   return 'Aligned';
+}
+
+function tuningValueLabel(value: number) {
+  return formatMaybeNumber(value);
 }
 
 export default function AdminWorldsPage() {
@@ -362,6 +424,19 @@ export default function AdminWorldsPage() {
   const draftHasChanges = data.world.hasDraft;
   const draftOverrideCount = data.layers.filter((layer) => layer.hasDraftOverride).length;
   const layerByKey = new Map(data.layers.map((layer) => [layer.key, layer]));
+  const currentDraftTuning = draftTuning ?? data.draftTuning;
+  const bucketTuningRows = TUNING_BUCKET_FIELDS.map((field) => ([
+    TUNING_FIELD_LABELS[field],
+    TUNING_FIELD_DESCRIPTIONS[field],
+    tuningValueLabel(currentDraftTuning.buckets.mobile[field]),
+    tuningValueLabel(currentDraftTuning.buckets.tablet[field]),
+    tuningValueLabel(currentDraftTuning.buckets.desktop[field]),
+  ]));
+  const sharedTuningRows = TUNING_SHARED_FIELDS.map((field) => [
+    TUNING_FIELD_LABELS[field],
+    TUNING_FIELD_DESCRIPTIONS[field],
+    tuningValueLabel(currentDraftTuning.shared[field]),
+  ]);
 
   return (
     <main id="main-content" className={`page-shell workspace-page ${sharedStyles.page}`}>
@@ -430,11 +505,11 @@ export default function AdminWorldsPage() {
               </div>
             </AdminRailSection>
 
-            <AdminRailSection eyebrow="Package" title="Replace draft world JSON" description="Upload or paste a validated world package. Layer file paths will be rebound by layer key.">
+            <AdminRailSection eyebrow="Package" title="Replace draft world JSON" description="Upload or paste a validated world package or Scene editor session. Layer file paths will be rebound by layer key.">
               <div className={sharedStyles.formStack}>
                 <form onSubmit={handlePackageUpload} className={sharedStyles.formStack}>
                   <input type="hidden" name="worldId" value={WORLD_ID} />
-                  <FormField label="World package">
+                  <FormField label="World package or session JSON">
                     <input
                       name="package"
                       type="file"
@@ -447,7 +522,7 @@ export default function AdminWorldsPage() {
                     {pendingKey === 'package' ? 'Uploading...' : 'Replace draft package'}
                   </button>
                 </form>
-                <p className={sharedStyles.note}>Paste a complete world JSON document when you want to import draft geometry, guides, and layer ordering directly from the clipboard.</p>
+                <p className={sharedStyles.note}>Paste a complete world JSON document or Scene editor session when you want to import draft geometry, guides, layer ordering, and optionally tuning directly from the clipboard.</p>
                 <form onSubmit={handlePackageImport} className={sharedStyles.formStack}>
                   <FormField label="Paste world package JSON">
                     <textarea
@@ -597,10 +672,24 @@ export default function AdminWorldsPage() {
               ['Safe zones', String(data.draftWorld.safeZones.length)],
               ['Anchors', String(data.draftWorld.points.length)],
               ['Layer order', draftLayerOrder],
-              ['Desktop cap', String(data.draftTuning.buckets.desktop.maxVisible)],
-              ['Tablet cap', String(data.draftTuning.buckets.tablet.maxVisible)],
-              ['Mobile cap', String(data.draftTuning.buckets.mobile.maxVisible)],
+              ['Desktop cap', String(currentDraftTuning.buckets.desktop.maxVisible)],
+              ['Tablet cap', String(currentDraftTuning.buckets.tablet.maxVisible)],
+              ['Mobile cap', String(currentDraftTuning.buckets.mobile.maxVisible)],
             ]}
+          />
+        </AdminPaneSection>
+
+        <AdminPaneSection eyebrow="Tuning" title="Movement tuning readback">
+          <p className={sharedStyles.note}>Shared settings apply across every viewport, while bucket settings tune mobile, tablet, and desktop behavior separately.</p>
+          <AdminDataTable
+            columns={['Shared setting', 'Meaning', 'Value']}
+            rows={sharedTuningRows}
+            emptyMessage="No shared tuning parameters loaded."
+          />
+          <AdminDataTable
+            columns={['Bucket setting', 'Meaning', 'Mobile', 'Tablet', 'Desktop']}
+            rows={bucketTuningRows}
+            emptyMessage="No bucket tuning parameters loaded."
           />
         </AdminPaneSection>
 
