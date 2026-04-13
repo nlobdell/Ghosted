@@ -17,6 +17,7 @@ vi.mock('next/headers', () => ({
 }));
 
 import { DELETE as deleteWomLinkRoute, POST as postWomLinkRoute } from '@/app/api/profile/wom-link/route';
+import { DELETE as deletePublicNameSourceRoute, POST as postPublicNameSourceRoute } from '@/app/api/profile/public-name-source/route';
 import { GET as getWomClanRoute } from '@/app/api/wom/clan/route';
 import { GET as getWomCompetitionsRoute } from '@/app/api/wom/competitions/route';
 import { GET as getWomMeRoute } from '@/app/api/wom/me/route';
@@ -127,6 +128,9 @@ describe('wom route handlers', () => {
     expect(payload.ok).toBe(true);
     expect(payload.message).toBe('WOM account linked.');
     expect(payload.result.playerId).toBe(PLAYER.id);
+    expect(payload.result.publicNameSource).toBe('osrs');
+    expect(payload.result.claimSource).toBe('manual_wom');
+    expect(payload.result.verifiedAt).toBeNull();
   });
 
   it('returns the expected envelope for unlinking a WOM account', async () => {
@@ -146,11 +150,58 @@ describe('wom route handlers', () => {
         playerId: null,
         username: null,
         displayName: null,
+        publicNameSource: 'discord',
+        claimSource: null,
+        verifiedAt: null,
         inGroup: false,
         membership: null,
         lastSyncedAt: null,
         status: 'unlinked',
       },
     });
+  });
+
+  it('updates the public name source without unlinking the linked WOM account', async () => {
+    const userId = insertUser(context.db, { username: 'discord-member', globalName: 'Discord Member' });
+    authMock.mockResolvedValue({ user: { id: String(userId) } });
+    saveUserGameAccount(context.db, userId, 'osrs', PLAYER);
+    installWomFetchMock();
+
+    const switchToOsrsResponse = await postPublicNameSourceRoute(new Request('http://localhost/api/profile/public-name-source', {
+      method: 'POST',
+      body: JSON.stringify({ source: 'osrs' }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const switchToOsrsPayload = await switchToOsrsResponse.json();
+
+    expect(switchToOsrsResponse.status).toBe(200);
+    expect(switchToOsrsPayload.ok).toBe(true);
+    expect(switchToOsrsPayload.result.linked).toBe(true);
+    expect(switchToOsrsPayload.result.publicNameSource).toBe('osrs');
+    expect(switchToOsrsPayload.result.username).toBe(PLAYER.username);
+
+    const switchToDiscordResponse = await deletePublicNameSourceRoute();
+    const switchToDiscordPayload = await switchToDiscordResponse.json();
+
+    expect(switchToDiscordResponse.status).toBe(200);
+    expect(switchToDiscordPayload.ok).toBe(true);
+    expect(switchToDiscordPayload.result.linked).toBe(true);
+    expect(switchToDiscordPayload.result.publicNameSource).toBe('discord');
+    expect(switchToDiscordPayload.result.playerId).toBe(PLAYER.id);
+  });
+
+  it('rejects OSRS public-name selection when no linked WOM account exists', async () => {
+    const userId = insertUser(context.db);
+    authMock.mockResolvedValue({ user: { id: String(userId) } });
+
+    const response = await postPublicNameSourceRoute(new Request('http://localhost/api/profile/public-name-source', {
+      method: 'POST',
+      body: JSON.stringify({ source: 'osrs' }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({ error: 'Link a Wise Old Man RuneScape account before using it as your public name.' });
   });
 });

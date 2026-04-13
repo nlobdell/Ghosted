@@ -15,6 +15,12 @@ import {
   listDiscordVoicePresence,
   listScenePresenceChannelAllowlist,
 } from '@/lib/server/discord-presence';
+import {
+  primaryOsrsIdentityJoin,
+  primaryOsrsIdentitySelect,
+  resolveClaimedOsrsDisplayName,
+  resolvePublicDisplayName,
+} from '@/lib/server/osrs-identity';
 import { resolvePublishedGhostlingWorld, resolvePublishedGhostlingWorldTuning } from '@/lib/server/scene-worlds';
 import { buildSharedHeroSceneSnapshot, resetSharedSceneStateForTests } from '@/lib/server/scene-shared-state';
 import { womGroupId, womRequestJson } from '@/lib/server/wom';
@@ -33,6 +39,13 @@ type ScenePresenceUserRow = {
   id: number;
   username: string;
   global_name: string | null;
+  public_name_source: string | null;
+  osrs_player_id: number | null;
+  osrs_username: string | null;
+  osrs_display_name: string | null;
+  osrs_claim_source: string | null;
+  osrs_claimed_at: string | null;
+  osrs_verified_at: string | null;
 };
 
 type WidgetVoiceMember = {
@@ -41,7 +54,9 @@ type WidgetVoiceMember = {
   displayName: string;
 };
 
-type ScenePresenceMemberSeed = Omit<ScenePresenceMember, 'activity'>;
+type ScenePresenceMemberSeed = Omit<ScenePresenceMember, 'activity'> & {
+  aliasDisplayName?: string;
+};
 type ScenePresencePayloadBase = Omit<ScenePresencePayload, 'sharedScene'>;
 type VoiceIdentityEntry = {
   identity: string;
@@ -111,8 +126,9 @@ function mergeIdentityForMember(
 ) {
   const normalizedUsername = normalizeSceneUsername(member.username);
   const normalizedUsernameAlias = normalizeSceneVoiceAlias(member.username);
-  const normalizedDisplayAlias = normalizeSceneVoiceAlias(member.displayName);
-  const normalizedDisplayName = normalizeSceneDisplayName(member.displayName);
+  const displayCandidate = member.aliasDisplayName ?? member.displayName;
+  const normalizedDisplayAlias = normalizeSceneVoiceAlias(displayCandidate);
+  const normalizedDisplayName = normalizeSceneDisplayName(displayCandidate);
 
   if (member.userId !== null) {
     const existingByUserId = identityByUserId.get(member.userId);
@@ -228,6 +244,8 @@ function registerMergedIdentity(
     const linkedAliases = new Set<string>();
     const normalizedDisplayName = normalizeSceneDisplayName(member.displayName);
     if (normalizedDisplayName) linkedAliases.add(normalizedDisplayName);
+    const normalizedAliasDisplayName = normalizeSceneDisplayName(member.aliasDisplayName ?? '');
+    if (normalizedAliasDisplayName) linkedAliases.add(normalizedAliasDisplayName);
 
     const linkedDisplayName = normalizeSceneDisplayName(member.companion?.user?.displayName ?? '');
     if (linkedDisplayName) linkedAliases.add(linkedDisplayName);
@@ -265,6 +283,10 @@ function registerMergedIdentity(
     const normalizedDisplayName = normalizeSceneDisplayName(member.displayName);
     if (normalizedDisplayName && normalizedDisplayName !== normalizedUsername) {
       displayAliases.add(normalizedDisplayName);
+    }
+    const normalizedAliasDisplayName = normalizeSceneDisplayName(member.aliasDisplayName ?? '');
+    if (normalizedAliasDisplayName && normalizedAliasDisplayName !== normalizedUsername) {
+      displayAliases.add(normalizedAliasDisplayName);
     }
 
     const linkedDisplayName = normalizeSceneDisplayName(member.companion?.user?.displayName ?? '');
@@ -358,9 +380,14 @@ function findSceneUserByUsername(
   if (!normalizedUsername) return undefined;
 
   return db.prepare(`
-    SELECT id, username, global_name
+    SELECT
+      users.id,
+      users.username,
+      users.global_name,
+      ${primaryOsrsIdentitySelect('users')}
     FROM users
-    WHERE LOWER(username) = LOWER(?)
+    ${primaryOsrsIdentityJoin('users')}
+    WHERE LOWER(users.username) = LOWER(?)
     LIMIT 1
   `).get(normalizedUsername) as ScenePresenceUserRow | undefined;
 }
@@ -373,11 +400,74 @@ function findSceneUserByDiscordId(
   if (!normalizedDiscordId) return undefined;
 
   return db.prepare(`
-    SELECT id, username, global_name
+    SELECT
+      users.id,
+      users.username,
+      users.global_name,
+      ${primaryOsrsIdentitySelect('users')}
     FROM users
-    WHERE discord_id = ?
+    ${primaryOsrsIdentityJoin('users')}
+    WHERE users.discord_id = ?
     LIMIT 1
   `).get(normalizedDiscordId) as ScenePresenceUserRow | undefined;
+}
+
+function findSceneUserByWomIdentity(
+  db: Database.Database,
+  player: Record<string, unknown>,
+) {
+  const womPlayerId = Number.parseInt(String(player.id ?? ''), 10);
+  if (Number.isFinite(womPlayerId)) {
+    const byPlayerId = db.prepare(`
+      SELECT
+        users.id,
+        users.username,
+        users.global_name,
+        ${primaryOsrsIdentitySelect('users')}
+      FROM user_game_accounts
+      JOIN users ON users.id = user_game_accounts.user_id
+      ${primaryOsrsIdentityJoin('users')}
+      WHERE user_game_accounts.game = 'osrs'
+        AND user_game_accounts.wom_player_id = ?
+      LIMIT 1
+    `).get(womPlayerId) as ScenePresenceUserRow | undefined;
+    if (byPlayerId) return byPlayerId;
+  }
+
+  const womUsername = String(player.username ?? '').trim();
+  if (womUsername) {
+    const byUsername = db.prepare(`
+      SELECT
+        users.id,
+        users.username,
+        users.global_name,
+        ${primaryOsrsIdentitySelect('users')}
+      FROM user_game_accounts
+      JOIN users ON users.id = user_game_accounts.user_id
+      ${primaryOsrsIdentityJoin('users')}
+      WHERE user_game_accounts.game = 'osrs'
+        AND LOWER(user_game_accounts.username) = LOWER(?)
+      LIMIT 1
+    `).get(womUsername) as ScenePresenceUserRow | undefined;
+    if (byUsername) return byUsername;
+  }
+
+  const womDisplayName = String(player.displayName ?? '').trim();
+  if (!womDisplayName) return undefined;
+
+  return db.prepare(`
+    SELECT
+      users.id,
+      users.username,
+      users.global_name,
+      ${primaryOsrsIdentitySelect('users')}
+    FROM user_game_accounts
+    JOIN users ON users.id = user_game_accounts.user_id
+    ${primaryOsrsIdentityJoin('users')}
+    WHERE user_game_accounts.game = 'osrs'
+      AND LOWER(user_game_accounts.display_name) = LOWER(?)
+    LIMIT 1
+  `).get(womDisplayName) as ScenePresenceUserRow | undefined;
 }
 
 async function fetchWidgetVoiceMembersRaw(guildId: string): Promise<WidgetVoiceMember[]> {
@@ -465,7 +555,8 @@ async function fetchWidgetVoiceMembers(options: {
       key,
       userId,
       username: member.username,
-      displayName: member.displayName || member.username,
+      displayName: row ? resolvePublicDisplayName(row) : (member.displayName || member.username),
+      aliasDisplayName: member.displayName || member.username,
       source: 'voice',
       voiceSource: 'widget',
       companion: buildCompanionPreviewSummaryOrBasePayload(db, row, fallbackCompanion),
@@ -495,7 +586,8 @@ function fetchBotVoiceMembers(
         key: buildSceneMemberKey('voice', userId, row.username),
         userId,
         username: row.username,
-        displayName: row.displayName || row.username,
+        displayName: linkedUser ? resolvePublicDisplayName(linkedUser) : (row.displayName || row.username),
+        aliasDisplayName: row.displayName || row.username,
         source: 'voice',
         voiceSource: 'bot',
         companion: buildCompanionPreviewSummaryOrBasePayload(db, linkedUser, fallbackCompanion),
@@ -527,22 +619,21 @@ async function fetchWomActiveMembers(
 
   for (const entry of entries) {
     const player = (entry.player ?? entry) as Record<string, unknown>;
-    const username = String(player.displayName ?? player.username ?? '').trim();
-    if (!username) continue;
+    const username = String(player.username ?? player.displayName ?? '').trim();
+    const displayName = String(player.displayName ?? player.username ?? '').trim();
+    if (!username && !displayName) continue;
 
-    const row = db.prepare(
-      `SELECT users.id, users.username, users.global_name
-       FROM user_game_accounts
-       JOIN users ON users.id = user_game_accounts.user_id
-       WHERE game = 'osrs' AND LOWER(user_game_accounts.username) = LOWER(?) LIMIT 1`,
-    ).get(username) as ScenePresenceUserRow | undefined;
+    const row = findSceneUserByWomIdentity(db, player);
 
     const userId = row?.id ?? null;
+    const publicDisplayName = row ? resolvePublicDisplayName(row) : displayName;
+    const sceneUsername = username || displayName;
     results.push({
-      key: buildSceneMemberKey('wom', userId, username),
+      key: buildSceneMemberKey('wom', userId, sceneUsername),
       userId,
-      username,
-      displayName: row?.global_name?.trim() || username,
+      username: sceneUsername,
+      displayName: publicDisplayName || sceneUsername,
+      aliasDisplayName: displayName || resolveClaimedOsrsDisplayName(row ?? {}) || sceneUsername,
       source: 'wom',
       companion: buildCompanionPreviewSummaryOrBasePayload(db, row, fallbackCompanion),
     });

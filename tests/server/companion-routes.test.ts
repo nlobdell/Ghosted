@@ -32,6 +32,9 @@ import { POST as postCompanionAdminUpdateRoute } from '@/app/api/companion/admin
 import { POST as postCompanionAdminVisibilityRoute } from '@/app/api/companion/admin/items/visibility/route';
 import { GET as getCompanionAdminLibraryRoute } from '@/app/api/companion/admin/library/route';
 import { createCompanionItem } from '@/lib/server/companion';
+import { setUserPublicNameSource } from '@/lib/server/osrs-identity';
+import { saveUserGameAccount } from '@/lib/server/wom';
+import { PLAYER } from './wom-fixtures';
 
 function getUser(context: ServerTestContext, userId: number) {
   return context.db.prepare(`
@@ -145,6 +148,19 @@ describe('companion route handlers', () => {
     expect(response.status).toBe(200);
     expect(payload.user).toMatchObject({ id: userId, displayName: 'Member' });
     expect(payload.items).toEqual([]);
+  });
+
+  it('prefers the claimed OSRS name on member-facing companion payloads', async () => {
+    const userId = insertUser(context.db, { username: 'member', globalName: 'Discord Member' });
+    authMock.mockResolvedValue({ user: { id: String(userId) } });
+    saveUserGameAccount(context.db, userId, 'osrs', PLAYER);
+    setUserPublicNameSource(context.db, userId, 'osrs');
+
+    const response = await getCompanionRoute();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.user).toMatchObject({ id: userId, displayName: PLAYER.displayName });
   });
 
   it('returns a public house preview summary without requiring auth', async () => {

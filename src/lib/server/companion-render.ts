@@ -28,6 +28,7 @@ import {
   type Matrix2D,
 } from '@/lib/companion-motion';
 import { AppError } from '@/lib/server/core';
+import { resolvePublicDisplayName } from '@/lib/server/osrs-identity';
 import {
   COMPANION_CANVAS_SIZE,
   COMPANION_DEFAULT_SHADOW_OPACITY,
@@ -822,7 +823,7 @@ function resolveCompanionLayers(db: Database, loadout: CompanionLoadout) {
 }
 
 function userDisplayName(user: CompanionUserRow) {
-  return user.global_name || user.username;
+  return resolvePublicDisplayName(user);
 }
 
 function getRenderOwnerByUserRef(db: Database, userRef: string) {

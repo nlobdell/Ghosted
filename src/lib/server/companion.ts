@@ -16,6 +16,7 @@ import type {
 } from '@/lib/types';
 import { recordAudit } from '@/lib/server/audit';
 import { AppError, slugify, utcIso } from '@/lib/server/core';
+import { primaryOsrsIdentityJoin, primaryOsrsIdentitySelect, resolvePublicDisplayName } from '@/lib/server/osrs-identity';
 import {
   COMPANION_LOADOUT_COLUMNS,
   COMPANION_SLOT_LABELS,
@@ -41,6 +42,13 @@ export type CompanionUserRow = {
   id: number;
   username: string;
   global_name: string | null;
+  public_name_source?: string | null;
+  osrs_player_id?: number | null;
+  osrs_username?: string | null;
+  osrs_display_name?: string | null;
+  osrs_claim_source?: string | null;
+  osrs_claimed_at?: string | null;
+  osrs_verified_at?: string | null;
 };
 
 export type CompanionUserRefRow = CompanionUserRow & {
@@ -102,7 +110,7 @@ const COMPANION_ADMIN_AUDIT_ACTIONS = [
 ] as const;
 
 function companionDisplayName(user: CompanionUserRow) {
-  return user.global_name || user.username;
+  return resolvePublicDisplayName(user);
 }
 
 function emptyCompanionLoadout() {
@@ -115,16 +123,28 @@ export function getCompanionUserByRef(db: Database, userRef: string) {
 
   if (/^\d+$/.test(normalizedRef)) {
     return db.prepare(`
-      SELECT id, discord_id, username, global_name
+      SELECT
+        users.id,
+        users.discord_id,
+        users.username,
+        users.global_name,
+        ${primaryOsrsIdentitySelect('users')}
       FROM users
-      WHERE id = ?
+      ${primaryOsrsIdentityJoin('users')}
+      WHERE users.id = ?
     `).get(Number(normalizedRef)) as CompanionUserRefRow | undefined;
   }
 
   return db.prepare(`
-    SELECT id, discord_id, username, global_name
+    SELECT
+      users.id,
+      users.discord_id,
+      users.username,
+      users.global_name,
+      ${primaryOsrsIdentitySelect('users')}
     FROM users
-    WHERE discord_id = ?
+    ${primaryOsrsIdentityJoin('users')}
+    WHERE users.discord_id = ?
   `).get(normalizedRef) as CompanionUserRefRow | undefined;
 }
 

@@ -14,7 +14,7 @@ import {
   FormField,
 } from '@/components/ui/AppUI';
 import { formatDate, formatPoints, getJSON } from '@/lib/api';
-import type { ShellData, WomLink, WomMeData } from '@/lib/types';
+import type { OsrsClaimSource, PublicNameSource, ShellData, WomLink, WomMeData } from '@/lib/types';
 import styles from './page.module.css';
 
 type WomLinkMutationResponse = {
@@ -23,11 +23,30 @@ type WomLinkMutationResponse = {
   result: WomLink;
 };
 
+type OsrsClaimChallengeResponse = {
+  ok: boolean;
+  message?: string;
+  challenge: {
+    requestedUsername: string;
+    expiresAt: string;
+  };
+};
+
 function normalizeHallProfileCopy(text: string) {
   return text
     .replace(/\bWOM\b/g, 'Wise Old Man')
     .replaceAll('Companion', 'Ghostling')
     .replaceAll('companion', 'Ghostling');
+}
+
+function claimSourceLabel(claimSource: OsrsClaimSource | null | undefined) {
+  if (claimSource === 'runelite_plugin') return 'RuneLite plugin verified';
+  if (claimSource === 'manual_wom') return 'Manual Wise Old Man link';
+  return 'Not claimed yet';
+}
+
+function publicNameSourceLabel(source: PublicNameSource | null | undefined) {
+  return source === 'osrs' ? 'Claimed OSRS name' : 'Discord name';
 }
 
 export default function ProfilePage() {
@@ -38,6 +57,8 @@ export default function ProfilePage() {
   const [authed, setAuthed] = useState(true);
   const [rsn, setRsn] = useState('');
   const [linking, setLinking] = useState(false);
+  const [savingPublicName, setSavingPublicName] = useState(false);
+  const [issuingClaimChallenge, setIssuingClaimChallenge] = useState(false);
   const [linkResult, setLinkResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   function syncShellWom(nextLink: WomLink) {
@@ -50,6 +71,9 @@ export default function ProfilePage() {
           linked: Boolean(nextLink.linked),
           username: nextLink.username ?? null,
           displayName: nextLink.displayName ?? null,
+          publicNameSource: nextLink.publicNameSource ?? current.wom.publicNameSource,
+          claimSource: nextLink.claimSource ?? current.wom.claimSource ?? null,
+          verifiedAt: nextLink.verifiedAt ?? current.wom.verifiedAt ?? null,
           inGroup: Boolean(nextLink.inGroup),
           membership: nextLink.membership,
           lastSyncedAt: nextLink.lastSyncedAt ?? null,
@@ -57,11 +81,21 @@ export default function ProfilePage() {
         user: current.user
           ? {
             ...current.user,
+            publicNameSource: nextLink.publicNameSource ?? current.user.publicNameSource,
             womLink: nextLink,
           }
           : current.user,
       };
     });
+  }
+
+  async function refreshLinkedState() {
+    const [womData, shellData] = await Promise.all([
+      getJSON<WomMeData>('/api/wom/me').catch(() => null),
+      getJSON<ShellData>('/api/site-shell').catch(() => null),
+    ]);
+    setWomMe(womData);
+    if (shellData) setShell(shellData);
   }
 
   useEffect(() => {
@@ -104,10 +138,7 @@ export default function ProfilePage() {
       syncShellWom(payload.result);
       setLinkResult({ ok: true, message: normalizeHallProfileCopy(payload.message ?? 'Wise Old Man account linked.') });
       setRsn('');
-      const womData = await getJSON<WomMeData>('/api/wom/me').catch(() => null);
-      setWomMe(womData);
-      const shellData = await getJSON<ShellData>('/api/site-shell').catch(() => null);
-      if (shellData) setShell(shellData);
+      await refreshLinkedState();
     } catch (nextError) {
       setLinkResult({
         ok: false,
@@ -128,8 +159,7 @@ export default function ProfilePage() {
       syncShellWom(payload.result);
       setLinkResult({ ok: true, message: normalizeHallProfileCopy(payload.message ?? 'Wise Old Man account unlinked.') });
       setWomMe(null);
-      const shellData = await getJSON<ShellData>('/api/site-shell').catch(() => null);
-      if (shellData) setShell(shellData);
+      await refreshLinkedState();
     } catch (nextError) {
       setLinkResult({
         ok: false,
@@ -140,8 +170,63 @@ export default function ProfilePage() {
     }
   }
 
+  async function handlePublicNameSource(source: PublicNameSource) {
+    setSavingPublicName(true);
+    setLinkResult(null);
+    try {
+      const payload = source === 'discord'
+        ? await getJSON<WomLinkMutationResponse>('/api/profile/public-name-source', {
+          method: 'DELETE',
+        })
+        : await getJSON<WomLinkMutationResponse>('/api/profile/public-name-source', {
+          method: 'POST',
+          body: JSON.stringify({ source }),
+        });
+      syncShellWom(payload.result);
+      await refreshLinkedState();
+      setLinkResult({
+        ok: true,
+        message: normalizeHallProfileCopy(payload.message ?? 'Public name preference updated.'),
+      });
+    } catch (nextError) {
+      setLinkResult({
+        ok: false,
+        message: nextError instanceof Error ? normalizeHallProfileCopy(nextError.message) : 'Failed to update public name preference.',
+      });
+    } finally {
+      setSavingPublicName(false);
+    }
+  }
+
+  async function handleIssueClaimChallenge() {
+    setIssuingClaimChallenge(true);
+    setLinkResult(null);
+    try {
+      const payload = await getJSON<OsrsClaimChallengeResponse>('/api/profile/osrs-claim-challenge', {
+        method: 'POST',
+      });
+      setLinkResult({
+        ok: true,
+        message: normalizeHallProfileCopy(
+          payload.message
+          ?? `Verification code sent to your Discord DMs for ${payload.challenge.requestedUsername}.`,
+        ),
+      });
+    } catch (nextError) {
+      setLinkResult({
+        ok: false,
+        message: nextError instanceof Error ? normalizeHallProfileCopy(nextError.message) : 'Failed to send claim challenge.',
+      });
+    } finally {
+      setIssuingClaimChallenge(false);
+    }
+  }
+
   const user = shell?.user;
   const wom = shell?.wom;
+  const publicNameSource = user?.publicNameSource ?? wom?.publicNameSource ?? 'discord';
+  const currentClaimSource = wom?.claimSource ?? null;
+  const isPluginVerified = Boolean(wom?.verifiedAt);
   const profileSummary = wom?.linked
     ? 'Your Hall identity and Wise Old Man account are connected.'
     : 'Link your Wise Old Man account to load your clan status in the Hall.';
@@ -207,12 +292,69 @@ export default function ProfilePage() {
                   <MetricGrid
                     items={[
                       ['Balance', user ? formatPoints(user.balance) : '-'],
-                      ['Admin', user?.isAdmin ? 'Yes' : 'No'],
+                      ['Public name', publicNameSourceLabel(publicNameSource)],
                       ['Wise Old Man status', wom?.linked ? 'Linked' : 'Not linked'],
+                      ['Claim source', claimSourceLabel(currentClaimSource)],
+                      ['Verification', isPluginVerified ? 'Verified' : (wom?.linked ? 'Pending' : '-')],
                       ['Clan', wom?.membership?.groupName ?? '-'],
                     ]}
                   />
                   {linkResult ? <Banner message={linkResult.message} variant={linkResult.ok ? 'info' : 'error'} /> : null}
+
+                  <div className={styles.claimControls}>
+                    <div className={styles.claimHeader}>
+                      <strong>Public member name</strong>
+                      <span>Ghostlings, member cards, and public share surfaces use this name.</span>
+                    </div>
+                    <div className={styles.claimCurrent}>
+                      <strong className={styles.claimCurrentLabel}>{user?.displayName ?? 'Ghosted member'}</strong>
+                      <span className={styles.claimCurrentMeta}>
+                        {publicNameSource === 'osrs'
+                          ? 'Public surfaces are showing your claimed OSRS identity.'
+                          : 'Public surfaces are still using your Discord identity.'}
+                      </span>
+                    </div>
+                    <div className={styles.claimToggle}>
+                      <button
+                        type="button"
+                        className={`button button--small ${publicNameSource === 'discord' ? '' : 'button--secondary'}`}
+                        disabled={savingPublicName || publicNameSource === 'discord'}
+                        onClick={() => void handlePublicNameSource('discord')}
+                      >
+                        {publicNameSource === 'discord' ? 'Using Discord name' : 'Use Discord name'}
+                      </button>
+                      <button
+                        type="button"
+                        className={`button button--small ${publicNameSource === 'osrs' ? '' : 'button--secondary'}`}
+                        disabled={savingPublicName || linking || !wom?.linked || publicNameSource === 'osrs'}
+                        onClick={() => void handlePublicNameSource('osrs')}
+                      >
+                        {publicNameSource === 'osrs' ? 'Using OSRS name' : 'Use OSRS name'}
+                      </button>
+                    </div>
+                    <div className={styles.claimFacts}>
+                      <span>Claim source: <strong>{claimSourceLabel(currentClaimSource)}</strong></span>
+                      <span>
+                        Verification:{' '}
+                        <strong>{wom?.verifiedAt ? `Verified ${formatDate(wom.verifiedAt)}` : (wom?.linked ? 'Plugin verification pending' : 'Not available')}</strong>
+                      </span>
+                    </div>
+                    {wom?.linked && currentClaimSource !== 'runelite_plugin' ? (
+                      <div className={styles.claimActions}>
+                        <button
+                          type="button"
+                          className="button button--secondary button--small app-button-start"
+                          disabled={issuingClaimChallenge}
+                          onClick={() => void handleIssueClaimChallenge()}
+                        >
+                          {issuingClaimChallenge ? 'Sending code...' : 'Send RuneLite verification code'}
+                        </button>
+                        <span className={styles.claimHint}>
+                          This sends a one-time code to your Discord DMs for the upcoming RuneLite verification flow.
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
 
                   {wom?.linked ? (
                     <div className="app-stack app-stack--compact">

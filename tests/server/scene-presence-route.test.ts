@@ -29,6 +29,7 @@ import {
   upsertDiscordVoicePresence,
 } from '@/lib/server/discord-presence';
 import { saveUserGameAccount } from '@/lib/server/wom';
+import { setUserPublicNameSource } from '@/lib/server/osrs-identity';
 
 function mockVoiceWidget(members: Array<{
   username: string;
@@ -206,7 +207,7 @@ describe('scene presence route', () => {
       key: `user:${linkedUserId}`,
       userId: linkedUserId,
       username: 'member',
-      displayName: 'Captain Smirk',
+      displayName: 'Member',
       source: 'voice',
       voiceSource: 'bot',
     });
@@ -306,6 +307,80 @@ describe('scene presence route', () => {
     expect(payload.members[0]?.companion?.animatedRenderUrl).toBe('/api/companion/render-animated');
   });
 
+  it('resolves WOM-linked cosmetics by WOM player id even when the live activity username differs', async () => {
+    const linkedUserId = insertUser(context.db, {
+      username: 'discord-kami',
+      globalName: 'Discord Kami',
+    });
+    saveUserGameAccount(context.db, linkedUserId, 'osrs', {
+      id: 555,
+      username: 'linked-kami',
+      displayName: 'Ghosted Kami',
+      status: 'active',
+    });
+    setUserPublicNameSource(context.db, linkedUserId, 'osrs');
+
+    buildRuntimeAuthConfigMock.mockReturnValue({ guildId: 'ghosted-guild' });
+    womGroupIdMock.mockReturnValue('123');
+    womRequestJsonMock.mockResolvedValue([
+      { player: { id: 555, username: 'activity-kami', displayName: 'Activity Alias' } },
+    ]);
+    vi.stubGlobal('fetch', mockVoiceWidget([]));
+
+    const response = await GET();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.members).toHaveLength(1);
+    expect(payload.members[0]).toMatchObject({
+      key: `user:${linkedUserId}`,
+      userId: linkedUserId,
+      username: 'activity-kami',
+      displayName: 'Ghosted Kami',
+      source: 'wom',
+    });
+    expect(payload.members[0]?.companion?.animatedRenderUrl).toContain(`user=${linkedUserId}`);
+    expect(payload.members[0]?.companion?.user).toEqual({
+      displayName: 'Ghosted Kami',
+      username: 'discord-kami',
+    });
+  });
+
+  it('falls back to linked account display name matching for WOM cosmetics when usernames differ', async () => {
+    const linkedUserId = insertUser(context.db, {
+      username: 'discord-kami',
+      globalName: 'Discord Kami',
+    });
+    saveUserGameAccount(context.db, linkedUserId, 'osrs', {
+      id: 777,
+      username: 'linked-kami',
+      displayName: 'Ghosted Kami',
+      status: 'active',
+    });
+    setUserPublicNameSource(context.db, linkedUserId, 'osrs');
+
+    buildRuntimeAuthConfigMock.mockReturnValue({ guildId: 'ghosted-guild' });
+    womGroupIdMock.mockReturnValue('123');
+    womRequestJsonMock.mockResolvedValue([
+      { player: { username: 'totally-different-name', displayName: 'Ghosted Kami' } },
+    ]);
+    vi.stubGlobal('fetch', mockVoiceWidget([]));
+
+    const response = await GET();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.members).toHaveLength(1);
+    expect(payload.members[0]).toMatchObject({
+      key: `user:${linkedUserId}`,
+      userId: linkedUserId,
+      username: 'totally-different-name',
+      displayName: 'Ghosted Kami',
+      source: 'wom',
+    });
+    expect(payload.members[0]?.companion?.animatedRenderUrl).toContain(`user=${linkedUserId}`);
+  });
+
   it('dedupes cross-source members that resolve to the same username and keeps the stronger voice-linked entry', async () => {
     const linkedUserId = insertUser(context.db, {
       discordId: 'discord-1',
@@ -352,7 +427,7 @@ describe('scene presence route', () => {
       key: `user:${linkedUserId}`,
       userId: linkedUserId,
       username: 'member',
-      displayName: 'Captain Smirk',
+      displayName: 'Member',
       source: 'voice',
       voiceSource: 'bot',
     });
@@ -703,7 +778,7 @@ describe('scene presence route', () => {
       key: `user:${userId}`,
       userId,
       username: 'member',
-      displayName: 'Widget Member',
+      displayName: 'Member',
       voiceSource: 'widget',
     });
     expect(payload.members[0]?.companion?.user).toEqual({

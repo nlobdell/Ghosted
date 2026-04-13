@@ -8,6 +8,14 @@ import { buildHallCompanionSummaryPayload } from '@/lib/server/companion';
 import { buildRoleDirectory, buildRuntimeAuthConfig, resolveRole, resolveRoles, type RoleDirectory } from '@/lib/server/discord';
 import { AppError, envFlag, jsonLoad, normalizeLocalPath, parseIso, utcIso, utcNow } from '@/lib/server/core';
 import { getDatabase } from '@/lib/server/database';
+import {
+  normalizePublicNameSource,
+  primaryOsrsIdentityJoin,
+  primaryOsrsIdentitySelect,
+  resolveClaimedOsrsDisplayName,
+  resolveDiscordDisplayName,
+  resolvePublicDisplayName,
+} from '@/lib/server/osrs-identity';
 import { getBalance, recentLedger } from '@/lib/server/rewards';
 import {
   DEFAULT_WOM_HISCORE_METRIC,
@@ -28,6 +36,13 @@ type UserRow = {
   avatar_hash: string | null;
   roles_json: string;
   is_admin: number;
+  public_name_source: string | null;
+  osrs_player_id: number | null;
+  osrs_username: string | null;
+  osrs_display_name: string | null;
+  osrs_claim_source: string | null;
+  osrs_claimed_at: string | null;
+  osrs_verified_at: string | null;
 };
 
 type GiveawayRow = {
@@ -123,11 +138,37 @@ function siteNavigationItems(isAdmin = false) {
 }
 
 export function getUserById(db: Database, userId: number) {
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as UserRow | undefined;
+  return db.prepare(`
+    SELECT
+      users.id,
+      users.discord_id,
+      users.username,
+      users.global_name,
+      users.avatar_hash,
+      users.roles_json,
+      users.is_admin,
+      ${primaryOsrsIdentitySelect('users')}
+    FROM users
+    ${primaryOsrsIdentityJoin('users')}
+    WHERE users.id = ?
+  `).get(userId) as UserRow | undefined;
 }
 
 export function getUserByDiscordId(db: Database, discordId: string) {
-  return db.prepare('SELECT * FROM users WHERE discord_id = ?').get(discordId) as UserRow | undefined;
+  return db.prepare(`
+    SELECT
+      users.id,
+      users.discord_id,
+      users.username,
+      users.global_name,
+      users.avatar_hash,
+      users.roles_json,
+      users.is_admin,
+      ${primaryOsrsIdentitySelect('users')}
+    FROM users
+    ${primaryOsrsIdentityJoin('users')}
+    WHERE users.discord_id = ?
+  `).get(discordId) as UserRow | undefined;
 }
 
 function userRoles(user: UserRow | null | undefined) {
@@ -135,7 +176,11 @@ function userRoles(user: UserRow | null | undefined) {
 }
 
 export function displayName(user: UserRow) {
-  return user.global_name || user.username;
+  return resolveDiscordDisplayName(user);
+}
+
+export function publicDisplayName(user: UserRow) {
+  return resolvePublicDisplayName(user);
 }
 
 function avatarUrl(user: UserRow) {
@@ -162,7 +207,10 @@ async function profilePayload(db: Database, user: UserRow, roleDirectory: RoleDi
   return {
     id: user.id,
     discordId: user.discord_id,
-    displayName: displayName(user),
+    displayName: publicDisplayName(user),
+    publicNameSource: normalizePublicNameSource(user.public_name_source) === 'osrs' && Boolean(resolveClaimedOsrsDisplayName(user))
+      ? 'osrs'
+      : 'discord',
     username: user.username,
     avatarUrl: avatarUrl(user),
     roles: userRoles(user),
@@ -178,9 +226,18 @@ async function profilePayload(db: Database, user: UserRow, roleDirectory: RoleDi
 
 function getLegacySessionUser(db: Database, token: string) {
   return db.prepare(`
-    SELECT users.*
+    SELECT
+      users.id,
+      users.discord_id,
+      users.username,
+      users.global_name,
+      users.avatar_hash,
+      users.roles_json,
+      users.is_admin,
+      ${primaryOsrsIdentitySelect('users')}
     FROM sessions
     JOIN users ON users.id = sessions.user_id
+    ${primaryOsrsIdentityJoin('users')}
     WHERE sessions.token = ? AND sessions.expires_at >= ?
   `).get(token, utcIso()) as UserRow | undefined;
 }
@@ -259,6 +316,9 @@ export async function buildSiteShell(nextPath = '/') {
         linked: false,
         username: null,
         displayName: null,
+        publicNameSource: 'discord',
+        claimSource: null,
+        verifiedAt: null,
         inGroup: false,
         membership: null,
         lastSyncedAt: null,
@@ -294,6 +354,9 @@ export async function buildSiteShell(nextPath = '/') {
       linked: Boolean(womLink.linked),
       username: womLink.username,
       displayName: womLink.displayName,
+      publicNameSource: womLink.publicNameSource,
+      claimSource: womLink.claimSource,
+      verifiedAt: womLink.verifiedAt,
       inGroup: Boolean(womLink.inGroup),
       membership: womLink.membership,
       lastSyncedAt: womLink.lastSyncedAt,
