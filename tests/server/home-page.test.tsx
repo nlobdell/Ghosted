@@ -131,6 +131,7 @@ describe('home page', () => {
     };
     const previewSummary: CompanionPreviewSummary = {
       user: null,
+      renderUrl: '/api/companion/render',
       animatedRenderUrl: '/api/companion/render-animated',
       actorMetrics: DEFAULT_GHOSTLING_ACTOR_METRICS,
       renderManifest: {

@@ -197,7 +197,7 @@ const HERO_PAN_WHEEL_LINE_PX = 18;
 const HERO_PAN_SMOOTHING_MS = 120;
 const HERO_PAN_SETTLE_EPSILON = 0.18;
 const HERO_RECENTER_VISIBILITY_THRESHOLD = 1.5;
-const DEFAULT_SRC = '/api/companion/render-animated';
+const DEFAULT_RENDER_SRC = '/api/companion/render';
 const FALLBACK_NAMES = ['Ghosted House', 'Hall Lantern', 'Night Watch'];
 
 function cameraLayoutForVariant(variant: GhostlingSceneVariant) {
@@ -664,8 +664,8 @@ function applySharedSceneEntity(
   target.actorMetrics = nextState.actorMetrics;
 }
 
-function imgSrc(userId: number | null) {
-  return userId !== null ? `/api/companion/render-animated?user=${userId}` : DEFAULT_SRC;
+function renderSrc(userId: number | null) {
+  return userId !== null ? `/api/companion/render?user=${userId}` : DEFAULT_RENDER_SRC;
 }
 
 function companionRenderSignature(companion?: CompanionPreviewSummary) {
@@ -1836,7 +1836,7 @@ export function GhostlingScene({
           ...motion,
           username: member.username,
           displayName: member.displayName,
-          imgSrc: member.companion?.animatedRenderUrl ?? imgSrc(member.userId),
+          imgSrc: member.companion?.renderUrl ?? renderSrc(member.userId),
           companion: member.companion,
           companionSignature: companionRenderSignature(member.companion),
           source: member.source,
@@ -1945,7 +1945,7 @@ export function GhostlingScene({
 
       existing.username = member.username;
       existing.displayName = member.displayName;
-      existing.imgSrc = member.companion?.animatedRenderUrl ?? imgSrc(member.userId);
+      existing.imgSrc = member.companion?.renderUrl ?? renderSrc(member.userId);
       existing.companion = member.companion;
       existing.companionSignature = companionRenderSignature(member.companion);
       existing.actorMetrics = member.companion?.actorMetrics ?? existing.actorMetrics;
@@ -2684,6 +2684,7 @@ export function GhostlingScene({
         data-pan-enabled={heroPanEnabled ? 'true' : 'false'}
         data-pan-dragging={heroPanDragging ? 'true' : 'false'}
         data-pan-offset={heroPanCanRecenter ? 'true' : 'false'}
+        data-mobile-performance={heroMobilePerformanceMode ? 'true' : 'false'}
         data-hero-crop-aspect={heroStageAspectRatio ?? undefined}
         style={heroStageAspectRatio
           ? { aspectRatio: heroStageAspectRatio }
@@ -2764,7 +2765,7 @@ export function GhostlingScene({
             });
             const stageMetrics = stageRenderMetrics(desiredGhostSize, entity.companion?.renderManifest);
             const useStaticGhostlingVisual = heroMobilePerformanceMode;
-            const ghostlingVisualSrc = entity.companion?.animatedRenderUrl ?? entity.imgSrc;
+            const ghostlingVisualSrc = entity.companion?.renderUrl ?? entity.imgSrc;
 
             return (
               <div
