@@ -322,6 +322,76 @@ describe('RuneLite pairing routes', () => {
     expect(linkRow.count).toBe(0);
   });
 
+  it('falls back to a regular WOM player lookup when the hiscores refresh is temporarily unavailable', async () => {
+    const userId = insertUser(context.db, {
+      discordId: 'discord-fallback',
+      username: 'fallback-user',
+      globalName: 'Fallback User',
+    });
+    authMock.mockResolvedValue({ user: { id: String(userId) } });
+    installWomFetchMock({
+      'POST /players/GhostedRSN': new Response(JSON.stringify({
+        code: 'HISCORES_UNEXPECTED_ERROR',
+        message: 'Hiscores connection refused',
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+      'GET /players/GhostedRSN': PLAYER,
+      'GET /players/GhostedRSN/groups': PLAYER_GROUPS,
+    });
+
+    const started = await startPairing('1234567890123456789');
+    const confirmResponse = await postRunelitePairingConfirmRoute(new Request('http://localhost/api/runelite/pairings/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ userCode: started.payload.userCode }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const confirmPayload = await confirmResponse.json();
+
+    expect(confirmResponse.status).toBe(200);
+    expect(confirmPayload.ok).toBe(true);
+    expect(confirmPayload.link.username).toBe(PLAYER.username);
+  });
+
+  it('returns a friendly 503 when WOM cannot refresh or look up the player during pairing confirmation', async () => {
+    const userId = insertUser(context.db, {
+      discordId: 'discord-wom-down',
+      username: 'wom-down',
+      globalName: 'WOM Down',
+    });
+    authMock.mockResolvedValue({ user: { id: String(userId) } });
+    installWomFetchMock({
+      'POST /players/GhostedRSN': new Response(JSON.stringify({
+        code: 'HISCORES_UNEXPECTED_ERROR',
+        message: 'Hiscores connection refused',
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+      'GET /players/GhostedRSN': new Response(JSON.stringify({
+        code: 'PLAYER_NOT_FOUND',
+        message: 'Player not found',
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+
+    const started = await startPairing('1234567890123456789');
+    const response = await postRunelitePairingConfirmRoute(new Request('http://localhost/api/runelite/pairings/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ userCode: started.payload.userCode }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload).toEqual({
+      error: 'Wise Old Man is temporarily unable to refresh that player from the hiscores. Try again in a few minutes.',
+    });
+  });
+
   it('replaces the current users previous RuneLite link when they pair a new account', async () => {
     const userId = insertUser(context.db, {
       discordId: 'discord-1',

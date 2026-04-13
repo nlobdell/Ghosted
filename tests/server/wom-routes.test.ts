@@ -133,6 +133,37 @@ describe('wom route handlers', () => {
     expect(payload.result.verifiedAt).toBeNull();
   });
 
+  it('falls back to a regular WOM lookup when hiscores refresh fails during manual WOM linking', async () => {
+    const userId = insertUser(context.db);
+    authMock.mockResolvedValue({ user: { id: String(userId) } });
+    installWomFetchMock({
+      'POST /players/GhostedRSN': new Response(JSON.stringify({
+        code: 'HISCORES_UNEXPECTED_ERROR',
+        message: 'Hiscores connection refused',
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+      'GET /players/GhostedRSN': PLAYER,
+      'GET /players/GhostedRSN/groups': [{
+        groupId: 123,
+        group: { id: 123, name: 'Ghosted' },
+        role: 'member',
+      }],
+    });
+
+    const response = await postWomLinkRoute(new Request('http://localhost/api/profile/wom-link', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'GhostedRSN' }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(payload.ok).toBe(true);
+    expect(payload.result.username).toBe(PLAYER.username);
+  });
+
   it('returns the expected envelope for unlinking a WOM account', async () => {
     const userId = insertUser(context.db);
     authMock.mockResolvedValue({ user: { id: String(userId) } });
