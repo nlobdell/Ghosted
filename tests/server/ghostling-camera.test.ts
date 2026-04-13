@@ -159,4 +159,43 @@ describe('ghostling scene camera', () => {
     expect(nudged).toBeGreaterThan(0);
     expect(relaxed).toBe(0);
   });
+
+  it('applies horizontal pan overrides without changing zoom and clamps to world bounds', () => {
+    const profile = resolveGhostlingSceneProfile(1920, 'hero');
+    const baselineCamera = createGhostlingSceneCameraMetrics(
+      SHARED_COMMONS_WORLD,
+      1920,
+      350,
+      profile.bucket,
+      'fixed-crop',
+    );
+    const pannedCamera = createGhostlingSceneCameraMetrics(
+      SHARED_COMMONS_WORLD,
+      1920,
+      350,
+      profile.bucket,
+      'fixed-crop',
+      { panXWorld: 180 },
+    );
+    const clampedCamera = createGhostlingSceneCameraMetrics(
+      SHARED_COMMONS_WORLD,
+      1920,
+      350,
+      profile.bucket,
+      'fixed-crop',
+      { panXWorld: 99_999 },
+    );
+
+    expect(pannedCamera.scale).toBeCloseTo(baselineCamera.scale, 4);
+    expect(pannedCamera.worldViewport.height).toBeCloseTo(baselineCamera.worldViewport.height, 4);
+    expect(pannedCamera.worldViewport.x).toBeCloseTo(baselineCamera.worldViewport.x + 180, 4);
+    expect(pannedCamera.panXWorld).toBeCloseTo(180, 4);
+    expect(clampedCamera.worldViewport.x + clampedCamera.worldViewport.width).toBeLessThanOrEqual(
+      SHARED_COMMONS_WORLD.sourceWidth,
+    );
+    expect(clampedCamera.panXWorld).toBeCloseTo(
+      clampedCamera.worldViewport.x - clampedCamera.defaultWorldViewportX,
+      4,
+    );
+  });
 });

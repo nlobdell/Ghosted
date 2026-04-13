@@ -65,6 +65,16 @@
     0 18px 60px rgba(0, 0, 0, 0.34);
 }
 
+.sceneStage[data-variant='hero'][data-pan-enabled='true'] {
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.sceneStage[data-variant='hero'][data-pan-enabled='true'][data-pan-dragging='true'] {
+  cursor: grabbing;
+}
+
 .sceneStage[data-variant='section'] {
   min-height: 19rem;
   border: 1px solid rgba(191, 179, 255, 0.16);
@@ -88,6 +98,8 @@
   object-fit: fill;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  transform-origin: top left;
+  will-change: transform;
 }
 
 .sceneOverlay {
@@ -101,6 +113,34 @@
 
 .sceneOverlay > * {
   pointer-events: auto;
+}
+
+.heroPanRecenter {
+  position: absolute;
+  right: clamp(0.85rem, 2vw, 1.25rem);
+  bottom: clamp(0.85rem, 2vw, 1.25rem);
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.36rem 0.78rem;
+  border: 1px solid rgba(191, 179, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(15, 13, 22, 0.84);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+  color: rgba(250, 247, 255, 0.94);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.heroPanRecenter:hover {
+  border-color: rgba(214, 206, 255, 0.34);
+  background: rgba(23, 20, 34, 0.92);
 }
 
 .sceneField {
@@ -697,9 +737,20 @@
     width: min(18rem, calc(100% - 1.8rem));
   }
 
+  .heroPanRecenter {
+    right: 0.9rem;
+    bottom: 0.9rem;
+  }
+
   .staticGrid .sceneField {
     grid-template-columns: repeat(auto-fit, minmax(7.5rem, max-content));
     gap: 0.9rem 0.8rem;
     padding-top: 5.5rem;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .heroPanRecenter {
+    display: none;
   }
 }

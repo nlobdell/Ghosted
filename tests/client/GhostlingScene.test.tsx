@@ -104,6 +104,8 @@ function installSceneStubs(options: {
   reducedMotion?: boolean;
   width?: number;
   height?: number;
+  coarsePointer?: boolean;
+  noHover?: boolean;
   webSocketClass?: typeof FakeSceneWebSocket;
 } = {}) {
   frameQueue.length = 0;
@@ -139,7 +141,13 @@ function installSceneStubs(options: {
   });
 
   const matchMedia = vi.fn((query: string): MatchMediaStub => ({
-    matches: Boolean(options.reducedMotion),
+    matches: query.includes('prefers-reduced-motion')
+      ? Boolean(options.reducedMotion)
+      : query.includes('pointer: coarse')
+        ? Boolean(options.coarsePointer)
+        : query.includes('hover: none')
+          ? Boolean(options.noHover)
+          : false,
     media: query,
     onchange: null,
     addEventListener: vi.fn(),
@@ -154,6 +162,20 @@ function installSceneStubs(options: {
     value: matchMedia,
   });
 
+  Object.defineProperty(window, 'innerWidth', {
+    configurable: true,
+    get() {
+      return viewportWidth;
+    },
+  });
+
+  Object.defineProperty(window, 'innerHeight', {
+    configurable: true,
+    get() {
+      return viewportHeight;
+    },
+  });
+
   Object.defineProperty(window, 'WebSocket', {
     configurable: true,
     value: options.webSocketClass,
@@ -164,6 +186,21 @@ function installSceneStubs(options: {
     value: {
       writeText: vi.fn().mockResolvedValue(undefined),
     },
+  });
+
+  Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', {
+    configurable: true,
+    value: vi.fn(),
+  });
+
+  Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', {
+    configurable: true,
+    value: vi.fn(),
+  });
+
+  Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
+    configurable: true,
+    value: vi.fn().mockReturnValue(true),
   });
 
   Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
@@ -200,11 +237,20 @@ function extractTranslate3d(styleValue: string) {
   };
 }
 
+function getHeroStage(container: HTMLElement) {
+  const stage = container.querySelector('div[data-world="shared-commons"][data-preset="public-hero"]');
+  if (!(stage instanceof HTMLDivElement)) {
+    throw new Error('Expected hero scene stage.');
+  }
+  return stage;
+}
+
 function expectedWrapPosition(
   x: number,
   y: number,
   renderScale: number,
   actorMetrics: CompanionActorMetrics = DEFAULT_GHOSTLING_ACTOR_METRICS,
+  panXWorld = 0,
 ) {
   const profile = resolveGhostlingSceneProfile(viewportWidth, 'hero');
   const camera = createGhostlingSceneCameraMetrics(
@@ -213,6 +259,7 @@ function expectedWrapPosition(
     viewportHeight,
     profile.bucket,
     'fixed-crop',
+    { panXWorld },
   );
   const point = projectGhostlingWorldPoint(camera, x, y);
   const visibleExtents = scaledGhostlingVisibleExtents(renderScale * camera.scale, actorMetrics);
@@ -507,6 +554,33 @@ describe('GhostlingScene', () => {
 
     expect(container.querySelector('[data-source="voice"]')).not.toBeNull();
     expect(screen.getByTestId('animated-stage').textContent).toContain("Wanderer's Ghostling");
+  });
+
+  it('uses static ghostling renders for the hero on mobile layouts to reduce animation cost', () => {
+    cleanup();
+    installSceneStubs({
+      width: 390,
+      height: 420,
+      coarsePointer: true,
+      noHover: true,
+    });
+    animatedStageMock.mockClear();
+
+    const payload = makePayload([makeMember('user:1', 'Member One')]);
+    render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    expect(screen.queryByTestId('animated-stage')).toBeNull();
+    expect(screen.getByAltText("Member One's Ghostling")).not.toBeNull();
+    expect(animatedStageMock).not.toHaveBeenCalled();
   });
 
   it('uses the measured visible ghost bounds as the interactive wrapper', () => {
@@ -1639,13 +1713,430 @@ describe('GhostlingScene', () => {
       />,
     );
 
-    const stage = container.querySelector('div[data-world="shared-commons"][data-preset="public-hero"]');
+    const stage = getHeroStage(container);
+    expect(stage.getAttribute('data-hero-crop-aspect')).toBe('840 / 420');
+  });
 
-    if (!(stage instanceof HTMLElement)) {
-      throw new Error('Expected hero scene stage.');
+  it('pans the hero horizontally from a ghostling drag and recenters on double-click', () => {
+    const sharedEntity = makeSharedEntity({
+      key: 'user:1',
+      x: 1245,
+      y: 242,
+      targetX: 1305,
+      targetY: 246,
+      safeZoneKey: 'shared-floor',
+      pointKey: 'floor-right-inner',
+    });
+    const payload = {
+      ...makePayload([makeMember('user:1', 'Member One')]),
+      sharedScene: {
+        hero: {
+          version: 1 as const,
+          variant: 'hero' as const,
+          savedAt: Date.now(),
+          width: SHARED_COMMONS_WORLD.sourceWidth,
+          height: SHARED_COMMONS_WORLD.sourceHeight,
+          payloadSource: 'voice' as const,
+          liveCount: 1,
+          entities: [sharedEntity],
+        },
+      },
+    };
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const stage = getHeroStage(container);
+    const wrap = container.querySelector('[data-source="voice"]');
+    const floorLayer = container.querySelector('[data-layer="floor"]');
+    if (!(wrap instanceof HTMLDivElement)) {
+      throw new Error('Expected Ghostling wrapper.');
+    }
+    if (!(floorLayer instanceof HTMLImageElement)) {
+      throw new Error('Expected floor layer.');
     }
 
-    expect(stage.getAttribute('data-hero-crop-aspect')).toBe('840 / 420');
+    const initialPosition = extractTranslate3d(wrap.style.transform);
+    const initialFloorPosition = extractTranslate3d(floorLayer.style.transform);
+
+    const dragPixels = 120;
+    fireEvent.pointerDown(wrap, {
+      pointerId: 1,
+      clientX: 420,
+      clientY: 160,
+      button: 0,
+      pointerType: 'mouse',
+    });
+    fireEvent.pointerMove(stage, {
+      pointerId: 1,
+      clientX: 420 + dragPixels,
+      clientY: 160,
+      button: 0,
+      pointerType: 'mouse',
+    });
+    flushFrame(32);
+
+    const draggedPosition = extractTranslate3d(wrap.style.transform);
+    const draggedFloorPosition = extractTranslate3d(floorLayer.style.transform);
+    expect(stage.getAttribute('data-pan-dragging')).toBe('true');
+    expect(draggedPosition.x).toBeGreaterThan(initialPosition.x + 80);
+    expect(draggedFloorPosition.x).toBeGreaterThan(initialFloorPosition.x + 80);
+
+    fireEvent.pointerUp(stage, {
+      pointerId: 1,
+      clientX: 420 + dragPixels,
+      clientY: 160,
+      button: 0,
+      pointerType: 'mouse',
+    });
+
+    fireEvent.doubleClick(stage);
+    flushFrame(96);
+    flushFrame(192);
+    flushFrame(320);
+
+    const recenteredPosition = extractTranslate3d(wrap.style.transform);
+    const recenteredFloorPosition = extractTranslate3d(floorLayer.style.transform);
+    expect(stage.getAttribute('data-pan-dragging')).toBe('false');
+    expect(Math.abs(recenteredPosition.x - initialPosition.x)).toBeLessThan(1);
+    expect(Math.abs(recenteredFloorPosition.x - initialFloorPosition.x)).toBeLessThan(1);
+  });
+
+  it('reclamps hero panning after resize and disables it while the scene editor is open', () => {
+    const sharedEntity = makeSharedEntity({
+      key: 'user:1',
+      x: 1245,
+      y: 242,
+      targetX: 1305,
+      targetY: 246,
+      safeZoneKey: 'shared-floor',
+      pointKey: 'floor-right-inner',
+    });
+    const payload = {
+      ...makePayload([makeMember('user:1', 'Member One')]),
+      sharedScene: {
+        hero: {
+          version: 1 as const,
+          variant: 'hero' as const,
+          savedAt: Date.now(),
+          width: SHARED_COMMONS_WORLD.sourceWidth,
+          height: SHARED_COMMONS_WORLD.sourceHeight,
+          payloadSource: 'voice' as const,
+          liveCount: 1,
+          entities: [sharedEntity],
+        },
+      },
+    };
+
+    const { container, rerender } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    let stage = getHeroStage(container);
+    const wrap = container.querySelector('[data-source="voice"]');
+    if (!(wrap instanceof HTMLDivElement)) {
+      throw new Error('Expected Ghostling wrapper.');
+    }
+
+    fireEvent.pointerDown(stage, {
+      pointerId: 2,
+      clientX: 620,
+      clientY: 160,
+      button: 0,
+      pointerType: 'mouse',
+    });
+    fireEvent.pointerMove(stage, {
+      pointerId: 2,
+      clientX: -2400,
+      clientY: 160,
+      button: 0,
+      pointerType: 'mouse',
+    });
+    flushFrame(48);
+    fireEvent.pointerUp(stage, {
+      pointerId: 2,
+      clientX: -2400,
+      clientY: 160,
+      button: 0,
+      pointerType: 'mouse',
+    });
+
+    viewportWidth = 1680;
+    viewportHeight = 420;
+    fireEvent(window, new Event('resize'));
+    flushFrame(64);
+
+    const floorLayerAfterResize = container.querySelector('[data-layer="floor"]');
+    if (!(floorLayerAfterResize instanceof HTMLImageElement)) {
+      throw new Error('Expected floor layer.');
+    }
+    const resizedProfile = resolveGhostlingSceneProfile(viewportWidth, 'hero');
+    const resizedCamera = createGhostlingSceneCameraMetrics(
+      SHARED_COMMONS_WORLD,
+      viewportWidth,
+      viewportHeight,
+      resizedProfile.bucket,
+      'fixed-crop',
+      { panXWorld: 99_999 },
+    );
+    expect(extractTranslate3d(floorLayerAfterResize.style.transform).x).toBeCloseTo(resizedCamera.offsetX, 2);
+
+    rerender(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(80);
+    flushFrame(96);
+
+    stage = getHeroStage(container);
+    const floorLayer = container.querySelector('[data-layer="floor"]');
+    if (!(floorLayer instanceof HTMLImageElement)) {
+      throw new Error('Expected floor layer.');
+    }
+    const beforeDisabledDrag = floorLayer.style.transform;
+
+    fireEvent.pointerDown(stage, {
+      pointerId: 3,
+      clientX: 360,
+      clientY: 160,
+      button: 0,
+      pointerType: 'mouse',
+    });
+    fireEvent.pointerMove(stage, {
+      pointerId: 3,
+      clientX: 520,
+      clientY: 160,
+      button: 0,
+      pointerType: 'mouse',
+    });
+    flushFrame(112);
+
+    const afterDisabledDrag = floorLayer.style.transform;
+    expect(stage.getAttribute('data-pan-enabled')).toBe('false');
+    expect(afterDisabledDrag).toBe(beforeDisabledDrag);
+  });
+
+  it('pans the hero from wheel and trackpad input, including vertical-only wheel gestures', () => {
+    const sharedEntity = makeSharedEntity({
+      key: 'user:1',
+      x: 1245,
+      y: 242,
+      targetX: 1305,
+      targetY: 246,
+      safeZoneKey: 'shared-floor',
+      pointKey: 'floor-right-inner',
+    });
+    const payload = {
+      ...makePayload([makeMember('user:1', 'Member One')]),
+      sharedScene: {
+        hero: {
+          version: 1 as const,
+          variant: 'hero' as const,
+          savedAt: Date.now(),
+          width: SHARED_COMMONS_WORLD.sourceWidth,
+          height: SHARED_COMMONS_WORLD.sourceHeight,
+          payloadSource: 'voice' as const,
+          liveCount: 1,
+          entities: [sharedEntity],
+        },
+      },
+    };
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const stage = getHeroStage(container);
+    const wrap = container.querySelector('[data-source="voice"]');
+    const floorLayer = container.querySelector('[data-layer="floor"]');
+    if (!(wrap instanceof HTMLDivElement) || !(floorLayer instanceof HTMLImageElement)) {
+      throw new Error('Expected hero pan elements.');
+    }
+
+    const initialWrap = extractTranslate3d(wrap.style.transform);
+    const initialFloor = extractTranslate3d(floorLayer.style.transform);
+
+    fireEvent.wheel(stage, {
+      deltaX: 160,
+      deltaY: 0,
+      deltaMode: 0,
+    });
+    flushFrame(32);
+    flushFrame(64);
+
+    const horizontalWheelWrap = extractTranslate3d(wrap.style.transform);
+    const horizontalWheelFloor = extractTranslate3d(floorLayer.style.transform);
+    expect(horizontalWheelWrap.x).toBeLessThan(initialWrap.x - 20);
+    expect(horizontalWheelFloor.x).toBeLessThan(initialFloor.x - 20);
+
+    fireEvent.wheel(stage, {
+      deltaX: 0,
+      deltaY: -140,
+      deltaMode: 0,
+    });
+    flushFrame(96);
+    flushFrame(128);
+
+    const verticalWheelWrap = extractTranslate3d(wrap.style.transform);
+    const verticalWheelFloor = extractTranslate3d(floorLayer.style.transform);
+    expect(verticalWheelWrap.x).toBeGreaterThan(horizontalWheelWrap.x + 16);
+    expect(verticalWheelFloor.x).toBeGreaterThan(horizontalWheelFloor.x + 16);
+  });
+
+  it('ignores wheel panning while the scene editor owns the hero stage', () => {
+    const payload = makePayload([makeMember('user:1', 'Member One')]);
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const stage = getHeroStage(container);
+    const floorLayer = container.querySelector('[data-layer="floor"]');
+    if (!(floorLayer instanceof HTMLImageElement)) {
+      throw new Error('Expected floor layer.');
+    }
+    const beforeWheel = floorLayer.style.transform;
+
+    fireEvent.wheel(stage, {
+      deltaX: 160,
+      deltaY: 0,
+      deltaMode: 0,
+    });
+    flushFrame(32);
+    flushFrame(64);
+
+    expect(stage.getAttribute('data-pan-enabled')).toBe('false');
+    expect(floorLayer.style.transform).toBe(beforeWheel);
+  });
+
+  it('shows the mobile recenter button only on touch/mobile layouts and recenters the hero', () => {
+    cleanup();
+    installSceneStubs({
+      width: 390,
+      height: 420,
+      coarsePointer: true,
+      noHover: true,
+    });
+
+    const sharedEntity = makeSharedEntity({
+      key: 'user:1',
+      x: 1245,
+      y: 242,
+      targetX: 1305,
+      targetY: 246,
+      safeZoneKey: 'shared-floor',
+      pointKey: 'floor-right-inner',
+    });
+    const payload = {
+      ...makePayload([makeMember('user:1', 'Member One')]),
+      sharedScene: {
+        hero: {
+          version: 1 as const,
+          variant: 'hero' as const,
+          savedAt: Date.now(),
+          width: SHARED_COMMONS_WORLD.sourceWidth,
+          height: SHARED_COMMONS_WORLD.sourceHeight,
+          payloadSource: 'voice' as const,
+          liveCount: 1,
+          entities: [sharedEntity],
+        },
+      },
+    };
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const stage = getHeroStage(container);
+    const wrap = container.querySelector('[data-source="voice"]');
+    if (!(wrap instanceof HTMLDivElement)) {
+      throw new Error('Expected Ghostling wrapper.');
+    }
+    const initialWrap = extractTranslate3d(wrap.style.transform);
+    expect(screen.queryByRole('button', { name: 'Recenter scene' })).toBeNull();
+
+    fireEvent.wheel(stage, {
+      deltaY: 180,
+      deltaMode: 0,
+    });
+    flushFrame(32);
+    flushFrame(64);
+    flushFrame(96);
+
+    const recenterButton = screen.getByRole('button', { name: 'Recenter scene' });
+    expect(recenterButton).not.toBeNull();
+
+    fireEvent.click(recenterButton);
+    flushFrame(128);
+    flushFrame(176);
+    flushFrame(224);
+    flushFrame(288);
+
+    const recenteredWrap = extractTranslate3d(wrap.style.transform);
+    expect(Math.abs(recenteredWrap.x - initialWrap.x)).toBeLessThan(1);
+    expect(screen.queryByRole('button', { name: 'Recenter scene' })).toBeNull();
+  });
+
+  it('keeps the mobile recenter button hidden on desktop layouts', () => {
+    const payload = makePayload([makeMember('user:1', 'Member One')]);
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const stage = getHeroStage(container);
+    fireEvent.wheel(stage, {
+      deltaY: 180,
+      deltaMode: 0,
+    });
+    flushFrame(32);
+    flushFrame(64);
+
+    expect(screen.queryByRole('button', { name: 'Recenter scene' })).toBeNull();
   });
 
   it('updates anchor values from the scene lab controls and supports keyboard nudging', () => {
