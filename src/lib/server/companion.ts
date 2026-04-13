@@ -383,8 +383,8 @@ export function buildHouseCompanionPreviewSummaryPayload(db: Database): Companio
   return buildCompanionPreviewSummary(db, {
     user: null,
     loadout: emptyCompanionLoadout(),
-    renderUrl: '/api/companion/render',
-    animatedRenderUrl: '/api/companion/render-animated',
+    renderUrl: '/api/companion/render?base=1',
+    animatedRenderUrl: '/api/companion/render-animated?base=1',
   });
 }
 

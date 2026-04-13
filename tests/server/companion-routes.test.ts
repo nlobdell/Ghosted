@@ -149,7 +149,8 @@ describe('companion route handlers', () => {
 
     expect(response.status).toBe(200);
     expect(payload.user).toBeNull();
-    expect(payload.animatedRenderUrl).toBe('/api/companion/render-animated');
+    expect(payload.renderUrl).toBe('/api/companion/render?base=1');
+    expect(payload.animatedRenderUrl).toBe('/api/companion/render-animated?base=1');
     expect(payload.renderManifest.motion.accents.length).toBeGreaterThan(0);
     expect(payload.renderManifest.debug.slotAnchors.hat).toEqual({ x: 105, y: 72 });
   });
