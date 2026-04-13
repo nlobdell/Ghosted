@@ -37,6 +37,56 @@ export interface WomLink {
   };
 }
 
+export interface RuneliteLinkStatus {
+  linked: boolean;
+  accountHash?: string | null;
+  username?: string | null;
+  launcherDisplayName?: string | null;
+  pluginVersion?: string | null;
+  linkedAt?: string | null;
+  lastVerifiedAt?: string | null;
+  lastSeenAt?: string | null;
+}
+
+export interface RunelitePairingLinkSummary {
+  accountHash: string;
+  username: string;
+  linkedAt: string;
+  womLinked: boolean;
+}
+
+export interface RunelitePairingCreatedResponse {
+  pairingId: string;
+  userCode: string;
+  verificationUrl: string;
+  pollToken: string;
+  pollAfterSeconds: number;
+  expiresAt: string;
+}
+
+export interface RunelitePairingAlreadyLinkedResponse {
+  status: 'already_linked';
+  link: RuneliteLinkStatus;
+}
+
+export type RunelitePairingStartResponse =
+  | RunelitePairingCreatedResponse
+  | RunelitePairingAlreadyLinkedResponse;
+
+export type RunelitePairingStatusResponse =
+  | {
+    status: 'pending';
+    expiresAt: string;
+  }
+  | {
+    status: 'approved';
+    link: RunelitePairingLinkSummary;
+  }
+  | {
+    status: 'denied' | 'expired' | 'conflict';
+    expiresAt: string;
+  };
+
 export interface ShellData {
   authenticated: boolean;
   user?: ShellUser;
