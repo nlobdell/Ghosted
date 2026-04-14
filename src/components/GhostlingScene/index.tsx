@@ -2896,7 +2896,6 @@ export function GhostlingScene({
             onBeginHistoryCapture={beginSceneLabHistoryCapture}
             onCommitHistoryCapture={commitSceneLabHistoryCapture}
             onCancelHistoryCapture={cancelSceneLabHistoryCapture}
-            camera={metrics}
             bucket={metrics.bucket}
             previewMode={sceneLabPreviewMode}
             playing={sceneLabPlaying}

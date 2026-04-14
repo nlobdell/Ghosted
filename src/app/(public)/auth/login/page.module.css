@@ -4,37 +4,7 @@
 
 .hero {
   position: relative;
-  overflow: clip;
-}
-
-.hero::before,
-.hero::after {
-  content: "";
-  position: absolute;
-  inset: auto;
-  pointer-events: none;
-}
-
-.hero::before {
-  top: -18%;
-  right: -10%;
-  width: clamp(16rem, 34vw, 28rem);
-  height: clamp(16rem, 34vw, 28rem);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(184, 168, 255, 0.22), transparent 70%);
-  filter: blur(8px);
-  animation: drift 16s ease-in-out infinite alternate;
-}
-
-.hero::after {
-  bottom: -24%;
-  left: -8%;
-  width: clamp(18rem, 30vw, 24rem);
-  height: clamp(18rem, 30vw, 24rem);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(109, 92, 179, 0.24), transparent 72%);
-  filter: blur(12px);
-  animation: driftReverse 18s ease-in-out infinite alternate;
+  overflow: visible;
 }
 
 .heroGrid {
@@ -48,7 +18,8 @@
 .heroCopy,
 .signalStack,
 .signalCard,
-.supportCard {
+.supportList,
+.supportRow {
   display: grid;
   align-content: start;
   gap: 0.85rem;
@@ -103,12 +74,9 @@
 
 .trustMeta {
   display: grid;
-  gap: 0.75rem;
-  padding: 1rem 1.05rem;
-  border: 1px solid rgba(191, 179, 255, 0.12);
-  border-radius: 1.35rem;
-  background:
-    linear-gradient(180deg, rgba(11, 10, 18, 0.72), rgba(17, 14, 26, 0.82));
+  gap: 0.55rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid rgba(191, 179, 255, 0.12);
 }
 
 .trustMetaLabel {
@@ -133,12 +101,17 @@
   line-height: 1.65;
 }
 
+.signalStack {
+  gap: 0.95rem;
+  padding-left: 1rem;
+  border-left: 1px solid rgba(191, 179, 255, 0.12);
+}
+
 .signalCard {
   min-height: 100%;
-  padding: 1rem 1.05rem;
-  border: 1px solid rgba(191, 179, 255, 0.1);
-  border-radius: 1.35rem;
-  background: rgba(255, 255, 255, 0.02);
+  padding-top: 0.85rem;
+  padding-bottom: 0.15rem;
+  border-top: 1px solid rgba(191, 179, 255, 0.12);
 }
 
 .signalCardLabel {
@@ -162,52 +135,40 @@
   line-height: 1.68;
 }
 
-.supportGrid {
+.supportList {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0;
+  border-top: 1px solid rgba(191, 179, 255, 0.12);
 }
 
-.supportCard {
-  min-height: 100%;
+.supportRow {
+  gap: 0.6rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(191, 179, 255, 0.12);
 }
 
-.supportCard p {
+.supportRow p {
   margin: 0;
 }
 
-.supportCard a {
+.supportRow a {
   color: var(--color-accent-soft);
 }
 
-@keyframes drift {
-  from {
-    transform: translate3d(0, 0, 0) scale(0.96);
-  }
-
-  to {
-    transform: translate3d(-1.4rem, 1.2rem, 0) scale(1.06);
-  }
-}
-
-@keyframes driftReverse {
-  from {
-    transform: translate3d(0, 0, 0) scale(0.94);
-  }
-
-  to {
-    transform: translate3d(1.2rem, -1rem, 0) scale(1.04);
-  }
-}
-
 @media (max-width: 1120px) {
-  .heroGrid,
-  .supportGrid {
+  .heroGrid {
     grid-template-columns: 1fr;
   }
 
   .heroTitle {
     max-width: 13ch;
+  }
+
+  .signalStack {
+    padding-left: 0;
+    border-left: 0;
+    padding-top: 0.25rem;
+    border-top: 1px solid rgba(191, 179, 255, 0.12);
   }
 }
 

@@ -125,8 +125,8 @@ export default async function LoginPage({
         </div>
       </section>
 
-      <section className={styles.supportGrid} aria-label="Sign-in notes">
-        <article className="editorial-surface editorial-card">
+      <section className={styles.supportList} aria-label="Sign-in notes">
+        <article className={styles.supportRow}>
           <p className="kicker">What unlocks</p>
           <h3>Hall access, Ghostling state, and verified clan tools.</h3>
           <p className="editorial-copy">
@@ -135,7 +135,7 @@ export default async function LoginPage({
           </p>
         </article>
 
-        <article className="editorial-surface editorial-card">
+        <article className={styles.supportRow}>
           <p className="kicker">What Ghosted uses</p>
           <h3>Discord identity only on this screen.</h3>
           <p className="editorial-copy">
@@ -144,7 +144,7 @@ export default async function LoginPage({
           </p>
         </article>
 
-        <article className="editorial-surface editorial-card">
+        <article className={styles.supportRow}>
           <p className="kicker">Need a hand</p>
           <h3>Use the fallback sign-in page or ask the clan.</h3>
           <p className="editorial-copy">

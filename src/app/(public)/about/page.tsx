@@ -20,7 +20,7 @@ export default function AboutPage() {
         <div className={styles.storyGrid}>
           <div className={styles.storyCopy}>
             <p className="kicker">About Ghosted</p>
-            <h1 className={styles.storyTitle}>Ghosted is a Discord-first OSRS clan built for loud nights, visible proof, and a Hall that remembers you.</h1>
+            <h1 className={styles.storyTitle}>Ghosted is a Discord-first OSRS clan.</h1>
             <p className="editorial-copy">
               The public site keeps the clan visible, the stream keeps the nights loud, and the Hall turns that energy
               into your own Ghostling, rewards loop, and competition presence.
@@ -42,11 +42,13 @@ export default function AboutPage() {
           <p className="kicker">Who keeps it moving</p>
           <h2 className={styles.leadershipTitle}>Ghosted runs on stream voice, member routing, and community leads who keep the nights alive.</h2>
         </div>
-        <div className="editorial-grid-three">
+        <div className={styles.leadershipList}>
           {LEADERS.map((leader) => (
-            <article key={leader.name} className={`editorial-surface editorial-card ${styles.card}`}>
-              <span className="app-chip">{leader.role}</span>
-              <h3>{leader.name}</h3>
+            <article key={leader.name} className={styles.leadershipRow}>
+              <div className={styles.leadershipMeta}>
+                <span className="app-chip">{leader.role}</span>
+                <h3>{leader.name}</h3>
+              </div>
               <p className="editorial-copy">{leader.note}</p>
             </article>
           ))}

@@ -164,15 +164,6 @@
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.55));
 }
 
-.sceneLabOverlay {
-  position: absolute;
-  inset: 0 auto auto 0;
-  z-index: 10;
-  pointer-events: none;
-  overflow: visible;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
-}
-
 .sceneLabRect,
 .sceneLabGuideRect,
 .sceneLabHandle,
@@ -188,6 +179,7 @@
   fill: rgba(255, 110, 160, 0.08);
   stroke: rgba(255, 110, 160, 0.85);
   stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
 
 .sceneLabGuideRect {
@@ -195,30 +187,16 @@
   stroke: rgba(132, 202, 255, 0.72);
   stroke-width: 1;
   stroke-dasharray: 6 4;
-}
-
-.sceneLabHeroCropStageFrame {
-  fill: rgba(132, 202, 255, 0.03);
-  stroke: rgba(132, 202, 255, 0.92);
-  stroke-width: 2;
-  stroke-dasharray: 10 6;
-}
-
-.sceneLabHeroCropStageLabel {
-  fill: rgba(250, 247, 255, 0.94);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  pointer-events: none;
+  vector-effect: non-scaling-stroke;
 }
 
 .sceneLabGuideLine {
   stroke: rgba(255, 216, 138, 0.9);
-  stroke-width: 2;
+  stroke-width: 4;
   stroke-dasharray: 8 4;
+  stroke-linecap: round;
   cursor: ns-resize;
+  vector-effect: non-scaling-stroke;
 }
 
 .sceneLabHandle {
@@ -226,6 +204,7 @@
   stroke: rgba(26, 23, 43, 0.9);
   stroke-width: 1;
   cursor: nwse-resize;
+  vector-effect: non-scaling-stroke;
 }
 
 .sceneLabAnchor {
@@ -233,6 +212,7 @@
   stroke: rgba(9, 9, 12, 0.94);
   stroke-width: 1.2;
   cursor: grab;
+  vector-effect: non-scaling-stroke;
 }
 
 .sceneLabFallbackAnchor {
@@ -240,12 +220,14 @@
   stroke: rgba(9, 9, 12, 0.94);
   stroke-width: 1.2;
   cursor: grab;
+  vector-effect: non-scaling-stroke;
 }
 
 .sceneLabMemberMarker line {
   stroke: rgba(255, 255, 255, 0.42);
   stroke-width: 1;
   stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
 }
 
 .sceneLabMemberMarker circle {
@@ -253,6 +235,7 @@
   stroke: rgba(9, 9, 12, 0.92);
   stroke-width: 1.1;
   cursor: pointer;
+  vector-effect: non-scaling-stroke;
 }
 
 .sceneLabRect[data-selected='true'],
@@ -345,35 +328,11 @@
   border-radius: 0.9rem;
   background: rgba(5, 5, 8, 0.92);
   overflow: visible;
+  touch-action: none;
 }
 
 .sceneLabCropPreviewCanvas {
   fill: rgba(11, 10, 16, 0.95);
-}
-
-.sceneLabCropPreviewZone {
-  fill: rgba(255, 110, 160, 0.08);
-  stroke: rgba(255, 110, 160, 0.28);
-  stroke-width: 2;
-}
-
-.sceneLabCropPreviewAnchor {
-  fill: rgba(149, 216, 255, 0.75);
-  stroke: rgba(9, 9, 12, 0.94);
-  stroke-width: 3;
-}
-
-.sceneLabCropPreviewFrame {
-  fill: rgba(132, 202, 255, 0.08);
-  stroke: rgba(132, 202, 255, 0.92);
-  stroke-width: 3;
-  stroke-dasharray: 18 12;
-  cursor: move;
-}
-
-.sceneLabCropPreviewFrame[data-selected='true'] {
-  stroke: #fff7d1;
-  stroke-width: 4;
 }
 
 .sceneLabVisibilityList {

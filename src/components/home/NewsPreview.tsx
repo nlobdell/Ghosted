@@ -21,10 +21,12 @@ export function NewsPreview({ posts }: { posts: NewsPost[] }) {
       <div className="home-news-layout">
         {featuredPost ? (
           <article className="home-news-feature">
-            <p>Featured dispatch</p>
+            <div className="home-news-feature__meta">
+              <span>Featured dispatch</span>
+              <span>{formatDate(featuredPost.publishedAt ?? featuredPost.createdAt)}</span>
+            </div>
             <h3>{featuredPost.title}</h3>
-            <span>{featuredPost.excerpt}</span>
-            <span>{formatDate(featuredPost.publishedAt ?? featuredPost.createdAt)}</span>
+            <p>{featuredPost.excerpt}</p>
             <Link href={`/news/${featuredPost.slug}/`} className="button button--secondary button--small">
               Read featured dispatch
             </Link>
@@ -32,15 +34,15 @@ export function NewsPreview({ posts }: { posts: NewsPost[] }) {
         ) : null}
         <div className="home-news-list">
           {archivePosts.map((post) => (
-            <article key={post.id} className="home-news-card">
-              <p>Recent dispatch</p>
-              <h3>{post.title}</h3>
-              <span>{post.excerpt}</span>
-              <span>{formatDate(post.publishedAt ?? post.createdAt)}</span>
-              <Link href={`/news/${post.slug}/`} className="button button--secondary button--small">
-                Read dispatch
-              </Link>
-            </article>
+            <Link key={post.id} href={`/news/${post.slug}/`} className="home-news-row">
+              <div className="home-news-row__head">
+                <span>Recent dispatch</span>
+                <span>{formatDate(post.publishedAt ?? post.createdAt)}</span>
+              </div>
+              <strong>{post.title}</strong>
+              <span className="home-news-row__excerpt">{post.excerpt}</span>
+              <span className="home-news-row__action">Read dispatch</span>
+            </Link>
           ))}
         </div>
       </div>

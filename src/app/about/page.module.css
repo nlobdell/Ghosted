@@ -1,13 +1,15 @@
 .page,
 .storyGrid,
 .leadership,
-.leadershipIntro {
+.leadershipIntro,
+.leadershipList,
+.leadershipMeta {
   display: grid;
   gap: 1rem;
 }
 
 .story {
-  padding: var(--surface-padding-lg);
+  padding-bottom: 1.15rem;
 }
 
 .storyGrid {
@@ -30,18 +32,36 @@
   line-height: 0.94;
 }
 
-.leadershipIntro {
+.leadershipList {
+  gap: 0;
+  border-top: 1px solid rgba(191, 179, 255, 0.12);
 }
 
-.card {
+.leadershipRow {
   display: grid;
-  align-content: start;
-  gap: 0.78rem;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  gap: 0.9rem 1.4rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(191, 179, 255, 0.12);
 }
 
-@media (max-width: 860px) {
+.leadershipMeta {
+  align-content: start;
+  gap: 0.55rem;
+}
+
+.leadershipMeta h3 {
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  line-height: 1.05;
+}
+
+@media (max-width: 1920px) {
   .storyTitle,
   .leadershipTitle {
     max-width: none;
+  }
+
+  .leadershipRow {
+    grid-template-columns: 1fr;
   }
 }

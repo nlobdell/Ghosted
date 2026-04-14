@@ -25,12 +25,6 @@ import {
   type GhostlingSceneLabSelection,
   type GhostlingSceneLabTab,
 } from '@/lib/ghostling-scene-lab';
-import {
-  projectGhostlingWorldPoint,
-  projectGhostlingWorldRect,
-  unprojectGhostlingScreenPoint,
-  type GhostlingSceneCameraMetrics,
-} from '@/lib/ghostling-camera';
 import type {
   GhostlingSceneDensityBucket,
   GhostlingWorldRect,
@@ -80,7 +74,6 @@ type DragState =
       kind: 'rect';
       selection: RectSelectionKey;
       handle: DragHandle;
-      surface: 'stage' | 'world-preview';
       startClientX: number;
       startClientY: number;
       originRect: GhostlingWorldRect;
@@ -118,7 +111,6 @@ type GhostlingSceneLabProps = {
   onBeginHistoryCapture: () => void;
   onCommitHistoryCapture: () => void;
   onCancelHistoryCapture: () => void;
-  camera: GhostlingSceneCameraMetrics;
   bucket: GhostlingSceneDensityBucket;
   previewMode: GhostlingSceneLabPreviewMode;
   playing: boolean;
@@ -152,6 +144,10 @@ const OVERLAY_VISIBILITY_LABELS: Record<GhostlingSceneLabOverlayKey, string> = {
   'fallback-anchor': 'Fallback anchor',
   members: 'Members',
 };
+const EXPORT_FRAME_HANDLE_SIZE = 36;
+const EXPORT_FRAME_ANCHOR_RADIUS = 20;
+const EXPORT_FRAME_FALLBACK_RADIUS = 24;
+const EXPORT_FRAME_MEMBER_RADIUS = 14;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -318,7 +314,6 @@ export function GhostlingSceneLab({
   onBeginHistoryCapture,
   onCommitHistoryCapture,
   onCancelHistoryCapture,
-  camera,
   bucket,
   previewMode,
   playing,
@@ -338,8 +333,7 @@ export function GhostlingSceneLab({
     DEFAULT_GHOSTLING_SCENE_LAB_OVERLAY_VISIBILITY,
   );
   const dragRef = useRef<DragState | null>(null);
-  const overlayRef = useRef<SVGSVGElement | null>(null);
-  const worldPreviewRef = useRef<SVGSVGElement | null>(null);
+  const exportFrameRef = useRef<SVGSVGElement | null>(null);
 
   useEffect(() => {
     setTuningBucket(bucket);
@@ -542,46 +536,27 @@ export function GhostlingSceneLab({
   };
 
   const resolveWorldDragDelta = useCallback((drag: DragState, clientX: number, clientY: number) => {
-    if (drag.kind === 'rect' && drag.surface === 'world-preview') {
-      const element = worldPreviewRef.current;
-      const rect = element?.getBoundingClientRect();
-      const width = rect && rect.width > 0
-        ? rect.width
-        : element?.clientWidth || worldDraft.sourceWidth;
-      const height = rect && rect.height > 0
-        ? rect.height
-        : element?.clientHeight || worldDraft.sourceHeight;
-
-      return {
-        dx: Math.round(((clientX - drag.startClientX) / Math.max(1, width)) * worldDraft.sourceWidth),
-        dy: Math.round(((clientY - drag.startClientY) / Math.max(1, height)) * worldDraft.sourceHeight),
-      };
-    }
-
-    const rect = overlayRef.current?.getBoundingClientRect();
-    if (rect && rect.width > 0 && rect.height > 0) {
-      const startWorld = unprojectGhostlingScreenPoint(
-        camera,
-        drag.startClientX - rect.left,
-        drag.startClientY - rect.top,
-      );
-      const currentWorld = unprojectGhostlingScreenPoint(
-        camera,
-        clientX - rect.left,
-        clientY - rect.top,
-      );
-
-      return {
-        dx: Math.round(currentWorld.x - startWorld.x),
-        dy: Math.round(currentWorld.y - startWorld.y),
-      };
-    }
+    const element = exportFrameRef.current;
+    const rect = element?.getBoundingClientRect();
+    const width = rect && rect.width > 0
+      ? rect.width
+      : element?.clientWidth || worldDraft.sourceWidth;
+    const height = rect && rect.height > 0
+      ? rect.height
+      : element?.clientHeight || worldDraft.sourceHeight;
+    const scale = Math.max(
+      0.001,
+      Math.min(
+        width / Math.max(1, worldDraft.sourceWidth),
+        height / Math.max(1, worldDraft.sourceHeight),
+      ),
+    );
 
     return {
-      dx: Math.round((clientX - drag.startClientX) / Math.max(0.001, camera.scaleX)),
-      dy: Math.round((clientY - drag.startClientY) / Math.max(0.001, camera.scaleY)),
+      dx: Math.round((clientX - drag.startClientX) / scale),
+      dy: Math.round((clientY - drag.startClientY) / scale),
     };
-  }, [camera, worldDraft.sourceHeight, worldDraft.sourceWidth]);
+  }, [worldDraft.sourceHeight, worldDraft.sourceWidth]);
 
   useEffect(() => {
     const onPointerMove = (event: PointerEvent) => {
@@ -782,7 +757,6 @@ export function GhostlingSceneLab({
     selectionKey: RectSelectionKey,
     handle: DragHandle,
     rect: GhostlingWorldRect,
-    surface: 'stage' | 'world-preview' = 'stage',
   ) => {
     event.preventDefault();
     onSelectionChange(selectionKey);
@@ -791,7 +765,6 @@ export function GhostlingSceneLab({
       kind: 'rect',
       selection: selectionKey,
       handle,
-      surface,
       startClientX: event.clientX,
       startClientY: event.clientY,
       originRect: { ...rect },
@@ -808,257 +781,245 @@ export function GhostlingSceneLab({
   };
 
   return (
-    <>
-      <svg
-        ref={overlayRef}
-        aria-hidden="true"
-        className={styles.sceneLabOverlay}
-        viewBox={`0 0 ${camera.width} ${camera.height}`}
-        preserveAspectRatio="none"
-        style={{
-          left: '0',
-          top: '0',
-          width: `${camera.width}px`,
-          height: `${camera.height}px`,
-        }}
-      >
-        {overlayVisibility['safe-zones'] ? worldDraft.safeZones.map((safeZone) => {
-          const selected = selection?.kind === 'safe-zone' && selection.key === safeZone.key;
-          const projectedBounds = projectGhostlingWorldRect(camera, safeZone.bounds);
-          return (
-            <g key={safeZone.key}>
-              <rect
-                data-scene-lab-role="safe-zone"
-                x={projectedBounds.x}
-                y={projectedBounds.y}
-                width={projectedBounds.width}
-                height={projectedBounds.height}
-                className={styles.sceneLabRect}
-                data-selected={selected ? 'true' : 'false'}
-                onPointerDown={(event) => beginRectDrag(event, { kind: 'safe-zone', key: safeZone.key }, 'move', safeZone.bounds)}
-              />
-              {(['nw', 'ne', 'sw', 'se'] as const).map((handle) => {
-                const x = handle.includes('w') ? projectedBounds.x : projectedBounds.x + projectedBounds.width;
-                const y = handle.includes('n') ? projectedBounds.y : projectedBounds.y + projectedBounds.height;
-                return (
-                  <rect
-                    key={`${safeZone.key}:${handle}`}
-                    data-scene-lab-role="safe-zone-handle"
-                    x={x - 4}
-                    y={y - 4}
-                    width="8"
-                    height="8"
-                    className={styles.sceneLabHandle}
-                    data-selected={selected ? 'true' : 'false'}
-                    onPointerDown={(event) => beginRectDrag(event, { kind: 'safe-zone', key: safeZone.key }, handle, safeZone.bounds)}
-                  />
-                );
-              })}
-            </g>
-          );
-        }) : null}
-        {overlayVisibility['guide-rects'] ? GUIDE_RECT_KEYS.map((guideKey) => {
-          const rect = guideKey === 'heroCrop'
-            ? effectiveHeroCrop
-            : worldDraft.guides[guideKey];
-          if (!rect) return null;
-          const selected = selection?.kind === 'guide' && selection.key === guideKey;
-          if (guideKey === 'heroCrop' && camera.guideMode === 'hero-crop') {
-            return (
-              <g key={guideKey}>
-                <rect
-                  data-scene-lab-role="hero-crop-stage-frame"
-                  x={0}
-                  y={0}
-                  width={camera.width}
-                  height={camera.height}
-                  className={`${styles.sceneLabGuideRect} ${styles.sceneLabHeroCropStageFrame}`}
-                  data-selected={selected ? 'true' : 'false'}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    onSelectionChange({ kind: 'guide', key: 'heroCrop' });
-                  }}
-                />
-                <text
-                  x={14}
-                  y={22}
-                  className={styles.sceneLabHeroCropStageLabel}
-                >
-                  Hero crop
-                </text>
-              </g>
-            );
-          }
-          const projectedRect = projectGhostlingWorldRect(camera, rect);
-          return (
-            <g key={guideKey}>
-              <rect
-                data-scene-lab-role="guide-rect"
-                x={projectedRect.x}
-                y={projectedRect.y}
-                width={projectedRect.width}
-                height={projectedRect.height}
-                className={styles.sceneLabGuideRect}
-                data-selected={selected ? 'true' : 'false'}
-                onPointerDown={(event) => beginRectDrag(event, { kind: 'guide', key: guideKey }, 'move', rect)}
-              />
-              {(['nw', 'ne', 'sw', 'se'] as const).map((handle) => {
-                const x = handle.includes('w') ? projectedRect.x : projectedRect.x + projectedRect.width;
-                const y = handle.includes('n') ? projectedRect.y : projectedRect.y + projectedRect.height;
-                return (
-                  <rect
-                    key={`${guideKey}:${handle}`}
-                    data-scene-lab-role="guide-rect-handle"
-                    x={x - 4}
-                    y={y - 4}
-                    width="8"
-                    height="8"
-                    className={styles.sceneLabHandle}
-                    data-selected={selected ? 'true' : 'false'}
-                    onPointerDown={(event) => beginRectDrag(event, { kind: 'guide', key: guideKey }, handle, rect)}
-                  />
-                );
-              })}
-            </g>
-          );
-        }) : null}
-        {overlayVisibility['guide-lines'] ? <line
-          data-scene-lab-role="guide-line"
-          x1={projectGhostlingWorldPoint(camera, 0, worldDraft.guides.horizonY).x}
-          x2={projectGhostlingWorldPoint(camera, worldDraft.sourceWidth, worldDraft.guides.horizonY).x}
-          y1={projectGhostlingWorldPoint(camera, 0, worldDraft.guides.horizonY).y}
-          y2={projectGhostlingWorldPoint(camera, worldDraft.sourceWidth, worldDraft.guides.horizonY).y}
-          className={styles.sceneLabGuideLine}
-          data-selected={selection?.kind === 'guide' && selection.key === 'horizonY' ? 'true' : 'false'}
-          onPointerDown={(event) => beginGuideLineDrag(event, 'horizonY', worldDraft.guides.horizonY)}
-        /> : null}
-        {overlayVisibility['guide-lines'] ? <line
-          data-scene-lab-role="guide-line"
-          x1={projectGhostlingWorldPoint(camera, 0, worldDraft.guides.floorY).x}
-          x2={projectGhostlingWorldPoint(camera, worldDraft.sourceWidth, worldDraft.guides.floorY).x}
-          y1={projectGhostlingWorldPoint(camera, 0, worldDraft.guides.floorY).y}
-          y2={projectGhostlingWorldPoint(camera, worldDraft.sourceWidth, worldDraft.guides.floorY).y}
-          className={styles.sceneLabGuideLine}
-          data-selected={selection?.kind === 'guide' && selection.key === 'floorY' ? 'true' : 'false'}
-          onPointerDown={(event) => beginGuideLineDrag(event, 'floorY', worldDraft.guides.floorY)}
-        /> : null}
-        {overlayVisibility.anchors ? worldDraft.points.map((point) => {
-          const projectedPoint = projectGhostlingWorldPoint(camera, point.x, point.y);
-          return (
-            <circle
-              key={point.key}
-              data-scene-lab-role="anchor"
-              cx={projectedPoint.x}
-              cy={projectedPoint.y}
-              r="7"
-              className={styles.sceneLabAnchor}
-              data-selected={selection?.kind === 'anchor' && selection.key === point.key ? 'true' : 'false'}
-              onPointerDown={(event) => beginAnchorDrag(event, point.key, point.x, point.y)}
-            />
-          );
-        }) : null}
-        {overlayVisibility['fallback-anchor'] ? (() => {
-          const projectedFallback = projectGhostlingWorldPoint(camera, worldDraft.fallbackAnchor.x, worldDraft.fallbackAnchor.y);
-          return (
-        <circle
-          data-scene-lab-role="fallback-anchor"
-          cx={projectedFallback.x}
-          cy={projectedFallback.y}
-          r="8"
-          className={styles.sceneLabFallbackAnchor}
-          data-selected={selection?.kind === 'fallback-anchor' ? 'true' : 'false'}
-          onPointerDown={(event) => beginAnchorDrag(event, worldDraft.fallbackAnchor.key, worldDraft.fallbackAnchor.x, worldDraft.fallbackAnchor.y, true)}
-        />
-          );
-        })() : null}
-        {overlayVisibility.members ? memberDiagnostics.map((member) => {
-          const projectedMember = projectGhostlingWorldPoint(camera, member.x, member.y);
-          const projectedTarget = projectGhostlingWorldPoint(camera, member.targetX, member.targetY);
-          return (
-          <g
-            key={member.key}
-            data-scene-lab-role="member"
-            className={styles.sceneLabMemberMarker}
-            onPointerDown={() => onSelectionChange({ kind: 'member', key: member.key })}
+    <section className={styles.sceneLabPanel} data-testid="scene-lab-panel">
+      <div className={styles.sceneLabSection}>
+        <div className={styles.sceneLabHeaderRow}>
+          <div className={styles.sceneLabSectionTitle}>Objects</div>
+          <div className={styles.sceneLabButtonRow}>
+            <button type="button" data-testid="scene-lab-undo" className={styles.sceneLabButton} disabled={!canUndo} onClick={onUndo}>Undo</button>
+            <button type="button" data-testid="scene-lab-redo" className={styles.sceneLabButton} disabled={!canRedo} onClick={onRedo}>Redo</button>
+          </div>
+        </div>
+        <div className={styles.sceneLabTabs}>
+          <button type="button" data-testid="scene-lab-tab-authored" className={styles.sceneLabChip} data-selected={activeTab === 'authored' ? 'true' : 'false'} onClick={() => onActiveTabChange('authored')}>Authored</button>
+          <button type="button" data-testid="scene-lab-tab-members" className={styles.sceneLabChip} data-selected={activeTab === 'members' ? 'true' : 'false'} onClick={() => onActiveTabChange('members')}>Members</button>
+        </div>
+        {activeTab === 'authored' ? (
+          <div className={styles.sceneLabButtonRow}>
+            <button type="button" data-testid="scene-lab-add-anchor" className={styles.sceneLabButton} onClick={handleAddAnchor}>Add anchor</button>
+            <button type="button" data-testid="scene-lab-remove-anchor" className={styles.sceneLabButton} disabled={!canRemoveAnchor} onClick={handleRemoveAnchor}>Remove anchor</button>
+          </div>
+        ) : null}
+        <div className={styles.sceneLabSearchRow}>
+          <input
+            data-testid="scene-lab-search"
+            className={styles.sceneLabInput}
+            type="search"
+            value={searchQuery}
+            placeholder={`Search ${activeTab === 'members' ? 'members' : 'objects'}`}
+            onChange={(event) => onSearchQueryChange(event.currentTarget.value)}
+            onKeyDown={handleBrowserKeyDown}
+          />
+        </div>
+        <div className={styles.sceneLabCropPreviewBox}>
+          <div className={styles.sceneLabSectionTitle}>Export Frame</div>
+          <svg
+            ref={exportFrameRef}
+            data-testid="scene-lab-export-frame"
+            data-scene-lab-role="export-frame"
+            className={styles.sceneLabCropPreview}
+            viewBox={`0 0 ${worldDraft.sourceWidth} ${worldDraft.sourceHeight}`}
+            preserveAspectRatio="xMidYMid meet"
           >
-            <line x1={projectedMember.x} y1={projectedMember.y} x2={projectedTarget.x} y2={projectedTarget.y} />
-            <circle cx={projectedMember.x} cy={projectedMember.y} r="5" data-selected={selection?.kind === 'member' && selection.key === member.key ? 'true' : 'false'} />
-          </g>
-          );
-        }) : null}
-      </svg>
-
-      <section className={styles.sceneLabPanel} data-testid="scene-lab-panel">
-        <div className={styles.sceneLabSection}>
-          <div className={styles.sceneLabHeaderRow}>
-            <div className={styles.sceneLabSectionTitle}>Objects</div>
-            <div className={styles.sceneLabButtonRow}>
-              <button type="button" data-testid="scene-lab-undo" className={styles.sceneLabButton} disabled={!canUndo} onClick={onUndo}>Undo</button>
-              <button type="button" data-testid="scene-lab-redo" className={styles.sceneLabButton} disabled={!canRedo} onClick={onRedo}>Redo</button>
-            </div>
-          </div>
-          <div className={styles.sceneLabTabs}>
-            <button type="button" data-testid="scene-lab-tab-authored" className={styles.sceneLabChip} data-selected={activeTab === 'authored' ? 'true' : 'false'} onClick={() => onActiveTabChange('authored')}>Authored</button>
-            <button type="button" data-testid="scene-lab-tab-members" className={styles.sceneLabChip} data-selected={activeTab === 'members' ? 'true' : 'false'} onClick={() => onActiveTabChange('members')}>Members</button>
-          </div>
-          {activeTab === 'authored' ? (
-            <div className={styles.sceneLabButtonRow}>
-              <button type="button" data-testid="scene-lab-add-anchor" className={styles.sceneLabButton} onClick={handleAddAnchor}>Add anchor</button>
-              <button type="button" data-testid="scene-lab-remove-anchor" className={styles.sceneLabButton} disabled={!canRemoveAnchor} onClick={handleRemoveAnchor}>Remove anchor</button>
-            </div>
-          ) : null}
-          <div className={styles.sceneLabSearchRow}>
-            <input
-              data-testid="scene-lab-search"
-              className={styles.sceneLabInput}
-              type="search"
-              value={searchQuery}
-              placeholder={`Search ${activeTab === 'members' ? 'members' : 'objects'}`}
-              onChange={(event) => onSearchQueryChange(event.currentTarget.value)}
-              onKeyDown={handleBrowserKeyDown}
+            <rect
+              x="0"
+              y="0"
+              width={worldDraft.sourceWidth}
+              height={worldDraft.sourceHeight}
+              className={styles.sceneLabCropPreviewCanvas}
             />
-          </div>
-          <div className={styles.sceneLabVisibilityBox}>
-            <div className={styles.sceneLabSectionTitle}>Overlay</div>
-            <div className={styles.sceneLabVisibilityList}>
-              {(Object.keys(OVERLAY_VISIBILITY_LABELS) as GhostlingSceneLabOverlayKey[]).map((key) => (
-                <label key={key} className={styles.sceneLabToggle}>
-                  <input
-                    data-testid={`scene-lab-visibility-${key}`}
-                    type="checkbox"
-                    checked={overlayVisibility[key]}
-                    onChange={() => toggleOverlayVisibility(key)}
+            {overlayVisibility['safe-zones'] ? worldDraft.safeZones.map((safeZone) => {
+              const selected = selection?.kind === 'safe-zone' && selection.key === safeZone.key;
+              return (
+                <g key={safeZone.key}>
+                  <rect
+                    data-scene-lab-role="safe-zone"
+                    data-safe-zone-key={safeZone.key}
+                    x={safeZone.bounds.x}
+                    y={safeZone.bounds.y}
+                    width={safeZone.bounds.width}
+                    height={safeZone.bounds.height}
+                    className={styles.sceneLabRect}
+                    data-selected={selected ? 'true' : 'false'}
+                    onPointerDown={(event) => beginRectDrag(event, { kind: 'safe-zone', key: safeZone.key }, 'move', safeZone.bounds)}
                   />
-                  <span>{OVERLAY_VISIBILITY_LABELS[key]}</span>
-                </label>
-              ))}
-            </div>
+                  {(['nw', 'ne', 'sw', 'se'] as const).map((handle) => {
+                    const x = handle.includes('w') ? safeZone.bounds.x : safeZone.bounds.x + safeZone.bounds.width;
+                    const y = handle.includes('n') ? safeZone.bounds.y : safeZone.bounds.y + safeZone.bounds.height;
+                    return (
+                      <rect
+                        key={`${safeZone.key}:${handle}`}
+                        data-scene-lab-role="safe-zone-handle"
+                        data-safe-zone-key={safeZone.key}
+                        data-handle={handle}
+                        x={x - (EXPORT_FRAME_HANDLE_SIZE / 2)}
+                        y={y - (EXPORT_FRAME_HANDLE_SIZE / 2)}
+                        width={EXPORT_FRAME_HANDLE_SIZE}
+                        height={EXPORT_FRAME_HANDLE_SIZE}
+                        className={styles.sceneLabHandle}
+                        data-selected={selected ? 'true' : 'false'}
+                        onPointerDown={(event) => beginRectDrag(event, { kind: 'safe-zone', key: safeZone.key }, handle, safeZone.bounds)}
+                      />
+                    );
+                  })}
+                </g>
+              );
+            }) : null}
+            {overlayVisibility['guide-rects'] ? GUIDE_RECT_KEYS.map((guideKey) => {
+              const rect = guideKey === 'heroCrop'
+                ? effectiveHeroCrop
+                : worldDraft.guides[guideKey];
+              if (!rect) return null;
+              const selected = selection?.kind === 'guide' && selection.key === guideKey;
+              return (
+                <g key={guideKey}>
+                  <rect
+                    data-scene-lab-role="guide-rect"
+                    data-guide-key={guideKey}
+                    x={rect.x}
+                    y={rect.y}
+                    width={rect.width}
+                    height={rect.height}
+                    className={styles.sceneLabGuideRect}
+                    data-selected={selected ? 'true' : 'false'}
+                    onPointerDown={(event) => beginRectDrag(event, { kind: 'guide', key: guideKey }, 'move', rect)}
+                  />
+                  {(['nw', 'ne', 'sw', 'se'] as const).map((handle) => {
+                    const x = handle.includes('w') ? rect.x : rect.x + rect.width;
+                    const y = handle.includes('n') ? rect.y : rect.y + rect.height;
+                    return (
+                      <rect
+                        key={`${guideKey}:${handle}`}
+                        data-scene-lab-role="guide-rect-handle"
+                        data-guide-key={guideKey}
+                        data-handle={handle}
+                        x={x - (EXPORT_FRAME_HANDLE_SIZE / 2)}
+                        y={y - (EXPORT_FRAME_HANDLE_SIZE / 2)}
+                        width={EXPORT_FRAME_HANDLE_SIZE}
+                        height={EXPORT_FRAME_HANDLE_SIZE}
+                        className={styles.sceneLabHandle}
+                        data-selected={selected ? 'true' : 'false'}
+                        onPointerDown={(event) => beginRectDrag(event, { kind: 'guide', key: guideKey }, handle, rect)}
+                      />
+                    );
+                  })}
+                </g>
+              );
+            }) : null}
+            {overlayVisibility['guide-lines'] ? (
+              <line
+                data-scene-lab-role="guide-line"
+                data-guide-key="horizonY"
+                x1={0}
+                x2={worldDraft.sourceWidth}
+                y1={worldDraft.guides.horizonY}
+                y2={worldDraft.guides.horizonY}
+                className={styles.sceneLabGuideLine}
+                data-selected={selection?.kind === 'guide' && selection.key === 'horizonY' ? 'true' : 'false'}
+                onPointerDown={(event) => beginGuideLineDrag(event, 'horizonY', worldDraft.guides.horizonY)}
+              />
+            ) : null}
+            {overlayVisibility['guide-lines'] ? (
+              <line
+                data-scene-lab-role="guide-line"
+                data-guide-key="floorY"
+                x1={0}
+                x2={worldDraft.sourceWidth}
+                y1={worldDraft.guides.floorY}
+                y2={worldDraft.guides.floorY}
+                className={styles.sceneLabGuideLine}
+                data-selected={selection?.kind === 'guide' && selection.key === 'floorY' ? 'true' : 'false'}
+                onPointerDown={(event) => beginGuideLineDrag(event, 'floorY', worldDraft.guides.floorY)}
+              />
+            ) : null}
+            {overlayVisibility.anchors ? worldDraft.points.map((point) => (
+              <circle
+                key={point.key}
+                data-scene-lab-role="anchor"
+                data-anchor-key={point.key}
+                cx={point.x}
+                cy={point.y}
+                r={EXPORT_FRAME_ANCHOR_RADIUS}
+                className={styles.sceneLabAnchor}
+                data-selected={selection?.kind === 'anchor' && selection.key === point.key ? 'true' : 'false'}
+                onPointerDown={(event) => beginAnchorDrag(event, point.key, point.x, point.y)}
+              />
+            )) : null}
+            {overlayVisibility['fallback-anchor'] ? (
+              <circle
+                data-scene-lab-role="fallback-anchor"
+                cx={worldDraft.fallbackAnchor.x}
+                cy={worldDraft.fallbackAnchor.y}
+                r={EXPORT_FRAME_FALLBACK_RADIUS}
+                className={styles.sceneLabFallbackAnchor}
+                data-selected={selection?.kind === 'fallback-anchor' ? 'true' : 'false'}
+                onPointerDown={(event) => beginAnchorDrag(event, worldDraft.fallbackAnchor.key, worldDraft.fallbackAnchor.x, worldDraft.fallbackAnchor.y, true)}
+              />
+            ) : null}
+            {overlayVisibility.members ? memberDiagnostics.map((member) => (
+              <g
+                key={member.key}
+                data-scene-lab-role="member"
+                data-member-key={member.key}
+                className={styles.sceneLabMemberMarker}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  onSelectionChange({ kind: 'member', key: member.key });
+                }}
+              >
+                <line x1={member.x} y1={member.y} x2={member.targetX} y2={member.targetY} />
+                <circle
+                  cx={member.x}
+                  cy={member.y}
+                  r={EXPORT_FRAME_MEMBER_RADIUS}
+                  data-selected={selection?.kind === 'member' && selection.key === member.key ? 'true' : 'false'}
+                />
+              </g>
+            )) : null}
+          </svg>
+          <div className={styles.sceneLabMeta}>Drag guides, safe zones, and anchors here. Hero crop still drives the published hero camera.</div>
+        </div>
+        <div className={styles.sceneLabVisibilityBox}>
+          <div className={styles.sceneLabSectionTitle}>Frame Layers</div>
+          <div className={styles.sceneLabVisibilityList}>
+            {(Object.keys(OVERLAY_VISIBILITY_LABELS) as GhostlingSceneLabOverlayKey[]).map((key) => (
+              <label key={key} className={styles.sceneLabToggle}>
+                <input
+                  data-testid={`scene-lab-visibility-${key}`}
+                  type="checkbox"
+                  checked={overlayVisibility[key]}
+                  onChange={() => toggleOverlayVisibility(key)}
+                />
+                <span>{OVERLAY_VISIBILITY_LABELS[key]}</span>
+              </label>
+            ))}
           </div>
-          <div className={styles.sceneLabObjectBrowser} data-testid="scene-lab-object-browser" tabIndex={0} onKeyDown={handleBrowserKeyDown}>
-            {groupedItems.length > 0 ? groupedItems.map((group) => (
-              <div key={group.group} className={styles.sceneLabObjectGroup}>
-                <div className={styles.sceneLabObjectGroupTitle}>{group.group}</div>
-                <div className={styles.sceneLabObjectList}>
-                  {group.items.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={styles.sceneLabObjectItem}
-                      data-selected={activeSelectionKey === item.id ? 'true' : 'false'}
-                      onClick={() => onSelectionChange(item.selection)}
-                    >
-                      <span>{item.label}</span>
-                      {item.meta ? <span className={styles.sceneLabObjectItemMeta}>{item.meta}</span> : null}
-                    </button>
-                  ))}
-                </div>
+        </div>
+        <div className={styles.sceneLabObjectBrowser} data-testid="scene-lab-object-browser" tabIndex={0} onKeyDown={handleBrowserKeyDown}>
+          {groupedItems.length > 0 ? groupedItems.map((group) => (
+            <div key={group.group} className={styles.sceneLabObjectGroup}>
+              <div className={styles.sceneLabObjectGroupTitle}>{group.group}</div>
+              <div className={styles.sceneLabObjectList}>
+                {group.items.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={styles.sceneLabObjectItem}
+                    data-selected={activeSelectionKey === item.id ? 'true' : 'false'}
+                    onClick={() => onSelectionChange(item.selection)}
+                  >
+                    <span>{item.label}</span>
+                    {item.meta ? <span className={styles.sceneLabObjectItemMeta}>{item.meta}</span> : null}
+                  </button>
+                ))}
               </div>
-            )) : (
-              <div className={styles.sceneLabMeta}>No matching objects.</div>
-            )}
-          </div>
-          <div className={styles.sceneLabSectionTitle}>Inspector</div>
-          <div className={styles.sceneLabFields}>
+            </div>
+          )) : (
+            <div className={styles.sceneLabMeta}>No matching objects.</div>
+          )}
+        </div>
+        <div className={styles.sceneLabSectionTitle}>Inspector</div>
+        <div className={styles.sceneLabFields}>
             {selectedAnchor ? (
               <>
                 <SelectionNumberField label="Anchor X" value={selectedAnchor.x} testId="scene-lab-anchor-x" onFocus={onBeginHistoryCapture} onBlur={onCommitHistoryCapture} onChange={(value) => updateWorldDraft((current) => ({
@@ -1106,90 +1067,22 @@ export function GhostlingSceneLab({
               }, { history: 'none' })} />
             ) : null}
           </div>
-          {selectedMember ? (
-            <div className={styles.sceneLabDiagnostics} data-testid="scene-lab-member-diagnostics">
-              <div>{selectedMember.displayName}</div>
-              <div>{`point=${selectedMember.pointKey}`}</div>
-              <div>{`zone=${selectedMember.safeZoneKey}`}</div>
-              <div>{`phase=${selectedMember.movementPhase}`}</div>
-              <div>{`speed=${Math.hypot(selectedMember.velocityX, selectedMember.velocityY).toFixed(2)}`}</div>
-              <div>{`distance=${selectedMember.distanceToTarget.toFixed(1)}`}</div>
-              <div>{`crowding=${selectedMember.crowding.toFixed(2)}`}</div>
-            </div>
-          ) : !selectedAnchor && !selectedSafeZone && !selectedGuideRect && !selectedFallback ? (
-            <div className={styles.sceneLabMeta}>Select an authored object or member to inspect it.</div>
-          ) : null}
-          {effectiveHeroCrop ? (
-            <div className={styles.sceneLabCropPreviewBox}>
-              <div className={styles.sceneLabSectionTitle}>Export Frame</div>
-              <svg
-                ref={worldPreviewRef}
-                data-testid="scene-lab-hero-crop-preview"
-                className={styles.sceneLabCropPreview}
-                viewBox={`0 0 ${worldDraft.sourceWidth} ${worldDraft.sourceHeight}`}
-                preserveAspectRatio="xMidYMid meet"
-              >
-                <rect
-                  x="0"
-                  y="0"
-                  width={worldDraft.sourceWidth}
-                  height={worldDraft.sourceHeight}
-                  className={styles.sceneLabCropPreviewCanvas}
-                />
-                {worldDraft.safeZones.map((safeZone) => (
-                  <rect
-                    key={safeZone.key}
-                    x={safeZone.bounds.x}
-                    y={safeZone.bounds.y}
-                    width={safeZone.bounds.width}
-                    height={safeZone.bounds.height}
-                    className={styles.sceneLabCropPreviewZone}
-                  />
-                ))}
-                {worldDraft.points.map((point) => (
-                  <circle
-                    key={point.key}
-                    cx={point.x}
-                    cy={point.y}
-                    r="6"
-                    className={styles.sceneLabCropPreviewAnchor}
-                  />
-                ))}
-                <rect
-                  data-scene-lab-role="hero-crop-preview-rect"
-                  x={effectiveHeroCrop.x}
-                  y={effectiveHeroCrop.y}
-                  width={effectiveHeroCrop.width}
-                  height={effectiveHeroCrop.height}
-                  className={styles.sceneLabCropPreviewFrame}
-                  data-selected={selection?.kind === 'guide' && selection.key === 'heroCrop' ? 'true' : 'false'}
-                  onPointerDown={(event) => beginRectDrag(event, { kind: 'guide', key: 'heroCrop' }, 'move', effectiveHeroCrop, 'world-preview')}
-                />
-                {(['nw', 'ne', 'sw', 'se'] as const).map((handle) => {
-                  const heroCrop = effectiveHeroCrop;
-                  const x = handle.includes('w') ? heroCrop.x : heroCrop.x + heroCrop.width;
-                  const y = handle.includes('n') ? heroCrop.y : heroCrop.y + heroCrop.height;
-                  return (
-                    <rect
-                      key={`hero-crop-preview:${handle}`}
-                      data-scene-lab-role="hero-crop-preview-handle"
-                      x={x - 8}
-                      y={y - 8}
-                      width="16"
-                      height="16"
-                      className={styles.sceneLabHandle}
-                      data-selected={selection?.kind === 'guide' && selection.key === 'heroCrop' ? 'true' : 'false'}
-                      onPointerDown={(event) => beginRectDrag(event, { kind: 'guide', key: 'heroCrop' }, handle, heroCrop, 'world-preview')}
-                    />
-                  );
-                })}
-              </svg>
-              <div className={styles.sceneLabMeta}>Hero crop drives the published hero camera. Edit it here for export framing.</div>
-            </div>
-          ) : null}
-        </div>
+        {selectedMember ? (
+          <div className={styles.sceneLabDiagnostics} data-testid="scene-lab-member-diagnostics">
+            <div>{selectedMember.displayName}</div>
+            <div>{`point=${selectedMember.pointKey}`}</div>
+            <div>{`zone=${selectedMember.safeZoneKey}`}</div>
+            <div>{`phase=${selectedMember.movementPhase}`}</div>
+            <div>{`speed=${Math.hypot(selectedMember.velocityX, selectedMember.velocityY).toFixed(2)}`}</div>
+            <div>{`distance=${selectedMember.distanceToTarget.toFixed(1)}`}</div>
+            <div>{`crowding=${selectedMember.crowding.toFixed(2)}`}</div>
+          </div>
+        ) : !selectedAnchor && !selectedSafeZone && !selectedGuideRect && !selectedFallback ? (
+          <div className={styles.sceneLabMeta}>Select an authored object or member to inspect it.</div>
+        ) : null}
+      </div>
 
-        <div className={styles.sceneLabSection}>
+      <div className={styles.sceneLabSection}>
           <div className={styles.sceneLabSectionTitle}>Movement</div>
           <div className={styles.sceneLabChipRow}>
             {TUNING_BUCKETS.map((nextBucket) => (
@@ -1246,8 +1139,7 @@ export function GhostlingSceneLab({
             <button type="button" className={styles.sceneLabButton} onClick={() => downloadJson('scene-lab-session.json', exportGhostlingSceneLabSession(worldDraft, tuningDraft, previewState))}>Download session</button>
           </div>
           <div className={styles.sceneLabMeta} data-testid="scene-lab-export-status">{exportStatus}</div>
-        </div>
-      </section>
-    </>
+      </div>
+    </section>
   );
 }

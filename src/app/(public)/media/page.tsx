@@ -68,11 +68,13 @@ export default async function MediaPage() {
           </p>
         </div>
 
-        <div className={`editorial-grid-two ${styles.grid}`}>
-          {CLIPS.map((clip) => (
-            <article key={clip.title} className={`editorial-surface editorial-card ${styles.card}`}>
-              <span className="app-chip">Replay</span>
-              <h3>{clip.title}</h3>
+        <div className={styles.replayList}>
+          {CLIPS.map((clip, index) => (
+            <article key={clip.title} className={styles.replayRow}>
+              <div className={styles.replayRowHeader}>
+                <span className="app-chip">Replay {index + 1}</span>
+                <h3>{clip.title}</h3>
+              </div>
               <p className="editorial-copy">{clip.meta}</p>
               <a href={GHOSTED_CONTENT.links.twitch} target="_blank" rel="noopener noreferrer" className="button button--secondary button--small">
                 Open replay
