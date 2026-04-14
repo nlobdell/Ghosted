@@ -3,6 +3,7 @@ import type {
   GhostlingWorldRect,
   GhostlingWorldSpec,
 } from '@/lib/ghostling-world';
+import { resolveGhostlingHeroCrop } from '@/lib/ghostling-world';
 
 export type GhostlingSceneCameraGuideMode = 'safe-area' | 'center-safe' | 'ultrawide-bleed' | 'fixed-crop' | 'hero-crop';
 export type GhostlingSceneCameraLayout = 'responsive-fit' | 'fixed-crop';
@@ -97,8 +98,13 @@ function createFixedCropCameraMetrics(
   bucket: GhostlingSceneDensityBucket,
   overrides?: GhostlingSceneCameraOverrides,
 ): GhostlingSceneCameraMetrics {
-  const cropRect = world.guides.heroCrop;
-  if (!cropRect) {
+  const authoredCrop = bucket === 'mobile'
+    ? world.guides.heroCropMobile ?? world.guides.heroCropTablet ?? world.guides.heroCrop
+    : bucket === 'tablet'
+      ? world.guides.heroCropTablet ?? world.guides.heroCrop
+      : world.guides.heroCrop;
+  const cropRect = resolveGhostlingHeroCrop(world, bucket);
+  if (!authoredCrop) {
     const scale = 1;
     const renderWidth = world.sourceWidth * scale;
     const renderHeight = world.sourceHeight * scale;
@@ -182,7 +188,7 @@ function createFixedCropCameraMetrics(
     renderHeight,
     offsetX,
     offsetY,
-    guideMode: 'hero-crop',
+    guideMode: authoredCrop ? 'hero-crop' : 'fixed-crop',
     labelSafeTopPx,
     panXWorld: worldViewport.x - defaultWorldViewportX,
     defaultWorldViewportX,

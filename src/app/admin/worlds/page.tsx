@@ -660,6 +660,8 @@ export default function AdminWorldsPage() {
               ['Draft updated', data.world.draftUpdatedAt ? formatDate(data.world.draftUpdatedAt) : 'Never'],
               ['Published at', data.world.publishedAt ? formatDate(data.world.publishedAt) : 'Repo fallback'],
               ['Published hero crop', rectLabel(data.publishedWorld.guides.heroCrop)],
+              ['Published hero crop (tablet)', rectLabel(data.publishedWorld.guides.heroCropTablet)],
+              ['Published hero crop (mobile)', rectLabel(data.publishedWorld.guides.heroCropMobile)],
             ]}
           />
         </AdminPaneSection>
@@ -669,6 +671,8 @@ export default function AdminWorldsPage() {
             items={[
               ['Canvas', `${data.draftWorld.sourceWidth} x ${data.draftWorld.sourceHeight}`],
               ['Hero crop', rectLabel(data.draftWorld.guides.heroCrop)],
+              ['Hero crop (tablet)', rectLabel(data.draftWorld.guides.heroCropTablet)],
+              ['Hero crop (mobile)', rectLabel(data.draftWorld.guides.heroCropMobile)],
               ['Safe zones', String(data.draftWorld.safeZones.length)],
               ['Anchors', String(data.draftWorld.points.length)],
               ['Layer order', draftLayerOrder],

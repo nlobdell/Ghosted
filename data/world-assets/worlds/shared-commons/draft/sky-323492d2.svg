@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3150 350" shape-rendering="crispEdges">
+  <rect width="3150" height="350" fill="#08090f"/>
+  <rect y="18" width="3150" height="48" fill="#10111a"/>
+  <rect y="66" width="3150" height="44" fill="#171621"/>
+  <rect y="110" width="3150" height="42" fill="#1e1820"/>
+  <rect y="152" width="3150" height="198" fill="#21171e"/>
+
+  <rect x="0" y="170" width="3150" height="4" fill="#2d1d24"/>
+  <rect x="0" y="174" width="3150" height="4" fill="#20161c"/>
+
+  <circle cx="835" cy="74" r="34" fill="#d8d9dd"/>
+  <circle cx="835" cy="74" r="52" fill="none" stroke="#1d2028" stroke-width="18"/>
+
+  <g fill="#f3f1ea">
+    <rect x="143" y="62" width="2" height="2"/>
+    <rect x="301" y="46" width="2" height="2"/>
+    <rect x="429" y="58" width="2" height="2"/>
+    <rect x="833" y="40" width="2" height="2"/>
+    <rect x="1041" y="54" width="2" height="2"/>
+    <rect x="1345" y="72" width="2" height="2"/>
+    <rect x="1503" y="48" width="2" height="2"/>
+    <rect x="1651" y="38" width="2" height="2"/>
+    <rect x="1855" y="60" width="2" height="2"/>
+    <rect x="2061" y="42" width="2" height="2"/>
+    <rect x="2309" y="68" width="2" height="2"/>
+    <rect x="2543" y="52" width="2" height="2"/>
+    <rect x="2759" y="76" width="2" height="2"/>
+    <rect x="2927" y="58" width="2" height="2"/>
+  </g>
+
+  <g fill="#14131c">
+    <rect x="39" y="134" width="140" height="10"/>
+    <rect x="231" y="138" width="180" height="8"/>
+    <rect x="489" y="132" width="126" height="10"/>
+    <rect x="1039" y="136" width="200" height="8"/>
+    <rect x="1333" y="130" width="164" height="10"/>
+    <rect x="1841" y="136" width="176" height="8"/>
+    <rect x="2039" y="132" width="136" height="10"/>
+    <rect x="2363" y="138" width="200" height="8"/>
+    <rect x="2657" y="132" width="168" height="10"/>
+  </g>
+</svg>

@@ -245,6 +245,14 @@ function getHeroStage(container: HTMLElement) {
   return stage;
 }
 
+function getSceneLabExportFrame() {
+  const frame = screen.getByTestId('scene-lab-export-frame');
+  if (!(frame instanceof SVGSVGElement)) {
+    throw new Error('Expected scene lab export frame.');
+  }
+  return frame;
+}
+
 function expectedWrapPosition(
   x: number,
   y: number,
@@ -270,19 +278,10 @@ function expectedWrapPosition(
   };
 }
 
-function expectedWorldDragDelta(screenDx: number, screenDy = 0) {
-  const profile = resolveGhostlingSceneProfile(viewportWidth, 'hero');
-  const camera = createGhostlingSceneCameraMetrics(
-    SHARED_COMMONS_WORLD,
-    viewportWidth,
-    viewportHeight,
-    profile.bucket,
-    'fixed-crop',
-  );
-
+function expectedExportFrameDragDelta(screenDx: number, screenDy = 0) {
   return {
-    x: Math.round(screenDx / Math.max(0.001, camera.scaleX)),
-    y: Math.round(screenDy / Math.max(0.001, camera.scaleY)),
+    x: screenDx,
+    y: screenDy,
   };
 }
 
@@ -557,7 +556,7 @@ describe('GhostlingScene', () => {
     expect(screen.getByTestId('animated-stage').textContent).toContain("Wanderer's Ghostling");
   });
 
-  it('uses static ghostling renders for the hero on mobile layouts to reduce animation cost', () => {
+  it('uses the animated ghostling pipeline for the hero on mobile layouts too', () => {
     cleanup();
     installSceneStubs({
       width: 390,
@@ -579,15 +578,9 @@ describe('GhostlingScene', () => {
     flushFrame(0);
     flushFrame(16);
 
-    const stage = screen.getByRole('img', { name: 'Ghostlings representing live members and recent clan activity' }).closest('div[data-world="shared-commons"][data-preset="public-hero"]');
-    expect(stage?.getAttribute('data-mobile-performance')).toBe('true');
-    expect(screen.queryByTestId('animated-stage')).toBeNull();
-    const ghostImg = screen.getByAltText("Member One's Ghostling");
-    expect(ghostImg).not.toBeNull();
-    expect((ghostImg as HTMLImageElement).src).toContain('/api/companion/render');
-    expect((ghostImg as HTMLImageElement).src).not.toContain('/api/companion/render-animated');
-    expect((ghostImg as HTMLImageElement).src).toContain('format=png');
-    expect(animatedStageMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('animated-stage')).not.toBeNull();
+    expect(screen.queryByAltText("Member One's Ghostling")).toBeNull();
+    expect(animatedStageMock).toHaveBeenCalled();
   });
 
   it('uses the measured visible ghost bounds as the interactive wrapper', () => {
@@ -1608,8 +1601,8 @@ describe('GhostlingScene', () => {
     expect(screen.getByRole('button', { name: 'Refresh live' })).not.toBeNull();
   });
 
-  it('lets the scene lab toggle overlay guide visibility while keeping safe zones editable from the browser', () => {
-    const { container } = render(
+  it('lets the scene lab toggle frame layers while keeping safe zones editable from the browser', () => {
+    render(
       <GhostlingScene
         variant="hero"
         initialPayload={makePayload([makeMember('user:1', 'Member One')])}
@@ -1621,14 +1614,24 @@ describe('GhostlingScene', () => {
     flushFrame(0);
     flushFrame(16);
 
-    expect(container.querySelectorAll('[data-scene-lab-role="guide-line"]').length).toBe(2);
-    expect(container.querySelectorAll('[data-scene-lab-role="safe-zone"]').length).toBeGreaterThan(0);
+    const exportFrame = getSceneLabExportFrame();
+    expect(exportFrame.querySelectorAll('[data-scene-lab-role="guide-line"]').length).toBe(2);
+    expect(exportFrame.querySelectorAll('[data-scene-lab-role="safe-zone"]').length).toBeGreaterThan(0);
+    expect(exportFrame.querySelectorAll('[data-scene-lab-role="anchor"]').length).toBeGreaterThan(0);
+    expect(exportFrame.querySelectorAll('[data-scene-lab-role="fallback-anchor"]').length).toBe(1);
+    expect(exportFrame.querySelectorAll('[data-scene-lab-role="member"]').length).toBe(1);
 
     fireEvent.click(screen.getByTestId('scene-lab-visibility-guide-lines'));
     fireEvent.click(screen.getByTestId('scene-lab-visibility-safe-zones'));
+    fireEvent.click(screen.getByTestId('scene-lab-visibility-anchors'));
+    fireEvent.click(screen.getByTestId('scene-lab-visibility-fallback-anchor'));
+    fireEvent.click(screen.getByTestId('scene-lab-visibility-members'));
 
-    expect(container.querySelectorAll('[data-scene-lab-role="guide-line"]').length).toBe(0);
-    expect(container.querySelectorAll('[data-scene-lab-role="safe-zone"]').length).toBe(0);
+    expect(exportFrame.querySelectorAll('[data-scene-lab-role="guide-line"]').length).toBe(0);
+    expect(exportFrame.querySelectorAll('[data-scene-lab-role="safe-zone"]').length).toBe(0);
+    expect(exportFrame.querySelectorAll('[data-scene-lab-role="anchor"]').length).toBe(0);
+    expect(exportFrame.querySelectorAll('[data-scene-lab-role="fallback-anchor"]').length).toBe(0);
+    expect(exportFrame.querySelectorAll('[data-scene-lab-role="member"]').length).toBe(0);
 
     fireEvent.click(screen.getByText('Shared floor'));
 
@@ -1636,7 +1639,7 @@ describe('GhostlingScene', () => {
     expect(screen.getByDisplayValue(String(SHARED_COMMONS_WORLD.safeZones[0]?.roamRadius))).not.toBeNull();
   });
 
-  it('shows a dedicated export-frame preview for hero crop and updates it visually for world export', () => {
+  it('uses the export frame as the hero crop editor and removes the old stage overlay', () => {
     const { container } = render(
       <GhostlingScene
         variant="hero"
@@ -1649,16 +1652,16 @@ describe('GhostlingScene', () => {
     flushFrame(0);
     flushFrame(16);
 
-    expect(container.querySelector('[data-scene-lab-role="hero-crop-stage-frame"]')).not.toBeNull();
+    expect(container.querySelector('[data-scene-lab-role="hero-crop-stage-frame"]')).toBeNull();
     fireEvent.click(within(screen.getByTestId('scene-lab-object-browser')).getByText('Hero crop'));
 
     const guideX = screen.getByLabelText('Guide X') as HTMLInputElement;
-    expect(screen.getByTestId('scene-lab-hero-crop-preview')).not.toBeNull();
+    const exportFrame = getSceneLabExportFrame();
     expect(guideX.value).toBe(String(SHARED_COMMONS_WORLD.guides.heroCrop?.x));
 
-    const previewRect = document.querySelector('[data-scene-lab-role="hero-crop-preview-rect"]');
+    const previewRect = exportFrame.querySelector('[data-scene-lab-role="guide-rect"][data-guide-key="heroCrop"]');
     if (!(previewRect instanceof Element)) {
-      throw new Error('Expected hero crop preview rect.');
+      throw new Error('Expected hero crop guide rect in the export frame.');
     }
 
     fireEvent.pointerDown(previewRect, { clientX: 100, clientY: 100 });
@@ -1694,7 +1697,90 @@ describe('GhostlingScene', () => {
 
     expect(screen.getByLabelText('Guide X')).not.toBeNull();
     expect(screen.getByLabelText('Guide Width')).not.toBeNull();
-    expect(screen.getByTestId('scene-lab-hero-crop-preview')).not.toBeNull();
+    expect(screen.getByTestId('scene-lab-export-frame')).not.toBeNull();
+  });
+
+  it('drags and resizes safe zones from the export frame', () => {
+    render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    fireEvent.click(screen.getByText('Shared floor'));
+
+    const zoneX = screen.getByLabelText('Zone X') as HTMLInputElement;
+    const zoneY = screen.getByLabelText('Zone Y') as HTMLInputElement;
+    const zoneWidth = screen.getByLabelText('Zone Width') as HTMLInputElement;
+    const zoneHeight = screen.getByLabelText('Zone Height') as HTMLInputElement;
+    const exportFrame = getSceneLabExportFrame();
+
+    const zoneRect = exportFrame.querySelector('[data-scene-lab-role="safe-zone"][data-safe-zone-key="shared-floor"]');
+    if (!(zoneRect instanceof Element)) {
+      throw new Error('Expected shared-floor safe zone rect.');
+    }
+
+    const moveDelta = expectedExportFrameDragDelta(24, 12);
+    const originX = Number(zoneX.value);
+    const originY = Number(zoneY.value);
+    fireEvent.pointerDown(zoneRect, { clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(window, { clientX: 124, clientY: 112 });
+    fireEvent.pointerUp(window, { clientX: 124, clientY: 112 });
+
+    expect(Number(zoneX.value)).toBe(originX + moveDelta.x);
+    expect(Number(zoneY.value)).toBe(originY + moveDelta.y);
+
+    const resizeHandle = exportFrame.querySelector('[data-scene-lab-role="safe-zone-handle"][data-safe-zone-key="shared-floor"][data-handle="se"]');
+    if (!(resizeHandle instanceof Element)) {
+      throw new Error('Expected shared-floor safe zone resize handle.');
+    }
+
+    const resizeDelta = expectedExportFrameDragDelta(18, 10);
+    const originWidth = Number(zoneWidth.value);
+    const originHeight = Number(zoneHeight.value);
+    fireEvent.pointerDown(resizeHandle, { clientX: 200, clientY: 200 });
+    fireEvent.pointerMove(window, { clientX: 218, clientY: 210 });
+    fireEvent.pointerUp(window, { clientX: 218, clientY: 210 });
+
+    expect(Number(zoneWidth.value)).toBe(originWidth + resizeDelta.x);
+    expect(Number(zoneHeight.value)).toBe(originHeight + resizeDelta.y);
+  });
+
+  it('drags guide lines from the export frame', () => {
+    render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    fireEvent.click(screen.getByText('Horizon'));
+
+    const guideY = screen.getByLabelText('horizonY Y') as HTMLInputElement;
+    const exportFrame = getSceneLabExportFrame();
+    const horizonLine = exportFrame.querySelector('[data-scene-lab-role="guide-line"][data-guide-key="horizonY"]');
+    if (!(horizonLine instanceof Element)) {
+      throw new Error('Expected horizon guide line.');
+    }
+
+    const originY = Number(guideY.value);
+    const dragDelta = expectedExportFrameDragDelta(0, 14);
+    fireEvent.pointerDown(horizonLine, { clientX: 120, clientY: 120 });
+    fireEvent.pointerMove(window, { clientX: 120, clientY: 134 });
+    fireEvent.pointerUp(window, { clientX: 120, clientY: 134 });
+
+    expect(Number(guideY.value)).toBe(originY + dragDelta.y);
   });
 
   it('matches the hero stage aspect ratio to the authored hero crop', () => {
@@ -1722,6 +1808,157 @@ describe('GhostlingScene', () => {
 
     const stage = getHeroStage(container);
     expect(stage.getAttribute('data-hero-crop-aspect')).toBe('840 / 420');
+  });
+
+  it('matches the hero stage aspect ratio to the bucket-specific mobile hero crop', () => {
+    cleanup();
+    installSceneStubs({
+      width: 390,
+      height: 420,
+      coarsePointer: true,
+      noHover: true,
+    });
+
+    const customWorld = {
+      ...SHARED_COMMONS_WORLD,
+      guides: {
+        ...SHARED_COMMONS_WORLD.guides,
+        heroCrop: {
+          x: 640,
+          y: 90,
+          width: 1800,
+          height: 240,
+        },
+        heroCropTablet: {
+          x: 860,
+          y: 58,
+          width: 1380,
+          height: 276,
+        },
+        heroCropMobile: {
+          x: 1110,
+          y: 45,
+          width: 960,
+          height: 300,
+        },
+      },
+    };
+
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={{ members: [], source: 'empty' }}
+        realtimeDisabled
+        worldSpec={customWorld}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const stage = getHeroStage(container);
+    expect(stage.getAttribute('data-hero-crop-aspect')).toBe('960 / 300');
+  });
+
+  it('keeps narrow desktop browsers on the desktop hero crop by default', () => {
+    cleanup();
+    installSceneStubs({
+      width: 390,
+      height: 420,
+      coarsePointer: false,
+      noHover: false,
+    });
+
+    const customWorld = {
+      ...SHARED_COMMONS_WORLD,
+      guides: {
+        ...SHARED_COMMONS_WORLD.guides,
+        heroCrop: {
+          x: 640,
+          y: 90,
+          width: 1800,
+          height: 240,
+        },
+        heroCropTablet: {
+          x: 860,
+          y: 58,
+          width: 1380,
+          height: 276,
+        },
+        heroCropMobile: {
+          x: 1110,
+          y: 45,
+          width: 960,
+          height: 300,
+        },
+      },
+    };
+
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={{ members: [], source: 'empty' }}
+        realtimeDisabled
+        worldSpec={customWorld}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const stage = getHeroStage(container);
+    expect(stage.getAttribute('data-hero-crop-aspect')).toBe('1800 / 240');
+  });
+
+  it('allows desktop browsers to preview a mobile hero crop through override props', () => {
+    cleanup();
+    installSceneStubs({
+      width: 390,
+      height: 420,
+      coarsePointer: false,
+      noHover: false,
+    });
+
+    const customWorld = {
+      ...SHARED_COMMONS_WORLD,
+      guides: {
+        ...SHARED_COMMONS_WORLD.guides,
+        heroCrop: {
+          x: 640,
+          y: 90,
+          width: 1800,
+          height: 240,
+        },
+        heroCropTablet: {
+          x: 860,
+          y: 58,
+          width: 1380,
+          height: 276,
+        },
+        heroCropMobile: {
+          x: 1110,
+          y: 45,
+          width: 960,
+          height: 300,
+        },
+      },
+    };
+
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={{ members: [], source: 'empty' }}
+        realtimeDisabled
+        worldSpec={customWorld}
+        heroBucketOverride="mobile"
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const stage = getHeroStage(container);
+    expect(stage.getAttribute('data-hero-crop-aspect')).toBe('960 / 300');
   });
 
   it('pans the hero horizontally from a ghostling drag and recenters on double-click', () => {
@@ -2211,7 +2448,7 @@ describe('GhostlingScene', () => {
   });
 
   it('drags scene lab anchors without snapping back to their origin', () => {
-    const { container } = render(
+    render(
       <GhostlingScene
         variant="hero"
         initialPayload={makePayload([makeMember('user:1', 'Member One')])}
@@ -2225,13 +2462,13 @@ describe('GhostlingScene', () => {
 
     fireEvent.click(screen.getByText('Floor left outer'));
     const anchorX = screen.getByTestId('scene-lab-anchor-x') as HTMLInputElement;
-    const selectedAnchor = container.querySelector('svg circle[r="7"][data-selected="true"]');
+    const selectedAnchor = getSceneLabExportFrame().querySelector('[data-scene-lab-role="anchor"][data-anchor-key="floor-left-outer"][data-selected="true"]');
     if (!(selectedAnchor instanceof Element) || selectedAnchor.tagName.toLowerCase() !== 'circle') {
       throw new Error('Expected selected scene lab anchor circle.');
     }
 
     const originX = Number(anchorX.value);
-    const expectedDelta = expectedWorldDragDelta(28, 12);
+    const expectedDelta = expectedExportFrameDragDelta(28, 12);
 
     fireEvent.pointerDown(selectedAnchor, { clientX: 100, clientY: 100 });
     fireEvent.pointerMove(window, { clientX: 128, clientY: 112 });
@@ -2241,7 +2478,7 @@ describe('GhostlingScene', () => {
   });
 
   it('adds and removes anchors from the scene lab authored browser', () => {
-    const { container } = render(
+    render(
       <GhostlingScene
         variant="hero"
         initialPayload={makePayload([makeMember('user:1', 'Member One')])}
@@ -2253,16 +2490,17 @@ describe('GhostlingScene', () => {
     flushFrame(0);
     flushFrame(16);
 
-    const initialAnchorCount = container.querySelectorAll('[data-scene-lab-role="anchor"]').length;
+    const exportFrame = getSceneLabExportFrame();
+    const initialAnchorCount = exportFrame.querySelectorAll('[data-scene-lab-role="anchor"]').length;
     fireEvent.click(screen.getByTestId('scene-lab-add-anchor'));
 
-    expect(container.querySelectorAll('[data-scene-lab-role="anchor"]').length).toBe(initialAnchorCount + 1);
+    expect(exportFrame.querySelectorAll('[data-scene-lab-role="anchor"]').length).toBe(initialAnchorCount + 1);
     expect(screen.getByTestId('scene-lab-anchor-x')).not.toBeNull();
     expect((screen.getByTestId('scene-lab-remove-anchor') as HTMLButtonElement).disabled).toBe(false);
 
     fireEvent.click(screen.getByTestId('scene-lab-remove-anchor'));
 
-    expect(container.querySelectorAll('[data-scene-lab-role="anchor"]').length).toBe(initialAnchorCount);
+    expect(exportFrame.querySelectorAll('[data-scene-lab-role="anchor"]').length).toBe(initialAnchorCount);
   });
 
   it('copies a world draft from the scene lab export controls', async () => {
@@ -2326,6 +2564,30 @@ describe('GhostlingScene', () => {
     expect(screen.queryByTestId('scene-lab-anchor-x')).toBeNull();
   });
 
+  it('selects member diagnostics from export frame markers', () => {
+    render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={makePayload([makeMember('user:1', 'Member One')])}
+        fallbackCompanion={makePreview()}
+        sceneEditorEnabled
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const memberMarker = getSceneLabExportFrame().querySelector('[data-scene-lab-role="member"][data-member-key="user:1"]');
+    if (!(memberMarker instanceof Element)) {
+      throw new Error('Expected export frame member marker.');
+    }
+
+    fireEvent.pointerDown(memberMarker, { clientX: 100, clientY: 100 });
+
+    expect(screen.getByTestId('scene-lab-member-diagnostics')).not.toBeNull();
+    expect(screen.queryByTestId('scene-lab-anchor-x')).toBeNull();
+  });
+
   it('supports keyboard selection through the scene lab browser', () => {
     render(
       <GhostlingScene
@@ -2350,7 +2612,7 @@ describe('GhostlingScene', () => {
   });
 
   it('undoes and redoes an anchor drag from the scene lab', () => {
-    const { container } = render(
+    render(
       <GhostlingScene
         variant="hero"
         initialPayload={makePayload([makeMember('user:1', 'Member One')])}
@@ -2364,13 +2626,13 @@ describe('GhostlingScene', () => {
 
     fireEvent.click(screen.getByText('Floor left outer'));
     const anchorX = screen.getByTestId('scene-lab-anchor-x') as HTMLInputElement;
-    const selectedAnchor = container.querySelector('svg circle[r="7"][data-selected="true"]');
+    const selectedAnchor = getSceneLabExportFrame().querySelector('[data-scene-lab-role="anchor"][data-anchor-key="floor-left-outer"][data-selected="true"]');
     if (!(selectedAnchor instanceof Element) || selectedAnchor.tagName.toLowerCase() !== 'circle') {
       throw new Error('Expected selected scene lab anchor circle.');
     }
 
     const originX = Number(anchorX.value);
-    const expectedDelta = expectedWorldDragDelta(28, 12);
+    const expectedDelta = expectedExportFrameDragDelta(28, 12);
     fireEvent.pointerDown(selectedAnchor, { clientX: 100, clientY: 100 });
     fireEvent.pointerMove(window, { clientX: 128, clientY: 112 });
     fireEvent.pointerUp(window, { clientX: 128, clientY: 112 });

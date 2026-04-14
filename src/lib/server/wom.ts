@@ -83,7 +83,7 @@ function womCacheTtlSeconds() {
 function womHeaders(extra?: HeadersInit) {
   return {
     Accept: 'application/json',
-    'User-Agent': 'GhostedApp/0.1 (+https://ghosted.smirkhub.com)',
+    'User-Agent': 'GhostedApp/0.1 (+https://ghostedclan.com)',
     ...extra,
   };
 }

@@ -453,9 +453,32 @@ function findSceneUserByWomIdentity(
   }
 
   const womDisplayName = String(player.displayName ?? '').trim();
-  if (!womDisplayName) return undefined;
+  if (womDisplayName) {
+    const byDisplayName = db.prepare(`
+      SELECT
+        users.id,
+        users.username,
+        users.global_name,
+        ${primaryOsrsIdentitySelect('users')}
+      FROM user_game_accounts
+      JOIN users ON users.id = user_game_accounts.user_id
+      ${primaryOsrsIdentityJoin('users')}
+      WHERE user_game_accounts.game = 'osrs'
+        AND LOWER(user_game_accounts.display_name) = LOWER(?)
+      LIMIT 1
+    `).get(womDisplayName) as ScenePresenceUserRow | undefined;
+    if (byDisplayName) return byDisplayName;
+  }
 
-  return db.prepare(`
+  const womAliases = new Set(
+    [womUsername, womDisplayName]
+      .map((value) => normalizeSceneVoiceAlias(value))
+      .filter(Boolean),
+  );
+  if (womAliases.size === 0) return undefined;
+  const womAliasList = Array.from(womAliases);
+
+  const rows = db.prepare(`
     SELECT
       users.id,
       users.username,
@@ -465,9 +488,22 @@ function findSceneUserByWomIdentity(
     JOIN users ON users.id = user_game_accounts.user_id
     ${primaryOsrsIdentityJoin('users')}
     WHERE user_game_accounts.game = 'osrs'
-      AND LOWER(user_game_accounts.display_name) = LOWER(?)
-    LIMIT 1
-  `).get(womDisplayName) as ScenePresenceUserRow | undefined;
+  `).all() as ScenePresenceUserRow[];
+
+  const matches = new Map<number, ScenePresenceUserRow>();
+  for (const row of rows) {
+    const rowAliases = new Set(
+      [row.osrs_username, row.osrs_display_name]
+        .map((value) => normalizeSceneVoiceAlias(String(value ?? '')))
+        .filter(Boolean),
+    );
+    if (womAliasList.some((alias) => rowAliases.has(alias))) {
+      matches.set(row.id, row);
+    }
+  }
+
+  if (matches.size !== 1) return undefined;
+  return Array.from(matches.values())[0];
 }
 
 async function fetchWidgetVoiceMembersRaw(guildId: string): Promise<WidgetVoiceMember[]> {

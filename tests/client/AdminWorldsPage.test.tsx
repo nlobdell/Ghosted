@@ -113,8 +113,12 @@ describe('AdminWorldsPage', () => {
     expect(screen.getByLabelText('Paste world package JSON')).not.toBeNull();
     expect(screen.getByLabelText('Paste movement tuning JSON')).not.toBeNull();
     expect(screen.getByText('Hero crop')).not.toBeNull();
+    expect(screen.getByText('Hero crop (tablet)')).not.toBeNull();
+    expect(screen.getByText('Hero crop (mobile)')).not.toBeNull();
     expect(screen.getAllByText(`${SHARED_COMMONS_WORLD.guides.heroCrop?.x}, ${SHARED_COMMONS_WORLD.guides.heroCrop?.y}, ${SHARED_COMMONS_WORLD.guides.heroCrop?.width}x${SHARED_COMMONS_WORLD.guides.heroCrop?.height}`).length).toBeGreaterThan(0);
     expect(screen.getByText('Published hero crop')).not.toBeNull();
+    expect(screen.getByText('Published hero crop (tablet)')).not.toBeNull();
+    expect(screen.getByText('Published hero crop (mobile)')).not.toBeNull();
     expect(screen.getByTestId('world-layer-upload-midground')).not.toBeNull();
     expect(screen.getByText('Movement tuning readback')).not.toBeNull();
     expect(screen.getByText('Jam breakout (ms)')).not.toBeNull();

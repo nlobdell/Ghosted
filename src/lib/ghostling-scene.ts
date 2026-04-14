@@ -698,8 +698,9 @@ export function resolveGhostlingSceneProfile(
   densityCaps: GhostlingSceneDensityCaps = {},
   tuning: GhostlingSceneTuningSpec = DEFAULT_SCENE_TUNING,
   world: GhostlingWorldSpec = SHARED_COMMONS_WORLD,
+  bucketOverride?: GhostlingSceneDensityBucket,
 ) {
-  const bucket = resolveGhostlingSceneBucket(width);
+  const bucket = bucketOverride ?? resolveGhostlingSceneBucket(width);
   return resolveGhostlingSceneTuning(
     world,
     bucket,

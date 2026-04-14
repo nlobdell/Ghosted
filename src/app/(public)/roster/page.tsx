@@ -52,7 +52,7 @@ export default async function RosterPage({
         <div className={styles.headerGrid}>
           <div className={styles.headerCopy}>
             <p className="kicker">Public roster</p>
-            <h1>Read Ghosted through the public roster before you step inside the Hall.</h1>
+            <h1>Ghosted Roster.</h1>
             <p className="editorial-copy">
               This roster shows Wise Old Man-verified membership, visible rank order, and who is carrying Ghosted right now.
             </p>
@@ -100,36 +100,50 @@ export default async function RosterPage({
         </div>
       </section>
 
-      <section className={styles.grid}>
+      <section className={styles.ledger} aria-label="Public roster ledger">
+        <div className={styles.ledgerHead} aria-hidden="true">
+          <span>Rank</span>
+          <span>Member</span>
+          <span>Roster ledger</span>
+        </div>
         {pageMembers.map((member, index) => {
           const iconPath = clanRankIconPath(member.rankLabel, member.roleKey);
+          const displayRank = member.rank ?? ((currentPage - 1) * PAGE_SIZE) + index + 1;
+          const displayName = member.player.displayName || member.player.username;
           return (
-            <article key={`${member.player.username}-${index}`} className={`editorial-surface editorial-card ${styles.card}`}>
-              <div className={styles.cardHeader}>
-                <span className="app-chip">#{member.rank ?? ((currentPage - 1) * PAGE_SIZE) + index + 1}</span>
-                <span className={`app-chip ${styles.rankChip}`}>
-                  {iconPath ? (
-                    <img
-                      src={iconPath}
-                      alt=""
-                      aria-hidden="true"
-                      className={styles.rankIcon}
-                    />
+            <article key={`${member.player.username}-${index}`} className={styles.ledgerRow}>
+              <div className={styles.ledgerIndex}>
+                <span>#{displayRank}</span>
+              </div>
+              <div className={styles.memberCell}>
+                <h2>{displayName}</h2>
+                <div className={styles.metaRow}>
+                  {member.player.username && member.player.username !== displayName ? (
+                    <span>@{member.player.username}</span>
                   ) : null}
-                  {member.rankLabel}
-                </span>
-              </div>
-              <h2>{member.player.displayName || member.player.username}</h2>
-              <div className={styles.metaRow}>
-                <span>{member.player.build ?? 'Main'}</span>
-                <span>{member.player.status ?? 'active'}</span>
-              </div>
-              <div className={styles.stats}>
-                <div>
-                  <span>Clan rank</span>
-                  <strong>{member.rankLabel}</strong>
+                  <span>{member.player.status ?? 'active'}</span>
                 </div>
-                <div>
+              </div>
+              <div className={styles.ledgerStats}>
+                <div className={styles.ledgerStat}>
+                  <span>Build</span>
+                  <strong>{member.player.build ?? 'Main'}</strong>
+                </div>
+                <div className={styles.ledgerStat}>
+                  <span>Clan rank</span>
+                  <strong className={styles.rankValue}>
+                    {iconPath ? (
+                      <img
+                        src={iconPath}
+                        alt=""
+                        aria-hidden="true"
+                        className={styles.rankIcon}
+                      />
+                    ) : null}
+                    {member.rankLabel}
+                  </strong>
+                </div>
+                <div className={styles.ledgerStat}>
                   <span>Overall XP</span>
                   <strong>{formatMaybeNumber(member.value)}</strong>
                 </div>

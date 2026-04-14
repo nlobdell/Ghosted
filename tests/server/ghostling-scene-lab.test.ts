@@ -18,12 +18,20 @@ describe('ghostling scene lab helpers', () => {
     if (draft.guides.heroCrop) {
       draft.guides.heroCrop.x += 18;
     }
+    if (draft.guides.heroCropTablet) {
+      draft.guides.heroCropTablet.x += 10;
+    }
+    if (draft.guides.heroCropMobile) {
+      draft.guides.heroCropMobile.x += 6;
+    }
     const exported = exportGhostlingWorldDraft(draft);
 
     expect(exported.kind).toBe('ghostling-world');
     expect(exported.canvas.width).toBe(SHARED_COMMONS_WORLD.sourceWidth);
     expect(exported.anchors[0]?.x).toBe(SHARED_COMMONS_WORLD.points[0]!.x + 12);
     expect(exported.guides.heroCrop?.x).toBe((SHARED_COMMONS_WORLD.guides.heroCrop?.x ?? 0) + 18);
+    expect(exported.guides.heroCropTablet?.x).toBe((SHARED_COMMONS_WORLD.guides.heroCropTablet?.x ?? 0) + 10);
+    expect(exported.guides.heroCropMobile?.x).toBe((SHARED_COMMONS_WORLD.guides.heroCropMobile?.x ?? 0) + 6);
     expect(exported.layers).toHaveLength(SHARED_COMMONS_WORLD.layers.length);
   });
 

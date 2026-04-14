@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_GHOSTLING_ACTOR_METRICS } from '@/lib/ghostling-actor';
 import type { ServerTestContext } from './test-utils';
-import { cleanupServerTestEnvironment, insertUser, setupServerTestEnvironment } from './test-utils';
+import {
+  addRewardLedgerEntry,
+  cleanupServerTestEnvironment,
+  insertUser,
+  setupServerTestEnvironment,
+} from './test-utils';
 
 const { buildRuntimeAuthConfigMock, womGroupIdMock, womRequestJsonMock } = vi.hoisted(() => ({
   buildRuntimeAuthConfigMock: vi.fn(),
@@ -23,6 +28,8 @@ vi.mock('@/lib/server/wom', async () => {
 });
 
 import { GET, resetPresencePayloadCacheForTests } from '@/app/api/scene/presence/route';
+import { buildScenePresencePayload } from '@/lib/server/scene-presence';
+import { createCompanionItem, purchaseCompanionItem } from '@/lib/server/companion';
 import {
   replaceScenePresenceChannelAllowlist,
   upsertDiscordPresenceWorkerState,
@@ -30,6 +37,25 @@ import {
 } from '@/lib/server/discord-presence';
 import { saveUserGameAccount } from '@/lib/server/wom';
 import { setUserPublicNameSource } from '@/lib/server/osrs-identity';
+
+function getUser(context: ServerTestContext, userId: number) {
+  return context.db.prepare(`
+    SELECT id, username, global_name
+    FROM users
+    WHERE id = ?
+  `).get(userId) as { id: number; username: string; global_name: string | null };
+}
+
+function svgAsset(filename: string, fill = '#7c5cff') {
+  return {
+    filename,
+    contentType: 'image/svg+xml',
+    data: Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" fill="${fill}"/></svg>`,
+      'utf8',
+    ),
+  };
+}
 
 function mockVoiceWidget(members: Array<{
   username: string;
@@ -382,6 +408,92 @@ describe('scene presence route', () => {
       source: 'wom',
     });
     expect(payload.members[0]?.companion?.animatedRenderUrl).toContain(`user=${linkedUserId}`);
+  });
+
+  it('keeps linked companion cosmetics when WOM activity remains after the user leaves voice', async () => {
+    const adminId = insertUser(context.db, {
+      username: 'admin',
+      globalName: 'Admin',
+      isAdmin: 1,
+    });
+    const linkedUserId = insertUser(context.db, {
+      username: 'discord-kami',
+      globalName: 'Discord Kami',
+    });
+
+    saveUserGameAccount(context.db, linkedUserId, 'osrs', {
+      id: 888,
+      username: 'Ghosted Kami',
+      displayName: 'Ghosted Kami',
+      status: 'active',
+    });
+    setUserPublicNameSource(context.db, linkedUserId, 'osrs');
+    addRewardLedgerEntry(context.db, linkedUserId, 250, 'welcome_bonus', 'Initial points');
+    createCompanionItem(context.db, getUser(context, adminId), {
+      name: 'Moon Hood',
+      slot: 'hat',
+      rarity: 'rare',
+      cost: 120,
+      description: 'Night market hood.',
+      frontAsset: svgAsset('moon-hood-front.svg'),
+    });
+    purchaseCompanionItem(context.db, getUser(context, linkedUserId), 'moon-hood');
+
+    buildRuntimeAuthConfigMock.mockReturnValue({ guildId: 'ghosted-guild' });
+    womGroupIdMock.mockReturnValue('123');
+    vi.stubGlobal('fetch', mockVoiceWidget([
+      {
+        username: 'discord-kami',
+        channel_id: 'voice-1',
+        display_name: 'Ghosted Kami',
+      },
+    ]));
+    womRequestJsonMock.mockResolvedValue([]);
+
+    const voicePayload = await buildScenePresencePayload({
+      db: context.db,
+      now: Date.parse('2026-04-10T12:00:00.000Z'),
+      forceRefresh: true,
+    });
+
+    expect(voicePayload.members).toHaveLength(1);
+    expect(voicePayload.members[0]).toMatchObject({
+      key: `user:${linkedUserId}`,
+      userId: linkedUserId,
+      source: 'voice',
+    });
+    expect(voicePayload.members[0]?.companion?.renderManifest.layers.some((layer: { slot?: string | null; src: string }) => (
+      layer.slot === 'hat' && layer.src.includes('moon-hood')
+    ))).toBe(true);
+
+    vi.stubGlobal('fetch', mockVoiceWidget([]));
+    womRequestJsonMock.mockResolvedValue([
+      { player: { username: 'GhostedKami', displayName: 'GhostedKami' } },
+    ]);
+
+    const womPayload = await buildScenePresencePayload({
+      db: context.db,
+      now: Date.parse('2026-04-10T12:00:05.000Z'),
+      forceRefresh: true,
+    });
+
+    expect(womPayload.members).toHaveLength(1);
+    expect(womPayload.members[0]).toMatchObject({
+      key: `user:${linkedUserId}`,
+      userId: linkedUserId,
+      username: 'GhostedKami',
+      displayName: 'Ghosted Kami',
+      source: 'wom',
+    });
+    expect(womPayload.members[0]?.companion?.animatedRenderUrl).toContain(`user=${linkedUserId}`);
+    expect(womPayload.members[0]?.companion?.user).toEqual({
+      displayName: 'Ghosted Kami',
+      username: 'discord-kami',
+    });
+    expect(womPayload.members[0]?.companion?.renderManifest.layers.some((layer: { slot?: string | null; src: string }) => (
+      layer.slot === 'hat' && layer.src.includes('moon-hood')
+    ))).toBe(true);
+    expect(womPayload.sharedScene?.hero?.entities[0]?.key).toBe(`user:${linkedUserId}`);
   });
 
   it('dedupes cross-source members that resolve to the same username and keeps the stronger voice-linked entry', async () => {

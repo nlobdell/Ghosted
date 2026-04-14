@@ -46,6 +46,9 @@ import { resolveSceneRealtimeClientUrl } from '@/lib/scene-realtime';
 import {
   SHARED_COMMONS_WORLD,
   ghostlingWorldById,
+  resolveGhostlingHeroCrop,
+  resolveGhostlingSceneBucket,
+  type GhostlingSceneDensityBucket,
   type GhostlingWorldId,
   type GhostlingWorldPreset,
   type GhostlingWorldSpec,
@@ -82,6 +85,7 @@ type GhostlingSceneProps = {
   preset?: GhostlingWorldPreset;
   worldSpec?: GhostlingWorldSpec | null;
   tuningSpec?: GhostlingSceneTuningSpec | null;
+  heroBucketOverride?: GhostlingSceneDensityBucket | null;
   debugWorldOverlay?: boolean;
   sceneEditorEnabled?: boolean;
   sceneEditorSandboxPayload?: ScenePresencePayload | null;
@@ -250,8 +254,23 @@ function heroLayerParallaxFactor(layerKey: string) {
 function detectHeroMobileViewport() {
   if (typeof window === 'undefined') return false;
   return window.matchMedia('(pointer: coarse)').matches
-    || window.matchMedia('(hover: none)').matches
-    || window.innerWidth <= 640;
+    || window.matchMedia('(hover: none)').matches;
+}
+
+function resolveHeroBucketPreference(
+  viewportWidth: number,
+  override: GhostlingSceneDensityBucket | null = null,
+): GhostlingSceneDensityBucket {
+  if (override) return override;
+  if (typeof window === 'undefined') return resolveGhostlingSceneBucket(viewportWidth);
+
+  const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+  const noHover = window.matchMedia('(hover: none)').matches;
+  if (!coarsePointer && !noHover) {
+    return 'desktop';
+  }
+
+  return resolveGhostlingSceneBucket(viewportWidth);
 }
 
 function isSharedHeroVariant(
@@ -832,11 +851,15 @@ function sharedSnapshotForPayload(
   return payload?.sharedScene?.hero ?? null;
 }
 
-function stageRenderMetrics(desiredSize: number, manifest?: CompanionPreviewSummary['renderManifest']) {
+function stageRenderMetrics(
+  desiredSize: number,
+  manifest?: CompanionPreviewSummary['renderManifest'],
+) {
   const logicalSize = Math.max(1, manifest?.width ?? 70, manifest?.height ?? 70);
   const integerScale = Math.max(1, Math.round(desiredSize / logicalSize));
   const targetSize = logicalSize * integerScale;
   return {
+    desiredSize,
     targetSize,
     residualScale: desiredSize / targetSize,
   };
@@ -1118,6 +1141,7 @@ export function GhostlingScene({
   preset = 'public-hero',
   worldSpec: injectedWorldSpec = null,
   tuningSpec: injectedTuningSpec = null,
+  heroBucketOverride = null,
   debugWorldOverlay = false,
   sceneEditorEnabled = false,
   sceneEditorSandboxPayload = null,
@@ -1148,6 +1172,9 @@ export function GhostlingScene({
   const [heroPanCanRecenter, setHeroPanCanRecenter] = useState(false);
   // Keep the first client render aligned with SSR; viewport detection runs after mount.
   const [heroPanMobileUi, setHeroPanMobileUi] = useState(false);
+  const [heroViewportBucket, setHeroViewportBucket] = useState<GhostlingSceneDensityBucket>(
+    heroBucketOverride ?? 'desktop',
+  );
   const stageRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const layerRefs = useRef<Map<string, HTMLImageElement | null>>(new Map());
@@ -1171,16 +1198,12 @@ export function GhostlingScene({
   const sceneLabEnabled = sceneEditorEnabled
     && isSharedHeroVariant(variant, world, preset);
   const heroPanEnabled = variant === 'hero' && !sceneLabEnabled;
-  const heroMobilePerformanceMode = heroPanEnabled && heroPanMobileUi;
   const heroPanCurrentXWorldRef = useRef(0);
   const heroPanTargetXWorldRef = useRef(0);
   const heroPanDragRef = useRef<HeroPanDragState | null>(null);
   const heroPanDraggingRef = useRef(false);
   const heroPanCanRecenterRef = useRef(false);
   const sceneWorldSpec = sceneLabEnabled ? sceneLabWorldDraft : worldSpec;
-  const heroStageAspectRatio = variant === 'hero' && sceneWorldSpec.guides.heroCrop
-    ? `${Math.max(1, sceneWorldSpec.guides.heroCrop.width)} / ${Math.max(1, sceneWorldSpec.guides.heroCrop.height)}`
-    : null;
   const defaultCameraMetrics = useMemo(
     () => createGhostlingSceneCameraMetrics(
       sceneWorldSpec,
@@ -1201,6 +1224,12 @@ export function GhostlingScene({
   const [liveCount, setLiveCount] = useState<number>(initialPayload?.members.length ?? 0);
   const [renderNow, setRenderNow] = useState(0);
   const [renderMetrics, setRenderMetrics] = useState<GhostlingSceneCameraMetrics>(defaultCameraMetrics);
+  const heroStageCrop = variant === 'hero'
+    ? resolveGhostlingHeroCrop(sceneWorldSpec, heroViewportBucket)
+    : null;
+  const heroStageAspectRatio = heroStageCrop
+    ? `${Math.max(1, heroStageCrop.width)} / ${Math.max(1, heroStageCrop.height)}`
+    : null;
 
   const worldDebugOverlayEnabled = process.env.NODE_ENV !== 'production'
     && debugWorldOverlay
@@ -1286,7 +1315,8 @@ export function GhostlingScene({
     setHeroPanDragging(false);
     setHeroPanCanRecenter(false);
     setHeroPanMobileUi(false);
-  }, [heroPanEnabled]);
+    setHeroViewportBucket(heroBucketOverride ?? 'desktop');
+  }, [heroBucketOverride, heroPanEnabled]);
 
   useEffect(() => {
     if (!heroPanEnabled || typeof window === 'undefined') return undefined;
@@ -1294,6 +1324,7 @@ export function GhostlingScene({
     const noHoverQuery = window.matchMedia('(hover: none)');
     const sync = () => {
       setHeroPanMobileUi(detectHeroMobileViewport());
+      setHeroViewportBucket(resolveHeroBucketPreference(window.innerWidth, heroBucketOverride));
     };
 
     sync();
@@ -1319,7 +1350,7 @@ export function GhostlingScene({
       coarsePointerQuery.removeListener(sync);
       noHoverQuery.removeListener(sync);
     };
-  }, [heroPanEnabled]);
+  }, [heroBucketOverride, heroPanEnabled]);
 
   const createSceneLabSnapshot = useCallback(() => cloneGhostlingSceneLabSnapshot({
     worldDraft: sceneLabWorldDraftRef.current,
@@ -1716,6 +1747,7 @@ export function GhostlingScene({
       densityCaps,
       sceneLabEnabled ? sceneLabTuningDraft : runtimeTuningSpec,
       sceneWorldSpec,
+      variant === 'hero' ? heroViewportBucket : undefined,
     );
     const metrics = createGhostlingSceneCameraMetrics(
       sceneWorldSpec,
@@ -2015,6 +2047,7 @@ export function GhostlingScene({
     fallbackCompanion,
     fallbackMode,
     authoritativeHeroMode,
+    heroViewportBucket,
     snapshotRenderMembers,
     stageSize,
     variant,
@@ -2377,6 +2410,7 @@ export function GhostlingScene({
         densityCaps,
         sceneLabEnabled ? sceneLabTuningDraft : runtimeTuningSpec,
         sceneWorldSpec,
+        variant === 'hero' ? heroViewportBucket : undefined,
       );
       if (heroPanEnabled) {
         const clampedTarget = createGhostlingSceneCameraMetrics(
@@ -2524,7 +2558,9 @@ export function GhostlingScene({
         const displayRenderScale = authoritativeHeroMode ? entity.displayRenderScale : entity.renderScale;
         const displayFacingLeft = authoritativeHeroMode ? entity.displayFacingLeft : entity.facingLeft;
         const displayOpacity = authoritativeHeroMode ? entity.displayOpacity : entity.opacity;
-        const desiredGhostSize = resolveGhostlingSceneDisplaySize(displayRenderScale, metrics.scale);
+        const exactGhostSize = resolveGhostlingSceneDisplaySize(displayRenderScale, metrics.scale);
+        const metricsForStage = stageRenderMetrics(exactGhostSize, entity.companion?.renderManifest);
+        const desiredGhostSize = metricsForStage.desiredSize;
         const actorMetrics = resolveGhostlingActorMetricsFromCompanion(entity.companion);
         const visibleExtents = scaledGhostlingVisibleExtents(displayRenderScale * metrics.scale, actorMetrics);
         const visibleBounds = scaledGhostlingVisibleBounds(displayRenderScale * metrics.scale, actorMetrics);
@@ -2558,7 +2594,6 @@ export function GhostlingScene({
         }
 
         if (visualEl) {
-          const metricsForStage = stageRenderMetrics(desiredGhostSize, entity.companion?.renderManifest);
           const emphasisScale = state === 'hovered'
             ? 1.08
             : state === 'featured-mascot'
@@ -2603,6 +2638,7 @@ export function GhostlingScene({
     prefersReducedMotion,
     authoritativeHeroMode,
     heroPanEnabled,
+    heroViewportBucket,
     sceneLabEnabled,
     sceneLabPlaying,
     sceneLabTuningDraft,
@@ -2757,7 +2793,9 @@ export function GhostlingScene({
         >
           {renderedMembers.map(({ entity, state, presenceActive, presenceOpacity, presenceTone }) => {
             const isInteractive = !entity.fallback;
-            const desiredGhostSize = resolveGhostlingSceneDisplaySize(entity.renderScale, metrics.scale);
+            const exactGhostSize = resolveGhostlingSceneDisplaySize(entity.renderScale, metrics.scale);
+            const stageMetrics = stageRenderMetrics(exactGhostSize, entity.companion?.renderManifest);
+            const desiredGhostSize = stageMetrics.desiredSize;
             const actorMetrics = resolveGhostlingActorMetricsFromCompanion(entity.companion);
             const visibleExtents = scaledGhostlingVisibleExtents(entity.renderScale * metrics.scale, actorMetrics);
             const visibleBounds = scaledGhostlingVisibleBounds(entity.renderScale * metrics.scale, actorMetrics);
@@ -2767,11 +2805,7 @@ export function GhostlingScene({
             const labelNudge = resolveGhostlingLabelClampOffset(metrics, {
               wrapperTopPx: wrapTop,
             });
-            const stageMetrics = stageRenderMetrics(desiredGhostSize, entity.companion?.renderManifest);
-            const useStaticGhostlingVisual = heroMobilePerformanceMode;
-            const ghostlingVisualSrc = useStaticGhostlingVisual
-              ? rasterizedRenderSrc(entity.companion?.renderUrl ?? entity.imgSrc)
-              : (entity.companion?.renderUrl ?? entity.imgSrc);
+            const ghostlingVisualSrc = entity.companion?.animatedRenderUrl ?? entity.imgSrc;
 
             return (
               <div
@@ -2839,7 +2873,7 @@ export function GhostlingScene({
                     transform: `scale(${(stageMetrics.residualScale * (entity.facingLeft ? 1 : -1)).toFixed(4)}, ${stageMetrics.residualScale.toFixed(4)})`,
                   }}
                 >
-                  {entity.companion && !useStaticGhostlingVisual ? (
+                  {entity.companion ? (
                     <AnimatedCompanionStage
                       manifest={entity.companion.renderManifest}
                       fallbackSrc={entity.companion.animatedRenderUrl}
@@ -2903,7 +2937,6 @@ export function GhostlingScene({
             onBeginHistoryCapture={beginSceneLabHistoryCapture}
             onCommitHistoryCapture={commitSceneLabHistoryCapture}
             onCancelHistoryCapture={cancelSceneLabHistoryCapture}
-            camera={metrics}
             bucket={metrics.bucket}
             previewMode={sceneLabPreviewMode}
             playing={sceneLabPlaying}

@@ -23,54 +23,58 @@ export function PublicNav({ hallHref }: { hallHref: string }) {
     return normalizedPath === normalizedHref || normalizedPath.startsWith(`${normalizedHref}/`);
   }
 
+  const navContent = (
+    <div className="nav-shell__inner">
+      <div className="nav-slot nav-slot--brand">
+        <Link href="/" className="nav-brand">
+          <GhostedLogo className="nav-brand-logo" sizes="44px" decorative />
+          <span className="nav-brand__copy">
+            <strong>Ghosted</strong>
+            <span>Clan Site</span>
+          </span>
+        </Link>
+      </div>
+
+      <div className="nav-slot nav-slot--links">
+        <nav aria-label="Public navigation" className="nav-links">
+          <div className="nav-link-group">
+            {PUBLIC_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="nav-link nav-link--small"
+                aria-current={isActive(link.href) ? 'page' : undefined}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      </div>
+
+      <div className="nav-slot nav-slot--cta">
+        <Link href={hallHref} className="button button--small">
+          Enter the Hall
+        </Link>
+      </div>
+
+      <button
+        type="button"
+        className="nav-toggle button button--secondary button--small"
+        aria-expanded={open}
+        aria-controls={drawerId}
+        aria-label={open ? 'Close menu' : 'Open menu'}
+        onClick={() => setOpen((value) => !value)}
+      >
+        Menu
+      </button>
+    </div>
+  );
+
   return (
-    <header className="site-nav site-nav--revealed">
-      <div className="container">
-        <div className="nav-shell nav-shell--public">
-          <div className="nav-slot nav-slot--brand">
-            <Link href="/" className="nav-brand">
-              <GhostedLogo className="nav-brand-logo" sizes="44px" decorative />
-              <span className="nav-brand__copy">
-                <strong>Ghosted</strong>
-                <span>Clan Site</span>
-              </span>
-            </Link>
-          </div>
-
-          <div className="nav-slot nav-slot--links">
-            <nav aria-label="Public navigation" className="nav-links">
-              <div className="nav-link-group">
-                {PUBLIC_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="nav-link nav-link--small"
-                    aria-current={isActive(link.href) ? 'page' : undefined}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            </nav>
-          </div>
-
-          <div className="nav-slot nav-slot--cta">
-            <Link href={hallHref} className="button button--small">
-              Enter the Hall
-            </Link>
-          </div>
-
-          <button
-            type="button"
-            className="nav-toggle button button--secondary button--small"
-            aria-expanded={open}
-            aria-controls={drawerId}
-            aria-label={open ? 'Close menu' : 'Open menu'}
-            onClick={() => setOpen((value) => !value)}
-          >
-            Menu
-          </button>
-        </div>
+    <header className="site-nav site-nav--revealed" data-menu-open={open ? 'true' : 'false'}>
+      <div className="nav-shell nav-shell--public">
+        {navContent}
       </div>
 
       {open ? (
