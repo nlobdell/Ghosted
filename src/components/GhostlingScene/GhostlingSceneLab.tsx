@@ -52,6 +52,7 @@ export interface GhostlingSceneLabMemberDiagnostic {
 
 type RectSelectionKey = Extract<GhostlingSceneLabSelection, { kind: 'safe-zone' | 'guide' }>;
 type DragHandle = 'move' | 'nw' | 'ne' | 'sw' | 'se';
+type HeroCropGuideKey = 'heroCrop' | 'heroCropTablet' | 'heroCropMobile';
 
 type DragState =
   | {
@@ -125,17 +126,32 @@ type GhostlingSceneLabProps = {
   onRefreshLive: () => void;
 };
 
-const GUIDE_RECT_KEYS = ['safeArea', 'centerSafe', 'ultrawideBleed', 'heroCrop', 'labelSafeTop'] as const;
+const GUIDE_RECT_KEYS = [
+  'safeArea',
+  'centerSafe',
+  'ultrawideBleed',
+  'heroCrop',
+  'heroCropTablet',
+  'heroCropMobile',
+  'labelSafeTop',
+] as const;
 const TUNING_BUCKETS: GhostlingSceneDensityBucket[] = ['desktop', 'tablet', 'mobile'];
 const GUIDE_SELECTION_LABELS = {
   safeArea: 'Safe area',
   centerSafe: 'Center safe',
   ultrawideBleed: 'Bleed',
   heroCrop: 'Hero crop',
+  heroCropTablet: 'Hero crop (tablet)',
+  heroCropMobile: 'Hero crop (mobile)',
   labelSafeTop: 'Label safe',
   horizonY: 'Horizon',
   floorY: 'Floor line',
 } as const;
+const HERO_CROP_GUIDE_BUCKETS: Record<HeroCropGuideKey, GhostlingSceneDensityBucket> = {
+  heroCrop: 'desktop',
+  heroCropTablet: 'tablet',
+  heroCropMobile: 'mobile',
+};
 const OVERLAY_VISIBILITY_LABELS: Record<GhostlingSceneLabOverlayKey, string> = {
   'safe-zones': 'Safe zones',
   'guide-rects': 'Guide rects',
@@ -160,6 +176,36 @@ function selectionKey(selection: GhostlingSceneLabSelection | null) {
     : `${selection.kind}:${selection.key}`;
 }
 
+function isHeroCropGuideKey(key: RectSelectionKey['key']): key is HeroCropGuideKey {
+  return key === 'heroCrop' || key === 'heroCropTablet' || key === 'heroCropMobile';
+}
+
+function resolveGuideRect(
+  worldDraft: GhostlingWorldSpec,
+  guideKey: typeof GUIDE_RECT_KEYS[number],
+): GhostlingWorldRect | null {
+  if (isHeroCropGuideKey(guideKey)) {
+    return resolveGhostlingSceneLabHeroCrop(worldDraft, HERO_CROP_GUIDE_BUCKETS[guideKey]);
+  }
+
+  const guideValue = worldDraft.guides[guideKey];
+  return typeof guideValue === 'object' && guideValue !== null && 'width' in guideValue ? guideValue : null;
+}
+
+function shouldRenderGuideRect(
+  worldDraft: GhostlingWorldSpec,
+  guideKey: typeof GUIDE_RECT_KEYS[number],
+  selection: GhostlingSceneLabSelection | null,
+) {
+  if (!isHeroCropGuideKey(guideKey)) {
+    return resolveGuideRect(worldDraft, guideKey) !== null;
+  }
+
+  return guideKey === 'heroCrop'
+    || Boolean(worldDraft.guides[guideKey])
+    || (selection?.kind === 'guide' && selection.key === guideKey);
+}
+
 function downloadJson(filename: string, value: unknown) {
   const blob = new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -180,12 +226,7 @@ function selectedRect(
     return worldDraft.safeZones.find((safeZone) => safeZone.key === selection.key)?.bounds ?? null;
   }
 
-  if (selection.key === 'heroCrop') {
-    return resolveGhostlingSceneLabHeroCrop(worldDraft);
-  }
-
-  const guideValue = worldDraft.guides[selection.key];
-  return typeof guideValue === 'object' && guideValue !== null && 'width' in guideValue ? guideValue : null;
+  return resolveGuideRect(worldDraft, selection.key as typeof GUIDE_RECT_KEYS[number]);
 }
 
 function applyRectSelectionUpdate(
@@ -372,10 +413,6 @@ export function GhostlingSceneLab({
       : null),
     [memberDiagnostics, selection],
   );
-  const effectiveHeroCrop = useMemo(
-    () => resolveGhostlingSceneLabHeroCrop(worldDraft),
-    [worldDraft],
-  );
   const selectedFallback = selection?.kind === 'fallback-anchor';
   const bucketSettings = tuningDraft.buckets[tuningBucket];
   const authoredItems = useMemo<SceneLabObjectItem[]>(() => ([
@@ -414,16 +451,14 @@ export function GhostlingSceneLab({
         meta: guideKey === 'horizonY' || guideKey === 'floorY'
           ? String(worldDraft.guides[guideKey])
           : (() => {
-              const rect = guideKey === 'heroCrop'
-                ? effectiveHeroCrop
-                : worldDraft.guides[guideKey];
+              const rect = resolveGuideRect(worldDraft, guideKey);
               if (!rect) {
                 return '0, 0, 0x0';
               }
               return `${rect.x}, ${rect.y}, ${rect.width}x${rect.height}`;
             })(),
       })),
-  ]), [effectiveHeroCrop, worldDraft]);
+  ]), [worldDraft]);
   const memberItems = useMemo<SceneLabObjectItem[]>(() => (
     memberDiagnostics.map((member) => ({
       id: `member:${member.key}`,
@@ -866,9 +901,8 @@ export function GhostlingSceneLab({
               );
             }) : null}
             {overlayVisibility['guide-rects'] ? GUIDE_RECT_KEYS.map((guideKey) => {
-              const rect = guideKey === 'heroCrop'
-                ? effectiveHeroCrop
-                : worldDraft.guides[guideKey];
+              if (!shouldRenderGuideRect(worldDraft, guideKey, selection)) return null;
+              const rect = resolveGuideRect(worldDraft, guideKey);
               if (!rect) return null;
               const selected = selection?.kind === 'guide' && selection.key === guideKey;
               return (

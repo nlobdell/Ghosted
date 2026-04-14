@@ -5,7 +5,7 @@ import {
   resolveGhostlingLabelClampOffset,
   unprojectGhostlingScreenPoint,
 } from '@/lib/ghostling-camera';
-import { SHARED_COMMONS_WORLD } from '@/lib/ghostling-world';
+import { resolveGhostlingHeroCrop, SHARED_COMMONS_WORLD } from '@/lib/ghostling-world';
 import { resolveGhostlingSceneProfile } from '@/lib/ghostling-scene';
 
 const VIEWPORTS = [
@@ -95,6 +95,64 @@ describe('ghostling scene camera', () => {
 
     expect(restored.x).toBeCloseTo(anchor.x, 4);
     expect(restored.y).toBeCloseTo(anchor.y, 4);
+  });
+
+  it('uses bucket-specific hero crops for tablet and mobile hero stages', () => {
+    const tabletCrop = resolveGhostlingHeroCrop(SHARED_COMMONS_WORLD, 'tablet');
+    const mobileCrop = resolveGhostlingHeroCrop(SHARED_COMMONS_WORLD, 'mobile');
+    const tabletViewport = { width: 900, height: 260 };
+    const mobileViewport = { width: 600, height: 220 };
+    const tabletProfile = resolveGhostlingSceneProfile(tabletViewport.width, 'hero');
+    const mobileProfile = resolveGhostlingSceneProfile(mobileViewport.width, 'hero');
+
+    expect(tabletProfile.bucket).toBe('tablet');
+    expect(mobileProfile.bucket).toBe('mobile');
+
+    const tabletCamera = createGhostlingSceneCameraMetrics(
+      SHARED_COMMONS_WORLD,
+      tabletViewport.width,
+      tabletViewport.height,
+      tabletProfile.bucket,
+      'fixed-crop',
+    );
+    const mobileCamera = createGhostlingSceneCameraMetrics(
+      SHARED_COMMONS_WORLD,
+      mobileViewport.width,
+      mobileViewport.height,
+      mobileProfile.bucket,
+      'fixed-crop',
+    );
+    const tabletCenter = projectGhostlingWorldPoint(
+      tabletCamera,
+      tabletCrop.x + (tabletCrop.width / 2),
+      tabletCrop.y + (tabletCrop.height / 2),
+    );
+    const mobileCenter = projectGhostlingWorldPoint(
+      mobileCamera,
+      mobileCrop.x + (mobileCrop.width / 2),
+      mobileCrop.y + (mobileCrop.height / 2),
+    );
+    const tabletBottom = projectGhostlingWorldPoint(
+      tabletCamera,
+      tabletCrop.x + (tabletCrop.width / 2),
+      tabletCrop.y + tabletCrop.height,
+    );
+    const mobileBottom = projectGhostlingWorldPoint(
+      mobileCamera,
+      mobileCrop.x + (mobileCrop.width / 2),
+      mobileCrop.y + mobileCrop.height,
+    );
+
+    expect(tabletCrop.width).not.toBe((SHARED_COMMONS_WORLD.guides.heroCrop?.width ?? 0));
+    expect(mobileCrop.width).not.toBe(tabletCrop.width);
+    expect(tabletCenter.x / tabletViewport.width).toBeGreaterThan(0.4);
+    expect(tabletCenter.x / tabletViewport.width).toBeLessThan(0.6);
+    expect(mobileCenter.x / mobileViewport.width).toBeGreaterThan(0.4);
+    expect(mobileCenter.x / mobileViewport.width).toBeLessThan(0.6);
+    expect(tabletBottom.y / tabletViewport.height).toBeGreaterThan(0.92);
+    expect(tabletBottom.y / tabletViewport.height).toBeLessThanOrEqual(1.001);
+    expect(mobileBottom.y / mobileViewport.height).toBeGreaterThan(0.92);
+    expect(mobileBottom.y / mobileViewport.height).toBeLessThanOrEqual(1.001);
   });
 
   it('uses narrower hero crop widths to increase fixed-crop zoom', () => {

@@ -21,6 +21,8 @@ export interface GhostlingWorldGuides {
   centerSafe: GhostlingWorldRect;
   ultrawideBleed: GhostlingWorldRect;
   heroCrop?: GhostlingWorldRect;
+  heroCropTablet?: GhostlingWorldRect;
+  heroCropMobile?: GhostlingWorldRect;
   labelSafeTop?: GhostlingWorldRect;
 }
 
@@ -141,6 +143,12 @@ function validateGhostlingWorldSpec(spec: GhostlingWorldSpec) {
   if (spec.guides.heroCrop) {
     assertRectInsideCanvas(spec.guides.heroCrop, spec.sourceWidth, spec.sourceHeight, 'hero crop guide');
   }
+  if (spec.guides.heroCropTablet) {
+    assertRectInsideCanvas(spec.guides.heroCropTablet, spec.sourceWidth, spec.sourceHeight, 'tablet hero crop guide');
+  }
+  if (spec.guides.heroCropMobile) {
+    assertRectInsideCanvas(spec.guides.heroCropMobile, spec.sourceWidth, spec.sourceHeight, 'mobile hero crop guide');
+  }
   if (spec.guides.labelSafeTop) {
     assertRectInsideCanvas(spec.guides.labelSafeTop, spec.sourceWidth, spec.sourceHeight, 'label safe top guide');
   }
@@ -251,6 +259,8 @@ export function ghostlingWorldPackageFromSpec(
       centerSafe: { ...spec.guides.centerSafe },
       ultrawideBleed: { ...spec.guides.ultrawideBleed },
       heroCrop: spec.guides.heroCrop ? { ...spec.guides.heroCrop } : undefined,
+      heroCropTablet: spec.guides.heroCropTablet ? { ...spec.guides.heroCropTablet } : undefined,
+      heroCropMobile: spec.guides.heroCropMobile ? { ...spec.guides.heroCropMobile } : undefined,
       labelSafeTop: spec.guides.labelSafeTop ? { ...spec.guides.labelSafeTop } : undefined,
     },
     fallbackAnchor: {
@@ -289,6 +299,27 @@ export const SHARED_COMMONS_WORLD = loadGhostlingWorldSpec(
 export function ghostlingWorldById(worldId: GhostlingWorldId) {
   if (worldId === 'shared-commons') return SHARED_COMMONS_WORLD;
   return SHARED_COMMONS_WORLD;
+}
+
+export function resolveGhostlingHeroCrop(
+  world: GhostlingWorldSpec,
+  bucket: GhostlingSceneDensityBucket,
+): GhostlingWorldRect {
+  switch (bucket) {
+    case 'mobile':
+      return world.guides.heroCropMobile
+        ?? world.guides.heroCropTablet
+        ?? world.guides.heroCrop
+        ?? world.guides.centerSafe;
+    case 'tablet':
+      return world.guides.heroCropTablet
+        ?? world.guides.heroCrop
+        ?? world.guides.centerSafe;
+    case 'desktop':
+    default:
+      return world.guides.heroCrop
+        ?? world.guides.centerSafe;
+  }
 }
 
 export function resolveGhostlingSceneBucket(width: number): GhostlingSceneDensityBucket {

@@ -18,12 +18,22 @@ import {
   resolveRepoGhostlingWorld,
 } from '@/lib/server/scene-worlds';
 import { getServerJSON } from '@/lib/server-api';
+import type { GhostlingSceneDensityBucket } from '@/lib/ghostling-world';
 import type { CompanionPreviewSummary, NewsPost, ScenePresencePayload, ShellData } from '@/lib/types';
 import styles from '../page.module.css';
 
 export const metadata: Metadata = {
   title: 'Home',
 };
+
+function parseHeroBucketOverride(
+  value: string | undefined,
+): GhostlingSceneDensityBucket | null {
+  if (value === 'desktop' || value === 'tablet' || value === 'mobile') {
+    return value;
+  }
+  return null;
+}
 
 function getHallHref(shellData: ShellData | null) {
   if (shellData?.authenticated) return '/hall/';
@@ -55,7 +65,13 @@ function heroSignal(payload: ScenePresencePayload | null) {
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ sceneDebug?: string; sceneEditor?: string; sceneFixture?: string; worldPreview?: string }>;
+  searchParams: Promise<{
+    sceneDebug?: string;
+    sceneEditor?: string;
+    sceneFixture?: string;
+    worldPreview?: string;
+    heroBucket?: string;
+  }>;
 }) {
   const params = await searchParams;
   const sceneEditorRequested = params.sceneEditor === '1';
@@ -104,6 +120,7 @@ export default async function HomePage({
   const hallHref = getHallHref(shellData);
   const signal = heroSignal(presencePayload);
   const debugWorldOverlay = process.env.NODE_ENV !== 'production' && params.sceneDebug === '1';
+  const heroBucketOverride = parseHeroBucketOverride(params.heroBucket);
   const sceneEditorEnabled = sceneEditorRequested
     && (process.env.NODE_ENV !== 'production' || Boolean(currentUser?.is_admin));
   const sandboxPayload = sceneEditorEnabled
@@ -122,6 +139,7 @@ export default async function HomePage({
           preset="public-hero"
           worldSpec={runtimeWorld}
           tuningSpec={runtimeTuning}
+          heroBucketOverride={heroBucketOverride}
           debugWorldOverlay={debugWorldOverlay}
           sceneEditorEnabled={sceneEditorEnabled}
           sceneEditorSandboxPayload={sandboxPayload}

@@ -7,6 +7,7 @@ import type {
   GhostlingWorldSafeZone,
   GhostlingWorldSpec,
 } from '@/lib/ghostling-world';
+import { resolveGhostlingHeroCrop } from '@/lib/ghostling-world';
 import {
   cloneGhostlingSceneTuningSpec,
   type GhostlingSceneTuningSpec,
@@ -55,10 +56,11 @@ export const DEFAULT_GHOSTLING_SCENE_LAB_OVERLAY_VISIBILITY: GhostlingSceneLabOv
 
 export function resolveGhostlingSceneLabHeroCrop(
   world: GhostlingWorldSpec,
+  bucket: GhostlingSceneDensityBucket = 'desktop',
 ): GhostlingWorldRect {
-  return world.guides.heroCrop
-    ? { ...world.guides.heroCrop }
-    : { ...world.guides.centerSafe };
+  return {
+    ...resolveGhostlingHeroCrop(world, bucket),
+  };
 }
 
 type GhostlingWorldPackageExport = {
@@ -89,6 +91,8 @@ export function cloneGhostlingWorldDraft(world: GhostlingWorldSpec): GhostlingWo
       centerSafe: { ...world.guides.centerSafe },
       ultrawideBleed: { ...world.guides.ultrawideBleed },
       heroCrop: world.guides.heroCrop ? { ...world.guides.heroCrop } : undefined,
+      heroCropTablet: world.guides.heroCropTablet ? { ...world.guides.heroCropTablet } : undefined,
+      heroCropMobile: world.guides.heroCropMobile ? { ...world.guides.heroCropMobile } : undefined,
       labelSafeTop: world.guides.labelSafeTop ? { ...world.guides.labelSafeTop } : undefined,
     },
     safeArea: { ...world.safeArea },
@@ -143,6 +147,8 @@ export function exportGhostlingWorldDraft(
       centerSafe: { ...world.guides.centerSafe },
       ultrawideBleed: { ...world.guides.ultrawideBleed },
       heroCrop,
+      heroCropTablet: world.guides.heroCropTablet ? { ...world.guides.heroCropTablet } : undefined,
+      heroCropMobile: world.guides.heroCropMobile ? { ...world.guides.heroCropMobile } : undefined,
       labelSafeTop: world.guides.labelSafeTop ? { ...world.guides.labelSafeTop } : undefined,
     },
     fallbackAnchor: {

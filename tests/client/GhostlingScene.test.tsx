@@ -555,7 +555,7 @@ describe('GhostlingScene', () => {
     expect(screen.getByTestId('animated-stage').textContent).toContain("Wanderer's Ghostling");
   });
 
-  it('uses static ghostling renders for the hero on mobile layouts to reduce animation cost', () => {
+  it('uses the animated ghostling pipeline for the hero on mobile layouts too', () => {
     cleanup();
     installSceneStubs({
       width: 390,
@@ -577,9 +577,9 @@ describe('GhostlingScene', () => {
     flushFrame(0);
     flushFrame(16);
 
-    expect(screen.queryByTestId('animated-stage')).toBeNull();
-    expect(screen.getByAltText("Member One's Ghostling")).not.toBeNull();
-    expect(animatedStageMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('animated-stage')).not.toBeNull();
+    expect(screen.queryByAltText("Member One's Ghostling")).toBeNull();
+    expect(animatedStageMock).toHaveBeenCalled();
   });
 
   it('uses the measured visible ghost bounds as the interactive wrapper', () => {
@@ -1807,6 +1807,157 @@ describe('GhostlingScene', () => {
 
     const stage = getHeroStage(container);
     expect(stage.getAttribute('data-hero-crop-aspect')).toBe('840 / 420');
+  });
+
+  it('matches the hero stage aspect ratio to the bucket-specific mobile hero crop', () => {
+    cleanup();
+    installSceneStubs({
+      width: 390,
+      height: 420,
+      coarsePointer: true,
+      noHover: true,
+    });
+
+    const customWorld = {
+      ...SHARED_COMMONS_WORLD,
+      guides: {
+        ...SHARED_COMMONS_WORLD.guides,
+        heroCrop: {
+          x: 640,
+          y: 90,
+          width: 1800,
+          height: 240,
+        },
+        heroCropTablet: {
+          x: 860,
+          y: 58,
+          width: 1380,
+          height: 276,
+        },
+        heroCropMobile: {
+          x: 1110,
+          y: 45,
+          width: 960,
+          height: 300,
+        },
+      },
+    };
+
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={{ members: [], source: 'empty' }}
+        realtimeDisabled
+        worldSpec={customWorld}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const stage = getHeroStage(container);
+    expect(stage.getAttribute('data-hero-crop-aspect')).toBe('960 / 300');
+  });
+
+  it('keeps narrow desktop browsers on the desktop hero crop by default', () => {
+    cleanup();
+    installSceneStubs({
+      width: 390,
+      height: 420,
+      coarsePointer: false,
+      noHover: false,
+    });
+
+    const customWorld = {
+      ...SHARED_COMMONS_WORLD,
+      guides: {
+        ...SHARED_COMMONS_WORLD.guides,
+        heroCrop: {
+          x: 640,
+          y: 90,
+          width: 1800,
+          height: 240,
+        },
+        heroCropTablet: {
+          x: 860,
+          y: 58,
+          width: 1380,
+          height: 276,
+        },
+        heroCropMobile: {
+          x: 1110,
+          y: 45,
+          width: 960,
+          height: 300,
+        },
+      },
+    };
+
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={{ members: [], source: 'empty' }}
+        realtimeDisabled
+        worldSpec={customWorld}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const stage = getHeroStage(container);
+    expect(stage.getAttribute('data-hero-crop-aspect')).toBe('1800 / 240');
+  });
+
+  it('allows desktop browsers to preview a mobile hero crop through override props', () => {
+    cleanup();
+    installSceneStubs({
+      width: 390,
+      height: 420,
+      coarsePointer: false,
+      noHover: false,
+    });
+
+    const customWorld = {
+      ...SHARED_COMMONS_WORLD,
+      guides: {
+        ...SHARED_COMMONS_WORLD.guides,
+        heroCrop: {
+          x: 640,
+          y: 90,
+          width: 1800,
+          height: 240,
+        },
+        heroCropTablet: {
+          x: 860,
+          y: 58,
+          width: 1380,
+          height: 276,
+        },
+        heroCropMobile: {
+          x: 1110,
+          y: 45,
+          width: 960,
+          height: 300,
+        },
+      },
+    };
+
+    const { container } = render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={{ members: [], source: 'empty' }}
+        realtimeDisabled
+        worldSpec={customWorld}
+        heroBucketOverride="mobile"
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    const stage = getHeroStage(container);
+    expect(stage.getAttribute('data-hero-crop-aspect')).toBe('960 / 300');
   });
 
   it('pans the hero horizontally from a ghostling drag and recenters on double-click', () => {
