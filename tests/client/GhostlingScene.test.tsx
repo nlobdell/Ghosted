@@ -320,6 +320,7 @@ function makePreview(
 
   return {
     user: null,
+    renderUrl: '/api/companion/render',
     animatedRenderUrl: '/api/companion/render-animated',
     renderManifest,
     actorMetrics: resolveGhostlingActorMetrics(renderManifest),
@@ -2411,6 +2412,7 @@ describe('GhostlingScene', () => {
     flushFrame(16);
 
     const stage = getHeroStage(container);
+    expect(stage.getAttribute('data-mobile-performance')).toBe('false');
     fireEvent.wheel(stage, {
       deltaY: 180,
       deltaMode: 0,

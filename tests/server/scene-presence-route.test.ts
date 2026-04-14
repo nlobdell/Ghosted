@@ -143,7 +143,8 @@ describe('scene presence route', () => {
       voiceSource: 'widget',
     });
     expect(payload.members[0]?.companion?.user).toBeNull();
-    expect(payload.members[0]?.companion?.animatedRenderUrl).toBe('/api/companion/render-animated');
+    expect(payload.members[0]?.companion?.renderUrl).toBe('/api/companion/render?base=1');
+    expect(payload.members[0]?.companion?.animatedRenderUrl).toBe('/api/companion/render-animated?base=1');
     expect(payload.members[0]?.companion?.renderManifest.layers.some((layer: { src: string }) => layer.src.includes('ghostling-base-body.png'))).toBe(true);
   });
 
@@ -250,7 +251,8 @@ describe('scene presence route', () => {
       voiceSource: 'widget',
     });
     expect(payload.members[1]?.companion?.user).toBeNull();
-    expect(payload.members[1]?.companion?.animatedRenderUrl).toBe('/api/companion/render-animated');
+    expect(payload.members[1]?.companion?.renderUrl).toBe('/api/companion/render?base=1');
+    expect(payload.members[1]?.companion?.animatedRenderUrl).toBe('/api/companion/render-animated?base=1');
   });
 
   it('filters bot-backed voice rows by the public allowlist while still permitting allowlisted widget fallback extras', async () => {
@@ -330,7 +332,8 @@ describe('scene presence route', () => {
       source: 'wom',
     });
     expect(payload.members[0]?.companion?.user).toBeNull();
-    expect(payload.members[0]?.companion?.animatedRenderUrl).toBe('/api/companion/render-animated');
+    expect(payload.members[0]?.companion?.renderUrl).toBe('/api/companion/render?base=1');
+    expect(payload.members[0]?.companion?.animatedRenderUrl).toBe('/api/companion/render-animated?base=1');
   });
 
   it('resolves WOM-linked cosmetics by WOM player id even when the live activity username differs', async () => {

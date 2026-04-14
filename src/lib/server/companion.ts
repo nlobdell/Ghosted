@@ -457,12 +457,14 @@ function buildCompanionPreviewSummary(
   options: {
     user: CompanionUserRow | null;
     loadout: Record<CompanionSlotKey, string | null>;
+    renderUrl: string;
     animatedRenderUrl: string;
   },
 ) {
   const renderManifest = companionRenderManifest(db, options.loadout);
   return {
     user: companionPreviewUser(options.user),
+    renderUrl: options.renderUrl,
     animatedRenderUrl: options.animatedRenderUrl,
     renderManifest,
     actorMetrics: companionActorMetrics(renderManifest, options.animatedRenderUrl),
@@ -522,6 +524,7 @@ export function buildCompanionPreviewSummaryPayload(db: Database, user: Companio
   return buildCompanionPreviewSummary(db, {
     user,
     loadout: companionLoadoutMap(db, user.id),
+    renderUrl: `/api/companion/render?user=${user.id}`,
     animatedRenderUrl: `/api/companion/render-animated?user=${user.id}`,
   });
 }
@@ -542,7 +545,8 @@ export function buildHouseCompanionPreviewSummaryPayload(db: Database): Companio
   return buildCompanionPreviewSummary(db, {
     user: null,
     loadout: emptyCompanionLoadout(),
-    animatedRenderUrl: '/api/companion/render-animated',
+    renderUrl: '/api/companion/render?base=1',
+    animatedRenderUrl: '/api/companion/render-animated?base=1',
   });
 }
 
@@ -554,6 +558,7 @@ export function buildHallCompanionSummaryPayload(db: Database, user: CompanionUs
   const preview = buildCompanionPreviewSummary(db, {
     user,
     loadout,
+    renderUrl: `/api/companion/render?user=${user.id}`,
     animatedRenderUrl,
   });
 

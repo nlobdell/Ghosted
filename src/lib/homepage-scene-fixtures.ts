@@ -31,7 +31,8 @@ function fixtureActivity(): ScenePresenceActivity {
 function fallbackPreviewSummary(): CompanionPreviewSummary {
   return {
     user: null,
-    animatedRenderUrl: '/api/companion/render-animated',
+    renderUrl: '/api/companion/render?base=1',
+    animatedRenderUrl: '/api/companion/render-animated?base=1',
     actorMetrics: DEFAULT_GHOSTLING_ACTOR_METRICS,
     renderManifest: {
       width: 70,

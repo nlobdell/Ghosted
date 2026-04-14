@@ -2,6 +2,7 @@ import { getCurrentUser } from '@/lib/server/ghosted-api';
 import { getDatabase } from '@/lib/server/database';
 import { renderRequestedCompanionSvg } from '@/lib/server/companion-render';
 import { withRouteErrorHandling } from '@/lib/server/core';
+import sharp from 'sharp';
 
 export const runtime = 'nodejs';
 
@@ -14,6 +15,7 @@ export const GET = withRouteErrorHandling(async (request: Request) => {
   const userRef = String(url.searchParams.get('user') ?? '').trim();
   const previewSlug = String(url.searchParams.get('preview') ?? '').trim();
   const baseOnly = boolSearchParam(url.searchParams.get('base'));
+  const responseFormat = String(url.searchParams.get('format') ?? '').trim().toLowerCase();
   const markup = renderRequestedCompanionSvg(getDatabase(), {
     animated: false,
     userRef,
@@ -23,6 +25,17 @@ export const GET = withRouteErrorHandling(async (request: Request) => {
     baseOnly,
     currentUser: userRef || baseOnly ? null : await getCurrentUser(),
   });
+
+  if (responseFormat === 'png') {
+    const png = await sharp(Buffer.from(await markup)).png().toBuffer();
+    return new Response(new Uint8Array(png), {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'no-store',
+      },
+    });
+  }
 
   return new Response(await markup, {
     status: 200,
