@@ -34,7 +34,7 @@
 
 .leadershipList {
   gap: 0;
-  border-top: 1px solid rgba(191, 179, 255, 0.12);
+  border-top: 1px solid var(--public-divider);
 }
 
 .leadershipRow {
@@ -42,7 +42,7 @@
   grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
   gap: 0.9rem 1.4rem;
   padding: 1rem 0;
-  border-bottom: 1px solid rgba(191, 179, 255, 0.12);
+  border-bottom: 1px solid var(--public-divider);
 }
 
 .leadershipMeta {

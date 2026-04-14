@@ -30,7 +30,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.8rem;
   padding-bottom: 0.95rem;
-  border-bottom: 1px solid rgba(191, 179, 255, 0.12);
+  border-bottom: 1px solid var(--public-divider);
 }
 
 .pulseList {
@@ -45,14 +45,14 @@
 }
 
 .pulseRow span {
-  color: var(--color-text-soft);
+  color: var(--public-soft);
   font-size: 0.72rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .pulseRow strong {
-  color: var(--color-text-strong);
+  color: var(--public-heading);
 }
 
 .filters {
@@ -61,8 +61,8 @@
   align-items: start;
   gap: 1.1rem 1.25rem;
   padding: 1rem 0 1.15rem;
-  border-top: 1px solid rgba(191, 179, 255, 0.12);
-  border-bottom: 1px solid rgba(191, 179, 255, 0.12);
+  border-top: 1px solid var(--public-divider);
+  border-bottom: 1px solid var(--public-divider);
 }
 
 .filtersSummary {
@@ -72,11 +72,14 @@
 }
 
 .filterTools {
-    align-content: start;
-    justify-self: end;
-    gap: 0.9rem;
-    padding: 0.65rem;
-    border: 1px solid rgba(191, 179, 255, 0.12);
+  align-content: start;
+  justify-self: end;
+  gap: 0.9rem;
+  padding: 0.65rem;
+  border: 1px solid var(--public-divider);
+  border-radius: 0.24rem;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: var(--public-shadow-soft);
 }
 
 .filterChipRow {
@@ -111,8 +114,10 @@
 
 .activeSortChip {
   border-color: rgba(157, 130, 255, 0.28);
-  background: linear-gradient(180deg, rgba(104, 80, 191, 0.24), rgba(69, 52, 128, 0.16));
-  color: var(--color-text-strong);
+  background:
+    linear-gradient(180deg, rgba(104, 80, 191, 0.24), rgba(69, 52, 128, 0.16));
+  box-shadow: var(--public-shadow-soft);
+  color: var(--public-heading);
 }
 
 .sortField {
@@ -122,14 +127,14 @@
 }
 
 .sortField span {
-  color: var(--color-text-soft);
+  color: var(--public-soft);
   font-size: 0.68rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .sortHint {
-  color: var(--color-text-soft);
+  color: var(--public-soft);
   font-size: 0.76rem;
   line-height: 1.5;
 }
@@ -138,11 +143,11 @@
   align-items: center;
   justify-items: start;
   padding: 1rem 0 0;
-  border-top: 1px solid rgba(191, 179, 255, 0.12);
+  border-top: 1px solid var(--public-divider);
 }
 
 .paginationMeta {
-  color: var(--color-text-soft);
+  color: var(--public-soft);
   font-size: 0.74rem;
   font-family: var(--font-mono);
   letter-spacing: 0.18em;
@@ -164,7 +169,7 @@
 
 .ledgerHead {
   padding: 0 0 0.55rem;
-  color: var(--color-text-soft);
+  color: var(--public-soft);
   font-size: 0.68rem;
   font-family: var(--font-mono);
   font-weight: 800;
@@ -174,7 +179,7 @@
 
 .ledgerRow {
   padding: 0.95rem 0;
-  border-top: 1px solid rgba(191, 179, 255, 0.12);
+  border-top: 1px solid var(--public-divider);
 }
 
 .ledgerIndex {
@@ -186,7 +191,7 @@
   display: inline-flex;
   align-items: center;
   min-height: 2rem;
-  color: var(--color-text-strong);
+  color: var(--public-heading);
   font-family: var(--font-mono);
   font-size: 0.9rem;
   font-weight: 800;
@@ -210,7 +215,7 @@
   align-items: center;
   gap: 0.45rem;
   flex-wrap: wrap;
-  color: var(--color-text-soft);
+  color: var(--public-soft);
   font-size: 0.72rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -237,14 +242,14 @@
 }
 
 .ledgerStat span {
-  color: var(--color-text-soft);
+  color: var(--public-soft);
   font-size: 0.72rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .ledgerStat strong {
-  color: var(--color-text-strong);
+  color: var(--public-heading);
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;

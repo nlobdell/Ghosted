@@ -63,24 +63,24 @@
 .ctaHint {
   margin: 0;
   max-width: 42ch;
-  color: var(--color-text-soft);
+  color: var(--public-soft);
   font-size: 0.8rem;
   line-height: 1.65;
 }
 
 .ctaHint a {
-  color: var(--color-accent-soft);
+  color: var(--public-accent);
 }
 
 .trustMeta {
   display: grid;
   gap: 0.55rem;
   padding-bottom: 0.9rem;
-  border-bottom: 1px solid rgba(191, 179, 255, 0.12);
+  border-bottom: 1px solid var(--public-divider);
 }
 
 .trustMetaLabel {
-  color: var(--color-text-soft);
+  color: var(--public-soft);
   font-size: 0.68rem;
   font-family: var(--font-mono);
   font-weight: 800;
@@ -89,7 +89,7 @@
 }
 
 .trustMetaValue {
-  color: var(--color-text-strong);
+  color: var(--public-heading);
   font-family: var(--font-display);
   font-size: clamp(1.6rem, 3vw, 2.35rem);
   line-height: 0.96;
@@ -97,25 +97,25 @@
 
 .trustMetaCopy {
   margin: 0;
-  color: var(--color-text-muted);
+  color: var(--public-muted);
   line-height: 1.65;
 }
 
 .signalStack {
   gap: 0.95rem;
   padding-left: 1rem;
-  border-left: 1px solid rgba(191, 179, 255, 0.12);
+  border-left: 1px solid var(--public-divider);
 }
 
 .signalCard {
   min-height: 100%;
   padding-top: 0.85rem;
   padding-bottom: 0.15rem;
-  border-top: 1px solid rgba(191, 179, 255, 0.12);
+  border-top: 1px solid var(--public-divider);
 }
 
 .signalCardLabel {
-  color: var(--color-text-soft);
+  color: var(--public-soft);
   font-size: 0.68rem;
   font-family: var(--font-mono);
   font-weight: 800;
@@ -124,27 +124,27 @@
 }
 
 .signalCardTitle {
-  color: var(--color-text-strong);
+  color: var(--public-heading);
   font-size: 1.06rem;
   line-height: 1.2;
 }
 
 .signalCardCopy {
   margin: 0;
-  color: var(--color-text-muted);
+  color: var(--public-muted);
   line-height: 1.68;
 }
 
 .supportList {
   display: grid;
   gap: 0;
-  border-top: 1px solid rgba(191, 179, 255, 0.12);
+  border-top: 1px solid var(--public-divider);
 }
 
 .supportRow {
   gap: 0.6rem;
   padding: 1rem 0;
-  border-bottom: 1px solid rgba(191, 179, 255, 0.12);
+  border-bottom: 1px solid var(--public-divider);
 }
 
 .supportRow p {
@@ -152,7 +152,7 @@
 }
 
 .supportRow a {
-  color: var(--color-accent-soft);
+  color: var(--public-accent);
 }
 
 @media (max-width: 1120px) {
@@ -168,7 +168,7 @@
     padding-left: 0;
     border-left: 0;
     padding-top: 0.25rem;
-    border-top: 1px solid rgba(191, 179, 255, 0.12);
+    border-top: 1px solid var(--public-divider);
   }
 }
 

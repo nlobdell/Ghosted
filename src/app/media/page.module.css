@@ -18,11 +18,12 @@
 }
 
 .broadcastFrame {
-    overflow: hidden;
-    border-radius: 0.7rem;
-    border: 1px solid rgba(191, 179, 255, 0.14);
-    background: #090810;
-    max-block-size: 34.25rem;
+  overflow: hidden;
+  border-radius: 0.24rem;
+  border: 1px solid rgba(191, 179, 255, 0.14);
+  background: #090810;
+  box-shadow: var(--public-shadow-soft);
+  max-block-size: 34.25rem;
 }
 
 .broadcastCopy {
@@ -40,7 +41,7 @@
   width: 100%;
   min-height: 34rem;
   border: 0;
-  background: #090810;
+  background: #0d0917;
 }
 
 .replayHeader {
@@ -58,7 +59,10 @@
   gap: 0.7rem 1rem;
   align-items: start;
   padding: 1rem 1rem;
-  border: 1px solid rgba(191, 179, 255, 0.12);
+  border: 1px solid var(--public-divider);
+  border-radius: 0.24rem;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: var(--public-shadow-soft);
 }
 
 .replayRowHeader {
