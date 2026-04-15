@@ -2724,7 +2724,6 @@ export function GhostlingScene({
         data-pan-enabled={heroPanEnabled ? 'true' : 'false'}
         data-pan-dragging={heroPanDragging ? 'true' : 'false'}
         data-pan-offset={heroPanCanRecenter ? 'true' : 'false'}
-        data-mobile-performance={heroMobilePerformanceMode ? 'true' : 'false'}
         data-hero-crop-aspect={heroStageAspectRatio ?? undefined}
         style={heroStageAspectRatio
           ? { aspectRatio: heroStageAspectRatio }
