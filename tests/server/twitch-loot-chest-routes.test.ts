@@ -23,6 +23,7 @@ vi.mock('next/headers', () => ({
 import { GET as getPlatformStateRoute } from '@/app/api/v/twitch/state/route';
 import { GET as getPlatformCallbackRoute } from '@/app/api/v/twitch/callback/route';
 import { POST as postPlatformEventSubRoute } from '@/app/api/v/twitch/eventsub/route';
+import { GET as getGiveawayBuildRoute } from '@/app/api/v/giveaways/build/route';
 import { GET as getGiveawayStateRoute } from '@/app/api/v/giveaways/state/route';
 import { GET as getGiveawayCallbackRoute } from '@/app/api/v/giveaways/twitch/callback/route';
 import { POST as postGiveawayPresentationRoute } from '@/app/api/v/giveaways/presentation/route';
@@ -142,6 +143,16 @@ describe('twitch platform and loot chest routes', () => {
     cleanupServerTestEnvironment(context);
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it('returns a no-store build id for long-lived public overlay refresh checks', async () => {
+    const response = await getGiveawayBuildRoute();
+    const payload = await response.json() as { buildId?: string };
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toContain('no-store');
+    expect(typeof payload.buildId).toBe('string');
+    expect(payload.buildId?.length).toBeGreaterThan(0);
   });
 
   it('returns 401 for signed-out Twitch platform state requests', async () => {

@@ -10,6 +10,7 @@ import type {
   LootChestTurn,
 } from '@/lib/types';
 import { LootChestScene } from '../LootChestScene';
+import { useGiveawayBuildSync } from '../useGiveawayBuildSync';
 import { useLootChestSceneTransport } from '../useLootChestSceneTransport';
 import styles from './page.module.css';
 
@@ -97,8 +98,10 @@ function recentResultLabel(turn: LootChestTurn) {
 
 export default function TwitchLootChestHostOverlayClient({
   initialState,
+  buildId,
 }: {
   initialState: LootChestGameState;
+  buildId: string;
 }) {
   const [state, setState] = useState(initialState);
   const [message, setMessage] = useState<HostMessage>(null);
@@ -126,6 +129,7 @@ export default function TwitchLootChestHostOverlayClient({
   const revealedChestKey = activeBoard?.revealedChests.join(',') ?? '';
   const overlayToken = state.connection.overlayToken ?? null;
   const revealBusy = Boolean(busyAction?.startsWith('reveal'));
+  useGiveawayBuildSync(buildId);
 
   useEffect(() => {
     setDraftSelections(
@@ -499,6 +503,7 @@ export default function TwitchLootChestHostOverlayClient({
               onPreviewChest={previewChest}
               frame="board-only"
               boardSizing="width"
+              assetVersion={buildId}
             />
           </section>
 

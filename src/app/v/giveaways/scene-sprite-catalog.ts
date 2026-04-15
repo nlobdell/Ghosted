@@ -29,6 +29,26 @@ export type SceneSpriteSpec = {
   frameAnchorBounds?: Array<SceneSpriteBounds | undefined>;
 };
 
+function versionedSpriteSrc(src: string, assetVersion?: string) {
+  if (!assetVersion) {
+    return src;
+  }
+
+  const separator = src.includes('?') ? '&' : '?';
+  return `${src}${separator}v=${encodeURIComponent(assetVersion)}`;
+}
+
+function withAssetVersion(spec: SceneSpriteSpec, assetVersion?: string): SceneSpriteSpec {
+  if (!assetVersion) {
+    return spec;
+  }
+
+  return {
+    ...spec,
+    src: versionedSpriteSrc(spec.src, assetVersion),
+  };
+}
+
 function staticSprite(
   id: string,
   src: string,
@@ -203,12 +223,15 @@ const BOARD_BACKDROP = staticSprite('board-backdrop', '/giveaways/sprites/backdr
 const BOARD_FRAME = staticSprite('board-frame', '/giveaways/sprites/board-frame.svg');
 const BOARD_FRAME_OVERLAY = staticSprite('board-frame-overlay', '/giveaways/sprites/board-frame-overlay.svg');
 
-export function getBoardBackdropSpriteSpec() {
-  return BOARD_BACKDROP;
+export function getBoardBackdropSpriteSpec(assetVersion?: string) {
+  return withAssetVersion(BOARD_BACKDROP, assetVersion);
 }
 
-export function getBoardFrameSpriteSpec(variant: 'default' | 'overlay' = 'default') {
-  return variant === 'overlay' ? BOARD_FRAME_OVERLAY : BOARD_FRAME;
+export function getBoardFrameSpriteSpec(
+  variant: 'default' | 'overlay' = 'default',
+  assetVersion?: string,
+) {
+  return withAssetVersion(variant === 'overlay' ? BOARD_FRAME_OVERLAY : BOARD_FRAME, assetVersion);
 }
 
 export function getChestSpriteSpec(
@@ -216,49 +239,53 @@ export function getChestSpriteSpec(
   animationState: LootChestChestAnimationState,
   options?: {
     winner?: boolean;
+    assetVersion?: string;
   },
 ): SceneSpriteSpec {
   if (spriteState === 'opening' && options?.winner) {
-    return WINNER_OPENING_SPRITE;
+    return withAssetVersion(WINNER_OPENING_SPRITE, options.assetVersion);
   }
 
   const base = CHEST_SPRITES[spriteState];
 
   if (base.frames > 1) {
-    return base;
+    return withAssetVersion(base, options?.assetVersion);
   }
 
   if (animationState === 'opening') {
-    return {
+    return withAssetVersion({
       ...base,
       playback: 'once',
       durationMs: 560,
-    };
+    }, options?.assetVersion);
   }
 
   if (animationState === 'pulse') {
-    return {
+    return withAssetVersion({
       ...base,
       playback: 'loop',
       durationMs: 860,
-    };
+    }, options?.assetVersion);
   }
 
   if (animationState === 'burst') {
-    return {
+    return withAssetVersion({
       ...base,
       playback: 'once',
       durationMs: 520,
-    };
+    }, options?.assetVersion);
   }
 
-  return base;
+  return withAssetVersion(base, options?.assetVersion);
 }
 
-export function getResultSpriteSpec(result: Exclude<LootChestTurnResult, 'pending'> | null | undefined) {
+export function getResultSpriteSpec(
+  result: Exclude<LootChestTurnResult, 'pending'> | null | undefined,
+  assetVersion?: string,
+) {
   if (!result) {
     return null;
   }
 
-  return RESULT_SPRITES[result];
+  return withAssetVersion(RESULT_SPRITES[result], assetVersion);
 }

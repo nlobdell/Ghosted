@@ -162,6 +162,7 @@ export function LootChestScene({
   onPreviewChest,
   frame = 'standalone',
   boardSizing = 'viewport',
+  assetVersion,
 }: {
   scene: LootChestSceneSnapshot;
   presentationCue?: LootChestPresentationCue | null;
@@ -171,6 +172,7 @@ export function LootChestScene({
   onPreviewChest?: (index: number | null) => void;
   frame?: 'standalone' | 'embedded' | 'broadcast' | 'board-only';
   boardSizing?: 'viewport' | 'width';
+  assetVersion?: string;
 }) {
   const turn = scene.focusTurn;
   const board = turn?.board ?? null;
@@ -274,8 +276,11 @@ export function LootChestScene({
       )}
 
       <div className={styles.boardShell}>
-        {boardOnly ? null : <SceneSprite spec={getBoardBackdropSpriteSpec()} className={styles.boardBackdrop} />}
-        <SceneSprite spec={getBoardFrameSpriteSpec(boardOnly ? 'overlay' : 'default')} className={styles.boardFrame} />
+        {boardOnly ? null : <SceneSprite spec={getBoardBackdropSpriteSpec(assetVersion)} className={styles.boardBackdrop} />}
+        <SceneSprite
+          spec={getBoardFrameSpriteSpec(boardOnly ? 'overlay' : 'default', assetVersion)}
+          className={styles.boardFrame}
+        />
         <div className={styles.boardContent}>
         {board ? (
           <>
@@ -285,6 +290,7 @@ export function LootChestScene({
                 const animationState = displayAnimationState(chest, spriteState);
                 const spriteSpec = getChestSpriteSpec(spriteState, animationState, {
                   winner: chest.containsPrize || spriteState === 'prize' || spriteState === 'resolved-prize',
+                  assetVersion,
                 });
                 const selectionRow = selectionRowActive ? selectionRowPosition(board, chest.index) : null;
                 const dormant = selectionRowActive && selectionRow === null;
@@ -364,9 +370,9 @@ export function LootChestScene({
               })}
             </div>
 
-            {(turn?.resolutionCue || cuedResult) && getResultSpriteSpec(cuedResult ?? turn?.resolutionCue?.result) ? (
+            {(turn?.resolutionCue || cuedResult) && getResultSpriteSpec(cuedResult ?? turn?.resolutionCue?.result, assetVersion) ? (
               <SceneSprite
-                spec={getResultSpriteSpec(cuedResult ?? turn?.resolutionCue?.result)!}
+                spec={getResultSpriteSpec(cuedResult ?? turn?.resolutionCue?.result, assetVersion)!}
                 className={`${styles.resultStamp} ${(animateResult || Boolean(cuedResult)) ? styles.resultStampAnimated : ''}`}
                 data-result-cue={(animateResult || Boolean(cuedResult)) ? 'true' : 'false'}
               />

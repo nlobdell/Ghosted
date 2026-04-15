@@ -540,4 +540,35 @@ describe('LootChestScene', () => {
     expect(container.querySelector('[data-sprite-id="board-frame"]')).toBeNull();
     expect(container.querySelector('[data-chest-index="4"]')).not.toBeNull();
   });
+
+  it('versions sprite asset urls so long-lived overlays pick up new scene art after reload', () => {
+    const board = makeBoard({
+      phase: 'locked',
+      selectedChests: [1, 4, 8],
+      allSelectionsLocked: true,
+      remainingSelections: 0,
+      remainingReveals: 3,
+    }, {
+      1: { spriteState: 'locked', animationState: 'idle' },
+      4: { spriteState: 'locked', animationState: 'idle' },
+      8: { spriteState: 'locked', animationState: 'idle' },
+    });
+
+    const { container } = render(
+      <LootChestScene
+        scene={makeScene({
+          queueCount: 2,
+          focusTurn: makeTurn({ board, phase: 'locked' }),
+        })}
+        frame="board-only"
+        assetVersion="build-123"
+      />,
+    );
+
+    const frameSprite = container.querySelector('[data-sprite-id="board-frame-overlay"]') as HTMLElement | null;
+    const lockedSprite = container.querySelector('[data-chest-index="1"] [data-sprite-id="chest-locked"]') as HTMLElement | null;
+
+    expect(frameSprite?.style.getPropertyValue('--scene-sprite-image')).toContain('board-frame-overlay.svg?v=build-123');
+    expect(lockedSprite?.style.getPropertyValue('--scene-sprite-image')).toContain('chest-selected.png?v=build-123');
+  });
 });

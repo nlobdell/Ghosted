@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/server/ghosted-api';
+import { getGhostedBuildId } from '@/lib/server/app-build';
 import { buildLootChestGameState } from '@/lib/server/twitch-loot-chest';
 import { isTwitchPlatformOperator, twitchPlatformLoginHref } from '@/lib/server/twitch-platform';
 import TwitchLootChestHostOverlayClient from './TwitchLootChestHostOverlayClient';
@@ -32,6 +33,7 @@ export default async function TwitchLootChestHostOverlayPage() {
   }
 
   const initialState = await buildLootChestGameState(currentUser);
+  const buildId = getGhostedBuildId();
 
-  return <TwitchLootChestHostOverlayClient initialState={initialState} />;
+  return <TwitchLootChestHostOverlayClient initialState={initialState} buildId={buildId} />;
 }

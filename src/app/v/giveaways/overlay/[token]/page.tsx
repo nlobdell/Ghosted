@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getGhostedBuildId } from '@/lib/server/app-build';
 import { lootChestStateForOverlayToken } from '@/lib/server/twitch-loot-chest';
 import TwitchLootChestOverlayClient from '../TwitchLootChestOverlayClient';
 
@@ -14,6 +15,7 @@ export default async function TwitchLootChestOverlayPage({
   if (!initialState) {
     notFound();
   }
+  const buildId = getGhostedBuildId();
 
   return (
     <>
@@ -28,7 +30,7 @@ export default async function TwitchLootChestOverlayPage({
           display: none !important;
         }
       `}</style>
-      <TwitchLootChestOverlayClient initialState={initialState} overlayToken={token} />
+      <TwitchLootChestOverlayClient initialState={initialState} overlayToken={token} buildId={buildId} />
     </>
   );
 }
