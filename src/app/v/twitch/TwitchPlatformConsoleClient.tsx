@@ -135,11 +135,23 @@ export default function TwitchPlatformConsoleClient({
         </div>
       </section>
 
-      <section className={styles.statusStrip}>
-        <span className={styles.statusChip}>{state.config.oauthReady ? 'OAuth ready' : 'OAuth missing'}</span>
-        <span className={styles.statusChip}>{state.config.eventSubReady ? 'EventSub ready' : 'EventSub missing'}</span>
-        <span className={styles.statusChip}>{state.config.operatorAllowlistConfigured ? 'Allowlist ready' : 'Allowlist missing'}</span>
-        <span className={styles.statusChip}>{connection ? `Broadcaster ${connection.displayName}` : 'No broadcaster'}</span>
+      <section className={styles.statusBoard}>
+        <div className={styles.statusItem}>
+          <span className={styles.statusLabel}>App auth</span>
+          <strong className={styles.statusValue}>{state.config.oauthReady ? 'Ready' : 'Missing'}</strong>
+        </div>
+        <div className={styles.statusItem}>
+          <span className={styles.statusLabel}>Webhooks</span>
+          <strong className={styles.statusValue}>{state.config.eventSubReady ? 'Ready' : 'Missing'}</strong>
+        </div>
+        <div className={styles.statusItem}>
+          <span className={styles.statusLabel}>Operators</span>
+          <strong className={styles.statusValue}>{state.config.operatorAllowlistConfigured ? 'Allowlisted' : 'Setup needed'}</strong>
+        </div>
+        <div className={styles.statusItem}>
+          <span className={styles.statusLabel}>Channel</span>
+          <strong className={styles.statusValue}>{connection ? connection.displayName : 'Not connected'}</strong>
+        </div>
       </section>
 
       <div className={styles.workspace}>
@@ -179,14 +191,13 @@ export default function TwitchPlatformConsoleClient({
           <Panel
             title="EventSub subscriptions"
             eyebrow="Subscriptions"
-            chip={`${subscriptionCount} tracked`}
             body={state.subscriptions.length > 0 ? (
               <div className={styles.cardList}>
                 {state.subscriptions.map((subscription) => (
                   <article key={subscription.id} className={styles.recordCard}>
                     <div className={styles.recordHeader}>
                       <strong>{subscription.subscriptionType}</strong>
-                      <span className={styles.chip}>{subscription.status}</span>
+                      <span className={styles.recordState}>{subscription.status}</span>
                     </div>
                     <p className={styles.metaLine}>Module: {subscription.moduleKey}</p>
                     <p className={styles.metaLine}>Broadcaster: {subscription.broadcasterUserId ?? 'n/a'}</p>
@@ -207,14 +218,13 @@ export default function TwitchPlatformConsoleClient({
           <Panel
             title="Recent deliveries"
             eyebrow="Ingress"
-            chip={`${deliveryCount} recent`}
             body={state.recentDeliveries.length > 0 ? (
               <div className={styles.cardList}>
                 {state.recentDeliveries.map((delivery) => (
                   <article key={delivery.messageId} className={styles.recordCard}>
                     <div className={styles.recordHeader}>
                       <strong>{delivery.messageType}</strong>
-                      <span className={styles.chip}>{delivery.processingStatus}</span>
+                      <span className={styles.recordState}>{delivery.processingStatus}</span>
                     </div>
                     <p className={styles.metaLine}>Subscription: {delivery.subscriptionType ?? 'unknown'}</p>
                     <p className={styles.metaLine}>Received: {formatDate(delivery.receivedAt)}</p>
@@ -231,14 +241,13 @@ export default function TwitchPlatformConsoleClient({
           <Panel
             title="Modules"
             eyebrow="Feature health"
-            chip={`${state.modules.length} loaded`}
             body={state.modules.length > 0 ? (
               <div className={styles.cardList}>
                 {state.modules.map((module) => (
                   <article key={module.key} className={styles.recordCard}>
                     <div className={styles.recordHeader}>
                       <strong>{module.label}</strong>
-                      <span className={styles.chip}>{module.status}</span>
+                      <span className={styles.recordState}>{module.status}</span>
                     </div>
                     <p>{module.summary}</p>
                     <p className={styles.metaLine}>{module.chips.join(' - ')}</p>

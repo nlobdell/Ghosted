@@ -1,53 +1,77 @@
-.surface {
+.shell {
   --v-surface-border: rgba(191, 179, 255, 0.14);
   --v-surface-border-strong: rgba(191, 179, 255, 0.22);
-  --v-surface-bg: rgba(10, 11, 17, 0.96);
-  --v-surface-bg-subtle: rgba(255, 255, 255, 0.02);
+  --v-surface-panel: rgba(15, 17, 24, 0.88);
+  --v-surface-panel-soft: rgba(255, 255, 255, 0.02);
+  --v-surface-tint: rgba(191, 179, 255, 0.12);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(71, 58, 125, 0.12), transparent 36%),
+    #0b0d12;
+  color: var(--color-text-strong);
+}
+
+.surface {
+  display: grid;
+  gap: 1rem;
+  padding-top: 1.3rem;
+  padding-bottom: 1.15rem;
 }
 
 .surface :global(.app-context),
 .surface :global(.app-panel),
 .surface :global(.app-empty),
-.surface :global(.app-banner) {
+.surface :global(.app-banner),
+.surface :global(.highlight-shell),
+.surface :global(.highlight-stage) {
   border: 1px solid var(--v-surface-border);
-  border-radius: 0.8rem;
-  background: var(--v-surface-bg);
+  border-radius: 0.85rem;
+  background: var(--v-surface-panel);
   box-shadow: none;
   backdrop-filter: none;
 }
 
 .surface :global(.app-context::before),
-.surface :global(.app-panel::before) {
+.surface :global(.app-panel::before),
+.surface :global(.highlight-shell::before) {
   display: none;
 }
 
 .surface :global(.app-context) {
-  padding: 0.95rem 1rem 0.9rem;
+  padding: 0.9rem 1rem 0.95rem;
   border-left: 0;
 }
 
 .surface :global(.app-breadcrumbs) {
   color: var(--color-text-soft);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
+.surface :global(.app-context__row) {
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
 .surface :global(.app-context__title) {
   max-width: none;
-  font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+  font-size: clamp(1.4rem, 2.8vw, 1.95rem);
   line-height: 1;
 }
 
 .surface :global(.app-context__summary) {
-  max-width: 68ch;
-  font-size: 0.88rem;
-  line-height: 1.6;
+  max-width: 64ch;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
 }
 
 .surface :global(.app-context__actions) {
   justify-content: flex-start;
+  gap: 0.45rem;
+  flex-wrap: wrap;
 }
 
 .surface :global(.app-panel) {
@@ -55,8 +79,8 @@
 }
 
 .surface :global(.app-panel__header) {
-  padding-bottom: 0.4rem;
-  border-bottom-color: rgba(191, 179, 255, 0.08);
+  padding: 0 0 0.25rem;
+  border-bottom: 0;
 }
 
 .surface :global(.app-panel__header h3),
@@ -65,60 +89,100 @@
   line-height: 1.2;
 }
 
+.surface :global(.app-panel__header-actions) {
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
 .surface :global(.app-panel__copy),
 .surface :global(.app-muted),
 .surface :global(.app-empty p),
 .surface :global(.app-section-heading__copy p) {
   color: var(--color-text-muted);
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
-.surface :global(.highlight-shell),
-.surface :global(.highlight-stage) {
-  border: 1px solid var(--v-surface-border);
-  border-radius: 0.8rem;
-  background: var(--v-surface-bg);
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-.surface :global(.highlight-shell::before) {
-  display: none;
+.surface :global(.app-panel__body) {
+  gap: 0.7rem;
 }
 
 .surface :global(.app-chip) {
-  min-height: 1.7rem;
-  padding: 0.14rem 0.55rem;
+  min-height: 1.55rem;
+  padding: 0.1rem 0.45rem;
   border: 1px solid var(--v-surface-border-strong);
   border-radius: 999px;
-  background: transparent;
+  background: var(--v-surface-panel-soft);
   color: var(--color-text-muted);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .surface :global(.app-banner) {
-  padding: 0.8rem 1rem;
+  padding: 0.7rem 0.8rem;
   color: var(--color-text-strong);
 }
 
 .surface :global(.app-banner.is-error) {
-  border-color: rgba(198, 112, 89, 0.3);
-  background: rgba(62, 28, 24, 0.92);
+  border-color: rgba(198, 112, 89, 0.28);
+  background: rgba(62, 28, 24, 0.46);
 }
 
 .surface :global(.app-banner.is-warning) {
   border-color: var(--v-surface-border-strong);
 }
 
+.surface :global(.app-empty) {
+  padding: 0.2rem 0 0;
+}
+
 .surface :global(.app-form-field label),
 .surface :global(.kicker) {
   color: var(--color-text-soft);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.surface :global(.button) {
+  min-height: 2.35rem;
+  padding: 0.46rem 0.76rem;
+  border: 1px solid var(--v-surface-border);
+  border-radius: 0.55rem;
+  background: var(--v-surface-tint);
+  color: var(--color-text-strong);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+
+.surface :global(.button:hover) {
+  transform: none;
+  filter: none;
+  border-color: var(--v-surface-border-strong);
+  background: rgba(191, 179, 255, 0.16);
+  box-shadow: none;
+}
+
+.surface :global(.button--secondary) {
+  background: rgba(255, 255, 255, 0.015);
+  color: var(--color-text-muted);
+  border-color: var(--v-surface-border);
+}
+
+.surface :global(.button--secondary:hover) {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-strong);
+}
+
+.surface :global(.button--small) {
+  min-height: 2.05rem;
+  padding: 0.34rem 0.62rem;
+  font-size: 0.68rem;
 }

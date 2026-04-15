@@ -1,8 +1,5 @@
 import { redirect } from 'next/navigation';
-import { HallTopbar } from '@/components/nav/HallTopbar';
-import type { ShellData } from '@/lib/types';
 import { getCurrentUser } from '@/lib/server/ghosted-api';
-import { getServerJSON } from '@/lib/server-api';
 import { buildGhostedTwitchPlatformState } from '@/lib/server/twitch-platform-runtime';
 import { isTwitchPlatformOperator, twitchPlatformLoginHref } from '@/lib/server/twitch-platform';
 import TwitchPlatformConsoleClient from './TwitchPlatformConsoleClient';
@@ -16,9 +13,8 @@ export default async function TwitchPlatformPage({
 }: {
   searchParams: Promise<{ message?: string }>;
 }) {
-  const [currentUser, shellData, params] = await Promise.all([
+  const [currentUser, params] = await Promise.all([
     getCurrentUser(),
-    getServerJSON<ShellData>('/api/site-shell?next=%2Fv%2Ftwitch%2F'),
     searchParams,
   ]);
 
@@ -28,9 +24,8 @@ export default async function TwitchPlatformPage({
 
   if (!isTwitchPlatformOperator(currentUser)) {
     return (
-      <div className="app-page app-shell app-shell--admin">
-        <HallTopbar shellData={shellData} surface="admin" />
-        <main id="main-content" className={`page-shell workspace-page ${styles.page} ${surfaceStyles.surface}`}>
+      <div className={surfaceStyles.shell}>
+        <main id="main-content" className={`page-shell ${styles.page} ${surfaceStyles.surface}`}>
           <section className={styles.operatorNotice}>
             <p className="kicker">Restricted console</p>
             <h1>Twitch operator access is limited.</h1>
@@ -49,9 +44,8 @@ export default async function TwitchPlatformPage({
   const initialState = await buildGhostedTwitchPlatformState(currentUser);
 
   return (
-    <div className="app-page app-shell app-shell--admin">
-      <HallTopbar shellData={shellData} surface="admin" />
-      <main id="main-content" className={`page-shell workspace-page ${styles.page} ${surfaceStyles.surface}`}>
+    <div className={surfaceStyles.shell}>
+      <main id="main-content" className={`page-shell ${styles.page} ${surfaceStyles.surface}`}>
         <TwitchPlatformConsoleClient
           initialState={initialState}
           initialMessage={typeof params.message === 'string' ? params.message : null}

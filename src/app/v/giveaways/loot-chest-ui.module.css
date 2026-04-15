@@ -1,94 +1,86 @@
 .board {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.7rem;
 }
 
 .boardGrid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.55rem;
 }
 
 .boardGridCompact {
-  gap: 0.5rem;
+  gap: 0.42rem;
 }
 
 .chest {
   display: grid;
   place-items: center;
-  gap: 0.3rem;
-  min-height: 5.6rem;
-  padding: 0.8rem 0.55rem;
-  border-radius: 1.15rem;
-  border: 1px solid rgba(191, 179, 255, 0.16);
-  background:
-    linear-gradient(180deg, rgba(39, 28, 14, 0.92), rgba(24, 18, 11, 0.94)),
-    radial-gradient(circle at 50% 22%, rgba(255, 218, 143, 0.16), transparent 42%);
+  gap: 0.2rem;
+  min-height: 5.1rem;
+  padding: 0.72rem 0.45rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(191, 179, 255, 0.12);
+  background: rgba(11, 13, 19, 0.95);
   color: var(--color-text-strong);
   transition:
-    transform var(--ease-standard),
     border-color var(--ease-standard),
-    box-shadow var(--ease-standard),
-    background-color var(--ease-standard);
+    background-color var(--ease-standard),
+    transform var(--ease-standard);
 }
 
 .chestInteractive:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 217, 142, 0.34);
-  box-shadow: 0 12px 28px rgba(8, 6, 3, 0.26);
+  transform: none;
+  border-color: rgba(191, 179, 255, 0.2);
+  background: rgba(191, 179, 255, 0.06);
 }
 
 .chestSelected {
-  border-color: rgba(255, 217, 142, 0.48);
-  background:
-    linear-gradient(180deg, rgba(74, 50, 20, 0.94), rgba(31, 23, 12, 0.94)),
-    radial-gradient(circle at 50% 18%, rgba(255, 217, 142, 0.28), transparent 46%);
+  border-color: rgba(191, 179, 255, 0.22);
+  background: rgba(191, 179, 255, 0.08);
 }
 
 .chestRevealed {
-  background:
-    linear-gradient(180deg, rgba(23, 31, 27, 0.94), rgba(10, 17, 15, 0.96)),
-    radial-gradient(circle at 50% 24%, rgba(143, 255, 196, 0.18), transparent 44%);
-  border-color: rgba(143, 255, 196, 0.22);
+  border-color: rgba(143, 255, 196, 0.18);
+  background: rgba(143, 255, 196, 0.05);
 }
 
 .chestPrize {
-  background:
-    linear-gradient(180deg, rgba(82, 63, 15, 0.95), rgba(42, 28, 11, 0.98)),
-    radial-gradient(circle at 50% 18%, rgba(255, 217, 142, 0.38), transparent 48%);
-  border-color: rgba(255, 217, 142, 0.52);
-  box-shadow: 0 16px 34px rgba(26, 17, 5, 0.28);
+  border-color: rgba(255, 217, 142, 0.24);
+  background: rgba(255, 217, 142, 0.06);
 }
 
 .chestNumber {
   font-family: var(--font-display);
-  font-size: clamp(1.35rem, 3vw, 1.9rem);
+  font-size: clamp(1.1rem, 2.4vw, 1.5rem);
 }
 
 .chestLabel {
-  color: rgba(255, 244, 223, 0.8);
-  font-size: 0.7rem;
+  color: var(--color-text-soft);
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .boardMeta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem;
+  gap: 0.42rem;
 }
 
 .boardMetaItem {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.45rem 0.72rem;
+  gap: 0.3rem;
+  padding: 0.1rem 0.44rem;
   border-radius: 999px;
-  border: 1px solid rgba(191, 179, 255, 0.12);
+  border: 1px solid rgba(191, 179, 255, 0.14);
   background: rgba(255, 255, 255, 0.02);
   color: var(--color-text-muted);
-  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
 }
 
 @media (max-width: 760px) {

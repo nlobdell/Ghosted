@@ -1,159 +1,242 @@
 .hostPage {
   min-height: 100vh;
   display: grid;
-  gap: 0.9rem;
-  padding: 1rem;
+  width: min(100%, 1360px);
+  margin: 0 auto;
+  padding: 0.9rem;
   background: var(--color-bg-0);
   color: var(--color-text-strong);
 }
 
-.topBar,
-.metaBar,
-.panel,
-.lockedCard,
-.messageBar,
-.controlBand,
-.sceneStage {
+.hostPage :global(.button) {
+  min-height: 2.35rem;
+  padding: 0.46rem 0.76rem;
   border: 1px solid rgba(191, 179, 255, 0.14);
-  border-radius: 0.8rem;
-  background: rgba(10, 11, 17, 0.96);
+  border-radius: 0;
+  background: rgba(191, 179, 255, 0.12);
+  color: var(--color-text-strong);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: none;
 }
 
-.topBar,
-.panel,
-.lockedCard,
-.messageBar,
-.controlBand {
-  padding: 0.9rem 1rem;
+.hostPage :global(.button:hover) {
+  transform: none;
+  filter: none;
+  border-color: rgba(191, 179, 255, 0.22);
+  background: rgba(191, 179, 255, 0.16);
+  box-shadow: none;
 }
 
-.topBar,
-.panelHeader,
-.recordHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.8rem;
-  flex-wrap: wrap;
+.hostPage :global(.button--secondary) {
+  background: rgba(255, 255, 255, 0.015);
+  color: var(--color-text-muted);
 }
 
-.topCopy,
-.topActions,
-.recordList,
-.recordCard {
+.hostPage :global(.button--secondary:hover) {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-strong);
+}
+
+.hostPage :global(.button--small) {
+  min-height: 2.05rem;
+  padding: 0.34rem 0.62rem;
+  font-size: 0.68rem;
+}
+
+.hostSurface {
+  display: grid;
+  border: 1px solid rgba(191, 179, 255, 0.14);
+  border-radius: 0;
+  background: rgba(15, 17, 24, 0.84);
+}
+
+.railBlock,
+.listRow {
+  border-bottom: 1px solid rgba(191, 179, 255, 0.08);
+}
+
+.sideRail,
+.railBlock,
+.list,
+.listMain {
   display: grid;
   gap: 0.7rem;
 }
 
-.topActions {
-  align-content: start;
-  justify-items: stretch;
-  min-width: min(18rem, 100%);
+.railUtility,
+.inlineBanner,
+.railHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  flex-wrap: wrap;
 }
 
-.routeLabel {
+.routeLabel,
+.sectionLabel,
+.inlineMeta,
+.keyHint {
   color: var(--color-text-soft);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .pageTitle {
-  font-size: clamp(1.45rem, 3vw, 2.2rem);
-  line-height: 1;
+  font-size: clamp(1.14rem, 2.3vw, 1.5rem);
+  line-height: 1.08;
 }
 
 .pageSummary,
-.recordCard p {
+.sectionCopy,
+.rowMeta {
+  margin: 0;
   color: var(--color-text-muted);
+  line-height: 1.45;
 }
 
-.metaBar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  padding: 0.7rem 0.8rem;
-}
-
-.metaChip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 1.7rem;
-  padding: 0.16rem 0.55rem;
-  border: 1px solid rgba(191, 179, 255, 0.16);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.messageBar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.7rem;
-  align-items: center;
+.inlineMeta {
+  letter-spacing: 0.08em;
 }
 
 .messageInfo {
-  border-color: rgba(191, 179, 255, 0.2);
+  color: var(--color-text-strong);
 }
 
 .messageError {
-  border-color: rgba(198, 112, 89, 0.3);
+  color: rgba(255, 181, 166, 0.9);
+}
+
+.surfaceBody {
+  display: grid;
+  align-items: stretch;
 }
 
 .sceneStage {
-  padding: 0.9rem;
+  padding: 0.95rem;
   outline: none;
 }
 
 .sceneStage:focus-visible {
-  border-color: rgba(191, 179, 255, 0.28);
-  box-shadow: 0 0 0 2px rgba(191, 179, 255, 0.12);
+  box-shadow: inset 0 0 0 2px rgba(191, 179, 255, 0.12);
 }
 
-.controlBand {
+.sideRail {
+  min-width: 0;
+}
+
+.railBlock {
+  padding: 0.85rem 0.95rem;
+}
+
+.railIntro {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.28rem;
 }
 
-.utilityGrid {
+.railUtility {
+  justify-content: flex-start;
+}
+
+.inlineBanner {
+  padding: 0.55rem 0;
+}
+
+.railBlock:last-child,
+.listRow:last-child {
+  border-bottom: 0;
+}
+
+.sectionTitle,
+.rowTitle {
+  color: var(--color-text-strong);
+}
+
+.sectionTitle {
+  font-size: 0.98rem;
+  line-height: 1.15;
+}
+
+.primaryActionButton {
+  width: 100%;
+  justify-content: center;
+  min-height: 2.8rem;
+}
+
+.actionGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
 }
 
-.panel {
-  display: grid;
-  gap: 0.8rem;
+.keyHint {
+  letter-spacing: 0.08em;
 }
 
-.recordCard {
-  padding: 0.8rem;
-  border: 1px solid rgba(191, 179, 255, 0.1);
-  border-radius: 0.7rem;
-  background: rgba(255, 255, 255, 0.02);
+.list {
+  gap: 0;
 }
 
-.lockedCard {
-  max-width: 38rem;
-  align-self: center;
-  justify-self: center;
-  text-align: center;
+.listRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.6rem 0;
+  flex-wrap: wrap;
 }
 
-@media (max-width: 1080px) {
-  .controlBand,
-  .utilityGrid {
+.listRow:first-child {
+  padding-top: 0;
+}
+
+.listMain {
+  min-width: 0;
+  gap: 0.18rem;
+}
+
+.rowTitle {
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.rowMeta {
+  font-size: 0.68rem;
+}
+
+@media (min-width: 1080px) {
+  .surfaceBody {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+  }
+
+  .sideRail {
+    border-left: 1px solid rgba(191, 179, 255, 0.08);
+  }
+}
+
+@media (max-width: 1079px) {
+  .sideRail {
+    border-top: 1px solid rgba(191, 179, 255, 0.08);
+  }
+}
+
+@media (max-width: 760px) {
+  .hostPage {
+    padding: 0;
+  }
+
+  .actionGrid {
     grid-template-columns: 1fr;
   }
 
-  .topActions {
-    min-width: 0;
+  .sceneStage,
+  .railBlock {
+    padding-inline: 0.8rem;
   }
 }

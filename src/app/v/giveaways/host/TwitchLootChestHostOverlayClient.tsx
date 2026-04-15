@@ -27,28 +27,13 @@ type TurnActionResponse = {
   scene: LootChestSceneSnapshot;
 };
 
-function hostTitle(state: LootChestGameState) {
+function hostCaption(state: LootChestGameState) {
   if (state.activeTurn) {
-    return `${state.activeTurn.viewer.displayName} live on board`;
-  }
-
-  const nextTurn = state.queue[0];
-  if (nextTurn) {
-    return `${nextTurn.viewer.displayName} ready in queue`;
-  }
-
-  return 'Host surface ready';
-}
-
-function hostSummary(state: LootChestGameState) {
-  if (state.activeTurn?.board) {
-    return state.activeTurn.board.allSelectionsLocked
-      ? 'Advance reveals from here while the public overlay stays in lockstep.'
-      : 'Pick exactly three chests, lock them, then reveal one at a time.';
+    return `${state.activeTurn.viewer.displayName} is live. ${boardStatus(state)}.`;
   }
 
   if (state.queue.length > 0) {
-    return 'Start the next queued redemption from this surface when stream timing is right.';
+    return `${state.queue.length} queued redemption${state.queue.length === 1 ? '' : 's'} waiting for the next start.`;
   }
 
   return 'Keep this open on a second screen for the fastest control path.';
@@ -106,6 +91,10 @@ function actionLabel(state: LootChestGameState) {
   return 'Complete turn';
 }
 
+function recentResultLabel(turn: LootChestTurn) {
+  return turn.result === 'win' ? 'Prize found' : 'Prize missed';
+}
+
 export default function TwitchLootChestHostOverlayClient({
   initialState,
 }: {
@@ -116,7 +105,6 @@ export default function TwitchLootChestHostOverlayClient({
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [draftSelections, setDraftSelections] = useState<number[]>(initialState.activeTurn?.board?.selectedChests ?? []);
   const [presentationCue, setPresentationCue] = useState<LootChestPresentationCue | null>(null);
-  const [lastSyncAt, setLastSyncAt] = useState(() => Date.now());
   const pollInFlightRef = useRef(false);
   const presentationThrottleRef = useRef<{
     lastSentAt: number;
@@ -192,7 +180,6 @@ export default function TwitchLootChestHostOverlayClient({
   function applyLoadedState(nextState: LootChestGameState) {
     startTransition(() => {
       setState(nextState);
-      setLastSyncAt(Date.now());
     });
   }
 
@@ -475,193 +462,185 @@ export default function TwitchLootChestHostOverlayClient({
 
   return (
     <main className={styles.hostPage}>
-      <section className={styles.topBar}>
-        <div className={styles.topCopy}>
-          <p className={styles.routeLabel}>Ghosted / giveaways / host</p>
-          <h1 className={styles.pageTitle}>{hostTitle(state)}</h1>
-          <p className={styles.pageSummary}>{hostSummary(state)}</p>
-        </div>
+      <section className={styles.hostSurface}>
+        <div className={styles.surfaceBody}>
+          <section className={styles.sceneStage} onKeyDown={handleBoardKeyDown} tabIndex={0}>
+            <LootChestScene
+              scene={state.scene}
+              presentationCue={presentationCue}
+              draftSelections={draftSelections}
+              onToggleSelection={toggleSelection}
+              onPreviewChest={previewChest}
+              frame="embedded"
+            />
+          </section>
 
-        <div className={styles.topActions}>
-          <button
-            className="button"
-            type="button"
-            onClick={() => {
-              void performPrimaryAction();
-            }}
-            disabled={Boolean(busyAction) || (!activeBoard && !nextQueuedTurn) || (!activeBoard ? false : (!activeBoard.allSelectionsLocked && draftSelections.length !== activeBoard.selectionLimit))}
-          >
-            {busyAction ? 'Working...' : actionLabel(state)}
-          </button>
-          <Link className="button button--secondary" href="/v/giveaways/">
-            Console
-          </Link>
-          {state.connection.overlayUrl ? (
-            <Link className="button button--secondary" href={state.connection.overlayUrl}>
-              Public overlay
-            </Link>
-          ) : (
-            <span className={styles.metaChip}>Overlay pending</span>
-          )}
-        </div>
-      </section>
+          <aside className={styles.sideRail}>
+            <section className={styles.railBlock}>
+              <div className={styles.railIntro}>
+                <p className={styles.routeLabel}>Ghosted giveaways</p>
+                <p className={styles.pageSummary}>{hostCaption(state)}</p>
+              </div>
 
-      <section className={styles.metaBar}>
-        <span className={styles.metaChip}>{boardStatus(state)}</span>
-        <span className={styles.metaChip}>{state.queue.length} queued</span>
-        <span className={styles.metaChip}>{controlHint(state)}</span>
-        <span className={styles.metaChip}>State sync {HOST_STATE_POLL_MS}ms</span>
-        <span className={styles.metaChip}>{formatDate(new Date(lastSyncAt).toISOString())}</span>
-      </section>
+              <div className={styles.railUtility}>
+                <span className={styles.inlineMeta}>{boardStatus(state)}</span>
+                <Link className="button button--secondary" href="/v/giveaways/">
+                  Console
+                </Link>
+                {state.connection.overlayUrl ? (
+                  <Link className="button button--secondary" href={state.connection.overlayUrl}>
+                    Public overlay
+                  </Link>
+                ) : (
+                  <span className={styles.inlineMeta}>Overlay pending</span>
+                )}
+              </div>
 
-      {message ? (
-        <section className={`${styles.messageBar} ${message.tone === 'error' ? styles.messageError : styles.messageInfo}`}>
-          <strong>{message.tone === 'error' ? 'Action failed' : 'Live update'}</strong>
-          <span>{message.text}</span>
-        </section>
-      ) : null}
-
-      <section className={styles.sceneStage} onKeyDown={handleBoardKeyDown} tabIndex={0}>
-        <LootChestScene
-          scene={state.scene}
-          presentationCue={presentationCue}
-          draftSelections={draftSelections}
-          onToggleSelection={toggleSelection}
-          onPreviewChest={previewChest}
-        />
-      </section>
-
-      <section className={styles.controlBand}>
-        <button
-          className="button"
-          type="button"
-          disabled={!nextQueuedTurn || Boolean(activeTurn) || busyAction === `start-${nextQueuedTurn?.id ?? 0}`}
-          onClick={() => {
-            if (nextQueuedTurn) {
-              void startTurn(nextQueuedTurn.id, nextQueuedTurn.viewer.displayName);
-            }
-          }}
-        >
-          {busyAction?.startsWith('start-') ? 'Starting...' : nextQueuedTurn ? `Start ${nextQueuedTurn.viewer.displayName}` : 'Queue empty'}
-        </button>
-        <button
-          className="button button--secondary"
-          type="button"
-          disabled={!activeBoard || activeBoard.allSelectionsLocked || draftSelections.length !== activeBoard.selectionLimit || busyAction === 'lock'}
-          onClick={() => {
-            void lockSelections();
-          }}
-        >
-          {busyAction === 'lock' ? 'Locking...' : 'Lock 3 picks'}
-        </button>
-        <button
-          className="button button--secondary"
-          type="button"
-          disabled={!activeBoard?.allSelectionsLocked || activeBoard.remainingReveals === 0 || busyAction === 'reveal'}
-          onClick={() => {
-            void revealNext();
-          }}
-        >
-          {busyAction === 'reveal' ? 'Revealing...' : 'Reveal next'}
-        </button>
-        <button
-          className="button button--secondary"
-          type="button"
-          disabled={!activeBoard || activeBoard.revealedChests.length !== activeBoard.selectionLimit || busyAction === 'complete'}
-          onClick={() => {
-            void completeTurn();
-          }}
-        >
-          {busyAction === 'complete' ? 'Completing...' : 'Complete'}
-        </button>
-      </section>
-
-      <section className={styles.utilityGrid}>
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <div>
-              <p className={styles.routeLabel}>Queue</p>
-              <h2>Next viewers</h2>
-            </div>
-            <span className={styles.metaChip}>{state.queue.length}</span>
-          </div>
-          <div className={styles.recordList}>
-            {state.queue.length > 0 ? state.queue.map((turn, index) => (
-              <article key={turn.id} className={styles.recordCard}>
-                <div className={styles.recordHeader}>
-                  <strong>{turn.viewer.displayName}</strong>
-                  <span className={styles.metaChip}>{index === 0 ? 'Next' : `#${index + 1}`}</span>
+              {message ? (
+                <div className={`${styles.inlineBanner} ${message.tone === 'error' ? styles.messageError : styles.messageInfo}`}>
+                  <strong>{message.tone === 'error' ? 'Action failed' : 'Live update'}</strong>
+                  <span>{message.text}</span>
                 </div>
-                <p>@{turn.viewer.login}</p>
-                <p>{formatDate(turn.redeemedAt)}</p>
+              ) : null}
+
+              <div className={styles.railHeader}>
+                <div>
+                  <p className={styles.sectionLabel}>Live control</p>
+                  <h2 className={styles.sectionTitle}>{actionLabel(state)}</h2>
+                </div>
+                <span className={styles.inlineMeta}>{state.queue.length} waiting</span>
+              </div>
+
+              <p className={styles.sectionCopy}>{controlHint(state)}</p>
+
+              <button
+                className={`button ${styles.primaryActionButton}`}
+                type="button"
+                onClick={() => {
+                  void performPrimaryAction();
+                }}
+                disabled={Boolean(busyAction) || (!activeBoard && !nextQueuedTurn) || (!activeBoard ? false : (!activeBoard.allSelectionsLocked && draftSelections.length !== activeBoard.selectionLimit))}
+              >
+                {busyAction ? 'Working...' : actionLabel(state)}
+              </button>
+
+              <div className={styles.actionGrid}>
                 <button
-                  className="button button--secondary button--small"
+                  className="button button--secondary"
                   type="button"
-                  disabled={Boolean(activeTurn) || busyAction === `start-${turn.id}`}
+                  disabled={!nextQueuedTurn || Boolean(activeTurn) || busyAction === `start-${nextQueuedTurn?.id ?? 0}`}
                   onClick={() => {
-                    void startTurn(turn.id, turn.viewer.displayName);
+                    if (nextQueuedTurn) {
+                      void startTurn(nextQueuedTurn.id, nextQueuedTurn.viewer.displayName);
+                    }
                   }}
                 >
-                  {busyAction === `start-${turn.id}` ? 'Starting...' : 'Start'}
+                  {busyAction?.startsWith('start-') ? 'Starting...' : nextQueuedTurn ? 'Start next' : 'Queue empty'}
                 </button>
-              </article>
-            )) : (
-              <article className={styles.recordCard}>
-                <strong>Queue clear.</strong>
-                <p>New Twitch redemptions appear here automatically.</p>
-              </article>
-            )}
-          </div>
-        </section>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  disabled={!activeBoard || activeBoard.allSelectionsLocked || draftSelections.length !== activeBoard.selectionLimit || busyAction === 'lock'}
+                  onClick={() => {
+                    void lockSelections();
+                  }}
+                >
+                  {busyAction === 'lock' ? 'Locking...' : 'Lock picks'}
+                </button>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  disabled={!activeBoard?.allSelectionsLocked || activeBoard.remainingReveals === 0 || busyAction === 'reveal'}
+                  onClick={() => {
+                    void revealNext();
+                  }}
+                >
+                  {busyAction === 'reveal' ? 'Revealing...' : 'Reveal next'}
+                </button>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  disabled={!activeBoard || activeBoard.revealedChests.length !== activeBoard.selectionLimit || busyAction === 'complete'}
+                  onClick={() => {
+                    void completeTurn();
+                  }}
+                >
+                  {busyAction === 'complete' ? 'Completing...' : 'Complete'}
+                </button>
+              </div>
 
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <div>
-              <p className={styles.routeLabel}>History</p>
-              <h2>Recent results</h2>
-            </div>
-          </div>
-          <div className={styles.recordList}>
-            {state.recentResults.length > 0 ? state.recentResults.slice(0, 5).map((turn) => (
-              <article key={turn.id} className={styles.recordCard}>
-                <div className={styles.recordHeader}>
-                  <strong>{turn.viewer.displayName}</strong>
-                  <span className={styles.metaChip}>{turn.result}</span>
+              <p className={styles.keyHint}>Shortcuts: 1-0 picks, Enter primary action, Space reveal, C complete.</p>
+            </section>
+
+            <section className={styles.railBlock}>
+              <div className={styles.railHeader}>
+                <div>
+                  <p className={styles.sectionLabel}>Queue</p>
+                  <h2 className={styles.sectionTitle}>Next viewers</h2>
                 </div>
-                <p>{turn.result === 'win' ? 'Prize chest found.' : 'Prize chest missed.'}</p>
-                <p>{formatDate(turn.completedAt ?? turn.createdAt)}</p>
-              </article>
-            )) : (
-              <article className={styles.recordCard}>
-                <strong>No completed turns yet.</strong>
-                <p>Resolved runs will land here.</p>
-              </article>
-            )}
-          </div>
-        </section>
+              </div>
 
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <div>
-              <p className={styles.routeLabel}>Keys</p>
-              <h2>Shortcuts</h2>
-            </div>
-          </div>
-          <div className={styles.recordList}>
-            <article className={styles.recordCard}>
-              <strong>1-0</strong>
-              <p>Toggle chest picks before lock.</p>
-            </article>
-            <article className={styles.recordCard}>
-              <strong>Enter</strong>
-              <p>Run the primary action for the current board state.</p>
-            </article>
-            <article className={styles.recordCard}>
-              <strong>Space / C</strong>
-              <p>Reveal the next chest, then complete once the board resolves.</p>
-            </article>
-          </div>
-        </section>
+              <div className={styles.list}>
+                {state.queue.length > 0 ? state.queue.slice(0, 4).map((turn, index) => (
+                  <article key={turn.id} className={styles.listRow}>
+                    <div className={styles.listMain}>
+                      <strong className={styles.rowTitle}>{turn.viewer.displayName}</strong>
+                      <p className={styles.rowMeta}>
+                        @{turn.viewer.login} - {formatDate(turn.redeemedAt)} - {index === 0 ? 'Next up' : `Queue #${index + 1}`}
+                      </p>
+                    </div>
+                    <button
+                      className="button button--secondary button--small"
+                      type="button"
+                      disabled={Boolean(activeTurn) || busyAction === `start-${turn.id}`}
+                      onClick={() => {
+                        void startTurn(turn.id, turn.viewer.displayName);
+                      }}
+                    >
+                      {busyAction === `start-${turn.id}` ? 'Starting...' : 'Start'}
+                    </button>
+                  </article>
+                )) : (
+                  <article className={styles.listRow}>
+                    <div className={styles.listMain}>
+                      <strong className={styles.rowTitle}>Queue clear</strong>
+                      <p className={styles.rowMeta}>New Twitch redemptions will appear here automatically.</p>
+                    </div>
+                  </article>
+                )}
+              </div>
+            </section>
+
+            <section className={styles.railBlock}>
+              <div className={styles.railHeader}>
+                <div>
+                  <p className={styles.sectionLabel}>Results</p>
+                  <h2 className={styles.sectionTitle}>Recent turns</h2>
+                </div>
+              </div>
+
+              <div className={styles.list}>
+                {state.recentResults.length > 0 ? state.recentResults.slice(0, 4).map((turn) => (
+                  <article key={turn.id} className={styles.listRow}>
+                    <div className={styles.listMain}>
+                      <strong className={styles.rowTitle}>{turn.viewer.displayName}</strong>
+                      <p className={styles.rowMeta}>
+                        {recentResultLabel(turn)} - {formatDate(turn.completedAt ?? turn.createdAt)}
+                      </p>
+                    </div>
+                  </article>
+                )) : (
+                  <article className={styles.listRow}>
+                    <div className={styles.listMain}>
+                      <strong className={styles.rowTitle}>No completed turns yet</strong>
+                      <p className={styles.rowMeta}>Resolved runs will land here after completion.</p>
+                    </div>
+                  </article>
+                )}
+              </div>
+            </section>
+          </aside>
+        </div>
       </section>
     </main>
   );

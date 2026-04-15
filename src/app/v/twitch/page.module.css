@@ -1,91 +1,93 @@
 .page {
   display: grid;
-  gap: 1rem;
+  gap: 0.95rem;
 }
 
 .toolbar,
-.statusStrip,
-.operatorNotice,
-.metricCard,
-.recordCard {
+.statusBoard,
+.operatorNotice {
   border: 1px solid rgba(191, 179, 255, 0.14);
   border-radius: 0.8rem;
-  background: rgba(10, 11, 17, 0.96);
+  background: rgba(15, 17, 24, 0.84);
 }
 
 .toolbar,
-.operatorNotice,
-.metricCard,
-.recordCard {
-  padding: 0.9rem 1rem;
-}
-
-.toolbar,
-.recordHeader,
 .operatorNotice {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.8rem;
   flex-wrap: wrap;
+  padding: 0.8rem 0.9rem;
 }
 
 .toolbarCopy,
-.toolbarActions,
 .column,
 .stack,
 .stackList,
 .cardList {
   display: grid;
-  gap: 0.8rem;
+  gap: 0.7rem;
 }
 
 .toolbarActions {
-  align-content: start;
-  justify-items: stretch;
-  min-width: min(18rem, 100%);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
 }
 
 .eyebrow,
 .smallLabel {
   color: var(--color-text-soft);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .toolbarCopy h2 {
-  font-size: clamp(1.35rem, 3vw, 1.95rem);
-  line-height: 1;
+  font-size: clamp(1.14rem, 2.3vw, 1.5rem);
+  line-height: 1.08;
 }
 
 .toolbarCopy p,
 .metaLine {
   margin: 0;
   color: var(--color-text-muted);
-  line-height: 1.55;
+  line-height: 1.45;
 }
 
-.statusStrip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  padding: 0.7rem 0.8rem;
+.statusBoard {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+  padding: 0.65rem 0.8rem;
 }
 
-.statusChip,
-.chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 1.7rem;
-  padding: 0.16rem 0.55rem;
+.statusItem,
+.recordState {
+  display: grid;
+  gap: 0.08rem;
+  padding: 0.42rem 0.5rem;
   border: 1px solid rgba(191, 179, 255, 0.16);
-  border-radius: 999px;
-  background: transparent;
+  border-radius: 0.58rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.statusLabel {
   color: var(--color-text-muted);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.statusValue,
+.recordState {
+  color: var(--color-text-strong);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -97,36 +99,48 @@
 
 .metricGrid {
   display: grid;
-  gap: 0.8rem;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
 }
 
 .metricCard,
 .recordCard {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.22rem;
+  padding: 0.68rem 0.76rem;
+  border: 1px solid rgba(191, 179, 255, 0.08);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.metricCard strong {
+.metricCard strong,
+.recordCard strong {
   color: var(--color-text-strong);
 }
 
 .recordHeader {
-  gap: 0.7rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.recordState {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.45rem;
+  padding: 0.08rem 0.42rem;
+  white-space: nowrap;
 }
 
 .errorLine {
-  margin: 0;
+  margin: 0.15rem 0 0;
   color: rgba(255, 181, 166, 0.9);
 }
 
 .inlineLink {
   font-weight: 700;
-}
-
-.operatorNotice {
-  display: grid;
-  gap: 0.75rem;
 }
 
 @media (min-width: 960px) {
@@ -137,7 +151,13 @@
 }
 
 @media (max-width: 960px) {
-  .toolbarActions {
-    min-width: 0;
+  .statusBoard {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .statusBoard {
+    grid-template-columns: 1fr;
   }
 }

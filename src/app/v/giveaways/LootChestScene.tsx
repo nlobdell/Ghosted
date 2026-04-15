@@ -33,21 +33,23 @@ function spriteAssetForState(state: LootChestChestSpriteState) {
   }
 }
 
-function badgeIcon(kind: 'reward' | 'queue' | 'viewer') {
-  if (kind === 'reward') return '/giveaways/sprites/badge-reward.svg';
-  if (kind === 'queue') return '/giveaways/sprites/badge-queue.svg';
-  return '/giveaways/sprites/badge-viewer.svg';
-}
-
 function resultAsset(result: LootChestTurn['result'] | null | undefined) {
   if (result === 'win') return '/giveaways/sprites/result-win.svg';
   if (result === 'miss') return '/giveaways/sprites/result-miss.svg';
   return null;
 }
 
+function phaseLabel(phase: LootChestTurn['phase'] | null | undefined, queueCount: number) {
+  if (phase === 'selection') return 'Choose 3 chests';
+  if (phase === 'locked') return 'Ready to reveal';
+  if (phase === 'revealing') return 'Reveal in progress';
+  if (phase === 'resolved') return 'Board resolved';
+  return queueCount > 0 ? 'Waiting in queue' : 'Idle';
+}
+
 function sceneHeadline(turn: LootChestTurn | null, queueCount: number) {
   if (turn?.status === 'active') {
-    return `${turn.viewer.displayName} on board`;
+    return `${turn.viewer.displayName} is on the board`;
   }
   if (turn?.status === 'completed') {
     return turn.result === 'win'
@@ -55,22 +57,22 @@ function sceneHeadline(turn: LootChestTurn | null, queueCount: number) {
       : `${turn.viewer.displayName} missed the prize`;
   }
   if (queueCount > 0) {
-    return `${queueCount} queued turn${queueCount === 1 ? '' : 's'}`;
+    return `${queueCount} waiting to play`;
   }
-  return 'Loot chest idle';
+  return 'Loot chest ready';
 }
 
 function sceneSummary(turn: LootChestTurn | null, queueCount: number, rewardTitle: string) {
   if (!turn?.board) {
     return queueCount > 0
-      ? `Waiting for the host to start the next ${rewardTitle.toLowerCase()} turn.`
+      ? `Start the next ${rewardTitle.toLowerCase()} turn when stream timing is right.`
       : `Waiting for the next ${rewardTitle.toLowerCase()} redemption.`;
   }
   if (turn.phase === 'selection') {
-    return 'Pick three chests.';
+    return 'Choose three chests.';
   }
   if (turn.phase === 'locked') {
-    return 'Selections locked. Reveals ready.';
+    return 'Three chests are locked in. Reveal when ready.';
   }
   if (turn.phase === 'revealing') {
     return `Reveal ${turn.board.revealedChests.length + 1} of ${turn.board.selectionLimit}.`;
@@ -79,6 +81,42 @@ function sceneSummary(turn: LootChestTurn | null, queueCount: number, rewardTitl
     return 'Prize found. Awaiting completion.';
   }
   return 'Board resolved. Awaiting completion.';
+}
+
+function footerNote(
+  turn: LootChestTurn | null,
+  selectedCount: number,
+  queueCount: number,
+) {
+  const board = turn?.board;
+
+  if (!board) {
+    return queueCount > 0
+      ? 'The next redemption is ready in queue.'
+      : 'Waiting for the next Twitch redemption.';
+  }
+
+  if (!board.allSelectionsLocked) {
+    return `${selectedCount} of ${board.selectionLimit} picks marked. Choose three chests.`;
+  }
+
+  if (turn?.phase === 'locked') {
+    return 'Three picks locked. Reveal the first chest when ready.';
+  }
+
+  if (board.remainingReveals > 0) {
+    return `${board.revealedChests.length} of ${board.selectionLimit} opened. Reveal the next chest.`;
+  }
+
+  if (turn?.result === 'win') {
+    return 'Prize chest found. Complete the turn when you are ready.';
+  }
+
+  if (turn?.result === 'miss') {
+    return 'No prize chest in the chosen set. Complete the turn to fulfill Twitch.';
+  }
+
+  return 'Board resolved. Complete the turn when ready.';
 }
 
 function chestLabel(chest: LootChestBoardChest, spriteState: LootChestChestSpriteState) {
@@ -122,16 +160,24 @@ export function LootChestScene({
   draftSelections,
   onToggleSelection,
   onPreviewChest,
+  frame = 'standalone',
 }: {
   scene: LootChestSceneSnapshot;
   presentationCue?: LootChestPresentationCue | null;
   draftSelections?: number[];
   onToggleSelection?: (index: number) => void;
   onPreviewChest?: (index: number | null) => void;
+  frame?: 'standalone' | 'embedded';
 }) {
   const turn = scene.focusTurn;
   const board = turn?.board ?? null;
-  const interactive = Boolean(onToggleSelection && board && turn?.status === 'active' && !board.allSelectionsLocked && board.revealedChests.length === 0);
+  const interactive = Boolean(
+    onToggleSelection
+    && board
+    && turn?.status === 'active'
+    && !board.allSelectionsLocked
+    && board.revealedChests.length === 0,
+  );
   const selectedIndices = new Set(interactive ? (draftSelections ?? []) : board?.selectedChests ?? []);
   const [animatedRevision, setAnimatedRevision] = useState(0);
   const lastAnimatedRef = useRef(board?.boardRevision ?? 0);
@@ -140,7 +186,8 @@ export function LootChestScene({
   useEffect(() => {
     const nextTurnId = turn?.id ?? 0;
     const nextRevision = board?.boardRevision ?? 0;
-    const shouldAnimate = nextRevision > 0 && (nextRevision > lastAnimatedRef.current || nextTurnId !== lastTurnIdRef.current);
+    const shouldAnimate = nextRevision > 0
+      && (nextRevision > lastAnimatedRef.current || nextTurnId !== lastTurnIdRef.current);
 
     lastAnimatedRef.current = nextRevision;
     lastTurnIdRef.current = nextTurnId;
@@ -166,11 +213,7 @@ export function LootChestScene({
   }, [board?.boardRevision, turn?.id]);
 
   const changedChestIndex = board?.activeAnimationChestIndex ?? board?.lastChangedChestIndex ?? null;
-  const animateResult = Boolean(
-    turn?.resolutionCue
-    && board
-    && animatedRevision === board.boardRevision,
-  );
+  const animateResult = Boolean(turn?.resolutionCue && board && animatedRevision === board.boardRevision);
   const hoveredChestIndex = presentationCue?.kind === 'hover' && presentationCue.turnId === turn?.id
     ? presentationCue.chestIndex ?? null
     : null;
@@ -182,7 +225,7 @@ export function LootChestScene({
     : null;
 
   return (
-    <section className={styles.scene}>
+    <section className={[styles.scene, frame === 'embedded' ? styles.sceneEmbedded : ''].filter(Boolean).join(' ')}>
       <header className={styles.sceneHeader}>
         <div className={styles.titleStack}>
           <p className={styles.kicker}>Ghosted loot chest</p>
@@ -190,41 +233,21 @@ export function LootChestScene({
           <p className={styles.summary}>{sceneSummary(turn, scene.queueCount, scene.reward.title)}</p>
         </div>
 
-        <div className={styles.badgeRow}>
-          <div className={styles.badge}>
-            <span className={styles.badgeIcon} style={{ ['--badge-icon' as string]: `url("${badgeIcon('viewer')}")` }} aria-hidden="true" />
-            <span>
-              <strong>{turn?.viewer.displayName ?? 'Stand by'}</strong>
-              <small>{turn ? `@${turn.viewer.login}` : 'No active viewer'}</small>
-            </span>
-          </div>
-          <div className={styles.badge}>
-            <span className={styles.badgeIcon} style={{ ['--badge-icon' as string]: `url("${badgeIcon('queue')}")` }} aria-hidden="true" />
-            <span>
-              <strong>{scene.queueCount}</strong>
-              <small>queued</small>
-            </span>
-          </div>
-          <div className={styles.badge}>
-            <span className={styles.badgeIcon} style={{ ['--badge-icon' as string]: `url("${badgeIcon('reward')}")` }} aria-hidden="true" />
-            <span>
-              <strong>{scene.reward.title}</strong>
-              <small>{scene.reward.cost.toLocaleString()} pts</small>
-            </span>
-          </div>
+        <div className={styles.sceneMeta}>
+          <span className={styles.sceneMetaItem}>
+            <strong>{scene.reward.title}</strong>
+            <small>{scene.reward.cost.toLocaleString()} pts</small>
+          </span>
+          <span className={styles.sceneMetaItem}>
+            <strong>{scene.queueCount}</strong>
+            <small>{scene.queueCount === 1 ? 'viewer waiting' : 'viewers waiting'}</small>
+          </span>
         </div>
       </header>
 
       <div className={styles.boardShell}>
         {board ? (
           <>
-            <div className={styles.boardMeta}>
-              <span className={styles.metaChip}>{selectedIndices.size}/{board.selectionLimit} selected</span>
-              <span className={styles.metaChip}>{board.revealedChests.length} revealed</span>
-              <span className={styles.metaChip}>{board.phase}</span>
-              <span className={styles.metaChip}>rev {board.boardRevision}</span>
-            </div>
-
             <div className={styles.boardGrid}>
               {board.chests.map((chest) => {
                 const spriteState = displaySpriteState(chest, board.selectionLimit, selectedIndices, interactive);
@@ -296,21 +319,18 @@ export function LootChestScene({
         )}
       </div>
 
-      <div className={styles.statusRail}>
-        <span className={styles.statusChip}>{turn?.phase ?? (scene.queueCount > 0 ? 'queued' : 'idle')}</span>
-        <span className={styles.statusChip}>
-          {turn?.result === 'win'
-            ? 'Prize found'
-            : turn?.result === 'miss'
-              ? 'Board resolved'
-              : 'Treasure hidden'}
-        </span>
-        <span className={styles.statusChip}>
+      <footer className={styles.sceneFooter}>
+        <div className={styles.footerPrimary}>
+          <span className={styles.footerLabel}>Live step</span>
+          <strong className={styles.footerValue}>{phaseLabel(turn?.phase, scene.queueCount)}</strong>
+        </div>
+        <p className={styles.footerNote}>{footerNote(turn, selectedIndices.size, scene.queueCount)}</p>
+        <span className={styles.footerTimestamp}>
           {turn?.lastActionAt
-            ? `Updated ${new Date(turn.lastActionAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+            ? new Date(turn.lastActionAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
             : 'Waiting'}
         </span>
-      </div>
+      </footer>
     </section>
   );
 }

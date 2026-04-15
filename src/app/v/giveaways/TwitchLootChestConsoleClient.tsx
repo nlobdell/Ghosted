@@ -203,12 +203,27 @@ export default function TwitchLootChestConsoleClient({
         </div>
       </section>
 
-      <section className={styles.statusStrip}>
-        <span className={styles.statusChip}>{state.connection.configured ? 'Env ready' : 'Missing Twitch env'}</span>
-        <span className={styles.statusChip}>{state.connection.connected ? 'Broadcaster connected' : 'No broadcaster token'}</span>
-        <span className={styles.statusChip}>{state.connection.eventSub.status ?? 'EventSub unsynced'}</span>
-        <span className={styles.statusChip}>{queueCount} queued</span>
-        <span className={styles.statusChip}>{activeTurn ? '1 active turn' : 'No active turn'}</span>
+      <section className={styles.statusBoard}>
+        <div className={styles.statusItem}>
+          <span className={styles.statusLabel}>Setup</span>
+          <strong className={styles.statusValue}>{state.connection.configured ? 'Ready' : 'Missing env'}</strong>
+        </div>
+        <div className={styles.statusItem}>
+          <span className={styles.statusLabel}>Channel</span>
+          <strong className={styles.statusValue}>{state.connection.connected ? 'Connected' : 'Not linked'}</strong>
+        </div>
+        <div className={styles.statusItem}>
+          <span className={styles.statusLabel}>Webhooks</span>
+          <strong className={styles.statusValue}>{state.connection.eventSub.status ?? 'Unsynced'}</strong>
+        </div>
+        <div className={styles.statusItem}>
+          <span className={styles.statusLabel}>Queue</span>
+          <strong className={styles.statusValue}>{queueCount} waiting</strong>
+        </div>
+        <div className={styles.statusItem}>
+          <span className={styles.statusLabel}>Board</span>
+          <strong className={styles.statusValue}>{activeTurn ? `${activeTurn.viewer.displayName} live` : 'Idle'}</strong>
+        </div>
       </section>
 
       <div className={styles.workspace}>
@@ -223,10 +238,19 @@ export default function TwitchLootChestConsoleClient({
                   copy="One Ghosted-owned custom reward powers the full loot chest flow."
                 />
 
-                <div className={styles.chipRow}>
-                  <span className={styles.chip}>{state.connection.reward.title}</span>
-                  <span className={styles.chip}>{state.connection.reward.cost.toLocaleString()} points</span>
-                  <span className={styles.chip}>{state.connection.reward.isPaused ? 'Paused' : 'Live'}</span>
+                <div className={styles.rewardSummary}>
+                  <div className={styles.rewardStat}>
+                    <span className={styles.rewardLabel}>Reward</span>
+                    <strong className={styles.rewardValue}>{state.connection.reward.title}</strong>
+                  </div>
+                  <div className={styles.rewardStat}>
+                    <span className={styles.rewardLabel}>Cost</span>
+                    <strong className={styles.rewardValue}>{state.connection.reward.cost.toLocaleString()} points</strong>
+                  </div>
+                  <div className={styles.rewardStat}>
+                    <span className={styles.rewardLabel}>Status</span>
+                    <strong className={styles.rewardValue}>{state.connection.reward.isPaused ? 'Paused' : 'Live'}</strong>
+                  </div>
                 </div>
 
                 <FormField label="Reward title">
@@ -397,7 +421,6 @@ export default function TwitchLootChestConsoleClient({
           <Panel
             title="Pending queue"
             eyebrow="Queue"
-            chip={`${queueCount} waiting`}
             body={state.queue.length > 0 ? (
               <div className={styles.queueList}>
                 {state.queue.map((turn) => (
@@ -407,7 +430,7 @@ export default function TwitchLootChestConsoleClient({
                         <div className={styles.cardTitle}>{turn.viewer.displayName}</div>
                         <div className={styles.cardMeta}>@{turn.viewer.login}</div>
                       </div>
-                      <span className={styles.chip}>{formatDate(turn.redeemedAt)}</span>
+                      <span className={styles.recordMeta}>{formatDate(turn.redeemedAt)}</span>
                     </div>
                     {turn.userInput ? <div className={styles.cardMeta}>Viewer input: {turn.userInput}</div> : null}
                     <div className={styles.actionRow}>
@@ -435,14 +458,13 @@ export default function TwitchLootChestConsoleClient({
           <Panel
             title="Recent results"
             eyebrow="History"
-            chip={`${state.recentResults.length} completed`}
             body={recentResultItems.length > 0 ? (
               <div className={styles.resultList}>
                 {recentResultItems.map((item) => (
                   <article key={`${item.title}-${item.meta}`} className={styles.historyCard}>
                     <div className={styles.historyHeader}>
                       <strong>{item.title}</strong>
-                      <span className={styles.chip}>{item.meta}</span>
+                      <span className={styles.recordMeta}>{item.meta}</span>
                     </div>
                     <p>{item.body}</p>
                   </article>
