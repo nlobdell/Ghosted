@@ -274,13 +274,15 @@
 }
 
 .sceneBoardOnly .boardActionDock {
-  bottom: clamp(0.8rem, 2vh, 1.3rem);
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
 }
 
 .sceneBoardOnly .boardActionButton {
-  min-height: 1.95rem;
-  padding-inline: 0.66rem;
-  font-size: 0.66rem;
+  min-height: 2.55rem;
+  padding-inline: 1rem;
+  font-size: 0.78rem;
 }
 
 .sceneSprite {
@@ -345,32 +347,43 @@
 .boardActionDock {
   position: absolute;
   left: 50%;
-  bottom: clamp(0.9rem, 2.2vh, 1.45rem);
+  top: 50%;
   z-index: 4;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   pointer-events: none;
 }
 
 .boardActionButton {
-  min-height: 2rem;
-  padding: 0.42rem 0.72rem;
-  border: 1px solid rgba(191, 179, 255, 0.22);
+  min-height: 2.7rem;
+  padding: 0.52rem 1.08rem;
+  border: 1px solid rgba(211, 166, 96, 0.55);
   border-radius: 0;
-  background: rgba(15, 17, 24, 0.88);
-  color: var(--color-text-strong);
+  background: linear-gradient(180deg, rgba(143, 96, 47, 0.96) 0%, rgba(104, 66, 32, 0.98) 100%);
+  color: rgba(255, 243, 219, 0.98);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  box-shadow: none;
+  box-shadow:
+    0 0 0 1px rgba(49, 30, 14, 0.5),
+    0 12px 28px rgba(14, 8, 3, 0.34);
   pointer-events: auto;
-  transition: border-color var(--ease-standard), background-color var(--ease-standard), color var(--ease-standard);
+  transition:
+    border-color var(--ease-standard),
+    background-color var(--ease-standard),
+    color var(--ease-standard),
+    box-shadow var(--ease-standard),
+    transform var(--ease-standard);
 }
 
 .boardActionButton:hover {
-  border-color: rgba(191, 179, 255, 0.34);
-  background: rgba(22, 24, 34, 0.96);
+  border-color: rgba(235, 193, 126, 0.72);
+  background: linear-gradient(180deg, rgba(167, 114, 57, 0.98) 0%, rgba(124, 79, 39, 1) 100%);
+  box-shadow:
+    0 0 0 1px rgba(62, 38, 18, 0.56),
+    0 14px 32px rgba(14, 8, 3, 0.4);
+  transform: translateY(-1px);
 }
 
 .boardActionButton:disabled {
@@ -746,7 +759,7 @@
   }
 
   .boardActionDock {
-    bottom: 0.7rem;
+    top: 50%;
   }
 
   .boardGrid {
