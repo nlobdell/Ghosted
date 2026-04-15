@@ -165,22 +165,22 @@ describe('twitch platform and loot chest routes', () => {
   it('preserves the Twitch platform callback query when redirecting signed-out users to login', async () => {
     authMock.mockResolvedValue(null);
 
-    const response = await getPlatformCallbackRoute(new Request('http://localhost/api/v/twitch/callback?code=test-code&state=test-state'));
+    const response = await getPlatformCallbackRoute(new Request('http://0.0.0.0:3000/api/v/twitch/callback?code=test-code&state=test-state'));
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe(
-      'http://localhost/auth/login?next=%2Fapi%2Fv%2Ftwitch%2Fcallback%3Fcode%3Dtest-code%26state%3Dtest-state',
+      'https://ghostedclan.com/auth/login?next=%2Fapi%2Fv%2Ftwitch%2Fcallback%3Fcode%3Dtest-code%26state%3Dtest-state',
     );
   });
 
   it('preserves the giveaway callback query when redirecting signed-out users to login', async () => {
     authMock.mockResolvedValue(null);
 
-    const response = await getGiveawayCallbackRoute(new Request('http://localhost/api/v/giveaways/twitch/callback?code=test-code&state=test-state'));
+    const response = await getGiveawayCallbackRoute(new Request('http://0.0.0.0:3000/api/v/giveaways/twitch/callback?code=test-code&state=test-state'));
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe(
-      'http://localhost/auth/login?next=%2Fapi%2Fv%2Fgiveaways%2Ftwitch%2Fcallback%3Fcode%3Dtest-code%26state%3Dtest-state',
+      'https://ghostedclan.com/auth/login?next=%2Fapi%2Fv%2Fgiveaways%2Ftwitch%2Fcallback%3Fcode%3Dtest-code%26state%3Dtest-state',
     );
   });
 
