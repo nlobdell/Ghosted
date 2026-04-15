@@ -136,6 +136,36 @@ describe('LootChestScene', () => {
     expect(onToggleSelection).toHaveBeenCalledWith(4);
   });
 
+  it('keeps three draft picks in the selected state until the host locks them', () => {
+    const board = makeBoard({
+      phase: 'selection',
+      selectedChests: [],
+      revealedChests: [],
+      allSelectionsLocked: false,
+      remainingSelections: 3,
+      remainingReveals: 0,
+    });
+
+    const { container } = render(
+      <LootChestScene
+        scene={makeScene({
+          queueCount: 1,
+          focusTurn: makeTurn({ board, phase: 'selection' }),
+        })}
+        draftSelections={[0, 2, 4]}
+        onToggleSelection={vi.fn()}
+      />,
+    );
+
+    const firstChest = container.querySelector('[data-chest-index="0"]');
+    const thirdChest = container.querySelector('[data-chest-index="2"]');
+    const fifthChest = container.querySelector('[data-chest-index="4"]');
+
+    expect(firstChest?.getAttribute('data-sprite-state')).toBe('selected');
+    expect(thirdChest?.getAttribute('data-sprite-state')).toBe('selected');
+    expect(fifthChest?.getAttribute('data-sprite-state')).toBe('selected');
+  });
+
   it('stages the locked selections into a centered row before reveals begin', () => {
     const board = makeBoard({
       phase: 'locked',
@@ -569,6 +599,6 @@ describe('LootChestScene', () => {
     const lockedSprite = container.querySelector('[data-chest-index="1"] [data-sprite-id="chest-locked"]') as HTMLElement | null;
 
     expect(frameSprite?.style.getPropertyValue('--scene-sprite-image')).toContain('board-frame-overlay.svg?v=build-123');
-    expect(lockedSprite?.style.getPropertyValue('--scene-sprite-image')).toContain('chest-selected.png?v=build-123');
+    expect(lockedSprite?.style.getPropertyValue('--scene-sprite-image')).toContain('chest.png?v=build-123');
   });
 });

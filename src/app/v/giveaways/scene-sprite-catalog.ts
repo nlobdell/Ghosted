@@ -109,10 +109,10 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     anchorBounds: CLOSED_CHEST_BOUNDS,
   },
   locked: {
-    ...staticSprite('chest-locked', '/giveaways/sprites/chest-selected.png', { pixelated: true }),
+    ...staticSprite('chest-locked', '/giveaways/sprites/chest.png', { pixelated: true }),
     frameWidth: 48,
     frameHeight: 32,
-    visibleBounds: SELECTED_CHEST_BOUNDS,
+    visibleBounds: CLOSED_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
   },
   opening: {

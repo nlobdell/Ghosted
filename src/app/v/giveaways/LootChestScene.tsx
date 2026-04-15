@@ -111,7 +111,6 @@ function chestLabel(chest: LootChestBoardChest, spriteState: LootChestChestSprit
 
 function displaySpriteState(
   chest: LootChestBoardChest,
-  boardSelectionLimit: number,
   selectedIndices: Set<number>,
   interactive: boolean,
 ): LootChestChestSpriteState {
@@ -119,7 +118,7 @@ function displaySpriteState(
     return chest.spriteState;
   }
   if (selectedIndices.has(chest.index)) {
-    return selectedIndices.size === boardSelectionLimit ? 'locked' : 'selected';
+    return 'selected';
   }
   return chest.revealed ? chest.spriteState : 'closed';
 }
@@ -286,7 +285,7 @@ export function LootChestScene({
           <>
             <div className={[styles.boardGrid, selectionRowActive ? styles.boardGridSelectionStage : ''].filter(Boolean).join(' ')}>
               {board.chests.map((chest) => {
-                const spriteState = displaySpriteState(chest, board.selectionLimit, selectedIndices, selectionInteractive);
+                const spriteState = displaySpriteState(chest, selectedIndices, selectionInteractive);
                 const animationState = displayAnimationState(chest, spriteState);
                 const spriteSpec = getChestSpriteSpec(spriteState, animationState, {
                   winner: chest.containsPrize || spriteState === 'prize' || spriteState === 'resolved-prize',
