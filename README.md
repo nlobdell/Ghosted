@@ -92,6 +92,12 @@ Twitch loot chest console:
 http://localhost:3000/v/giveaways
 ```
 
+Twitch loot chest host overlay:
+
+```text
+http://localhost:3000/v/giveaways/host
+```
+
 Twitch operator home:
 
 ```text
@@ -184,6 +190,7 @@ Current VPS pattern:
 - optional Discord worker (`ghosted-discord-worker.service`) for bot-backed Discord features
 - Next owns all public and internal `/api/*` routes, including companion asset serving and render endpoints
 - The Twitch platform control plane lives at `/v/twitch`, while the loot chest giveaway console stays at `/v/giveaways` and its OBS/browser-source overlay stays at `/v/giveaways/overlay/[token]`
+- The authenticated host-side stream control surface for the loot chest game lives at `/v/giveaways/host`
 - `/auth/login`, `/auth/logout`, `/auth/dev-login`, and `/api/auth/*` live in Next/Auth.js plus the legacy-session bridge
 - `/admin/discord-presence/` is the operator surface for worker health, current public mode, and the public voice/stage allowlist
 - Env file lives at `/etc/ghosted/ghosted.env`

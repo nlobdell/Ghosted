@@ -25,7 +25,7 @@ export default function TwitchLootChestOverlayClient({
           setState(nextState);
         });
       })();
-    }, 2500);
+    }, 1200);
 
     return () => window.clearInterval(intervalId);
   }, [overlayToken]);

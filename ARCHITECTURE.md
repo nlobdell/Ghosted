@@ -66,6 +66,7 @@ Browser
 
 - `/v/twitch/`
 - `/v/giveaways/`
+- `/v/giveaways/host/`
 - `/v/giveaways/overlay/:token`
 
 ## 5. API Domains

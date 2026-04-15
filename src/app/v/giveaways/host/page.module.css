@@ -1,0 +1,249 @@
+.hostPage {
+  --host-border: rgba(209, 190, 138, 0.16);
+  --host-panel: rgba(10, 12, 16, 0.78);
+  min-height: 100vh;
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at top, rgba(255, 213, 112, 0.14), transparent 20%),
+    radial-gradient(circle at 0% 100%, rgba(124, 101, 255, 0.11), transparent 26%),
+    linear-gradient(180deg, #0d0d12 0%, #06070b 100%);
+  color: var(--color-text-strong);
+}
+
+.hero,
+.mainStage,
+.sidePanel,
+.lockedCard,
+.messageBar {
+  border: 1px solid var(--host-border);
+  background: var(--host-panel);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) auto;
+  gap: 1rem;
+  align-items: end;
+  padding: 1.15rem 1.2rem;
+  border-radius: 1.5rem;
+}
+
+.heroCopy,
+.heroActions,
+.metaStrip,
+.controlRail,
+.workspace,
+.queueList,
+.historyList,
+.hintList,
+.queueMeta,
+.panelHeader {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.heroActions {
+  align-content: end;
+  justify-items: stretch;
+  min-width: min(18rem, 100%);
+}
+
+.eyebrow,
+.label {
+  color: var(--color-text-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.headline {
+  font-size: clamp(2.2rem, 4vw, 4.4rem);
+  line-height: 0.92;
+}
+
+.heroSummary {
+  max-width: 60rem;
+  color: rgba(255, 245, 225, 0.82);
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.chip,
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 229, 170, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.messageBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border-radius: 1.2rem;
+}
+
+.messageInfo {
+  border-color: rgba(138, 210, 255, 0.2);
+  background: rgba(138, 210, 255, 0.08);
+}
+
+.messageError {
+  border-color: rgba(255, 168, 150, 0.2);
+  background: rgba(255, 168, 150, 0.09);
+}
+
+.workspace {
+  grid-template-columns: minmax(0, 1.45fr) minmax(22rem, 0.8fr);
+  align-items: start;
+}
+
+.mainStage,
+.sidePanel,
+.lockedCard {
+  border-radius: 1.45rem;
+  padding: 1rem;
+}
+
+.mainStage {
+  display: grid;
+  gap: 1rem;
+}
+
+.statusBar {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.95rem 1rem;
+  border-radius: 1.2rem;
+  border: 1px solid rgba(255, 214, 132, 0.16);
+  background: rgba(255, 214, 132, 0.08);
+}
+
+.statusWin {
+  border-color: rgba(143, 255, 196, 0.18);
+  background: rgba(143, 255, 196, 0.08);
+}
+
+.statusMiss {
+  border-color: rgba(255, 181, 166, 0.18);
+  background: rgba(255, 181, 166, 0.08);
+}
+
+.metaStrip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metaCard {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.95rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.boardShell {
+  display: grid;
+  gap: 1rem;
+  min-height: 28rem;
+  padding: 1rem;
+  border-radius: 1.3rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 216, 140, 0.1), transparent 28%),
+    rgba(255, 255, 255, 0.02);
+  outline: none;
+}
+
+.boardShell:focus-visible {
+  border-color: rgba(255, 214, 132, 0.34);
+  box-shadow: 0 0 0 2px rgba(255, 214, 132, 0.16);
+}
+
+.emptyBoard {
+  align-self: center;
+  display: grid;
+  gap: 0.55rem;
+  text-align: center;
+}
+
+.controlRail {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.sideRail {
+  display: grid;
+  gap: 1rem;
+}
+
+.panelHeader {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.queueCard,
+.historyCard,
+.hintCard {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.queueCardPrimary {
+  border-color: rgba(255, 214, 132, 0.18);
+  background:
+    radial-gradient(circle at top, rgba(255, 214, 132, 0.08), transparent 60%),
+    rgba(255, 255, 255, 0.03);
+}
+
+.queueCard p,
+.historyCard p,
+.hintCard p {
+  color: var(--color-text-muted);
+}
+
+.queueMeta {
+  gap: 0.35rem;
+  color: var(--color-text-soft);
+  font-size: 0.82rem;
+}
+
+.lockedCard {
+  align-self: center;
+  max-width: 38rem;
+  justify-self: center;
+  text-align: center;
+}
+
+@media (max-width: 1080px) {
+  .hero,
+  .workspace,
+  .metaStrip,
+  .controlRail {
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions {
+    min-width: 0;
+  }
+}

@@ -37,6 +37,16 @@ describe('twitch operator middleware', () => {
     expect(response.headers.get('location')).toBe('https://ghostedclan.com/auth/login?next=%2Fv%2Fgiveaways%2F');
   });
 
+  it('redirects signed-out requests for the host overlay route', async () => {
+    vi.stubEnv('ENABLE_DEV_AUTH', 'false');
+    getTokenMock.mockResolvedValue(null);
+
+    const response = await middleware(new NextRequest('https://ghostedclan.com/v/giveaways/host/'));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('https://ghostedclan.com/auth/login?next=%2Fv%2Fgiveaways%2Fhost%2F');
+  });
+
   it('allows the tokenized overlay through without login', async () => {
     vi.stubEnv('ENABLE_DEV_AUTH', 'false');
     getTokenMock.mockResolvedValue(null);

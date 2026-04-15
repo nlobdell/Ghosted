@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { startTransition, useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   AppContext,
@@ -187,6 +188,9 @@ export default function TwitchLootChestConsoleClient({
               <button className="button button--small" type="button" onClick={handleConnect} disabled={busyAction === 'connect'}>
                 {busyAction === 'connect' ? 'Redirecting...' : state.connection.connected ? 'Reconnect Twitch' : 'Connect Twitch'}
               </button>
+              <Link className="button button--secondary button--small" href="/v/giveaways/host/">
+                Open host overlay
+              </Link>
               <button
                 className="button button--secondary button--small"
                 type="button"
@@ -259,6 +263,9 @@ export default function TwitchLootChestConsoleClient({
 
                 <div className={styles.overlayRow}>
                   <input className={styles.overlayUrl} readOnly value={state.connection.overlayUrl ?? 'Overlay URL will appear after setup.'} />
+                  <Link className="button button--secondary button--small" href="/v/giveaways/host/">
+                    Host overlay
+                  </Link>
                   <button
                     className="button button--secondary button--small"
                     type="button"
