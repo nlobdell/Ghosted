@@ -161,6 +161,7 @@ export function LootChestScene({
   onRevealChest,
   onPreviewChest,
   frame = 'standalone',
+  boardSizing = 'viewport',
 }: {
   scene: LootChestSceneSnapshot;
   presentationCue?: LootChestPresentationCue | null;
@@ -169,6 +170,7 @@ export function LootChestScene({
   onRevealChest?: (index: number) => void;
   onPreviewChest?: (index: number | null) => void;
   frame?: 'standalone' | 'embedded' | 'broadcast' | 'board-only';
+  boardSizing?: 'viewport' | 'width';
 }) {
   const turn = scene.focusTurn;
   const board = turn?.board ?? null;
@@ -245,6 +247,8 @@ export function LootChestScene({
         frame === 'embedded' ? styles.sceneEmbedded : '',
         frame === 'broadcast' ? styles.sceneBroadcast : '',
         boardOnly ? styles.sceneBoardOnly : '',
+        boardOnly && boardSizing === 'width' ? styles.sceneBoardOnlyWidth : '',
+        boardOnly && boardSizing === 'viewport' ? styles.sceneBoardOnlyViewport : '',
       ].filter(Boolean).join(' ')}
     >
       {boardOnly ? null : (

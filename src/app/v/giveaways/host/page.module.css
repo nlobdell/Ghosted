@@ -123,8 +123,8 @@
   align-items: stretch;
   width: 100%;
   min-width: 0;
-  aspect-ratio: 16 / 9;
-  min-height: clamp(30rem, 74vh, 62rem);
+  align-self: start;
+  min-height: 0;
   padding: 0;
   outline: none;
 }
@@ -239,10 +239,6 @@
 
   .actionGrid {
     grid-template-columns: 1fr;
-  }
-
-  .sceneStage {
-    min-height: min(100vh, 44rem);
   }
 
   .railBlock {

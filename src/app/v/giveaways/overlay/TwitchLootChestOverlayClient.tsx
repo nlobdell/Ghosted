@@ -41,7 +41,7 @@ export default function TwitchLootChestOverlayClient({
 
   return (
     <main className={styles.overlayPage}>
-      <LootChestScene scene={state.scene} presentationCue={presentationCue} frame="board-only" />
+      <LootChestScene scene={state.scene} presentationCue={presentationCue} frame="board-only" boardSizing="viewport" />
     </main>
   );
 }

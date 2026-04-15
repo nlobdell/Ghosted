@@ -498,6 +498,7 @@ export default function TwitchLootChestHostOverlayClient({
               onRevealChest={busyAction ? undefined : revealChest}
               onPreviewChest={previewChest}
               frame="board-only"
+              boardSizing="width"
             />
           </section>
 
