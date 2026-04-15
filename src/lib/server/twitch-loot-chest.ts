@@ -587,24 +587,23 @@ export async function publishLootChestOperatorPresentation(input: {
     return clearCue;
   }
 
-  if (Array.isArray(input.selectedChests)) {
-    const mirroredSelectedChests = normalizeChestIndexes(input.selectedChests);
-    if (mirroredSelectedChests.length === 0) {
-      const clearCue = buildLootChestClearCue(activeTurn.id, []);
-      await publishLootChestPresentationCue(clearCue);
-      return clearCue;
-    }
+  const mirroredSelectedChests = Array.isArray(input.selectedChests)
+    ? normalizeChestIndexes(input.selectedChests)
+    : undefined;
 
-    if (mirroredSelectedChests.length > CHEST_SELECTION_LIMIT) {
-      throw new AppError(`Select at most ${CHEST_SELECTION_LIMIT} unique chests.`, 400);
-    }
-
-    const cue = buildLootChestSelectionCue(activeTurn.id, mirroredSelectedChests);
-    await publishLootChestPresentationCue(cue);
-    return cue;
+  if (mirroredSelectedChests && mirroredSelectedChests.length > CHEST_SELECTION_LIMIT) {
+    throw new AppError(`Select at most ${CHEST_SELECTION_LIMIT} unique chests.`, 400);
   }
 
   if (input.chestIndex === null || input.chestIndex === undefined || input.chestIndex === '') {
+    if (mirroredSelectedChests !== undefined) {
+      const cue = mirroredSelectedChests.length === 0
+        ? buildLootChestClearCue(activeTurn.id, [])
+        : buildLootChestSelectionCue(activeTurn.id, mirroredSelectedChests);
+      await publishLootChestPresentationCue(cue);
+      return cue;
+    }
+
     const clearCue = buildLootChestClearCue(activeTurn.id);
     await publishLootChestPresentationCue(clearCue);
     return clearCue;
@@ -615,9 +614,6 @@ export async function publishLootChestOperatorPresentation(input: {
     throw new AppError('Chest index is invalid.', 400);
   }
 
-  const mirroredSelectedChests = Array.isArray(input.selectedChests)
-    ? normalizeChestIndexes(input.selectedChests)
-    : undefined;
   const cue = buildLootChestHoverCue(activeTurn.id, chestIndex, mirroredSelectedChests);
   await publishLootChestPresentationCue(cue);
   return cue;

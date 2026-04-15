@@ -683,6 +683,37 @@ describe('twitch platform and loot chest routes', () => {
     expect(turnRow.revealed_chests_json).toBe('[]');
   });
 
+  it('publishes hover cues with mirrored draft selections so the public overlay can match the host scene', async () => {
+    authMock.mockResolvedValue({ user: { id: String(operatorUserId) } });
+    seedConnectedTwitchState(context);
+    const queuedTurn = insertQueuedLootChestTurnForTests({ viewerLogin: 'hoverdraft', viewerDisplayName: 'Hover Draft Viewer' });
+
+    await postStartTurnRoute(new Request('http://localhost/api/v/giveaways/turns/1/start', {
+      method: 'POST',
+    }), {
+      params: Promise.resolve({ id: String(queuedTurn.id) }),
+    });
+
+    const response = await postGiveawayPresentationRoute(new Request('http://localhost/api/v/giveaways/presentation', {
+      method: 'POST',
+      body: JSON.stringify({ turnId: queuedTurn.id, chestIndex: 4, selectedChests: [1, 4, 8] }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.cue).toMatchObject({
+      kind: 'hover',
+      turnId: queuedTurn.id,
+      chestIndex: 4,
+      selectedChests: [1, 4, 8],
+    });
+
+    const turnRow = turnRowsForTests()[0];
+    expect(turnRow.selected_chests_json).toBe('[]');
+    expect(turnRow.revealed_chests_json).toBe('[]');
+  });
+
   it('publishes mirrored draft selection cues for the public overlay without mutating board state', async () => {
     authMock.mockResolvedValue({ user: { id: String(operatorUserId) } });
     seedConnectedTwitchState(context);
