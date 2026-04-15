@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 let cachedBuildId: string | null = null;
+let cachedDevSurfaceVersion = '';
+let cachedDevSurfaceVersionAt = 0;
 
 function firstNonEmpty(values: Array<string | null | undefined>) {
   for (const value of values) {
@@ -45,17 +47,79 @@ function readPackageVersion() {
   }
 }
 
-export function getGhostedBuildId() {
-  if (cachedBuildId) {
-    return cachedBuildId;
+function walkLatestModifiedAt(rootPath: string) {
+  let latestModifiedAt = 0;
+  const queue = [rootPath];
+
+  while (queue.length > 0) {
+    const currentPath = queue.pop();
+    if (!currentPath) {
+      continue;
+    }
+
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(currentPath, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      const absolutePath = path.join(currentPath, entry.name);
+      if (entry.isDirectory()) {
+        queue.push(absolutePath);
+        continue;
+      }
+
+      try {
+        const stats = fs.statSync(absolutePath);
+        latestModifiedAt = Math.max(latestModifiedAt, Math.trunc(stats.mtimeMs));
+      } catch {
+        // Ignore files that disappear mid-scan during local iteration.
+      }
+    }
   }
 
-  cachedBuildId = firstNonEmpty([
+  return latestModifiedAt;
+}
+
+function readDevSurfaceVersion() {
+  const now = Date.now();
+  if (cachedDevSurfaceVersion && (now - cachedDevSurfaceVersionAt) < 1500) {
+    return cachedDevSurfaceVersion;
+  }
+
+  const roots = [
+    path.join(process.cwd(), 'public', 'giveaways', 'sprites'),
+    path.join(process.cwd(), 'src', 'app', 'v', 'giveaways'),
+  ];
+
+  const latestModifiedAt = roots.reduce((currentLatest, rootPath) => (
+    Math.max(currentLatest, walkLatestModifiedAt(rootPath))
+  ), 0);
+
+  cachedDevSurfaceVersion = latestModifiedAt > 0 ? String(latestModifiedAt) : 'dev';
+  cachedDevSurfaceVersionAt = now;
+  return cachedDevSurfaceVersion;
+}
+
+export function getGhostedBuildId() {
+  const baseBuildId = firstNonEmpty([
     process.env.GHOSTED_BUILD_ID,
     process.env.NEXT_PUBLIC_APP_BUILD_ID,
     process.env.VERCEL_GIT_COMMIT_SHA,
     readBuildIdFromDisk(),
   ]) ?? `pkg-${readPackageVersion()}`;
+
+  if (process.env.NODE_ENV !== 'production') {
+    return `${baseBuildId}-surface-${readDevSurfaceVersion()}`;
+  }
+
+  if (cachedBuildId) {
+    return cachedBuildId;
+  }
+
+  cachedBuildId = baseBuildId;
 
   return cachedBuildId;
 }
