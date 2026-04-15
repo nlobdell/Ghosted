@@ -6,6 +6,13 @@ import type {
 
 export type SceneSpritePlayback = 'static' | 'once' | 'loop';
 
+type SceneSpriteBounds = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
+
 export type SceneSpriteSpec = {
   id: string;
   src: string;
@@ -16,18 +23,9 @@ export type SceneSpriteSpec = {
   playback: SceneSpritePlayback;
   initialFrame?: number;
   pixelated?: boolean;
-  visibleBounds?: {
-    left: number;
-    top: number;
-    right: number;
-    bottom: number;
-  };
-  anchorBounds?: {
-    left: number;
-    top: number;
-    right: number;
-    bottom: number;
-  };
+  visibleBounds?: SceneSpriteBounds;
+  anchorBounds?: SceneSpriteBounds;
+  frameBounds?: Array<SceneSpriteBounds | undefined>;
 };
 
 function staticSprite(
@@ -47,6 +45,30 @@ function staticSprite(
 const CLOSED_CHEST_BOUNDS = { left: 2, top: 12, right: 29, bottom: 31 } as const;
 const EMPTY_CHEST_BOUNDS = { left: 2, top: 21, right: 40, bottom: 31 } as const;
 const PRIZE_CHEST_BOUNDS = { left: 2, top: 2, right: 40, bottom: 31 } as const;
+const OPENING_CHEST_FRAME_BOUNDS = [
+  { left: 2, top: 12, right: 29, bottom: 31 },
+  { left: 2, top: 12, right: 29, bottom: 31 },
+  { left: 1, top: 13, right: 29, bottom: 31 },
+  { left: 1, top: 13, right: 29, bottom: 31 },
+  { left: 2, top: 11, right: 29, bottom: 31 },
+  { left: 2, top: 11, right: 30, bottom: 31 },
+  { left: 2, top: 9, right: 31, bottom: 31 },
+  { left: 2, top: 23, right: 41, bottom: 31 },
+  { left: 2, top: 21, right: 40, bottom: 31 },
+  { left: 2, top: 21, right: 40, bottom: 31 },
+] as const satisfies SceneSpriteBounds[];
+const WINNER_CHEST_FRAME_BOUNDS = [
+  { left: 2, top: 12, right: 29, bottom: 31 },
+  { left: 2, top: 12, right: 29, bottom: 31 },
+  { left: 1, top: 13, right: 29, bottom: 31 },
+  { left: 1, top: 13, right: 29, bottom: 31 },
+  { left: 2, top: 11, right: 29, bottom: 31 },
+  { left: 2, top: 11, right: 30, bottom: 31 },
+  { left: 2, top: 9, right: 31, bottom: 31 },
+  { left: 2, top: 12, right: 41, bottom: 31 },
+  { left: 2, top: 8, right: 40, bottom: 31 },
+  { left: 2, top: 2, right: 40, bottom: 31 },
+] as const satisfies SceneSpriteBounds[];
 
 const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
   closed: {
@@ -81,6 +103,7 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     pixelated: true,
     visibleBounds: CLOSED_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
+    frameBounds: OPENING_CHEST_FRAME_BOUNDS,
   },
   empty: {
     id: 'chest-empty',
@@ -92,7 +115,7 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     initialFrame: 9,
     pixelated: true,
     visibleBounds: EMPTY_CHEST_BOUNDS,
-    anchorBounds: CLOSED_CHEST_BOUNDS,
+    frameBounds: OPENING_CHEST_FRAME_BOUNDS,
   },
   prize: {
     id: 'chest-prize',
@@ -104,7 +127,7 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     initialFrame: 9,
     pixelated: true,
     visibleBounds: PRIZE_CHEST_BOUNDS,
-    anchorBounds: CLOSED_CHEST_BOUNDS,
+    frameBounds: WINNER_CHEST_FRAME_BOUNDS,
   },
   'resolved-empty': {
     id: 'chest-resolved-empty',
@@ -116,7 +139,7 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     initialFrame: 9,
     pixelated: true,
     visibleBounds: EMPTY_CHEST_BOUNDS,
-    anchorBounds: CLOSED_CHEST_BOUNDS,
+    frameBounds: OPENING_CHEST_FRAME_BOUNDS,
   },
   'resolved-prize': {
     id: 'chest-resolved-prize',
@@ -128,7 +151,7 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     initialFrame: 9,
     pixelated: true,
     visibleBounds: PRIZE_CHEST_BOUNDS,
-    anchorBounds: CLOSED_CHEST_BOUNDS,
+    frameBounds: WINNER_CHEST_FRAME_BOUNDS,
   },
 };
 
@@ -142,7 +165,7 @@ const WINNER_OPENING_SPRITE: SceneSpriteSpec = {
   durationMs: 680,
   pixelated: true,
   visibleBounds: PRIZE_CHEST_BOUNDS,
-  anchorBounds: CLOSED_CHEST_BOUNDS,
+  frameBounds: WINNER_CHEST_FRAME_BOUNDS,
 };
 
 const RESULT_SPRITES: Record<Exclude<LootChestTurnResult, 'pending'>, SceneSpriteSpec> = {

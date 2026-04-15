@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LootChestScene } from '@/app/v/giveaways/LootChestScene';
 import type { LootChestBoard, LootChestBoardChest, LootChestSceneSnapshot, LootChestTurn, TwitchRewardConnectionState } from '@/lib/types';
@@ -314,6 +314,57 @@ describe('LootChestScene', () => {
       const prizeSprite = prizeChest?.querySelector('[data-sprite-id="chest-opening-winner"]');
       expect(prizeSprite).not.toBeNull();
     });
+  });
+
+  it('re-anchors the opening strip as wider reveal frames play', () => {
+    vi.useFakeTimers();
+
+    const { container } = render(
+      <LootChestScene
+        scene={makeScene({
+          revision: 3,
+          focusTurn: makeTurn({
+            board: makeBoard({
+              phase: 'revealing',
+              boardRevision: 3,
+              selectedChests: [1, 4, 8],
+              revealedChests: [4],
+              allSelectionsLocked: true,
+              remainingSelections: 0,
+              remainingReveals: 2,
+              lastAction: 'chest_revealed',
+              lastChangedChestIndex: 4,
+              activeAnimationChestIndex: 4,
+            }, {
+              1: { spriteState: 'locked', animationState: 'idle' },
+              4: {
+                revealed: true,
+                spriteState: 'opening',
+                animationState: 'opening',
+                revealCue: true,
+              },
+              8: { spriteState: 'locked', animationState: 'idle' },
+            }),
+            phase: 'revealing',
+            lastAction: 'chest_revealed',
+          }),
+        })}
+      />,
+    );
+
+    const openingSprite = container.querySelector('[data-chest-index="4"] [data-sprite-id="chest-opening"]') as HTMLElement | null;
+    expect(openingSprite).not.toBeNull();
+
+    const startAnchor = Number.parseFloat(openingSprite?.style.getPropertyValue('--scene-sprite-anchor-x') ?? '');
+    expect(openingSprite?.getAttribute('data-sprite-frame')).toBe('0');
+
+    act(() => {
+      vi.advanceTimersByTime(620);
+    });
+
+    const laterFrame = Number.parseFloat(openingSprite?.style.getPropertyValue('--scene-sprite-anchor-x') ?? '');
+    expect(Number.parseInt(openingSprite?.getAttribute('data-sprite-frame') ?? '0', 10)).toBeGreaterThan(0);
+    expect(laterFrame).toBeLessThan(startAnchor);
   });
 
   it('shows the result burst when a resolved board arrives on a new revision', async () => {
