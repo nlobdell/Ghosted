@@ -546,7 +546,7 @@ function ensureSchema(db: Database.Database) {
       legacyLootChestSettings.oauth_state,
       legacyLootChestSettings.oauth_state_actor_discord_id,
       legacyLootChestSettings.oauth_state_expires_at,
-      '/v/giveaways/',
+      '/v?tab=live',
       legacyLootChestSettings.created_at,
       legacyLootChestSettings.updated_at,
     );

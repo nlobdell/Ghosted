@@ -64,10 +64,9 @@ Browser
 
 ### Private operator tools
 
-- `/v/twitch/`
-- `/v/giveaways/`
-- `/v/giveaways/host/`
-- `/v/giveaways/overlay/:token`
+- `/v`
+- `/v/host`
+- `/v/overlay?token=...`
 
 ## 5. API Domains
 
@@ -83,6 +82,7 @@ Implemented by route handlers under [`src/app/api`](./src/app/api) and shared se
 - `/api/news/:slug`
 - `/api/giveaways`
 - `/api/giveaways/:id/enter`
+- `/api/v/state`
 - `/api/v/twitch/*`
 - `/api/v/giveaways/state`
 - `/api/v/giveaways/twitch/*`
@@ -123,8 +123,8 @@ Shared backend logic is organized by domain:
 - Primary browser auth uses Auth.js with Discord
 - `getCurrentUser()` first checks the Auth.js session, then falls back to the legacy `ghosted_session` cookie stored in SQLite
 - `/auth/dev-login` stays available only when `ENABLE_DEV_AUTH=true` and still creates the legacy session row/cookie for local and VPS debugging
-- `/v/twitch` and `/v/giveaways` are separately gated by `TWITCH_OPERATOR_DISCORD_IDS`, with `TWITCH_GAME_OPERATOR_DISCORD_IDS` supported as a temporary compatibility fallback
-- `/v/giveaways/overlay/:token` stays tokenized and unauthenticated for OBS/browser-source embeds
+- `/v` and `/v/host` are gated by `TWITCH_OPERATOR_DISCORD_IDS`, with `TWITCH_GAME_OPERATOR_DISCORD_IDS` supported as a temporary compatibility fallback
+- `/v/overlay?token=...` stays tokenized and unauthenticated for OBS/browser-source embeds
 
 ## 8. Deployment Architecture
 

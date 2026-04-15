@@ -22,6 +22,7 @@ vi.mock('next/headers', () => ({
 }));
 
 import { GET as getPlatformStateRoute } from '@/app/api/v/twitch/state/route';
+import { GET as getAppStateRoute } from '@/app/api/v/state/route';
 import { GET as getPlatformCallbackRoute } from '@/app/api/v/twitch/callback/route';
 import { POST as postPlatformDisconnectRoute } from '@/app/api/v/twitch/disconnect/route';
 import { POST as postPlatformEventSubRoute } from '@/app/api/v/twitch/eventsub/route';
@@ -175,6 +176,22 @@ describe('twitch platform and loot chest routes', () => {
 
     expect(response.status).toBe(403);
     expect(payload).toEqual({ error: 'You do not have access to the Twitch operator console.' });
+  });
+
+  it('returns the combined /v app-shell state for allowlisted operators', async () => {
+    authMock.mockResolvedValue({ user: { id: String(operatorUserId) } });
+    seedConnectedTwitchState(context);
+    insertQueuedLootChestTurnForTests({ viewerLogin: 'shell_viewer', viewerDisplayName: 'Shell Viewer' });
+
+    const response = await getAppStateRoute();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.platform.connection.id).toBe('broadcaster-1');
+    expect(payload.platform.modules).toHaveLength(1);
+    expect(payload.giveaway.connection.connected).toBe(true);
+    expect(payload.giveaway.queue).toHaveLength(1);
+    expect(payload.giveaway.scene.queueCount).toBe(1);
   });
 
   it('preserves the Twitch platform callback query when redirecting signed-out users to login', async () => {
@@ -831,7 +848,7 @@ describe('twitch platform and loot chest routes', () => {
     const actor = getUserById(context.db, operatorUserId);
     expect(actor).toBeTruthy();
 
-    await beginGhostedTwitchPlatformConnect(actor!, '/v/twitch/');
+    await beginGhostedTwitchPlatformConnect(actor!, '/v?tab=setup');
     const { oauth_state: state } = context.db.prepare(`
       SELECT oauth_state
       FROM twitch_platform_settings

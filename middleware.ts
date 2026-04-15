@@ -32,11 +32,10 @@ export default async function middleware(request: NextRequest) {
   const legacyDevAdmin = legacyDevSession
     && request.cookies.get('ghosted_dev_admin')?.value === '1';
   const token = await readAuthToken(request);
-  const isTwitchOperatorRoute = (
-    pathname.startsWith('/v/twitch')
-    || pathname.startsWith('/v/giveaways')
-  )
-    && !pathname.startsWith('/v/giveaways/overlay/');
+  const isPublicOverlayRoute =
+    pathname === '/v/overlay'
+    || pathname.startsWith('/v/giveaways/overlay/');
+  const isTwitchOperatorRoute = pathname.startsWith('/v') && !isPublicOverlayRoute;
 
   if (pathname.startsWith('/hall') && !token?.sub && !legacyDevSession) {
     const loginUrl = new URL(devAuthEnabled ? '/auth/dev-login' : '/auth/login', request.nextUrl.origin);
@@ -60,5 +59,5 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/hall/:path*', '/admin/:path*', '/v/giveaways/:path*', '/v/twitch/:path*'],
+  matcher: ['/hall/:path*', '/admin/:path*', '/v/:path*'],
 };

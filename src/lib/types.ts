@@ -833,6 +833,13 @@ export interface TwitchPlatformState {
   modules: TwitchModuleHealth[];
 }
 
+export type VOperatorAppTab = 'live' | 'queue' | 'setup' | 'diagnostics';
+
+export interface VOperatorAppState {
+  platform: TwitchPlatformState;
+  giveaway: LootChestGameState;
+}
+
 export type LootChestTurnStatus = 'queued' | 'active' | 'completed';
 export type LootChestTurnResult = 'pending' | 'win' | 'miss';
 export type LootChestPresentationPhase = 'queued' | 'selection' | 'locked' | 'revealing' | 'resolved';

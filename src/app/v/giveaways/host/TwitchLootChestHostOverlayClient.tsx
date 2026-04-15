@@ -674,7 +674,7 @@ export default function TwitchLootChestHostOverlayClient({
 
               <div className={styles.railUtility}>
                 <span className={styles.inlineMeta}>{boardStatus(state)}</span>
-                <Link className="button button--secondary" href="/v/giveaways/">
+                <Link className="button button--secondary" href="/v?tab=live">
                   Console
                 </Link>
                 <button

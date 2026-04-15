@@ -661,7 +661,7 @@ function connectionStateFromRows(db: Database): TwitchRewardConnectionState {
     },
     scopes: connection ? jsonLoad<string[]>(connection.token_scope_json, []) : [],
     overlayUrl: getTwitchPlatformFeatureBaseUrl()
-      ? `${getTwitchPlatformFeatureBaseUrl()}/v/giveaways/overlay/${settings.overlay_token}`
+      ? `${getTwitchPlatformFeatureBaseUrl()}/v/overlay?token=${encodeURIComponent(settings.overlay_token)}`
       : null,
     overlayToken: settings.overlay_token,
   };
@@ -981,7 +981,7 @@ async function listUnfulfilledRewardRedemptions(db: Database, rewardId: string) 
 export const twitchGiveawaysModuleHandler: TwitchModuleHandler = {
   moduleKey: 'giveaways',
   label: 'Giveaways',
-  href: '/v/giveaways/',
+  href: '/v?tab=live',
   subscriptionTypes: [GIVEAWAY_REDEMPTION_SUBSCRIPTION],
 
   buildHealth(db): TwitchModuleHealth {
@@ -1004,7 +1004,7 @@ export const twitchGiveawaysModuleHandler: TwitchModuleHandler = {
     return {
       key: 'giveaways',
       label: 'Loot chest giveaways',
-      href: '/v/giveaways/',
+      href: '/v?tab=live',
       status,
       summary,
       chips: [
@@ -1043,7 +1043,7 @@ export const twitchGameLoginHref = twitchPlatformLoginHref;
 export const requireTwitchGameOperator = requireTwitchPlatformOperator;
 
 export async function beginTwitchConnect(actor: Awaited<ReturnType<typeof requireTwitchPlatformOperator>>) {
-  return beginTwitchPlatformConnect(actor, '/v/giveaways/');
+  return beginTwitchPlatformConnect(actor, '/v?tab=live');
 }
 
 export async function completeTwitchConnect(params: {

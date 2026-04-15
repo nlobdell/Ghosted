@@ -248,8 +248,8 @@ function randomToken(bytes = 24) {
 }
 
 function normalizedNextPath(nextPath?: string | null) {
-  const value = String(nextPath ?? '/v/twitch/').trim();
-  if (!value.startsWith('/')) return '/v/twitch/';
+  const value = String(nextPath ?? '/v').trim();
+  if (!value.startsWith('/')) return '/v';
   return value;
 }
 
@@ -270,7 +270,7 @@ export function isTwitchPlatformOperator(user: Pick<TwitchOperatorUser, 'discord
   return operatorIds.size > 0 && operatorIds.has(String(user.discord_id ?? '').trim());
 }
 
-export function twitchPlatformLoginHref(nextPath = '/v/twitch/') {
+export function twitchPlatformLoginHref(nextPath = '/v') {
   const encodedNext = encodeURIComponent(normalizedNextPath(nextPath));
   return process.env.ENABLE_DEV_AUTH === 'true'
     ? `/auth/dev-login?next=${encodedNext}`
@@ -381,7 +381,7 @@ function migrateLegacyTwitchPlatformState(db: Database) {
       SET oauth_state = ?,
           oauth_state_actor_discord_id = ?,
           oauth_state_expires_at = ?,
-          oauth_state_next_path = COALESCE(oauth_state_next_path, '/v/giveaways/'),
+          oauth_state_next_path = COALESCE(oauth_state_next_path, '/v?tab=live'),
           updated_at = ?
       WHERE singleton_key = ?
     `).run(
