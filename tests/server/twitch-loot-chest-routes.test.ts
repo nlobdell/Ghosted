@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ServerTestContext } from './test-utils';
+import type { LootChestGameState } from '@/lib/types';
 import {
   cleanupServerTestEnvironment,
   insertUser,
@@ -22,6 +23,7 @@ vi.mock('next/headers', () => ({
 
 import { GET as getPlatformStateRoute } from '@/app/api/v/twitch/state/route';
 import { GET as getPlatformCallbackRoute } from '@/app/api/v/twitch/callback/route';
+import { POST as postPlatformDisconnectRoute } from '@/app/api/v/twitch/disconnect/route';
 import { POST as postPlatformEventSubRoute } from '@/app/api/v/twitch/eventsub/route';
 import { GET as getGiveawayBuildRoute } from '@/app/api/v/giveaways/build/route';
 import { GET as getGiveawayStateRoute } from '@/app/api/v/giveaways/state/route';
@@ -280,6 +282,86 @@ describe('twitch platform and loot chest routes', () => {
     expect(payload.state.queue[0].redemptionId).toBe('remote-redemption');
     expect(turnRowsForTests()).toHaveLength(1);
     expect(turnRowsForTests()[0].redemption_id).toBe('remote-redemption');
+  });
+
+  it('disconnects Twitch and clears the managed giveaway session state', async () => {
+    authMock.mockResolvedValue({ user: { id: String(operatorUserId) } });
+    seedConnectedTwitchState(context);
+    insertQueuedLootChestTurnForTests({
+      redemptionId: 'queued-redemption',
+      viewerLogin: 'queued_viewer',
+      viewerDisplayName: 'Queued Viewer',
+    });
+
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === 'https://id.twitch.tv/oauth2/token') {
+        return new Response(JSON.stringify({
+          access_token: 'app-token',
+          expires_in: 3600,
+          token_type: 'bearer',
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (url.includes('/helix/channel_points/custom_rewards') && init?.method === 'PATCH') {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'reward-1',
+            title: 'Loot Chest Spin',
+            prompt: 'Redeem for a host-run Ghosted loot chest turn.',
+            cost: 1000,
+            is_enabled: false,
+            is_paused: true,
+          }],
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (url.includes('/helix/eventsub/subscriptions') && init?.method === 'DELETE') {
+        return new Response(null, { status: 204 });
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }));
+
+    const response = await postPlatformDisconnectRoute();
+    const payload = await response.json() as {
+      platformState: { connection: unknown; subscriptions: unknown[] };
+      giveawayState: LootChestGameState;
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload.platformState.connection).toBeNull();
+    expect(payload.platformState.subscriptions).toHaveLength(0);
+    expect(payload.giveawayState.connection.connected).toBe(false);
+    expect(payload.giveawayState.connection.broadcaster).toBeNull();
+    expect(payload.giveawayState.connection.reward.id).toBeNull();
+    expect(payload.giveawayState.queue).toHaveLength(0);
+    expect(turnRowsForTests()).toHaveLength(0);
+    expect(twitchPlatformStore.getActiveBroadcaster(context.db)).toBeUndefined();
+
+    const settings = context.db.prepare(`
+      SELECT reward_id, broadcaster_user_id, reward_is_enabled
+      FROM twitch_loot_chest_settings
+      WHERE singleton_key = 'default'
+      LIMIT 1
+    `).get() as {
+      reward_id: string | null;
+      broadcaster_user_id: string | null;
+      reward_is_enabled: number;
+    };
+
+    expect(settings.reward_id).toBeNull();
+    expect(settings.broadcaster_user_id).toBeNull();
+    expect(settings.reward_is_enabled).toBe(0);
   });
 
   it('persists accepted webhook deliveries, creates queued turns, and ignores duplicate message ids', async () => {

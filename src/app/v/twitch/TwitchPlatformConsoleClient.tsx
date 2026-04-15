@@ -84,6 +84,17 @@ export default function TwitchPlatformConsoleClient({
     }
   }
 
+  async function handleDisconnect() {
+    await runAction('disconnect', async () => {
+      const result = await getJSON<{ platformState: TwitchPlatformState }>('/api/v/twitch/disconnect', {
+        method: 'POST',
+      });
+      startTransition(() => {
+        setState(result.platformState);
+      });
+    }, 'Twitch disconnected. Reconnect when the next session starts.');
+  }
+
   const connection = state.connection;
   const deliveryCount = state.recentDeliveries.length;
   const subscriptionCount = state.subscriptions.length;
@@ -116,6 +127,16 @@ export default function TwitchPlatformConsoleClient({
         <div className={styles.toolbarActions}>
           <button className="button button--small" type="button" onClick={handleConnect} disabled={busyAction === 'connect'}>
             {busyAction === 'connect' ? 'Redirecting...' : connection ? 'Reconnect Twitch' : 'Connect Twitch'}
+          </button>
+          <button
+            className="button button--secondary button--small"
+            type="button"
+            disabled={!connection || busyAction === 'disconnect'}
+            onClick={() => {
+              void handleDisconnect();
+            }}
+          >
+            {busyAction === 'disconnect' ? 'Disconnecting...' : 'Disconnect Twitch'}
           </button>
           <button
             className="button button--secondary button--small"

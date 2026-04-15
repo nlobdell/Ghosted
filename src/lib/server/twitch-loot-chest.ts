@@ -763,6 +763,42 @@ async function setRewardPaused(db: Database, paused: boolean) {
   });
 }
 
+async function disconnectGiveawayModule(context: TwitchModuleContext) {
+  const settings = getSettingsRow(context.db);
+  if (settings.reward_id && context.config.oauthReady && context.connection.access_token) {
+    try {
+      await context.gateway.userApiRequest<{ data?: TwitchRewardRecord[] }>(context.db, {
+        path: '/channel_points/custom_rewards',
+        method: 'PATCH',
+        query: {
+          broadcaster_id: context.connection.broadcaster_user_id,
+          id: settings.reward_id,
+        },
+        body: {
+          is_enabled: false,
+          is_paused: true,
+        },
+      });
+    } catch {
+      // Disconnecting should still clear the local session even if Twitch already lost the reward.
+    }
+  }
+
+  context.db.prepare(`
+    DELETE FROM twitch_loot_chest_turns
+    WHERE status IN ('queued', 'active')
+  `).run();
+
+  updateSettings(context.db, {
+    broadcaster_user_id: null,
+    reward_id: null,
+    reward_is_paused: 0,
+    reward_is_enabled: 0,
+  });
+
+  await publishLootChestRealtimeUpdate(context.db, buildLootChestClearCue(null));
+}
+
 async function syncGiveawaySubscription(context: TwitchModuleContext, settings = getSettingsRow(context.db)) {
   if (!settings.reward_id) {
     throw new AppError('Create the Twitch reward first.', 400);
@@ -983,6 +1019,10 @@ export const twitchGiveawaysModuleHandler: TwitchModuleHandler = {
   async syncSubscriptions(context) {
     const settings = await syncManagedReward(context.db);
     await syncGiveawaySubscription(context, settings);
+  },
+
+  async disconnect(context) {
+    await disconnectGiveawayModule(context);
   },
 
   async processDelivery(context) {

@@ -4,6 +4,7 @@ import {
   beginTwitchPlatformConnect,
   buildTwitchPlatformState,
   completeTwitchPlatformConnect,
+  disconnectTwitchPlatform,
   replayTwitchPlatformDelivery,
   syncTwitchPlatformSubscriptions,
   twitchEventProcessor,
@@ -45,6 +46,14 @@ export async function completeGhostedTwitchPlatformConnect(params: {
 
 export async function syncGhostedTwitchPlatformSubscriptions() {
   return syncTwitchPlatformSubscriptions(GHOSTED_TWITCH_HANDLERS);
+}
+
+export async function disconnectGhostedTwitchPlatform(actor: GhostedTwitchOperator) {
+  const platformState = await disconnectTwitchPlatform(GHOSTED_TWITCH_HANDLERS);
+  return {
+    platformState,
+    giveawayState: await buildLootChestGameState(actor),
+  };
 }
 
 export async function handleGhostedTwitchPlatformWebhook(request: Request) {

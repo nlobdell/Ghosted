@@ -31,6 +31,10 @@ type TurnActionResponse = {
   scene: LootChestSceneSnapshot;
 };
 
+type DisconnectResponse = {
+  giveawayState: LootChestGameState;
+};
+
 function hostCaption(state: LootChestGameState) {
   if (state.activeTurn) {
     return `${state.activeTurn.viewer.displayName} is live. ${boardStatus(state)}.`;
@@ -531,6 +535,28 @@ export default function TwitchLootChestHostOverlayClient({
     }), 'Turn completed and redemption fulfilled.');
   }
 
+  async function disconnectTwitch() {
+    dismissCue();
+    setBusyAction('disconnect');
+    try {
+      const response = await getJSON<DisconnectResponse>('/api/v/twitch/disconnect', {
+        method: 'POST',
+      });
+      applyLoadedState(response.giveawayState);
+      setMessage({
+        text: 'Twitch disconnected. Reconnect before the next live session.',
+        tone: 'info',
+      });
+    } catch (caught) {
+      setMessage({
+        text: caught instanceof Error ? caught.message : 'Unable to disconnect Twitch.',
+        tone: 'error',
+      });
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   async function performPrimaryAction() {
     if (!activeBoard) {
       if (nextQueuedTurn) {
@@ -651,6 +677,16 @@ export default function TwitchLootChestHostOverlayClient({
                 <Link className="button button--secondary" href="/v/giveaways/">
                   Console
                 </Link>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  disabled={!state.connection.connected || busyAction === 'disconnect'}
+                  onClick={() => {
+                    void disconnectTwitch();
+                  }}
+                >
+                  {busyAction === 'disconnect' ? 'Disconnecting...' : 'Disconnect Twitch'}
+                </button>
                 {state.connection.overlayUrl ? (
                   <Link className="button button--secondary" href={state.connection.overlayUrl}>
                     Public overlay

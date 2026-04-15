@@ -132,6 +132,17 @@ export default function TwitchLootChestConsoleClient({
     }
   }
 
+  async function handleDisconnect() {
+    await runAction('disconnect', async () => {
+      const result = await getJSON<{ giveawayState: LootChestGameState }>('/api/v/twitch/disconnect', {
+        method: 'POST',
+      });
+      startTransition(() => {
+        setState(result.giveawayState);
+      });
+    }, 'Twitch disconnected. Reconnect when the next session starts.');
+  }
+
   function copyOverlayUrl() {
     if (!state.connection.overlayUrl) return;
     void navigator.clipboard.writeText(state.connection.overlayUrl);
@@ -228,6 +239,16 @@ export default function TwitchLootChestConsoleClient({
         <div className={styles.toolbarActions}>
           <button className="button button--small" type="button" onClick={handleConnect} disabled={busyAction === 'connect'}>
             {busyAction === 'connect' ? 'Redirecting...' : state.connection.connected ? 'Reconnect Twitch' : 'Connect Twitch'}
+          </button>
+          <button
+            className="button button--secondary button--small"
+            type="button"
+            disabled={!state.connection.connected || busyAction === 'disconnect'}
+            onClick={() => {
+              void handleDisconnect();
+            }}
+          >
+            {busyAction === 'disconnect' ? 'Disconnecting...' : 'Disconnect Twitch'}
           </button>
           <Link className="button button--secondary button--small" href="/v/giveaways/host/">
             Open host
