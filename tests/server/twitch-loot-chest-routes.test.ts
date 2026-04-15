@@ -25,6 +25,7 @@ import { GET as getPlatformCallbackRoute } from '@/app/api/v/twitch/callback/rou
 import { POST as postPlatformEventSubRoute } from '@/app/api/v/twitch/eventsub/route';
 import { GET as getGiveawayStateRoute } from '@/app/api/v/giveaways/state/route';
 import { GET as getGiveawayCallbackRoute } from '@/app/api/v/giveaways/twitch/callback/route';
+import { POST as postGiveawayPresentationRoute } from '@/app/api/v/giveaways/presentation/route';
 import { POST as postStartTurnRoute } from '@/app/api/v/giveaways/turns/[id]/start/route';
 import { POST as postSelectTurnRoute } from '@/app/api/v/giveaways/turns/[id]/select/route';
 import { POST as postRevealTurnRoute } from '@/app/api/v/giveaways/turns/[id]/reveal/route';
@@ -546,6 +547,36 @@ describe('twitch platform and loot chest routes', () => {
     expect(completePayload.result.board.lastChangedChestIndex).toBe(4);
     expect(completePayload.result.board.chests[4].spriteState).toBe('resolved-prize');
     expect(completePayload.scene.focusTurn.status).toBe('completed');
+  });
+
+  it('publishes authenticated host hover presentation cues without mutating board state', async () => {
+    authMock.mockResolvedValue({ user: { id: String(operatorUserId) } });
+    seedConnectedTwitchState(context);
+    const queuedTurn = insertQueuedLootChestTurnForTests({ viewerLogin: 'hoverer', viewerDisplayName: 'Hover Viewer' });
+
+    await postStartTurnRoute(new Request('http://localhost/api/v/giveaways/turns/1/start', {
+      method: 'POST',
+    }), {
+      params: Promise.resolve({ id: String(queuedTurn.id) }),
+    });
+
+    const response = await postGiveawayPresentationRoute(new Request('http://localhost/api/v/giveaways/presentation', {
+      method: 'POST',
+      body: JSON.stringify({ turnId: queuedTurn.id, chestIndex: 4 }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.cue).toMatchObject({
+      kind: 'hover',
+      turnId: queuedTurn.id,
+      chestIndex: 4,
+    });
+
+    const turnRow = turnRowsForTests()[0];
+    expect(turnRow.selected_chests_json).toBe('[]');
+    expect(turnRow.revealed_chests_json).toBe('[]');
   });
 
   it('stores broadcaster tokens and syncs the managed reward and subscription during connect completion', async () => {

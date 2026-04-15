@@ -5,6 +5,7 @@ import type {
   LootChestBoardChest,
   LootChestChestAnimationState,
   LootChestChestSpriteState,
+  LootChestPresentationCue,
   LootChestSceneSnapshot,
   LootChestTurn,
 } from '@/lib/types';
@@ -117,12 +118,16 @@ function displayAnimationState(
 
 export function LootChestScene({
   scene,
+  presentationCue,
   draftSelections,
   onToggleSelection,
+  onPreviewChest,
 }: {
   scene: LootChestSceneSnapshot;
+  presentationCue?: LootChestPresentationCue | null;
   draftSelections?: number[];
   onToggleSelection?: (index: number) => void;
+  onPreviewChest?: (index: number | null) => void;
 }) {
   const turn = scene.focusTurn;
   const board = turn?.board ?? null;
@@ -166,6 +171,15 @@ export function LootChestScene({
     && board
     && animatedRevision === board.boardRevision,
   );
+  const hoveredChestIndex = presentationCue?.kind === 'hover' && presentationCue.turnId === turn?.id
+    ? presentationCue.chestIndex ?? null
+    : null;
+  const cuedRevealChestIndex = presentationCue?.kind === 'reveal' && presentationCue.turnId === turn?.id
+    ? presentationCue.chestIndex ?? null
+    : null;
+  const cuedResult = presentationCue?.kind === 'result' && presentationCue.turnId === turn?.id
+    ? presentationCue.result ?? null
+    : null;
 
   return (
     <section className={styles.scene}>
@@ -216,13 +230,18 @@ export function LootChestScene({
                 const spriteState = displaySpriteState(chest, board.selectionLimit, selectedIndices, interactive);
                 const animationState = displayAnimationState(chest, spriteState);
                 const animateReveal = Boolean(
-                  changedChestIndex === chest.index
-                  && board.boardRevision === animatedRevision
-                  && chest.revealCue,
+                  (
+                    changedChestIndex === chest.index
+                    && board.boardRevision === animatedRevision
+                    && chest.revealCue
+                  )
+                  || cuedRevealChestIndex === chest.index,
                 );
+                const hovered = hoveredChestIndex === chest.index;
                 const chestClassName = [
                   styles.chest,
                   interactive ? styles.chestInteractive : '',
+                  hovered ? styles.chestHovered : '',
                   spriteState === 'selected' ? styles.chestSelected : '',
                   spriteState === 'locked' ? styles.chestLocked : '',
                   spriteState === 'prize' || spriteState === 'resolved-prize' ? styles.chestPrize : '',
@@ -237,9 +256,14 @@ export function LootChestScene({
                     className={chestClassName}
                     disabled={!interactive}
                     onClick={() => onToggleSelection?.(chest.index)}
+                    onPointerEnter={() => onPreviewChest?.(chest.index)}
+                    onPointerLeave={() => onPreviewChest?.(null)}
+                    onFocus={() => onPreviewChest?.(chest.index)}
+                    onBlur={() => onPreviewChest?.(null)}
                     data-chest-index={chest.index}
                     data-sprite-state={spriteState}
                     data-animation-state={animationState}
+                    data-hovered={hovered ? 'true' : 'false'}
                     data-reveal-cue={chest.revealCue ? 'true' : 'false'}
                     data-active-animation={animateReveal ? 'true' : 'false'}
                   >
@@ -255,11 +279,11 @@ export function LootChestScene({
               })}
             </div>
 
-            {turn?.resolutionCue && resultAsset(turn.resolutionCue.result) ? (
+            {(turn?.resolutionCue || cuedResult) && resultAsset(cuedResult ?? turn?.resolutionCue?.result) ? (
               <div
-                className={`${styles.resultStamp} ${animateResult ? styles.resultStampAnimated : ''}`}
-                style={{ ['--result-asset' as string]: `url("${resultAsset(turn.resolutionCue.result)}")` }}
-                data-result-cue={animateResult ? 'true' : 'false'}
+                className={`${styles.resultStamp} ${(animateResult || Boolean(cuedResult)) ? styles.resultStampAnimated : ''}`}
+                style={{ ['--result-asset' as string]: `url("${resultAsset(cuedResult ?? turn?.resolutionCue?.result)}")` }}
+                data-result-cue={(animateResult || Boolean(cuedResult)) ? 'true' : 'false'}
                 aria-hidden="true"
               />
             ) : null}

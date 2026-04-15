@@ -1,8 +1,14 @@
-import type { LootChestRealtimeSocketMessage, LootChestSceneSnapshot } from '@/lib/types';
+import type {
+  LootChestPresentationCue,
+  LootChestRealtimeSocketMessage,
+  LootChestSceneSnapshot,
+} from '@/lib/types';
 import { SCENE_REALTIME_PORT } from '@/lib/scene-realtime';
 
 export const LOOT_CHEST_REALTIME_PATH = '/ws/giveaways/loot-chest';
 export const LOOT_CHEST_REALTIME_INTERVAL_MS = 250;
+export const LOOT_CHEST_REALTIME_INTERNAL_SNAPSHOT_PATH = '/internal/giveaways/snapshot';
+export const LOOT_CHEST_REALTIME_INTERNAL_CUE_PATH = '/internal/giveaways/cue';
 
 export function buildLootChestSocketSnapshotMessage(
   payload: LootChestSceneSnapshot,
@@ -10,6 +16,17 @@ export function buildLootChestSocketSnapshotMessage(
 ): LootChestRealtimeSocketMessage {
   return {
     type: 'loot-chest:snapshot',
+    payload,
+    sentAt,
+  };
+}
+
+export function buildLootChestSocketCueMessage(
+  payload: LootChestPresentationCue,
+  sentAt = payload.sentAt,
+): LootChestRealtimeSocketMessage {
+  return {
+    type: 'loot-chest:cue',
     payload,
     sentAt,
   };

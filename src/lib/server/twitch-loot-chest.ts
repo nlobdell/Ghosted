@@ -5,6 +5,7 @@ import type { Database } from 'better-sqlite3';
 import type {
   LootChestBoard,
   LootChestChestAnimationState,
+  LootChestPresentationCue,
   LootChestChestSpriteState,
   LootChestGameState,
   LootChestOverlayState,
@@ -19,6 +20,10 @@ import type {
 } from '@/lib/types';
 import { AppError, jsonLoad, utcIso } from '@/lib/server/core';
 import { getDatabase } from '@/lib/server/database';
+import {
+  publishLootChestPresentationCue,
+  publishLootChestSceneSnapshot,
+} from '@/lib/server/giveaway-realtime';
 import { displayName } from '@/lib/server/ghosted-api';
 import {
   beginTwitchPlatformConnect,
@@ -42,6 +47,9 @@ const DEFAULT_REWARD_PROMPT = 'Redeem for a host-run Ghosted loot chest turn.';
 const DEFAULT_REWARD_COST = 1000;
 const GIVEAWAY_REDEMPTION_SUBSCRIPTION = 'channel.channel_points_custom_reward_redemption.add';
 const GIVEAWAY_REDEMPTION_SUBSCRIPTION_VERSION = '1';
+const HOVER_CUE_TTL_MS = 1000;
+const REVEAL_CUE_TTL_MS = 1200;
+const RESULT_CUE_TTL_MS = 1600;
 
 type TwitchRewardRecord = {
   id: string;
@@ -471,8 +479,132 @@ export function buildLootChestSceneSnapshot(db = getDb()): LootChestSceneSnapsho
     publishedAt,
     queueCount: queued.length,
     reward: connectionStateFromRows(db).reward,
-    focusTurn: active ? mapTurnRow(active) : lastResolved ? mapTurnRow(lastResolved) : null,
+      focusTurn: active ? mapTurnRow(active) : lastResolved ? mapTurnRow(lastResolved) : null,
   };
+}
+
+function cueExpiresAt(durationMs: number) {
+  return utcIso(new Date(Date.now() + durationMs));
+}
+
+function buildLootChestClearCue(turnId: number | null = null): LootChestPresentationCue {
+  return {
+    kind: 'clear',
+    turnId,
+    sentAt: utcIso(),
+  };
+}
+
+function buildLootChestHoverCue(turnId: number, chestIndex: number): LootChestPresentationCue {
+  return {
+    kind: 'hover',
+    turnId,
+    chestIndex,
+    sentAt: utcIso(),
+    expiresAt: cueExpiresAt(HOVER_CUE_TTL_MS),
+  };
+}
+
+function buildLootChestRevealCue(turn: LootChestTurn, scene: LootChestSceneSnapshot): LootChestPresentationCue | null {
+  const chestIndex = turn.board?.lastChangedChestIndex ?? turn.resolutionCue?.highlightChestIndex ?? null;
+  if (!Number.isInteger(chestIndex)) {
+    return null;
+  }
+
+  return {
+    kind: 'reveal',
+    turnId: turn.id,
+    chestIndex,
+    sceneRevision: scene.revision,
+    sentAt: utcIso(),
+    expiresAt: cueExpiresAt(REVEAL_CUE_TTL_MS),
+  };
+}
+
+function buildLootChestResultCue(turn: LootChestTurn, scene: LootChestSceneSnapshot): LootChestPresentationCue | null {
+  if (turn.result !== 'win' && turn.result !== 'miss') {
+    return null;
+  }
+
+  return {
+    kind: 'result',
+    turnId: turn.id,
+    chestIndex: turn.resolutionCue?.highlightChestIndex ?? null,
+    result: turn.result,
+    sceneRevision: scene.revision,
+    sentAt: utcIso(),
+    expiresAt: cueExpiresAt(RESULT_CUE_TTL_MS),
+  };
+}
+
+async function publishLootChestRealtimeUpdate(
+  db: Database,
+  cue?: LootChestPresentationCue | null,
+) {
+  const scene = buildLootChestSceneSnapshot(db);
+  await publishLootChestSceneSnapshot(scene);
+  if (cue) {
+    await publishLootChestPresentationCue(cue);
+  }
+  return scene;
+}
+
+export async function publishLootChestTurnActionRealtime(turn: LootChestTurn) {
+  const db = getDb();
+  const scene = buildLootChestSceneSnapshot(db);
+  let cue: LootChestPresentationCue | null = null;
+
+  if (turn.lastAction === 'turn_started' || turn.lastAction === 'chests_selected' || turn.lastAction === 'turn_completed') {
+    cue = buildLootChestClearCue(turn.id);
+  } else if (turn.lastAction === 'chest_revealed') {
+    cue = turn.result === 'pending'
+      ? buildLootChestRevealCue(turn, scene)
+      : buildLootChestResultCue(turn, scene);
+  }
+
+  await publishLootChestSceneSnapshot(scene);
+  if (cue) {
+    await publishLootChestPresentationCue(cue);
+  }
+  return scene;
+}
+
+export async function publishLootChestOperatorPresentation(input: {
+  turnId?: unknown;
+  chestIndex?: unknown;
+}) {
+  const db = getDb();
+  await requireTwitchPlatformOperator();
+  const activeTurn = activeTurnRow(db);
+  const board = buildTurnBoard(activeTurn);
+
+  if (!activeTurn || !board || board.allSelectionsLocked || board.revealedChests.length > 0) {
+    const clearCue = buildLootChestClearCue(activeTurn?.id ?? null);
+    await publishLootChestPresentationCue(clearCue);
+    return clearCue;
+  }
+
+  const requestedTurnId = Number.parseInt(String(input.turnId ?? activeTurn.id), 10);
+  if (!Number.isFinite(requestedTurnId) || requestedTurnId !== activeTurn.id) {
+    const clearCue = buildLootChestClearCue(activeTurn.id);
+    await publishLootChestPresentationCue(clearCue);
+    return clearCue;
+  }
+
+  if (input.chestIndex === null || input.chestIndex === undefined || input.chestIndex === '') {
+    const clearCue = buildLootChestClearCue(activeTurn.id);
+    await publishLootChestPresentationCue(clearCue);
+    return clearCue;
+  }
+
+  const chestIndex = Number.parseInt(String(input.chestIndex), 10);
+  if (!Number.isInteger(chestIndex) || chestIndex < 0 || chestIndex >= CHEST_COUNT) {
+    throw new AppError('Chest index is invalid.', 400);
+  }
+
+  const cue = buildLootChestHoverCue(activeTurn.id, chestIndex);
+  await publishLootChestPresentationCue(cue);
+  return cue;
 }
 
 function findGiveawaySubscription(db: Database, broadcasterUserId?: string | null, rewardId?: string | null) {
@@ -823,6 +955,7 @@ export const twitchGiveawaysModuleHandler: TwitchModuleHandler = {
       return 'ignored';
     }
     upsertTurnFromRedemption(context.db, event);
+    await publishLootChestRealtimeUpdate(context.db);
     return 'processed';
   },
 };

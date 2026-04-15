@@ -4,12 +4,16 @@ import type { AddressInfo } from 'node:net';
 import type Database from 'better-sqlite3';
 import { WebSocketServer, type WebSocket } from 'ws';
 import {
+  buildLootChestSocketCueMessage,
   buildLootChestSocketErrorMessage,
   buildLootChestSocketSnapshotMessage,
+  LOOT_CHEST_REALTIME_INTERNAL_CUE_PATH,
+  LOOT_CHEST_REALTIME_INTERNAL_SNAPSHOT_PATH,
   LOOT_CHEST_REALTIME_INTERVAL_MS,
   LOOT_CHEST_REALTIME_PATH,
 } from '@/lib/giveaway-realtime';
 import type {
+  LootChestPresentationCue,
   LootChestRealtimeSocketMessage,
   LootChestSceneSnapshot,
   ScenePresencePayload,
@@ -59,6 +63,27 @@ type SceneRealtimeStartResult = {
   port: number;
 };
 
+async function readRequestJson<T>(request: IncomingMessage): Promise<T> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  const rawBody = Buffer.concat(chunks).toString('utf8');
+  return JSON.parse(rawBody || '{}') as T;
+}
+
+function cueIsExpired(cue: LootChestPresentationCue | null | undefined) {
+  if (!cue?.expiresAt) return false;
+  return Date.parse(cue.expiresAt) <= Date.now();
+}
+
+function cueMatchesSnapshot(cue: LootChestPresentationCue | null | undefined, snapshot: LootChestSceneSnapshot) {
+  if (!cue || cue.kind === 'clear') return false;
+  if (cue.turnId === null) return true;
+  return snapshot.focusTurn?.id === cue.turnId;
+}
+
 export function resolveSceneRealtimePort() {
   return envInt('SCENE_REALTIME_PORT', SCENE_REALTIME_PORT);
 }
@@ -93,6 +118,38 @@ export function createSceneRealtimeServer(options: SceneRealtimeServerOptions = 
   const logger = options.logger ?? console;
 
   const server = createServer((request, response) => {
+    if (request.method === 'POST' && request.url === LOOT_CHEST_REALTIME_INTERNAL_SNAPSHOT_PATH) {
+      void (async () => {
+        try {
+          const payload = await readRequestJson<LootChestSceneSnapshot>(request);
+          broadcastGiveawaySnapshot(payload);
+          response.writeHead(202, { 'content-type': 'application/json' });
+          response.end(JSON.stringify({ ok: true }));
+        } catch (error) {
+          logger.warn('[scene-realtime] Failed to accept internal giveaway snapshot.', error);
+          response.writeHead(400, { 'content-type': 'application/json' });
+          response.end(JSON.stringify({ error: 'Invalid giveaway snapshot payload.' }));
+        }
+      })();
+      return;
+    }
+
+    if (request.method === 'POST' && request.url === LOOT_CHEST_REALTIME_INTERNAL_CUE_PATH) {
+      void (async () => {
+        try {
+          const payload = await readRequestJson<LootChestPresentationCue>(request);
+          broadcastGiveawayCue(payload);
+          response.writeHead(202, { 'content-type': 'application/json' });
+          response.end(JSON.stringify({ ok: true }));
+        } catch (error) {
+          logger.warn('[scene-realtime] Failed to accept internal giveaway cue.', error);
+          response.writeHead(400, { 'content-type': 'application/json' });
+          response.end(JSON.stringify({ error: 'Invalid giveaway cue payload.' }));
+        }
+      })();
+      return;
+    }
+
     if (request.url === '/health') {
       response.writeHead(200, { 'content-type': 'application/json' });
       response.end(JSON.stringify({
@@ -118,6 +175,7 @@ export function createSceneRealtimeServer(options: SceneRealtimeServerOptions = 
   let latestSceneMessageAt = 0;
   let latestGiveawayMessage: LootChestRealtimeSocketMessage | null = null;
   let latestGiveawayMessageAt = 0;
+  let latestGiveawayCue: LootChestPresentationCue | null = null;
   let scenePublishInFlight: Promise<void> | null = null;
   let giveawayPublishInFlight: Promise<void> | null = null;
 
@@ -135,6 +193,21 @@ export function createSceneRealtimeServer(options: SceneRealtimeServerOptions = 
     for (const client of giveawayWss.clients) {
       sendSocketMessage(client, message);
     }
+  };
+
+  const broadcastGiveawayCue = (cue: LootChestPresentationCue) => {
+    latestGiveawayCue = cue.kind === 'clear' ? null : cue;
+    broadcastGiveaway(buildLootChestSocketCueMessage(cue));
+  };
+
+  const broadcastGiveawaySnapshot = (
+    payload: LootChestSceneSnapshot,
+    sentAt = new Date().toISOString(),
+  ) => {
+    if (!cueMatchesSnapshot(latestGiveawayCue, payload)) {
+      latestGiveawayCue = null;
+    }
+    broadcastGiveaway(buildLootChestSocketSnapshotMessage(payload, sentAt));
   };
 
   const publishSceneSnapshot = async (forceRefresh = false) => {
@@ -177,7 +250,7 @@ export function createSceneRealtimeServer(options: SceneRealtimeServerOptions = 
     giveawayPublishInFlight = (async () => {
       try {
         const payload = await buildGiveawaySnapshot({ now, db, forceRefresh });
-        broadcastGiveaway(buildLootChestSocketSnapshotMessage(payload, new Date(now).toISOString()));
+        broadcastGiveawaySnapshot(payload, new Date(now).toISOString());
       } catch (error) {
         logger.error('[scene-realtime] Failed to publish giveaway snapshot.', error);
         broadcastGiveaway(buildLootChestSocketErrorMessage(true));
@@ -214,7 +287,6 @@ export function createSceneRealtimeServer(options: SceneRealtimeServerOptions = 
 
     socket.destroy();
   });
-
   sceneWss.on('connection', (socket: WebSocket, request: IncomingMessage) => {
     logger.info(
       `[scene-realtime] Scene client connected from ${request.socket.remoteAddress ?? 'unknown'} (${sceneWss.clients.size} total).`,
@@ -240,6 +312,10 @@ export function createSceneRealtimeServer(options: SceneRealtimeServerOptions = 
       sendSocketMessage(socket, latestGiveawayMessage);
     } else {
       void publishGiveawaySnapshot();
+    }
+
+    if (latestGiveawayCue && !cueIsExpired(latestGiveawayCue)) {
+      sendSocketMessage(socket, buildLootChestSocketCueMessage(latestGiveawayCue));
     }
 
     socket.on('close', () => {
@@ -306,6 +382,16 @@ export function createSceneRealtimeServer(options: SceneRealtimeServerOptions = 
     },
     async publishGiveawaySnapshot(forceRefresh = false) {
       await publishGiveawaySnapshot(forceRefresh);
+    },
+    async pushGiveawaySnapshot(snapshot: LootChestSceneSnapshot) {
+      broadcastGiveawaySnapshot(snapshot);
+    },
+    async publishGiveawayCue(cue: LootChestPresentationCue) {
+      if (cue.kind !== 'clear' && cueIsExpired(cue)) {
+        latestGiveawayCue = null;
+        return;
+      }
+      broadcastGiveawayCue(cue);
     },
     get clientCount() {
       return sceneWss.clients.size;

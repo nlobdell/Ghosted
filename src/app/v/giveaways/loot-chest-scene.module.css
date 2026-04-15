@@ -9,7 +9,7 @@
   border: 1px solid rgba(191, 179, 255, 0.16);
   border-radius: 0.9rem;
   background: rgba(9, 10, 15, 0.96);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.24);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
 }
 
 .sceneHeader,
@@ -158,6 +158,17 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
+.chestHovered {
+  border-color: rgba(191, 179, 255, 0.34);
+  background:
+    radial-gradient(circle at center, rgba(191, 179, 255, 0.12), transparent 66%);
+}
+
+.chestHovered .chestSprite {
+  filter: drop-shadow(0 0 20px rgba(191, 179, 255, 0.28));
+  transform: translateY(-3px) scale(1.02);
+}
+
 .chestSprite {
   position: absolute;
   inset: 0;
@@ -295,6 +306,11 @@
   .chestSprite,
   .chestInteractive:hover {
     transition-duration: 0.01ms;
+  }
+
+  .chestHovered .chestSprite {
+    filter: none;
+    transform: none;
   }
 
   .chestReveal .chestSprite,

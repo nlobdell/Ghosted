@@ -2,7 +2,11 @@
 
 import { useEffect, useEffectEvent, useRef } from 'react';
 import { resolveLootChestRealtimeClientUrl } from '@/lib/giveaway-realtime';
-import type { LootChestRealtimeSocketMessage, LootChestSceneSnapshot } from '@/lib/types';
+import type {
+  LootChestPresentationCue,
+  LootChestRealtimeSocketMessage,
+  LootChestSceneSnapshot,
+} from '@/lib/types';
 
 const FALLBACK_POLL_MS = 1500;
 const SOCKET_RECONNECT_BASE_MS = 600;
@@ -16,6 +20,15 @@ function sceneSortKey(scene: LootChestSceneSnapshot) {
   return Number.isFinite(scene.revision)
     ? scene.revision
     : Date.parse(scene.publishedAt) || 0;
+}
+
+function cueSortKey(cue: LootChestPresentationCue) {
+  return Date.parse(cue.sentAt) || Date.now();
+}
+
+function cueMatchesScene(cue: LootChestPresentationCue, scene: LootChestSceneSnapshot) {
+  if (cue.turnId === null) return true;
+  return scene.focusTurn?.id === cue.turnId;
 }
 
 function shouldApplySnapshot(current: LootChestSceneSnapshot | null, next: LootChestSceneSnapshot) {
@@ -32,21 +45,84 @@ function shouldApplySnapshot(current: LootChestSceneSnapshot | null, next: LootC
 export function useLootChestSceneTransport<TState extends SceneCarrier>({
   overlayToken,
   currentScene,
+  currentCue,
   fetchState,
   applyState,
   applyScene,
+  applyCue,
 }: {
   overlayToken?: string | null;
   currentScene: LootChestSceneSnapshot;
+  currentCue: LootChestPresentationCue | null;
   fetchState: () => Promise<TState>;
   applyState: (nextState: TState) => void;
   applyScene: (nextScene: LootChestSceneSnapshot) => void;
+  applyCue: (nextCue: LootChestPresentationCue | null) => void;
 }) {
   const sceneRef = useRef(currentScene);
+  const cueRef = useRef(currentCue);
+  const cueKeyRef = useRef(currentCue ? cueSortKey(currentCue) : 0);
+  const cueTimeoutRef = useRef(0);
+  const applyCueRef = useRef(applyCue);
 
   useEffect(() => {
     sceneRef.current = currentScene;
   }, [currentScene]);
+
+  useEffect(() => {
+    cueRef.current = currentCue;
+  }, [currentCue]);
+
+  useEffect(() => {
+    applyCueRef.current = applyCue;
+  }, [applyCue]);
+
+  function dismissCue() {
+    if (cueTimeoutRef.current > 0) {
+      window.clearTimeout(cueTimeoutRef.current);
+      cueTimeoutRef.current = 0;
+    }
+    cueRef.current = null;
+    applyCueRef.current(null);
+  }
+
+  function syncCue(nextCue: LootChestPresentationCue) {
+    const nextKey = cueSortKey(nextCue);
+    if (nextKey < cueKeyRef.current) {
+      return;
+    }
+
+    cueKeyRef.current = nextKey;
+
+    if (cueTimeoutRef.current > 0) {
+      window.clearTimeout(cueTimeoutRef.current);
+      cueTimeoutRef.current = 0;
+    }
+
+    if (nextCue.kind === 'clear') {
+      cueRef.current = null;
+      applyCueRef.current(null);
+      return;
+    }
+
+    if (!cueMatchesScene(nextCue, sceneRef.current)) {
+      return;
+    }
+
+    cueRef.current = nextCue;
+    applyCueRef.current(nextCue);
+
+    if (nextCue.expiresAt) {
+      const ttlMs = Math.max(0, Date.parse(nextCue.expiresAt) - Date.now());
+      cueTimeoutRef.current = window.setTimeout(() => {
+        if (cueKeyRef.current !== nextKey) {
+          return;
+        }
+        cueRef.current = null;
+        applyCueRef.current(null);
+      }, ttlMs);
+    }
+  }
 
   const syncScene = useEffectEvent((nextScene: LootChestSceneSnapshot) => {
     if (!shouldApplySnapshot(sceneRef.current, nextScene)) {
@@ -54,12 +130,20 @@ export function useLootChestSceneTransport<TState extends SceneCarrier>({
     }
     sceneRef.current = nextScene;
     applyScene(nextScene);
+
+    if (cueRef.current && !cueMatchesScene(cueRef.current, nextScene)) {
+      dismissCue();
+    }
   });
 
   const loadFallbackState = useEffectEvent(async () => {
     const nextState = await fetchState();
     sceneRef.current = nextState.scene;
     applyState(nextState);
+
+    if (cueRef.current && !cueMatchesScene(cueRef.current, nextState.scene)) {
+      dismissCue();
+    }
   });
 
   useEffect(() => {
@@ -166,6 +250,12 @@ export function useLootChestSceneTransport<TState extends SceneCarrier>({
               return;
             }
 
+            if (message.type === 'loot-chest:cue') {
+              stopFallbackPolling();
+              syncCue(message.payload);
+              return;
+            }
+
             if (message.type === 'loot-chest:error' && message.retryable) {
               startFallbackPolling(false);
             }
@@ -215,9 +305,18 @@ export function useLootChestSceneTransport<TState extends SceneCarrier>({
       disposed = true;
       clearReconnectTimeout();
       stopFallbackPolling();
+      if (cueTimeoutRef.current > 0) {
+        window.clearTimeout(cueTimeoutRef.current);
+        cueTimeoutRef.current = 0;
+      }
       document.removeEventListener('visibilitychange', syncVisibility);
       window.removeEventListener('focus', syncVisibility);
       closeSocket();
     };
   }, [overlayToken]);
+
+  return {
+    syncCue,
+    dismissCue,
+  };
 }

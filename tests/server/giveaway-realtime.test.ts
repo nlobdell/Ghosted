@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WebSocket } from 'ws';
-import type { LootChestRealtimeSocketMessage, LootChestSceneSnapshot } from '@/lib/types';
+import type {
+  LootChestPresentationCue,
+  LootChestRealtimeSocketMessage,
+  LootChestSceneSnapshot,
+} from '@/lib/types';
 import { createSceneRealtimeServer } from '@/lib/server/scene-realtime';
 
 function waitForMessage(socket: WebSocket) {
@@ -37,6 +41,18 @@ function makeSnapshot(revision: number): LootChestSceneSnapshot {
       isEnabled: true,
     },
     focusTurn: null,
+  };
+}
+
+function makeCue(overrides: Partial<LootChestPresentationCue> = {}): LootChestPresentationCue {
+  return {
+    kind: overrides.kind ?? 'hover',
+    turnId: overrides.turnId ?? 7,
+    chestIndex: overrides.chestIndex ?? 4,
+    sentAt: overrides.sentAt ?? new Date().toISOString(),
+    expiresAt: overrides.expiresAt ?? new Date(Date.now() + 1000).toISOString(),
+    result: overrides.result ?? null,
+    sceneRevision: overrides.sceneRevision ?? null,
   };
 }
 
@@ -92,6 +108,34 @@ describe('giveaway realtime server', () => {
       type: 'loot-chest:error',
       code: 'unavailable',
       retryable: true,
+    });
+
+    socket.close();
+    await server.stop();
+  });
+
+  it('broadcasts transient giveaway cues to connected clients', async () => {
+    const server = createSceneRealtimeServer({
+      host: '127.0.0.1',
+      port: 0,
+      giveawayTickMs: 1000,
+      logger: { info() {}, warn() {}, error() {} },
+      buildGiveawaySnapshot: vi.fn(async () => makeSnapshot(1)),
+      isValidGiveawayToken: vi.fn((token) => token === 'overlay-token'),
+    });
+
+    const start = await server.start();
+    const socket = new WebSocket(`ws://${start.host}:${start.port}${start.giveawayPath}?overlayToken=overlay-token`);
+    await waitForMessage(socket);
+
+    const cue = makeCue();
+    await server.publishGiveawayCue(cue);
+    const message = await waitForMessage(socket);
+
+    expect(message).toEqual({
+      type: 'loot-chest:cue',
+      payload: cue,
+      sentAt: cue.sentAt,
     });
 
     socket.close();

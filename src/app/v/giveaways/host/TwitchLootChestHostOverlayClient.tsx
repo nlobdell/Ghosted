@@ -3,12 +3,18 @@
 import Link from 'next/link';
 import { startTransition, useEffect, useEffectEvent, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { formatDate, getJSON } from '@/lib/api';
-import type { LootChestGameState, LootChestSceneSnapshot, LootChestTurn } from '@/lib/types';
+import type {
+  LootChestGameState,
+  LootChestPresentationCue,
+  LootChestSceneSnapshot,
+  LootChestTurn,
+} from '@/lib/types';
 import { LootChestScene } from '../LootChestScene';
 import { useLootChestSceneTransport } from '../useLootChestSceneTransport';
 import styles from './page.module.css';
 
 const HOST_STATE_POLL_MS = 2500;
+const PRESENTATION_THROTTLE_MS = 90;
 
 type HostMessage = {
   text: string;
@@ -109,8 +115,20 @@ export default function TwitchLootChestHostOverlayClient({
   const [message, setMessage] = useState<HostMessage>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [draftSelections, setDraftSelections] = useState<number[]>(initialState.activeTurn?.board?.selectedChests ?? []);
+  const [presentationCue, setPresentationCue] = useState<LootChestPresentationCue | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState(() => Date.now());
   const pollInFlightRef = useRef(false);
+  const presentationThrottleRef = useRef<{
+    lastSentAt: number;
+    lastSentKey: string | null;
+    queued: { turnId: number; chestIndex: number | null } | null;
+    timeoutId: number;
+  }>({
+    lastSentAt: 0,
+    lastSentKey: null,
+    queued: null,
+    timeoutId: 0,
+  });
 
   const activeTurn = state.activeTurn;
   const activeBoard = activeTurn?.board ?? null;
@@ -127,6 +145,49 @@ export default function TwitchLootChestHostOverlayClient({
         : [],
     );
   }, [activeTurnId, selectedChestKey, revealedChestKey]);
+
+  useEffect(() => {
+    presentationThrottleRef.current.lastSentAt = 0;
+    presentationThrottleRef.current.lastSentKey = null;
+    presentationThrottleRef.current.queued = null;
+    if (presentationThrottleRef.current.timeoutId > 0) {
+      window.clearTimeout(presentationThrottleRef.current.timeoutId);
+      presentationThrottleRef.current.timeoutId = 0;
+    }
+    setPresentationCue(null);
+  }, [activeTurnId, revealedChestKey]);
+
+  useEffect(() => {
+    const throttleState = presentationThrottleRef.current;
+    return () => {
+      if (throttleState.timeoutId > 0) {
+        window.clearTimeout(throttleState.timeoutId);
+      }
+    };
+  }, []);
+
+  function cueKey(input: { turnId: number; chestIndex: number | null }) {
+    return `${input.turnId}:${input.chestIndex ?? 'clear'}`;
+  }
+
+  function makeOptimisticCue(input: { turnId: number; chestIndex: number | null }): LootChestPresentationCue {
+    const sentAt = new Date().toISOString();
+    if (input.chestIndex === null) {
+      return {
+        kind: 'clear',
+        turnId: input.turnId,
+        sentAt,
+      };
+    }
+
+    return {
+      kind: 'hover',
+      turnId: input.turnId,
+      chestIndex: input.chestIndex,
+      sentAt,
+      expiresAt: new Date(Date.now() + 1000).toISOString(),
+    };
+  }
 
   function applyLoadedState(nextState: LootChestGameState) {
     startTransition(() => {
@@ -160,6 +221,60 @@ export default function TwitchLootChestHostOverlayClient({
     void loadState(quiet);
   });
 
+  async function publishPresentationCue(input: { turnId: number; chestIndex: number | null }) {
+    const optimisticCue = makeOptimisticCue(input);
+    syncCue(optimisticCue);
+
+    try {
+      const response = await getJSON<{ cue: LootChestPresentationCue }>('/api/v/giveaways/presentation', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      });
+      syncCue(response.cue);
+    } catch {
+      // Hover sync is best-effort. Keep the host surface responsive even if the sidecar is unavailable.
+    }
+  }
+
+  function flushQueuedPresentationCue() {
+    const queued = presentationThrottleRef.current.queued;
+    presentationThrottleRef.current.queued = null;
+    presentationThrottleRef.current.timeoutId = 0;
+    if (!queued) {
+      return;
+    }
+
+    presentationThrottleRef.current.lastSentAt = Date.now();
+    presentationThrottleRef.current.lastSentKey = cueKey(queued);
+    void publishPresentationCue(queued);
+  }
+
+  function queuePresentationCue(input: { turnId: number; chestIndex: number | null }) {
+    const nextKey = cueKey(input);
+    if (presentationThrottleRef.current.lastSentKey === nextKey) {
+      syncCue(makeOptimisticCue(input));
+      return;
+    }
+
+    const elapsedMs = Date.now() - presentationThrottleRef.current.lastSentAt;
+    if (elapsedMs >= PRESENTATION_THROTTLE_MS) {
+      presentationThrottleRef.current.lastSentAt = Date.now();
+      presentationThrottleRef.current.lastSentKey = nextKey;
+      void publishPresentationCue(input);
+      return;
+    }
+
+    presentationThrottleRef.current.queued = input;
+    syncCue(makeOptimisticCue(input));
+    if (presentationThrottleRef.current.timeoutId > 0) {
+      return;
+    }
+
+    presentationThrottleRef.current.timeoutId = window.setTimeout(() => {
+      flushQueuedPresentationCue();
+    }, PRESENTATION_THROTTLE_MS - elapsedMs);
+  }
+
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       refreshState(true);
@@ -184,9 +299,10 @@ export default function TwitchLootChestHostOverlayClient({
     };
   }, []);
 
-  useLootChestSceneTransport({
+  const { syncCue, dismissCue } = useLootChestSceneTransport({
     overlayToken,
     currentScene: state.scene,
+    currentCue: presentationCue,
     fetchState: () => getJSON<LootChestGameState>('/api/v/giveaways/state'),
     applyState: (nextState) => {
       applyLoadedState(nextState);
@@ -196,6 +312,11 @@ export default function TwitchLootChestHostOverlayClient({
         setState((current) => ({ ...current, scene: nextScene }));
       });
     },
+    applyCue: (nextCue) => {
+      startTransition(() => {
+        setPresentationCue(nextCue);
+      });
+    },
   });
 
   async function runAction(
@@ -203,6 +324,7 @@ export default function TwitchLootChestHostOverlayClient({
     action: () => Promise<TurnActionResponse>,
     successText?: string,
   ) {
+    dismissCue();
     setBusyAction(actionKey);
     try {
       const response = await action();
@@ -235,6 +357,18 @@ export default function TwitchLootChestHostOverlayClient({
           ? current
           : [...current, index]
     ));
+  }
+
+  function previewChest(index: number | null) {
+    if (!activeTurn || !activeBoard || activeBoard.allSelectionsLocked || activeBoard.revealedChests.length > 0) {
+      dismissCue();
+      return;
+    }
+
+    queuePresentationCue({
+      turnId: activeTurn.id,
+      chestIndex: index,
+    });
   }
 
   async function startTurn(turnId: number, viewerName: string) {
@@ -335,6 +469,7 @@ export default function TwitchLootChestHostOverlayClient({
     if (event.key === 'Escape') {
       setDraftSelections(activeBoard?.selectedChests ?? []);
       setMessage(null);
+      dismissCue();
     }
   }
 
@@ -389,8 +524,10 @@ export default function TwitchLootChestHostOverlayClient({
       <section className={styles.sceneStage} onKeyDown={handleBoardKeyDown} tabIndex={0}>
         <LootChestScene
           scene={state.scene}
+          presentationCue={presentationCue}
           draftSelections={draftSelections}
           onToggleSelection={toggleSelection}
+          onPreviewChest={previewChest}
         />
       </section>
 

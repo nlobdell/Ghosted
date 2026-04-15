@@ -267,4 +267,34 @@ describe('LootChestScene', () => {
       expect(container.querySelector('[data-result-cue="true"]')).not.toBeNull();
     });
   });
+
+  it('mirrors a host hover cue onto the shared scene without enabling public controls', () => {
+    const board = makeBoard({
+      phase: 'selection',
+      selectedChests: [],
+      revealedChests: [],
+      allSelectionsLocked: false,
+      remainingSelections: 3,
+      remainingReveals: 0,
+    });
+
+    const { container } = render(
+      <LootChestScene
+        scene={makeScene({
+          queueCount: 1,
+          focusTurn: makeTurn({ board, phase: 'selection' }),
+        })}
+        presentationCue={{
+          kind: 'hover',
+          turnId: 7,
+          chestIndex: 4,
+          sentAt: '2026-04-14T19:31:05.000Z',
+          expiresAt: '2026-04-14T19:31:06.000Z',
+        }}
+      />,
+    );
+
+    const hoveredChest = container.querySelector('[data-chest-index="4"]');
+    expect(hoveredChest?.getAttribute('data-hovered')).toBe('true');
+  });
 });

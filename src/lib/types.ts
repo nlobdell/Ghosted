@@ -947,10 +947,27 @@ export interface LootChestSceneSnapshot {
   focusTurn: LootChestTurn | null;
 }
 
+export type LootChestPresentationCueKind = 'hover' | 'clear' | 'reveal' | 'result';
+
+export interface LootChestPresentationCue {
+  kind: LootChestPresentationCueKind;
+  turnId: number | null;
+  chestIndex?: number | null;
+  result?: Exclude<LootChestTurnResult, 'pending'> | null;
+  sceneRevision?: number | null;
+  sentAt: string;
+  expiresAt?: string | null;
+}
+
 export type LootChestRealtimeSocketMessage =
   | {
     type: 'loot-chest:snapshot';
     payload: LootChestSceneSnapshot;
+    sentAt: string;
+  }
+  | {
+    type: 'loot-chest:cue';
+    payload: LootChestPresentationCue;
     sentAt: string;
   }
   | {
