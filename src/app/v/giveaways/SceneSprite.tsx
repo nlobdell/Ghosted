@@ -21,11 +21,12 @@ function spriteEndTranslate(frames: number) {
 }
 
 function spriteAnchorShift(spec: SceneSpriteSpec) {
-  if (!spec.visibleBounds || !spec.frameWidth) {
+  const bounds = spec.anchorBounds ?? spec.visibleBounds;
+  if (!bounds || !spec.frameWidth) {
     return '0%';
   }
 
-  const visibleCenter = (spec.visibleBounds.left + spec.visibleBounds.right + 1) / 2;
+  const visibleCenter = (bounds.left + bounds.right + 1) / 2;
   const frameCenter = spec.frameWidth / 2;
   return `${((frameCenter - visibleCenter) / spec.frameWidth) * 100}%`;
 }

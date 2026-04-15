@@ -270,7 +270,9 @@ export function LootChestScene({
               {board.chests.map((chest) => {
                 const spriteState = displaySpriteState(chest, board.selectionLimit, selectedIndices, interactive);
                 const animationState = displayAnimationState(chest, spriteState);
-                const spriteSpec = getChestSpriteSpec(spriteState, animationState);
+                const spriteSpec = getChestSpriteSpec(spriteState, animationState, {
+                  winner: chest.containsPrize || spriteState === 'prize' || spriteState === 'resolved-prize',
+                });
                 const selectionRow = selectionRowActive ? selectionRowPosition(board, chest.index) : null;
                 const dormant = selectionRowActive && selectionRow === null;
                 const animateReveal = Boolean(

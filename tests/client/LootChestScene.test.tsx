@@ -246,6 +246,76 @@ describe('LootChestScene', () => {
     });
   });
 
+  it('uses the winner strip when a prize chest begins opening', async () => {
+    const { container, rerender } = render(
+      <LootChestScene
+        scene={makeScene({
+          revision: 2,
+          focusTurn: makeTurn({
+            board: makeBoard({
+              phase: 'locked',
+              boardRevision: 2,
+              selectedChests: [1, 4, 8],
+              revealedChests: [],
+              allSelectionsLocked: true,
+              remainingSelections: 0,
+              remainingReveals: 3,
+              lastAction: 'chests_selected',
+              prizeChestIndex: 4,
+            }, {
+              1: { spriteState: 'locked', animationState: 'idle' },
+              4: { spriteState: 'locked', animationState: 'idle' },
+              8: { spriteState: 'locked', animationState: 'idle' },
+            }),
+            phase: 'locked',
+            lastAction: 'chests_selected',
+          }),
+        })}
+      />,
+    );
+
+    rerender(
+      <LootChestScene
+        scene={makeScene({
+          revision: 3,
+          focusTurn: makeTurn({
+            board: makeBoard({
+              phase: 'revealing',
+              boardRevision: 3,
+              selectedChests: [1, 4, 8],
+              revealedChests: [4],
+              allSelectionsLocked: true,
+              remainingSelections: 0,
+              remainingReveals: 2,
+              lastAction: 'chest_revealed',
+              lastChangedChestIndex: 4,
+              activeAnimationChestIndex: 4,
+              prizeChestIndex: 4,
+            }, {
+              1: { spriteState: 'locked', animationState: 'idle' },
+              4: {
+                revealed: true,
+                containsPrize: true,
+                spriteState: 'opening',
+                animationState: 'opening',
+                revealCue: true,
+              },
+              8: { spriteState: 'locked', animationState: 'idle' },
+            }),
+            phase: 'revealing',
+            lastAction: 'chest_revealed',
+          }),
+        })}
+      />,
+    );
+
+    await waitFor(() => {
+      const prizeChest = container.querySelector('[data-chest-index="4"]');
+      const prizeSprite = prizeChest?.querySelector('[data-sprite-id="chest-opening-winner"]');
+      expect(prizeSprite).not.toBeNull();
+    });
+  });
+
   it('shows the result burst when a resolved board arrives on a new revision', async () => {
     const { container, rerender } = render(
       <LootChestScene
