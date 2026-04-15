@@ -1,9 +1,10 @@
 .hostPage {
   min-height: 100vh;
   display: grid;
-  width: min(100%, 1500px);
-  margin: 0 auto;
-  padding: 0.7rem;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
   background: var(--color-bg-0);
   color: var(--color-text-strong);
 }
@@ -49,6 +50,8 @@
 
 .hostSurface {
   display: grid;
+  width: 100%;
+  min-height: 100vh;
   border: 1px solid rgba(191, 179, 255, 0.14);
   border-radius: 0;
   background: rgba(15, 17, 24, 0.84);
@@ -122,9 +125,10 @@
 .sceneStage {
   display: grid;
   align-items: stretch;
-  width: 100%;
+  width: min(100vw, 1920px);
   min-width: 0;
   aspect-ratio: 16 / 9;
+  justify-self: center;
   align-self: start;
   min-height: 0;
   padding: 0;
