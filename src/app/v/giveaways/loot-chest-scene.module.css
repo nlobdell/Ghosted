@@ -460,7 +460,9 @@
   background: transparent;
 }
 
-.chestHovered .chestSprite {
+.chestHovered .chestSprite,
+.chestSelected .chestSprite,
+.chestLocked .chestSprite {
   filter: drop-shadow(0 0 10px rgba(191, 179, 255, 0.18));
   --chest-sprite-lift: -1px;
 }
@@ -522,12 +524,9 @@
   background: transparent;
 }
 
-.chestSelected .chestSprite {
-  --chest-sprite-lift: -1px;
-}
-
 .chestSelected::after {
-  border-color: rgba(191, 179, 255, 0.14);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .chestLocked {
