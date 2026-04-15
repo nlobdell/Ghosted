@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LootChestScene } from '@/app/v/giveaways/LootChestScene';
-import type { LootChestBoard, LootChestBoardChest, LootChestTurn, TwitchRewardConnectionState } from '@/lib/types';
+import type { LootChestBoard, LootChestBoardChest, LootChestSceneSnapshot, LootChestTurn, TwitchRewardConnectionState } from '@/lib/types';
 
 const reward: TwitchRewardConnectionState['reward'] = {
   id: 'reward-1',
@@ -86,6 +86,16 @@ function makeTurn(overrides: Partial<LootChestTurn> = {}): LootChestTurn {
   };
 }
 
+function makeScene(overrides: Partial<LootChestSceneSnapshot> = {}): LootChestSceneSnapshot {
+  return {
+    revision: overrides.revision ?? 1,
+    publishedAt: overrides.publishedAt ?? '2026-04-14T19:31:00.000Z',
+    queueCount: overrides.queueCount ?? 0,
+    reward: overrides.reward ?? reward,
+    focusTurn: overrides.focusTurn ?? null,
+  };
+}
+
 describe('LootChestScene', () => {
   afterEach(() => {
     cleanup();
@@ -105,10 +115,10 @@ describe('LootChestScene', () => {
 
     const { container } = render(
       <LootChestScene
-        turn={makeTurn({ board, phase: 'selection' })}
-        queueCount={2}
-        reward={reward}
-        variant="host"
+        scene={makeScene({
+          queueCount: 2,
+          focusTurn: makeTurn({ board, phase: 'selection' }),
+        })}
         draftSelections={[0, 2]}
         onToggleSelection={onToggleSelection}
       />,
@@ -144,42 +154,43 @@ describe('LootChestScene', () => {
 
     const { container, rerender } = render(
       <LootChestScene
-        turn={makeTurn({
-          board: lockedBoard,
-          phase: 'locked',
-          lastAction: 'chests_selected',
+        scene={makeScene({
+          queueCount: 1,
+          focusTurn: makeTurn({
+            board: lockedBoard,
+            phase: 'locked',
+            lastAction: 'chests_selected',
+          }),
         })}
-        queueCount={1}
-        reward={reward}
-        variant="overlay"
       />,
     );
 
     rerender(
       <LootChestScene
-        turn={makeTurn({
-          board: makeBoard({
+        scene={makeScene({
+          revision: 3,
+          queueCount: 1,
+          focusTurn: makeTurn({
+            board: makeBoard({
+              phase: 'revealing',
+              boardRevision: 3,
+              selectedChests: [1, 4, 8],
+              revealedChests: [1],
+              allSelectionsLocked: true,
+              remainingSelections: 0,
+              remainingReveals: 2,
+              lastAction: 'chest_revealed',
+              lastChangedChestIndex: 1,
+              activeAnimationChestIndex: 1,
+            }, {
+              1: { revealed: true, spriteState: 'opening', animationState: 'opening', revealCue: true },
+              4: { spriteState: 'locked', animationState: 'idle' },
+              8: { spriteState: 'locked', animationState: 'idle' },
+            }),
             phase: 'revealing',
-            boardRevision: 3,
-            selectedChests: [1, 4, 8],
-            revealedChests: [1],
-            allSelectionsLocked: true,
-            remainingSelections: 0,
-            remainingReveals: 2,
             lastAction: 'chest_revealed',
-            lastChangedChestIndex: 1,
-            activeAnimationChestIndex: 1,
-          }, {
-            1: { revealed: true, spriteState: 'opening', animationState: 'opening', revealCue: true },
-            4: { spriteState: 'locked', animationState: 'idle' },
-            8: { spriteState: 'locked', animationState: 'idle' },
           }),
-          phase: 'revealing',
-          lastAction: 'chest_revealed',
         })}
-        queueCount={1}
-        reward={reward}
-        variant="overlay"
       />,
     );
 
@@ -193,62 +204,62 @@ describe('LootChestScene', () => {
   it('shows the result burst when a resolved board arrives on a new revision', async () => {
     const { container, rerender } = render(
       <LootChestScene
-        turn={makeTurn({
-          board: makeBoard({
+        scene={makeScene({
+          revision: 4,
+          focusTurn: makeTurn({
+            board: makeBoard({
+              phase: 'revealing',
+              boardRevision: 4,
+              selectedChests: [1, 4, 8],
+              revealedChests: [1, 4],
+              allSelectionsLocked: true,
+              remainingSelections: 0,
+              remainingReveals: 1,
+              lastAction: 'chest_revealed',
+              lastChangedChestIndex: 4,
+              activeAnimationChestIndex: 4,
+              prizeChestIndex: 4,
+            }),
             phase: 'revealing',
-            boardRevision: 4,
-            selectedChests: [1, 4, 8],
-            revealedChests: [1, 4],
-            allSelectionsLocked: true,
-            remainingSelections: 0,
-            remainingReveals: 1,
             lastAction: 'chest_revealed',
-            lastChangedChestIndex: 4,
-            activeAnimationChestIndex: 4,
-            prizeChestIndex: 4,
           }),
-          phase: 'revealing',
-          lastAction: 'chest_revealed',
         })}
-        queueCount={0}
-        reward={reward}
-        variant="overlay"
       />,
     );
 
     rerender(
       <LootChestScene
-        turn={makeTurn({
-          status: 'completed',
-          result: 'win',
-          phase: 'resolved',
-          lastAction: 'turn_completed',
-          completedAt: '2026-04-14T19:33:00.000Z',
-          resolutionCue: {
+        scene={makeScene({
+          revision: 5,
+          focusTurn: makeTurn({
+            status: 'completed',
             result: 'win',
-            highlightChestIndex: 4,
-          },
-          board: makeBoard({
             phase: 'resolved',
-            boardRevision: 5,
-            selectedChests: [1, 4, 8],
-            revealedChests: [1, 4, 8],
-            allSelectionsLocked: true,
-            remainingSelections: 0,
-            remainingReveals: 0,
-            prizeFound: true,
             lastAction: 'turn_completed',
-            lastChangedChestIndex: 4,
-            prizeChestIndex: 4,
-          }, {
-            1: { revealed: true, spriteState: 'resolved-empty', animationState: 'settled' },
-            4: { revealed: true, spriteState: 'resolved-prize', animationState: 'burst' },
-            8: { revealed: true, spriteState: 'resolved-empty', animationState: 'settled' },
+            completedAt: '2026-04-14T19:33:00.000Z',
+            resolutionCue: {
+              result: 'win',
+              highlightChestIndex: 4,
+            },
+            board: makeBoard({
+              phase: 'resolved',
+              boardRevision: 5,
+              selectedChests: [1, 4, 8],
+              revealedChests: [1, 4, 8],
+              allSelectionsLocked: true,
+              remainingSelections: 0,
+              remainingReveals: 0,
+              prizeFound: true,
+              lastAction: 'turn_completed',
+              lastChangedChestIndex: 4,
+              prizeChestIndex: 4,
+            }, {
+              1: { revealed: true, spriteState: 'resolved-empty', animationState: 'settled' },
+              4: { revealed: true, spriteState: 'resolved-prize', animationState: 'burst' },
+              8: { revealed: true, spriteState: 'resolved-empty', animationState: 'settled' },
+            }),
           }),
         })}
-        queueCount={0}
-        reward={reward}
-        variant="overlay"
       />,
     );
 

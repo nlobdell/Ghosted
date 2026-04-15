@@ -19,15 +19,15 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Install frontend dependencies
-        run: npm ci
-
       - name: Block merge conflict markers
         run: |
-          if grep -R -nE "^(<<<<<<<|=======|>>>>>>>)" .; then
+          if git grep -nE "^(<<<<<<< .+|=======|>>>>>>> .+|\\|\\|\\|\\|\\|\\|\\| .+)$" -- .; then
             echo "Merge conflict markers found."
             exit 1
           fi
+
+      - name: Install frontend dependencies
+        run: npm ci
 
       - name: Lint frontend
         run: npm run lint

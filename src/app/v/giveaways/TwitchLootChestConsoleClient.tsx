@@ -7,7 +7,6 @@ import {
   Banner,
   EmptyState,
   FormField,
-  Highlight,
   Panel,
   SectionHeading,
 } from '@/components/ui/AppUI';
@@ -51,7 +50,6 @@ export default function TwitchLootChestConsoleClient({
   const activeTurn = state.activeTurn;
   const queueCount = state.queue.length;
   const rewardReady = Boolean(state.connection.reward.id);
-  const queueHeadline = queueCount > 0 ? `${queueCount} queued turn${queueCount === 1 ? '' : 's'}` : 'Queue is clear';
   const activeTurnId = state.activeTurn?.id ?? null;
   const selectedChestKey = state.activeTurn?.board?.selectedChests.join(',') ?? '';
   const revealedChestKey = state.activeTurn?.board?.revealedChests.join(',') ?? '';
@@ -170,50 +168,47 @@ export default function TwitchLootChestConsoleClient({
           { label: 'Operator surfaces' },
           { label: 'Twitch loot chest' },
         ]}
-        title="Twitch Loot Chest Console"
-        summary="Run a private host-controlled channel-points game, keep the pending queue moving, and feed the live board into OBS with the overlay link."
+        title="Twitch Loot Chest"
+        summary="Queue control, reward sync, and operator actions for the Ghosted loot chest game."
       />
 
       {message ? <Banner message={message.text} variant={message.variant} /> : null}
 
-      <section className={styles.hero}>
-        <Highlight
-          eyebrow="Live queue"
-          title={queueHeadline}
-          copy={activeTurn
-            ? `${activeTurn.viewer.displayName} is on the board right now. Reveal the selected chests one at a time, then complete the turn to fulfill Twitch.`
-            : 'New redemptions land in the queue as queued turns. Start each turn manually when the stream is ready.'}
-          actions={(
-            <>
-              <button className="button button--small" type="button" onClick={handleConnect} disabled={busyAction === 'connect'}>
-                {busyAction === 'connect' ? 'Redirecting...' : state.connection.connected ? 'Reconnect Twitch' : 'Connect Twitch'}
-              </button>
-              <Link className="button button--secondary button--small" href="/v/giveaways/host/">
-                Open host overlay
-              </Link>
-              <button
-                className="button button--secondary button--small"
-                type="button"
-                disabled={!state.connection.overlayUrl}
-                onClick={copyOverlayUrl}
-              >
-                Copy overlay URL
-              </button>
-            </>
-          )}
-          stage={{
-            label: 'Operator snapshot',
-            primary: state.connection.connected ? `Connected to ${state.connection.broadcaster?.displayName ?? 'Twitch'}` : 'Twitch not connected',
-            secondary: rewardReady
-              ? `${state.connection.reward.title} - ${state.connection.reward.cost.toLocaleString()} points`
-              : 'Create or sync the managed Twitch reward before you go live.',
-            chips: [
-              `${queueCount} queued`,
-              activeTurn ? '1 active turn' : 'No active turn',
-              state.connection.eventSub.status ?? 'EventSub idle',
-            ],
-          }}
-        />
+      <section className={styles.toolbar}>
+        <div className={styles.toolbarCopy}>
+          <p className={styles.eyebrow}>Giveaway control</p>
+          <h2>{activeTurn ? `${activeTurn.viewer.displayName} active` : queueCount > 0 ? `${queueCount} queued turn${queueCount === 1 ? '' : 's'}` : 'Queue clear'}</h2>
+          <p>
+            {activeTurn
+              ? 'Reveal the selected chests one at a time, then complete the turn to fulfill Twitch.'
+              : 'New redemptions land here as queued turns. Start each turn manually when stream timing is right.'}
+          </p>
+        </div>
+
+        <div className={styles.toolbarActions}>
+          <button className="button button--small" type="button" onClick={handleConnect} disabled={busyAction === 'connect'}>
+            {busyAction === 'connect' ? 'Redirecting...' : state.connection.connected ? 'Reconnect Twitch' : 'Connect Twitch'}
+          </button>
+          <Link className="button button--secondary button--small" href="/v/giveaways/host/">
+            Open host
+          </Link>
+          <button
+            className="button button--secondary button--small"
+            type="button"
+            disabled={!state.connection.overlayUrl}
+            onClick={copyOverlayUrl}
+          >
+            Copy overlay URL
+          </button>
+        </div>
+      </section>
+
+      <section className={styles.statusStrip}>
+        <span className={styles.statusChip}>{state.connection.configured ? 'Env ready' : 'Missing Twitch env'}</span>
+        <span className={styles.statusChip}>{state.connection.connected ? 'Broadcaster connected' : 'No broadcaster token'}</span>
+        <span className={styles.statusChip}>{state.connection.eventSub.status ?? 'EventSub unsynced'}</span>
+        <span className={styles.statusChip}>{queueCount} queued</span>
+        <span className={styles.statusChip}>{activeTurn ? '1 active turn' : 'No active turn'}</span>
       </section>
 
       <div className={styles.workspace}>
@@ -225,13 +220,13 @@ export default function TwitchLootChestConsoleClient({
               <form className={styles.rewardForm} onSubmit={handleRewardSync}>
                 <SectionHeading
                   title="Managed reward"
-                  copy="The app owns one custom channel-points reward so it can manage redemptions and fulfill turns after the board resolves."
+                  copy="One Ghosted-owned custom reward powers the full loot chest flow."
                 />
 
                 <div className={styles.chipRow}>
-                  <span className={styles.chip}>{state.connection.configured ? 'Env ready' : 'Missing Twitch env'}</span>
-                  <span className={styles.chip}>{state.connection.connected ? 'Broadcaster connected' : 'No broadcaster token'}</span>
-                  <span className={styles.chip}>{state.connection.eventSub.status ?? 'EventSub unsynced'}</span>
+                  <span className={styles.chip}>{state.connection.reward.title}</span>
+                  <span className={styles.chip}>{state.connection.reward.cost.toLocaleString()} points</span>
+                  <span className={styles.chip}>{state.connection.reward.isPaused ? 'Paused' : 'Live'}</span>
                 </div>
 
                 <FormField label="Reward title">
@@ -264,7 +259,7 @@ export default function TwitchLootChestConsoleClient({
                 <div className={styles.overlayRow}>
                   <input className={styles.overlayUrl} readOnly value={state.connection.overlayUrl ?? 'Overlay URL will appear after setup.'} />
                   <Link className="button button--secondary button--small" href="/v/giveaways/host/">
-                    Host overlay
+                    Host
                   </Link>
                   <button
                     className="button button--secondary button--small"
@@ -272,7 +267,7 @@ export default function TwitchLootChestConsoleClient({
                     disabled={!state.connection.overlayUrl}
                     onClick={copyOverlayUrl}
                   >
-                    Copy URL
+                    Copy
                   </button>
                 </div>
 
@@ -306,96 +301,94 @@ export default function TwitchLootChestConsoleClient({
 
           <Panel
             title={activeTurn ? `Active turn: ${activeTurn.viewer.displayName}` : 'Active turn'}
-            eyebrow="Stage"
-            body={(
-              activeTurn ? (
-                <div className={styles.turnStage}>
-                  <div className={styles.turnSummary}>
-                    <article className={styles.metricCard}>
-                      <span className={styles.smallLabel}>Viewer</span>
-                      <strong>{activeTurn.viewer.displayName}</strong>
-                      <span>@{activeTurn.viewer.login}</span>
-                    </article>
-                    <article className={styles.metricCard}>
-                      <span className={styles.smallLabel}>Redeemed</span>
-                      <strong>{formatDate(activeTurn.redeemedAt)}</strong>
-                      <span>{activeTurn.result === 'pending' ? 'Turn in progress' : activeTurn.result.toUpperCase()}</span>
-                    </article>
-                    <article className={styles.metricCard}>
-                      <span className={styles.smallLabel}>Board flow</span>
-                      <strong>{activeTurn.board?.revealedChests.length ?? 0} / 3 opened</strong>
-                      <span>{activeTurn.board?.allSelectionsLocked ? 'Selections locked' : 'Pick three chests'}</span>
-                    </article>
-                  </div>
-
-                  <LootChestBoardView
-                    board={activeTurn.board}
-                    draftSelections={draftSelections}
-                    onToggleSelection={(index) => {
-                      if (activeTurn.board?.allSelectionsLocked || activeTurn.board?.revealedChests.length) return;
-                      setDraftSelections((current) => (
-                        current.includes(index)
-                          ? current.filter((entry) => entry !== index)
-                          : current.length >= 3
-                            ? current
-                            : [...current, index]
-                      ));
-                    }}
-                  />
-
-                  <div className={statusBannerClass(activeTurn)}>
-                    {activeTurn.result === 'pending'
-                      ? 'Lock three chest picks, reveal each selected chest one at a time, then complete the turn.'
-                      : activeTurn.result === 'win'
-                        ? 'The prize chest has been found. Reveal any remaining selected chests, then complete the turn.'
-                        : 'All selected chests are empty. Complete the turn to fulfill the redemption and move to the next viewer.'}
-                  </div>
-
-                  <div className={styles.actionRow}>
-                    <button
-                      className="button"
-                      type="button"
-                      disabled={activeTurn.board?.allSelectionsLocked || draftSelections.length !== 3 || busyAction === 'lock'}
-                      onClick={() => {
-                        void runAction('lock', async () => {
-                          await getJSON(`/api/v/giveaways/turns/${activeTurn.id}/select`, {
-                            method: 'POST',
-                            body: JSON.stringify({ chests: draftSelections }),
-                          });
-                        }, 'Chest selections locked.');
-                      }}
-                    >
-                      {busyAction === 'lock' ? 'Locking...' : 'Lock selections'}
-                    </button>
-                    <button
-                      className="button button--secondary"
-                      type="button"
-                      disabled={!activeTurn.board?.allSelectionsLocked || activeTurn.board.remainingReveals === 0 || busyAction === 'reveal'}
-                      onClick={() => {
-                        void runAction('reveal', async () => {
-                          await getJSON(`/api/v/giveaways/turns/${activeTurn.id}/reveal`, { method: 'POST' });
-                        });
-                      }}
-                    >
-                      {busyAction === 'reveal' ? 'Opening...' : 'Reveal next chest'}
-                    </button>
-                    <button
-                      className="button button--secondary"
-                      type="button"
-                      disabled={activeTurn.board?.revealedChests.length !== 3 || busyAction === 'complete'}
-                      onClick={() => {
-                        void runAction('complete', async () => {
-                          await getJSON(`/api/v/giveaways/turns/${activeTurn.id}/complete`, { method: 'POST' });
-                        }, 'Turn completed and Twitch redemption fulfilled.');
-                      }}
-                    >
-                      {busyAction === 'complete' ? 'Completing...' : 'Complete turn'}
-                    </button>
-                  </div>
+            eyebrow="Board"
+            body={activeTurn ? (
+              <div className={styles.turnStage}>
+                <div className={styles.turnSummary}>
+                  <article className={styles.metricCard}>
+                    <span className={styles.smallLabel}>Viewer</span>
+                    <strong>{activeTurn.viewer.displayName}</strong>
+                    <span>@{activeTurn.viewer.login}</span>
+                  </article>
+                  <article className={styles.metricCard}>
+                    <span className={styles.smallLabel}>Redeemed</span>
+                    <strong>{formatDate(activeTurn.redeemedAt)}</strong>
+                    <span>{activeTurn.result === 'pending' ? 'Turn in progress' : activeTurn.result.toUpperCase()}</span>
+                  </article>
+                  <article className={styles.metricCard}>
+                    <span className={styles.smallLabel}>Board flow</span>
+                    <strong>{activeTurn.board?.revealedChests.length ?? 0} / 3 opened</strong>
+                    <span>{activeTurn.board?.allSelectionsLocked ? 'Selections locked' : 'Pick three chests'}</span>
+                  </article>
                 </div>
-              ) : (
-                <EmptyState message="No active turn is on the board. Start the next queued redemption when the stream is ready." />
-              )
+
+                <LootChestBoardView
+                  board={activeTurn.board}
+                  draftSelections={draftSelections}
+                  onToggleSelection={(index) => {
+                    if (activeTurn.board?.allSelectionsLocked || activeTurn.board?.revealedChests.length) return;
+                    setDraftSelections((current) => (
+                      current.includes(index)
+                        ? current.filter((entry) => entry !== index)
+                        : current.length >= 3
+                          ? current
+                          : [...current, index]
+                    ));
+                  }}
+                />
+
+                <div className={statusBannerClass(activeTurn)}>
+                  {activeTurn.result === 'pending'
+                    ? 'Lock three picks, reveal the selected chests, then complete the turn.'
+                    : activeTurn.result === 'win'
+                      ? 'Prize chest found. Finish any remaining reveals, then complete the turn.'
+                      : 'All selected chests are empty. Complete the turn to fulfill Twitch and move on.'}
+                </div>
+
+                <div className={styles.actionRow}>
+                  <button
+                    className="button"
+                    type="button"
+                    disabled={activeTurn.board?.allSelectionsLocked || draftSelections.length !== 3 || busyAction === 'lock'}
+                    onClick={() => {
+                      void runAction('lock', async () => {
+                        await getJSON(`/api/v/giveaways/turns/${activeTurn.id}/select`, {
+                          method: 'POST',
+                          body: JSON.stringify({ chests: draftSelections }),
+                        });
+                      }, 'Chest selections locked.');
+                    }}
+                  >
+                    {busyAction === 'lock' ? 'Locking...' : 'Lock selections'}
+                  </button>
+                  <button
+                    className="button button--secondary"
+                    type="button"
+                    disabled={!activeTurn.board?.allSelectionsLocked || activeTurn.board.remainingReveals === 0 || busyAction === 'reveal'}
+                    onClick={() => {
+                      void runAction('reveal', async () => {
+                        await getJSON(`/api/v/giveaways/turns/${activeTurn.id}/reveal`, { method: 'POST' });
+                      });
+                    }}
+                  >
+                    {busyAction === 'reveal' ? 'Opening...' : 'Reveal next'}
+                  </button>
+                  <button
+                    className="button button--secondary"
+                    type="button"
+                    disabled={activeTurn.board?.revealedChests.length !== 3 || busyAction === 'complete'}
+                    onClick={() => {
+                      void runAction('complete', async () => {
+                        await getJSON(`/api/v/giveaways/turns/${activeTurn.id}/complete`, { method: 'POST' });
+                      }, 'Turn completed and Twitch redemption fulfilled.');
+                    }}
+                  >
+                    {busyAction === 'complete' ? 'Completing...' : 'Complete turn'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <EmptyState message="No active turn is on the board. Start the next queued redemption when the stream is ready." />
             )}
           />
         </div>
@@ -405,39 +398,37 @@ export default function TwitchLootChestConsoleClient({
             title="Pending queue"
             eyebrow="Queue"
             chip={`${queueCount} waiting`}
-            body={(
-              state.queue.length > 0 ? (
-                <div className={styles.queueList}>
-                  {state.queue.map((turn) => (
-                    <article key={turn.id} className={styles.queueCard}>
-                      <div className={styles.queueHeader}>
-                        <div>
-                          <div className={styles.cardTitle}>{turn.viewer.displayName}</div>
-                          <div className={styles.cardMeta}>@{turn.viewer.login}</div>
-                        </div>
-                        <span className={styles.chip}>{formatDate(turn.redeemedAt)}</span>
+            body={state.queue.length > 0 ? (
+              <div className={styles.queueList}>
+                {state.queue.map((turn) => (
+                  <article key={turn.id} className={styles.queueCard}>
+                    <div className={styles.queueHeader}>
+                      <div>
+                        <div className={styles.cardTitle}>{turn.viewer.displayName}</div>
+                        <div className={styles.cardMeta}>@{turn.viewer.login}</div>
                       </div>
-                      {turn.userInput ? <div className={styles.cardMeta}>Viewer input: {turn.userInput}</div> : null}
-                      <div className={styles.actionRow}>
-                        <button
-                          className="button button--small"
-                          type="button"
-                          disabled={Boolean(activeTurn) || busyAction === `start-${turn.id}`}
-                          onClick={() => {
-                            void runAction(`start-${turn.id}`, async () => {
-                              await getJSON(`/api/v/giveaways/turns/${turn.id}/start`, { method: 'POST' });
-                            }, `${turn.viewer.displayName} is now on the board.`);
-                          }}
-                        >
-                          {busyAction === `start-${turn.id}` ? 'Starting...' : 'Start turn'}
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState message="No queued Twitch redemptions yet." />
-              )
+                      <span className={styles.chip}>{formatDate(turn.redeemedAt)}</span>
+                    </div>
+                    {turn.userInput ? <div className={styles.cardMeta}>Viewer input: {turn.userInput}</div> : null}
+                    <div className={styles.actionRow}>
+                      <button
+                        className="button button--small"
+                        type="button"
+                        disabled={Boolean(activeTurn) || busyAction === `start-${turn.id}`}
+                        onClick={() => {
+                          void runAction(`start-${turn.id}`, async () => {
+                            await getJSON(`/api/v/giveaways/turns/${turn.id}/start`, { method: 'POST' });
+                          }, `${turn.viewer.displayName} is now on the board.`);
+                        }}
+                      >
+                        {busyAction === `start-${turn.id}` ? 'Starting...' : 'Start turn'}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyState message="No queued Twitch redemptions yet." />
             )}
           />
 
@@ -445,22 +436,20 @@ export default function TwitchLootChestConsoleClient({
             title="Recent results"
             eyebrow="History"
             chip={`${state.recentResults.length} completed`}
-            body={(
-              recentResultItems.length > 0 ? (
-                <div className={styles.resultList}>
-                  {recentResultItems.map((item) => (
-                    <article key={`${item.title}-${item.meta}`} className={styles.historyCard}>
-                      <div className={styles.historyHeader}>
-                        <strong>{item.title}</strong>
-                        <span className={styles.chip}>{item.meta}</span>
-                      </div>
-                      <p>{item.body}</p>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState message="Completed turns will appear here after the first redemption resolves." />
-              )
+            body={recentResultItems.length > 0 ? (
+              <div className={styles.resultList}>
+                {recentResultItems.map((item) => (
+                  <article key={`${item.title}-${item.meta}`} className={styles.historyCard}>
+                    <div className={styles.historyHeader}>
+                      <strong>{item.title}</strong>
+                      <span className={styles.chip}>{item.meta}</span>
+                    </div>
+                    <p>{item.body}</p>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyState message="Completed turns will appear here after the first redemption resolves." />
             )}
           />
         </div>

@@ -7,6 +7,7 @@ import { buildLootChestGameState } from '@/lib/server/twitch-loot-chest';
 import { isTwitchPlatformOperator, twitchPlatformLoginHref } from '@/lib/server/twitch-platform';
 import TwitchLootChestConsoleClient from './TwitchLootChestConsoleClient';
 import styles from './page.module.css';
+import surfaceStyles from '../v-surface.module.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +30,7 @@ export default async function TwitchLootChestPage({
     return (
       <div className="app-page app-shell app-shell--admin">
         <HallTopbar shellData={shellData} surface="admin" />
-        <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
+        <main id="main-content" className={`page-shell workspace-page ${styles.page} ${surfaceStyles.surface}`}>
           <section className={styles.operatorNotice}>
             <p className="kicker">Restricted console</p>
             <h1>Twitch loot chest access is limited.</h1>
@@ -50,7 +51,7 @@ export default async function TwitchLootChestPage({
   return (
     <div className="app-page app-shell app-shell--admin">
       <HallTopbar shellData={shellData} surface="admin" />
-      <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
+      <main id="main-content" className={`page-shell workspace-page ${styles.page} ${surfaceStyles.surface}`}>
         <TwitchLootChestConsoleClient
           initialState={initialState}
           initialMessage={typeof params.message === 'string' ? params.message : null}

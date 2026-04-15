@@ -4,6 +4,9 @@ ghosted.example.com {
     @sceneRealtime path /ws/scene/presence
     reverse_proxy @sceneRealtime 127.0.0.1:3001
 
+    @giveawayRealtime path /ws/giveaways/loot-chest
+    reverse_proxy @giveawayRealtime 127.0.0.1:3001
+
     reverse_proxy 127.0.0.1:3000
 
     header {

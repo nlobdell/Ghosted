@@ -1,0 +1,124 @@
+.surface {
+  --v-surface-border: rgba(191, 179, 255, 0.14);
+  --v-surface-border-strong: rgba(191, 179, 255, 0.22);
+  --v-surface-bg: rgba(10, 11, 17, 0.96);
+  --v-surface-bg-subtle: rgba(255, 255, 255, 0.02);
+}
+
+.surface :global(.app-context),
+.surface :global(.app-panel),
+.surface :global(.app-empty),
+.surface :global(.app-banner) {
+  border: 1px solid var(--v-surface-border);
+  border-radius: 0.8rem;
+  background: var(--v-surface-bg);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.surface :global(.app-context::before),
+.surface :global(.app-panel::before) {
+  display: none;
+}
+
+.surface :global(.app-context) {
+  padding: 0.95rem 1rem 0.9rem;
+  border-left: 0;
+}
+
+.surface :global(.app-breadcrumbs) {
+  color: var(--color-text-soft);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.surface :global(.app-context__title) {
+  max-width: none;
+  font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+  line-height: 1;
+}
+
+.surface :global(.app-context__summary) {
+  max-width: 68ch;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.surface :global(.app-context__actions) {
+  justify-content: flex-start;
+}
+
+.surface :global(.app-panel) {
+  padding: 0.9rem 1rem;
+}
+
+.surface :global(.app-panel__header) {
+  padding-bottom: 0.4rem;
+  border-bottom-color: rgba(191, 179, 255, 0.08);
+}
+
+.surface :global(.app-panel__header h3),
+.surface :global(.app-section-heading h3) {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.surface :global(.app-panel__copy),
+.surface :global(.app-muted),
+.surface :global(.app-empty p),
+.surface :global(.app-section-heading__copy p) {
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.surface :global(.highlight-shell),
+.surface :global(.highlight-stage) {
+  border: 1px solid var(--v-surface-border);
+  border-radius: 0.8rem;
+  background: var(--v-surface-bg);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.surface :global(.highlight-shell::before) {
+  display: none;
+}
+
+.surface :global(.app-chip) {
+  min-height: 1.7rem;
+  padding: 0.14rem 0.55rem;
+  border: 1px solid var(--v-surface-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.surface :global(.app-banner) {
+  padding: 0.8rem 1rem;
+  color: var(--color-text-strong);
+}
+
+.surface :global(.app-banner.is-error) {
+  border-color: rgba(198, 112, 89, 0.3);
+  background: rgba(62, 28, 24, 0.92);
+}
+
+.surface :global(.app-banner.is-warning) {
+  border-color: var(--v-surface-border-strong);
+}
+
+.surface :global(.app-form-field label),
+.surface :global(.kicker) {
+  color: var(--color-text-soft);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}

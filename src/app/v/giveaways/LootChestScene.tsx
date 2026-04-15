@@ -5,14 +5,12 @@ import type {
   LootChestBoardChest,
   LootChestChestAnimationState,
   LootChestChestSpriteState,
+  LootChestSceneSnapshot,
   LootChestTurn,
-  TwitchRewardConnectionState,
 } from '@/lib/types';
 import styles from './loot-chest-scene.module.css';
 
 const REVEAL_ANIMATION_MS = 1400;
-
-type LootChestSceneReward = Pick<TwitchRewardConnectionState, 'reward'>['reward'];
 
 function spriteAssetForState(state: LootChestChestSpriteState) {
   switch (state) {
@@ -48,38 +46,38 @@ function resultAsset(result: LootChestTurn['result'] | null | undefined) {
 
 function sceneHeadline(turn: LootChestTurn | null, queueCount: number) {
   if (turn?.status === 'active') {
-    return `${turn.viewer.displayName} is on the board`;
+    return `${turn.viewer.displayName} on board`;
   }
   if (turn?.status === 'completed') {
     return turn.result === 'win'
-      ? `${turn.viewer.displayName} cracked the treasure chest`
-      : `${turn.viewer.displayName} came up empty`;
+      ? `${turn.viewer.displayName} found the prize`
+      : `${turn.viewer.displayName} missed the prize`;
   }
   if (queueCount > 0) {
-    return `${queueCount} queued turn${queueCount === 1 ? '' : 's'} waiting`;
+    return `${queueCount} queued turn${queueCount === 1 ? '' : 's'}`;
   }
-  return 'Treasure board standing by';
+  return 'Loot chest idle';
 }
 
-function sceneSummary(turn: LootChestTurn | null, queueCount: number, reward: LootChestSceneReward) {
+function sceneSummary(turn: LootChestTurn | null, queueCount: number, rewardTitle: string) {
   if (!turn?.board) {
     return queueCount > 0
-      ? `The host can start the next ${reward.title} turn at any time.`
-      : `Waiting for the next ${reward.title} redemption.`;
+      ? `Waiting for the host to start the next ${rewardTitle.toLowerCase()} turn.`
+      : `Waiting for the next ${rewardTitle.toLowerCase()} redemption.`;
   }
   if (turn.phase === 'selection') {
-    return 'Choose three chests before the reveal begins.';
+    return 'Pick three chests.';
   }
   if (turn.phase === 'locked') {
-    return 'Three chests are locked in and ready to open.';
+    return 'Selections locked. Reveals ready.';
   }
   if (turn.phase === 'revealing') {
-    return `Revealing chest ${turn.board.revealedChests.length + 1} of ${turn.board.selectionLimit}.`;
+    return `Reveal ${turn.board.revealedChests.length + 1} of ${turn.board.selectionLimit}.`;
   }
   if (turn.result === 'win') {
-    return 'The prize chest is open and the board is celebrating the win.';
+    return 'Prize found. Awaiting completion.';
   }
-  return 'All chosen chests are open and the board has resolved.';
+  return 'Board resolved. Awaiting completion.';
 }
 
 function chestLabel(chest: LootChestBoardChest, spriteState: LootChestChestSpriteState) {
@@ -118,20 +116,15 @@ function displayAnimationState(
 }
 
 export function LootChestScene({
-  turn,
-  queueCount,
-  reward,
-  variant = 'overlay',
+  scene,
   draftSelections,
   onToggleSelection,
 }: {
-  turn: LootChestTurn | null;
-  queueCount: number;
-  reward: LootChestSceneReward;
-  variant?: 'overlay' | 'host';
+  scene: LootChestSceneSnapshot;
   draftSelections?: number[];
   onToggleSelection?: (index: number) => void;
 }) {
+  const turn = scene.focusTurn;
   const board = turn?.board ?? null;
   const interactive = Boolean(onToggleSelection && board && turn?.status === 'active' && !board.allSelectionsLocked && board.revealedChests.length === 0);
   const selectedIndices = new Set(interactive ? (draftSelections ?? []) : board?.selectedChests ?? []);
@@ -175,46 +168,44 @@ export function LootChestScene({
   );
 
   return (
-    <section className={`${styles.scene} ${variant === 'host' ? styles.sceneHost : styles.sceneOverlay}`}>
-      <div className={styles.ambientHalo} aria-hidden="true" />
-      <div className={styles.sceneHeader}>
+    <section className={styles.scene}>
+      <header className={styles.sceneHeader}>
         <div className={styles.titleStack}>
           <p className={styles.kicker}>Ghosted loot chest</p>
-          <h2 className={styles.headline}>{sceneHeadline(turn, queueCount)}</h2>
-          <p className={styles.summary}>{sceneSummary(turn, queueCount, reward)}</p>
+          <h2 className={styles.headline}>{sceneHeadline(turn, scene.queueCount)}</h2>
+          <p className={styles.summary}>{sceneSummary(turn, scene.queueCount, scene.reward.title)}</p>
         </div>
 
         <div className={styles.badgeRow}>
-          <div className={styles.badge} data-badge-kind="viewer">
+          <div className={styles.badge}>
             <span className={styles.badgeIcon} style={{ ['--badge-icon' as string]: `url("${badgeIcon('viewer')}")` }} aria-hidden="true" />
             <span>
               <strong>{turn?.viewer.displayName ?? 'Stand by'}</strong>
               <small>{turn ? `@${turn.viewer.login}` : 'No active viewer'}</small>
             </span>
           </div>
-          <div className={styles.badge} data-badge-kind="queue">
+          <div className={styles.badge}>
             <span className={styles.badgeIcon} style={{ ['--badge-icon' as string]: `url("${badgeIcon('queue')}")` }} aria-hidden="true" />
             <span>
-              <strong>{queueCount}</strong>
-              <small>queued turn{queueCount === 1 ? '' : 's'}</small>
+              <strong>{scene.queueCount}</strong>
+              <small>queued</small>
             </span>
           </div>
-          <div className={styles.badge} data-badge-kind="reward">
+          <div className={styles.badge}>
             <span className={styles.badgeIcon} style={{ ['--badge-icon' as string]: `url("${badgeIcon('reward')}")` }} aria-hidden="true" />
             <span>
-              <strong>{reward.title}</strong>
-              <small>{reward.cost.toLocaleString()} points</small>
+              <strong>{scene.reward.title}</strong>
+              <small>{scene.reward.cost.toLocaleString()} pts</small>
             </span>
           </div>
         </div>
-      </div>
+      </header>
 
       <div className={styles.boardShell}>
-        <div className={styles.boardFrame} aria-hidden="true" />
         {board ? (
           <>
             <div className={styles.boardMeta}>
-              <span className={styles.metaChip}>{selectedIndices.size} / {board.selectionLimit} selected</span>
+              <span className={styles.metaChip}>{selectedIndices.size}/{board.selectionLimit} selected</span>
               <span className={styles.metaChip}>{board.revealedChests.length} revealed</span>
               <span className={styles.metaChip}>{board.phase}</span>
               <span className={styles.metaChip}>rev {board.boardRevision}</span>
@@ -225,8 +216,7 @@ export function LootChestScene({
                 const spriteState = displaySpriteState(chest, board.selectionLimit, selectedIndices, interactive);
                 const animationState = displayAnimationState(chest, spriteState);
                 const animateReveal = Boolean(
-                  board
-                  && changedChestIndex === chest.index
+                  changedChestIndex === chest.index
                   && board.boardRevision === animatedRevision
                   && chest.revealCue,
                 );
@@ -253,7 +243,6 @@ export function LootChestScene({
                     data-reveal-cue={chest.revealCue ? 'true' : 'false'}
                     data-active-animation={animateReveal ? 'true' : 'false'}
                   >
-                    <span className={styles.chestGlow} aria-hidden="true" />
                     <span
                       className={styles.chestSprite}
                       style={{ ['--chest-sprite' as string]: `url("${spriteAssetForState(spriteState)}")` }}
@@ -268,7 +257,7 @@ export function LootChestScene({
 
             {turn?.resolutionCue && resultAsset(turn.resolutionCue.result) ? (
               <div
-                className={`${styles.outcomeBurst} ${animateResult ? styles.outcomeBurstAnimated : ''}`}
+                className={`${styles.resultStamp} ${animateResult ? styles.resultStampAnimated : ''}`}
                 style={{ ['--result-asset' as string]: `url("${resultAsset(turn.resolutionCue.result)}")` }}
                 data-result-cue={animateResult ? 'true' : 'false'}
                 aria-hidden="true"
@@ -277,24 +266,25 @@ export function LootChestScene({
           </>
         ) : (
           <div className={styles.emptyState}>
-            <span className={styles.emptyCrest} aria-hidden="true" />
             <strong>No active board</strong>
-            <p>The next redemption will light up the treasure room as soon as the host starts a turn.</p>
+            <p>The next redemption will appear here when the host starts a turn.</p>
           </div>
         )}
       </div>
 
       <div className={styles.statusRail}>
-        <span className={styles.statusChip}>{turn?.phase ?? 'queued'}</span>
+        <span className={styles.statusChip}>{turn?.phase ?? (scene.queueCount > 0 ? 'queued' : 'idle')}</span>
         <span className={styles.statusChip}>
           {turn?.result === 'win'
             ? 'Prize found'
             : turn?.result === 'miss'
-              ? 'All picks opened'
+              ? 'Board resolved'
               : 'Treasure hidden'}
         </span>
         <span className={styles.statusChip}>
-          {turn?.lastActionAt ? `Updated ${new Date(turn.lastActionAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Waiting for motion'}
+          {turn?.lastActionAt
+            ? `Updated ${new Date(turn.lastActionAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+            : 'Waiting'}
         </span>
       </div>
     </section>

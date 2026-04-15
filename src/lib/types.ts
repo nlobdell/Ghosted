@@ -879,6 +879,7 @@ export interface TwitchRewardConnectionState {
   };
   scopes: string[];
   overlayUrl?: string | null;
+  overlayToken?: string | null;
 }
 
 export interface LootChestBoardChest {
@@ -938,12 +939,33 @@ export interface LootChestTurn {
   board?: LootChestBoard | null;
 }
 
+export interface LootChestSceneSnapshot {
+  revision: number;
+  publishedAt: string;
+  queueCount: number;
+  reward: TwitchRewardConnectionState['reward'];
+  focusTurn: LootChestTurn | null;
+}
+
+export type LootChestRealtimeSocketMessage =
+  | {
+    type: 'loot-chest:snapshot';
+    payload: LootChestSceneSnapshot;
+    sentAt: string;
+  }
+  | {
+    type: 'loot-chest:error';
+    code: 'unavailable';
+    retryable: boolean;
+  };
+
 export interface LootChestGameState {
   operator: {
     displayName: string;
     discordId: string;
   };
   connection: TwitchRewardConnectionState;
+  scene: LootChestSceneSnapshot;
   queue: LootChestTurn[];
   activeTurn: LootChestTurn | null;
   recentResults: LootChestTurn[];
@@ -952,6 +974,7 @@ export interface LootChestGameState {
 
 export interface LootChestOverlayState {
   connection: Pick<TwitchRewardConnectionState, 'connected' | 'reward'>;
+  scene: LootChestSceneSnapshot;
   queueCount: number;
   activeTurn: LootChestTurn | null;
   lastResolvedTurn: LootChestTurn | null;

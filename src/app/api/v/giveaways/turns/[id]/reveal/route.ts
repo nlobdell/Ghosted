@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { AppError, withRouteErrorHandling } from '@/lib/server/core';
-import { revealNextLootChest } from '@/lib/server/twitch-loot-chest';
+import { buildLootChestSceneSnapshot, revealNextLootChest } from '@/lib/server/twitch-loot-chest';
 
 export const runtime = 'nodejs';
 
@@ -13,5 +13,6 @@ export const POST = withRouteErrorHandling(async (
   if (!Number.isFinite(turnId) || turnId <= 0) {
     throw new AppError('Turn ID is invalid.', 400);
   }
-  return NextResponse.json({ ok: true, result: await revealNextLootChest(turnId) });
+  const result = await revealNextLootChest(turnId);
+  return NextResponse.json({ ok: true, result, scene: buildLootChestSceneSnapshot() });
 });

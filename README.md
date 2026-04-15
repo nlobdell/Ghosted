@@ -6,7 +6,7 @@ Current production shape:
 
 - one **Next.js 16** app (`src/app`)
 - one **Discord worker** host for bot-backed Discord features
-- one **scene realtime** websocket sidecar for the public homepage hero
+- one **scene realtime** websocket sidecar for the public homepage hero and giveaway scene sync
 - **SQLite** for users, rewards, giveaways, WOM cache, casino history, and companion state
 - a native **Ghostling** system for companion state, admin uploads, asset serving, and SVG rendering
 - **Caddy + systemd** on a single Ubuntu VPS
@@ -51,7 +51,7 @@ Optional Discord worker:
 npm run dev:discord:worker
 ```
 
-Optional homepage scene realtime service:
+Optional homepage scene and giveaway realtime service:
 
 ```powershell
 npm run dev:scene:realtime
@@ -141,7 +141,7 @@ Foreground sidecars:
 
 - `npm run dev:discord:worker` - run the Discord worker in a separate terminal
 - `npm run dev:presence:worker` - compatibility alias for the current `voicePresence` worker module host
-- `npm run dev:scene:realtime` - run the homepage scene realtime websocket service
+- `npm run dev:scene:realtime` - run the homepage scene and giveaway realtime websocket service
 
 ## Scripts
 
@@ -153,10 +153,10 @@ Foreground sidecars:
 - `npm run dev:stack:logs` - tail local dev logs
 - `npm run dev:discord:worker` - run the Discord worker in development
 - `npm run dev:presence:worker` - compatibility alias for the Discord worker
-- `npm run dev:scene:realtime` - run the homepage scene realtime websocket service in development
+- `npm run dev:scene:realtime` - run the homepage scene and giveaway realtime websocket service in development
 - `npm run discord:worker` - run the Discord worker entrypoint directly
 - `npm run discord:presence:worker` - compatibility alias for the Discord worker
-- `npm run scene:realtime` - run the homepage scene realtime websocket service directly
+- `npm run scene:realtime` - run the homepage scene and giveaway realtime websocket service directly
 - `npm run build` - production build
 - `npm run start` - run the built Next.js app
 - `npm run typecheck` - run TypeScript checks
@@ -186,7 +186,7 @@ npm run test:server
 Current VPS pattern:
 
 - Caddy -> Next.js (`ghosted-web.service`) on `127.0.0.1:3000`
-- Caddy -> scene realtime websocket sidecar (`ghosted-scene-realtime.service`) on `127.0.0.1:3001` for `/ws/scene/presence`
+- Caddy -> scene realtime websocket sidecar (`ghosted-scene-realtime.service`) on `127.0.0.1:3001` for `/ws/scene/presence` and `/ws/giveaways/loot-chest`
 - optional Discord worker (`ghosted-discord-worker.service`) for bot-backed Discord features
 - Next owns all public and internal `/api/*` routes, including companion asset serving and render endpoints
 - The Twitch platform control plane lives at `/v/twitch`, while the loot chest giveaway console stays at `/v/giveaways` and its OBS/browser-source overlay stays at `/v/giveaways/overlay/[token]`
@@ -218,7 +218,7 @@ If a deploy changes the Discord worker code, env, or service wiring, also restar
 sudo systemctl restart ghosted-discord-worker
 ```
 
-If a deploy changes the homepage realtime websocket code, env, or proxy wiring, also restart it:
+If a deploy changes the realtime websocket code, env, or proxy wiring for the homepage or giveaway scene, also restart it:
 
 ```bash
 sudo systemctl restart ghosted-scene-realtime

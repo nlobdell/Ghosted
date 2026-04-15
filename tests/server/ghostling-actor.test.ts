@@ -15,7 +15,7 @@ describe('ghostling actor metrics', () => {
     expect(DEFAULT_GHOSTLING_ACTOR_METRICS.sourceHeight).toBe(70);
     expect(DEFAULT_GHOSTLING_ACTOR_METRICS.visibleBounds).toEqual({
       x: 21,
-      y: 20,
+      y: 13,
       width: 28,
       height: 49,
     });
@@ -32,8 +32,8 @@ describe('ghostling actor metrics', () => {
     expect(scaledGhostlingVisibleExtents(2)).toEqual({
       left: 28,
       right: 28,
-      top: 30,
-      bottom: 68,
+      top: 44,
+      bottom: 54,
       width: 56,
       height: 98,
     });
@@ -93,7 +93,7 @@ describe('ghostling actor metrics', () => {
       x: 18,
       y: 4,
       width: 34,
-      height: 65,
+      height: 58,
     });
   });
 });

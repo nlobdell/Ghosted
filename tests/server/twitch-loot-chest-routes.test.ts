@@ -204,6 +204,7 @@ describe('twitch platform and loot chest routes', () => {
     expect(giveawayResponse.status).toBe(200);
     expect(giveawayPayload.connection.connected).toBe(true);
     expect(giveawayPayload.queue).toHaveLength(1);
+    expect(giveawayPayload.scene.queueCount).toBe(1);
     expect(giveawayPayload.queue[0]).toMatchObject({
       phase: 'queued',
       lastAction: 'queued',
@@ -217,6 +218,7 @@ describe('twitch platform and loot chest routes', () => {
     expect(overlayResponse.status).toBe(200);
     expect(overlayPayload.queueCount).toBe(1);
     expect(overlayPayload.connection.connected).toBe(true);
+    expect(overlayPayload.scene.queueCount).toBe(1);
   });
 
   it('persists accepted webhook deliveries, creates queued turns, and ignores duplicate message ids', async () => {
@@ -471,6 +473,7 @@ describe('twitch platform and loot chest routes', () => {
     expect(startPayload.result.phase).toBe('selection');
     expect(startPayload.result.lastAction).toBe('turn_started');
     expect(startPayload.result.board.boardRevision).toBe(1);
+    expect(startPayload.scene.focusTurn.id).toBe(queuedTurn.id);
     context.db.prepare(`
       UPDATE twitch_loot_chest_turns
       SET prize_chest_index = ?
@@ -490,6 +493,7 @@ describe('twitch platform and loot chest routes', () => {
     expect(selectPayload.result.lastAction).toBe('chests_selected');
     expect(selectPayload.result.board.boardRevision).toBe(2);
     expect(selectPayload.result.board.chests[4].spriteState).toBe('locked');
+    expect(selectPayload.scene.focusTurn.board.boardRevision).toBe(2);
 
     const firstRevealResponse = await postRevealTurnRoute(new Request('http://localhost/api/v/giveaways/turns/1/reveal', { method: 'POST' }), {
       params: Promise.resolve({ id: String(queuedTurn.id) }),
@@ -505,6 +509,7 @@ describe('twitch platform and loot chest routes', () => {
       spriteState: 'opening',
       animationState: 'opening',
     });
+    expect(firstRevealPayload.scene.focusTurn.board.boardRevision).toBe(3);
 
     const secondRevealResponse = await postRevealTurnRoute(new Request('http://localhost/api/v/giveaways/turns/1/reveal', { method: 'POST' }), {
       params: Promise.resolve({ id: String(queuedTurn.id) }),
@@ -523,6 +528,7 @@ describe('twitch platform and loot chest routes', () => {
     expect(finalRevealPayload.result.phase).toBe('resolved');
     expect(finalRevealPayload.result.board.boardRevision).toBe(5);
     expect(finalRevealPayload.result.resolutionCue).toMatchObject({ result: 'win', highlightChestIndex: 4 });
+    expect(finalRevealPayload.scene.focusTurn.result).toBe('win');
 
     const completeResponse = await postCompleteTurnRoute(new Request('http://localhost/api/v/giveaways/turns/1/complete', {
       method: 'POST',
@@ -539,6 +545,7 @@ describe('twitch platform and loot chest routes', () => {
     expect(completePayload.result.board.boardRevision).toBe(6);
     expect(completePayload.result.board.lastChangedChestIndex).toBe(4);
     expect(completePayload.result.board.chests[4].spriteState).toBe('resolved-prize');
+    expect(completePayload.scene.focusTurn.status).toBe('completed');
   });
 
   it('stores broadcaster tokens and syncs the managed reward and subscription during connect completion', async () => {

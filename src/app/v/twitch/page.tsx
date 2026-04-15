@@ -7,6 +7,7 @@ import { buildGhostedTwitchPlatformState } from '@/lib/server/twitch-platform-ru
 import { isTwitchPlatformOperator, twitchPlatformLoginHref } from '@/lib/server/twitch-platform';
 import TwitchPlatformConsoleClient from './TwitchPlatformConsoleClient';
 import styles from './page.module.css';
+import surfaceStyles from '../v-surface.module.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +30,7 @@ export default async function TwitchPlatformPage({
     return (
       <div className="app-page app-shell app-shell--admin">
         <HallTopbar shellData={shellData} surface="admin" />
-        <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
+        <main id="main-content" className={`page-shell workspace-page ${styles.page} ${surfaceStyles.surface}`}>
           <section className={styles.operatorNotice}>
             <p className="kicker">Restricted console</p>
             <h1>Twitch operator access is limited.</h1>
@@ -50,7 +51,7 @@ export default async function TwitchPlatformPage({
   return (
     <div className="app-page app-shell app-shell--admin">
       <HallTopbar shellData={shellData} surface="admin" />
-      <main id="main-content" className={`page-shell workspace-page ${styles.page}`}>
+      <main id="main-content" className={`page-shell workspace-page ${styles.page} ${surfaceStyles.surface}`}>
         <TwitchPlatformConsoleClient
           initialState={initialState}
           initialMessage={typeof params.message === 'string' ? params.message : null}

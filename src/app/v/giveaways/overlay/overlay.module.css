@@ -1,9 +1,9 @@
 .overlayPage {
   min-height: 100vh;
+  display: grid;
+  align-items: stretch;
   padding: 1rem;
-  background:
-    radial-gradient(circle at top, rgba(255, 214, 126, 0.14), transparent 20%),
-    linear-gradient(180deg, rgba(7, 7, 8, 0.98), rgba(4, 4, 5, 1));
+  background: var(--color-bg-0);
 }
 
 @media (max-width: 760px) {

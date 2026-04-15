@@ -10,6 +10,7 @@ import type {
   LootChestOverlayState,
   LootChestPresentationAction,
   LootChestPresentationPhase,
+  LootChestSceneSnapshot,
   LootChestTurn,
   LootChestTurnResult,
   LootChestTurnStatus,
@@ -427,6 +428,53 @@ function mapTurnRow(row: LootChestTurnRow): LootChestTurn {
   };
 }
 
+function latestScenePublishedAt(input: {
+  settings: LootChestSettingsRow;
+  queued: LootChestTurnRow[];
+  active: LootChestTurnRow | null;
+  lastResolved: LootChestTurnRow | null;
+}) {
+  const timestamps = [
+    input.settings.updated_at,
+    input.active?.updated_at ?? null,
+    input.lastResolved?.updated_at ?? null,
+    input.queued[0]?.updated_at ?? null,
+  ].filter((value): value is string => Boolean(value));
+
+  const latestTimestamp = timestamps.reduce((latest, value) => {
+    if (!latest) return value;
+    return Date.parse(value) > Date.parse(latest) ? value : latest;
+  }, '');
+
+  return latestTimestamp || utcIso();
+}
+
+function sceneRevisionFromTimestamp(value: string) {
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function buildLootChestSceneSnapshot(db = getDb()): LootChestSceneSnapshot {
+  const settings = getSettingsRow(db);
+  const queued = queuedTurnRows(db);
+  const active = activeTurnRow(db) ?? null;
+  const lastResolved = recentCompletedTurns(db, 1)[0] ?? null;
+  const publishedAt = latestScenePublishedAt({
+    settings,
+    queued,
+    active,
+    lastResolved,
+  });
+
+  return {
+    revision: sceneRevisionFromTimestamp(publishedAt),
+    publishedAt,
+    queueCount: queued.length,
+    reward: connectionStateFromRows(db).reward,
+    focusTurn: active ? mapTurnRow(active) : lastResolved ? mapTurnRow(lastResolved) : null,
+  };
+}
+
 function findGiveawaySubscription(db: Database, broadcasterUserId?: string | null, rewardId?: string | null) {
   return twitchPlatformStore.listSubscriptions(db).find((subscription) => {
     if (subscription.module_key !== 'giveaways') return false;
@@ -474,6 +522,7 @@ function connectionStateFromRows(db: Database): TwitchRewardConnectionState {
     overlayUrl: getTwitchPlatformFeatureBaseUrl()
       ? `${getTwitchPlatformFeatureBaseUrl()}/v/giveaways/overlay/${settings.overlay_token}`
       : null,
+    overlayToken: settings.overlay_token,
   };
 }
 
@@ -1021,6 +1070,7 @@ export async function buildLootChestGameState(actor?: Awaited<ReturnType<typeof 
       discordId: operator.discord_id,
     },
     connection: connectionStateFromRows(db),
+    scene: buildLootChestSceneSnapshot(db),
     queue,
     activeTurn: activeTurn ? mapTurnRow(activeTurn) : null,
     recentResults,
@@ -1043,6 +1093,7 @@ export function buildLootChestOverlayStateFromToken(token: string): LootChestOve
       connected: Boolean(twitchPlatformStore.getActiveBroadcaster(db)?.access_token),
       reward: connectionStateFromRows(db).reward,
     },
+    scene: buildLootChestSceneSnapshot(db),
     queueCount: queuedTurnRows(db).length,
     activeTurn: activeTurn ? mapTurnRow(activeTurn) : null,
     lastResolvedTurn: lastResolved ? mapTurnRow(lastResolved) : null,
@@ -1073,6 +1124,11 @@ export async function reconnectManagedRewardAndSubscription() {
 
 export function overlayTokenFromSettings() {
   return getSettingsRow(getDb()).overlay_token;
+}
+
+export function isValidLootChestOverlayToken(token: string, db = getDb()) {
+  const normalized = String(token ?? '').trim();
+  return Boolean(normalized) && normalized === getSettingsRow(db).overlay_token;
 }
 
 export function turnRowsForTests() {

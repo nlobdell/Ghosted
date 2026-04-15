@@ -3,7 +3,7 @@
 This guide reflects the current web app plus realtime sidecars:
 
 - Next.js web app on port `3000`
-- homepage scene realtime websocket service on port `3001`
+- homepage scene and giveaway realtime websocket service on port `3001`
 - Discord worker as a separate Node process
 - Caddy as HTTPS reverse proxy
 - SQLite and companion uploads on local disk
@@ -37,7 +37,7 @@ The recommended production layout is now a single Git checkout at `/opt/ghosted`
 
 ## 4. Configure env file
 
-Use `/etc/ghosted/ghosted.env` for the Next.js runtime, the scene realtime service, and the Discord worker.
+Use `/etc/ghosted/ghosted.env` for the Next.js runtime, the realtime websocket service, and the Discord worker.
 
 At minimum:
 
@@ -62,7 +62,7 @@ Discord application settings must include this redirect URI for browser sign-in:
 
 ## 5. Install the services
 
-Use [`deploy/ghosted-web.service`](./ghosted-web.service) for the web app, [`deploy/ghosted-scene-realtime.service`](./ghosted-scene-realtime.service) for the homepage websocket service, and [`deploy/ghosted-discord-worker.service`](./ghosted-discord-worker.service) for the Discord worker. The old `ghosted-discord-presence.service` file remains as a compatibility alias.
+Use [`deploy/ghosted-web.service`](./ghosted-web.service) for the web app, [`deploy/ghosted-scene-realtime.service`](./ghosted-scene-realtime.service) for the homepage and giveaway websocket service, and [`deploy/ghosted-discord-worker.service`](./ghosted-discord-worker.service) for the Discord worker. The old `ghosted-discord-presence.service` file remains as a compatibility alias.
 
 Companion uploads should stay outside `/opt/ghosted`; the default runtime target is `/var/lib/ghosted/companion-assets` when `COMPANION_ASSET_DIR` is set as above.
 
@@ -89,11 +89,13 @@ ghosted.example.com {
     encode zstd gzip
     @sceneRealtime path /ws/scene/presence
     reverse_proxy @sceneRealtime 127.0.0.1:3001
+    @giveawayRealtime path /ws/giveaways/loot-chest
+    reverse_proxy @giveawayRealtime 127.0.0.1:3001
     reverse_proxy 127.0.0.1:3000
 }
 ```
 
-The Next.js app still owns the public site, Auth.js routes, companion asset routes, and companion render routes directly. Only `/ws/scene/presence` should proxy to the scene realtime service; the Discord worker still only talks to Discord and SQLite.
+The Next.js app still owns the public site, Auth.js routes, companion asset routes, and companion render routes directly. Both `/ws/scene/presence` and `/ws/giveaways/loot-chest` should proxy to the realtime service; the Discord worker still only talks to Discord and SQLite.
 
 ## 7. Deploy updates
 
@@ -117,7 +119,7 @@ If the deploy also changes the Discord worker, restart it separately:
 sudo systemctl restart ghosted-discord-worker
 ```
 
-If the deploy also changes the scene realtime service, restart it separately:
+If the deploy also changes the realtime websocket service, restart it separately:
 
 ```bash
 sudo systemctl restart ghosted-scene-realtime
@@ -153,7 +155,7 @@ If `/api/auth/signin` fails to render the Auth.js sign-in page, verify that `AUT
 
 If the Discord worker fails to start, verify that `DISCORD_GUILD_ID` and `DISCORD_BOT_TOKEN` are present in `/etc/ghosted/ghosted.env`.
 
-If the scene realtime service fails to start, verify that `SCENE_REALTIME_PORT` is not colliding with another local process and that `/ws/scene/presence` is proxied to `127.0.0.1:3001` in Caddy.
+If the realtime service fails to start, verify that `SCENE_REALTIME_PORT` is not colliding with another local process and that both `/ws/scene/presence` and `/ws/giveaways/loot-chest` are proxied to `127.0.0.1:3001` in Caddy.
 
 If a manual `npm run build` behaves differently on the server, make sure you loaded `/etc/ghosted/ghosted.env` first. Builds without that env file can fall back to `./data/ghosted.db` instead of `DATABASE_PATH=/var/lib/ghosted/ghosted.db`.
 

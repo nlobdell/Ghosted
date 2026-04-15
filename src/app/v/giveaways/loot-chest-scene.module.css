@@ -1,40 +1,15 @@
 .scene {
-  --scene-border: rgba(219, 188, 118, 0.2);
   position: relative;
   display: grid;
-  gap: 1rem;
-  padding: 1.15rem;
-  overflow: hidden;
-  border-radius: 1.65rem;
-  border: 1px solid var(--scene-border);
-  background:
-    linear-gradient(180deg, rgba(11, 10, 8, 0.82), rgba(7, 7, 6, 0.9)),
-    url('/giveaways/sprites/backdrop.svg') center/cover no-repeat;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 239, 199, 0.08),
-    0 28px 54px rgba(0, 0, 0, 0.28);
-  isolation: isolate;
-}
-
-.sceneHost {
-  min-height: 42rem;
-}
-
-.sceneOverlay {
-  min-height: min(88vh, 54rem);
-}
-
-.ambientHalo {
-  position: absolute;
-  inset: auto 8% 68% 8%;
-  height: 12rem;
-  border-radius: 999px;
-  background:
-    radial-gradient(circle, rgba(255, 214, 126, 0.18) 0%, rgba(255, 214, 126, 0.04) 42%, transparent 72%);
-  filter: blur(18px);
-  animation: ambientFloat 6s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 0;
+  gap: 0.9rem;
+  width: min(100%, 72rem);
+  min-height: clamp(22rem, 62vh, 40rem);
+  margin: 0 auto;
+  padding: 1rem;
+  border: 1px solid rgba(191, 179, 255, 0.16);
+  border-radius: 0.9rem;
+  background: rgba(9, 10, 15, 0.96);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.24);
 }
 
 .sceneHeader,
@@ -43,62 +18,56 @@
 .boardGrid,
 .statusRail {
   display: grid;
-  gap: 0.8rem;
-}
-
-.sceneHeader,
-.boardShell,
-.statusRail {
-  position: relative;
-  z-index: 1;
+  gap: 0.7rem;
 }
 
 .sceneHeader {
-  grid-template-columns: minmax(0, 1.1fr) minmax(16rem, 0.9fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
 }
 
 .titleStack {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .kicker,
 .chestWord {
-  color: rgba(255, 240, 207, 0.76);
-  font-size: 0.74rem;
+  color: var(--color-text-soft);
+  font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .headline {
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 4vw, 4rem);
-  line-height: 0.9;
-  color: #fff5dc;
-  text-wrap: balance;
+  font-size: clamp(1.5rem, 3vw, 2.35rem);
+  line-height: 1;
+  color: var(--color-text-strong);
 }
 
 .summary {
-  max-width: 46rem;
-  color: rgba(255, 245, 222, 0.84);
+  max-width: 36rem;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
 .badgeRow {
+  grid-auto-flow: row;
   align-content: start;
 }
 
 .badge {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.75rem;
+  gap: 0.65rem;
   align-items: center;
-  padding: 0.75rem 0.9rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 235, 186, 0.11);
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(6px);
+  min-width: 12rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(191, 179, 255, 0.12);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .badge strong,
@@ -106,47 +75,39 @@
 .statusChip,
 .emptyState strong,
 .chestNumber {
-  color: #fff2cf;
+  color: var(--color-text-strong);
 }
 
 .badge small,
 .emptyState p {
-  color: rgba(255, 244, 223, 0.72);
+  color: var(--color-text-muted);
 }
 
 .badgeIcon {
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: 0.85rem;
-  border: 1px solid rgba(255, 236, 191, 0.14);
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(191, 179, 255, 0.12);
+  border-radius: 0.55rem;
   background:
-    linear-gradient(180deg, rgba(58, 42, 17, 0.92), rgba(22, 17, 10, 0.98)),
-    var(--badge-icon) center/72% no-repeat;
-  box-shadow: inset 0 1px 0 rgba(255, 247, 230, 0.1);
+    rgba(19, 17, 29, 0.92)
+    var(--badge-icon) center/68% no-repeat;
 }
 
 .boardShell {
+  position: relative;
   display: grid;
-  gap: 0.95rem;
-  padding: 1.25rem;
-  border-radius: 1.45rem;
-  border: 1px solid rgba(255, 238, 205, 0.08);
-  background:
-    linear-gradient(180deg, rgba(18, 15, 9, 0.84), rgba(10, 9, 7, 0.9));
-}
-
-.boardFrame {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: url('/giveaways/sprites/board-frame.svg') center/cover no-repeat;
-  opacity: 0.88;
+  gap: 0.8rem;
+  min-height: clamp(16rem, 44vh, 28rem);
+  padding: 1rem;
+  border: 1px solid rgba(191, 179, 255, 0.12);
+  border-radius: 0.8rem;
+  background: rgba(13, 14, 20, 0.98);
 }
 
 .boardMeta,
 .statusRail {
   grid-auto-flow: column;
-  grid-auto-columns: minmax(0, max-content);
+  grid-auto-columns: max-content;
   align-items: center;
   justify-content: start;
   overflow-x: auto;
@@ -156,30 +117,34 @@
 .statusChip {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  min-height: 2rem;
-  padding: 0.42rem 0.74rem;
+  min-height: 1.7rem;
+  padding: 0.16rem 0.55rem;
+  border: 1px solid rgba(191, 179, 255, 0.14);
   border-radius: 999px;
-  border: 1px solid rgba(255, 232, 180, 0.1);
-  background: rgba(255, 255, 255, 0.04);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
 .boardGrid {
   position: relative;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.9rem;
+  gap: 0.65rem;
 }
 
 .chest {
   position: relative;
   display: grid;
   place-items: center;
-  gap: 0.2rem;
+  gap: 0.1rem;
   aspect-ratio: 0.9;
-  border: none;
-  background: transparent;
   padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  background: transparent;
   color: inherit;
   cursor: default;
 }
@@ -189,140 +154,98 @@
 }
 
 .chestInteractive:hover {
-  transform: translateY(-2px);
+  border-color: rgba(191, 179, 255, 0.24);
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.chestGlow,
 .chestSprite {
   position: absolute;
   inset: 0;
-  border-radius: 1rem;
-  pointer-events: none;
-}
-
-.chestGlow {
-  inset: 12% 12% 18%;
-  background:
-    radial-gradient(circle, rgba(255, 222, 149, 0.3), rgba(255, 222, 149, 0.04) 54%, transparent 74%);
-  filter: blur(14px);
-  opacity: 0;
-  transition: opacity var(--ease-standard);
-}
-
-.chestSelected .chestGlow,
-.chestLocked .chestGlow,
-.chestPrize .chestGlow {
-  opacity: 1;
-}
-
-.chestSprite {
   background: var(--chest-sprite) center/contain no-repeat;
-  transition:
-    transform var(--ease-standard),
-    filter var(--ease-standard);
+  transition: transform var(--ease-standard), filter var(--ease-standard);
 }
 
 .chestNumber,
 .chestWord {
   position: relative;
   z-index: 1;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 
 .chestNumber {
   align-self: end;
   font-family: var(--font-display);
-  font-size: clamp(1.2rem, 2.4vw, 1.85rem);
+  font-size: clamp(1rem, 2.1vw, 1.55rem);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.34);
 }
 
 .chestWord {
   align-self: start;
 }
 
+.chestSelected {
+  border-color: rgba(191, 179, 255, 0.28);
+}
+
 .chestSelected .chestSprite {
-  transform: translateY(-4px) scale(1.02);
-  animation: chestPulse 1.8s ease-in-out infinite;
+  transform: translateY(-2px);
 }
 
-.chestLocked .chestSprite {
-  transform: translateY(-3px);
+.chestLocked {
+  border-color: rgba(191, 179, 255, 0.22);
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.chestEmpty .chestSprite {
-  filter: saturate(0.86) brightness(0.95);
+.chestPrize {
+  border-color: rgba(255, 217, 142, 0.28);
 }
 
 .chestPrize .chestSprite {
-  filter: drop-shadow(0 0 18px rgba(255, 216, 124, 0.34));
+  filter: saturate(1.02);
+}
+
+.chestEmpty {
+  border-color: rgba(191, 179, 255, 0.16);
+}
+
+.chestEmpty .chestSprite {
+  filter: saturate(0.88);
 }
 
 .chestReveal .chestSprite {
-  animation: chestReveal 0.95s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: chestReveal 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.outcomeBurst {
+.resultStamp {
   position: absolute;
-  right: clamp(0.8rem, 2vw, 1.6rem);
-  bottom: clamp(0.8rem, 2vw, 1.3rem);
-  width: clamp(7rem, 14vw, 10rem);
+  right: 1rem;
+  bottom: 1rem;
+  width: clamp(4rem, 9vw, 5.5rem);
   aspect-ratio: 1;
   background: var(--result-asset) center/contain no-repeat;
   opacity: 0.9;
-  transform: scale(0.9);
   pointer-events: none;
 }
 
-.outcomeBurstAnimated {
-  animation: outcomeBurst 1s cubic-bezier(0.18, 0.88, 0.2, 1);
+.resultStampAnimated {
+  animation: resultStamp 0.85s ease-out;
 }
 
 .emptyState {
   display: grid;
   place-items: center;
-  gap: 0.7rem;
-  min-height: 22rem;
+  gap: 0.55rem;
+  min-height: clamp(10rem, 24vh, 14rem);
   text-align: center;
-}
-
-.emptyCrest {
-  width: 5.5rem;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, rgba(255, 214, 126, 0.2), rgba(255, 214, 126, 0.04) 62%, transparent 74%),
-    url('/giveaways/sprites/result-win.svg') center/60% no-repeat;
-}
-
-@keyframes ambientFloat {
-  0%,
-  100% {
-    transform: translateY(0px) scaleX(1);
-    opacity: 0.62;
-  }
-  50% {
-    transform: translateY(8px) scaleX(1.06);
-    opacity: 0.86;
-  }
-}
-
-@keyframes chestPulse {
-  0%,
-  100% {
-    transform: translateY(-3px) scale(1.01);
-  }
-  50% {
-    transform: translateY(-6px) scale(1.04);
-  }
 }
 
 @keyframes chestReveal {
   0% {
-    transform: translateY(10px) scale(0.92);
-    filter: brightness(0.7);
+    transform: translateY(8px) scale(0.94);
+    filter: brightness(0.75);
   }
-  45% {
-    transform: translateY(-10px) scale(1.06);
-    filter: brightness(1.18);
+  55% {
+    transform: translateY(-5px) scale(1.02);
+    filter: brightness(1.08);
   }
   100% {
     transform: translateY(0) scale(1);
@@ -330,18 +253,14 @@
   }
 }
 
-@keyframes outcomeBurst {
+@keyframes resultStamp {
   0% {
     opacity: 0;
-    transform: translateY(18px) scale(0.6);
-  }
-  45% {
-    opacity: 1;
-    transform: translateY(-6px) scale(1.06);
+    transform: translateY(12px);
   }
   100% {
-    opacity: 0.92;
-    transform: translateY(0) scale(1);
+    opacity: 0.9;
+    transform: translateY(0);
   }
 }
 
@@ -349,29 +268,37 @@
   .sceneHeader {
     grid-template-columns: 1fr;
   }
+
+  .badgeRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
-  .boardGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .scene {
+    min-height: auto;
+    padding: 0.85rem;
   }
 
-  .scene {
-    padding: 0.95rem;
+  .boardShell {
+    min-height: auto;
+    padding: 0.8rem;
+  }
+
+  .badgeRow,
+  .boardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ambientHalo,
-  .chestSelected .chestSprite,
-  .chestReveal .chestSprite,
-  .outcomeBurstAnimated {
-    animation: none;
+  .chestSprite,
+  .chestInteractive:hover {
+    transition-duration: 0.01ms;
   }
 
-  .chestInteractive:hover,
-  .chestSprite,
-  .chestGlow {
-    transition-duration: 0.01ms;
+  .chestReveal .chestSprite,
+  .resultStampAnimated {
+    animation: none;
   }
 }
