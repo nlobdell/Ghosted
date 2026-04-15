@@ -212,7 +212,7 @@
 
 @media (min-width: 1080px) {
   .surfaceBody {
-    grid-template-columns: minmax(0, 1fr) 19.5rem;
+    grid-template-columns: minmax(0, 1fr) 18rem;
   }
 
   .sideRail {

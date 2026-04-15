@@ -344,4 +344,33 @@ describe('LootChestScene', () => {
     const hoveredChest = container.querySelector('[data-chest-index="4"]');
     expect(hoveredChest?.getAttribute('data-hovered')).toBe('true');
   });
+
+  it('can render a board-only public overlay without header or footer chrome', () => {
+    const board = makeBoard({
+      phase: 'locked',
+      selectedChests: [1, 4, 8],
+      allSelectionsLocked: true,
+      remainingSelections: 0,
+      remainingReveals: 3,
+    }, {
+      1: { spriteState: 'locked', animationState: 'idle' },
+      4: { spriteState: 'locked', animationState: 'idle' },
+      8: { spriteState: 'locked', animationState: 'idle' },
+    });
+
+    const { container } = render(
+      <LootChestScene
+        scene={makeScene({
+          queueCount: 2,
+          focusTurn: makeTurn({ board, phase: 'locked' }),
+        })}
+        frame="board-only"
+      />,
+    );
+
+    expect(container.querySelector('header')).toBeNull();
+    expect(container.querySelector('footer')).toBeNull();
+    expect(container.querySelector('[data-sprite-id="board-backdrop"]')).toBeNull();
+    expect(container.querySelector('[data-chest-index="4"]')).not.toBeNull();
+  });
 });

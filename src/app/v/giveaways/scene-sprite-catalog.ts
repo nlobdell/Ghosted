@@ -16,30 +16,36 @@ export type SceneSpriteSpec = {
   pixelated?: boolean;
 };
 
-function staticSprite(id: string, src: string): SceneSpriteSpec {
+function staticSprite(
+  id: string,
+  src: string,
+  options?: Partial<Pick<SceneSpriteSpec, 'pixelated' | 'initialFrame'>>,
+): SceneSpriteSpec {
   return {
     id,
     src,
     frames: 1,
     playback: 'static',
+    ...options,
   };
 }
 
 const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
-  closed: staticSprite('chest-closed', '/giveaways/sprites/chest-closed.svg'),
-  selected: staticSprite('chest-selected', '/giveaways/sprites/chest-selected.svg'),
-  locked: staticSprite('chest-locked', '/giveaways/sprites/chest-locked.svg'),
+  closed: staticSprite('chest-closed', '/giveaways/sprites/chest.png', { pixelated: true }),
+  selected: staticSprite('chest-selected', '/giveaways/sprites/chest.png', { pixelated: true }),
+  locked: staticSprite('chest-locked', '/giveaways/sprites/chest.png', { pixelated: true }),
   opening: {
     id: 'chest-opening',
-    src: '/giveaways/sprites/chest-opening.svg',
-    frames: 1,
+    src: '/giveaways/sprites/chest-opening-animation.png',
+    frames: 10,
     playback: 'once',
-    durationMs: 560,
+    durationMs: 680,
+    pixelated: true,
   },
-  empty: staticSprite('chest-empty', '/giveaways/sprites/chest-empty.svg'),
-  prize: staticSprite('chest-prize', '/giveaways/sprites/chest-prize.svg'),
-  'resolved-empty': staticSprite('chest-resolved-empty', '/giveaways/sprites/chest-empty.svg'),
-  'resolved-prize': staticSprite('chest-resolved-prize', '/giveaways/sprites/chest-prize.svg'),
+  empty: staticSprite('chest-empty', '/giveaways/sprites/chest-empty.svg', { pixelated: true }),
+  prize: staticSprite('chest-prize', '/giveaways/sprites/chest-prize.svg', { pixelated: true }),
+  'resolved-empty': staticSprite('chest-resolved-empty', '/giveaways/sprites/chest-empty.svg', { pixelated: true }),
+  'resolved-prize': staticSprite('chest-resolved-prize', '/giveaways/sprites/chest-prize.svg', { pixelated: true }),
 };
 
 const RESULT_SPRITES: Record<Exclude<LootChestTurnResult, 'pending'>, SceneSpriteSpec> = {

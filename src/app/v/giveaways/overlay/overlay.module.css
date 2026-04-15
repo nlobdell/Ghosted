@@ -1,13 +1,11 @@
 .overlayPage {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 0.4rem;
-  background: var(--color-bg-0);
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  align-items: stretch;
+  justify-items: stretch;
+  padding: 0;
+  background: transparent;
   box-sizing: border-box;
-}
-
-.overlayPage > * {
-  width: min(100%, 78rem);
+  overflow: hidden;
 }

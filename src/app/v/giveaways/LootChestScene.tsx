@@ -166,7 +166,7 @@ export function LootChestScene({
   draftSelections?: number[];
   onToggleSelection?: (index: number) => void;
   onPreviewChest?: (index: number | null) => void;
-  frame?: 'standalone' | 'embedded';
+  frame?: 'standalone' | 'embedded' | 'broadcast' | 'board-only';
 }) {
   const turn = scene.focusTurn;
   const board = turn?.board ?? null;
@@ -227,30 +227,41 @@ export function LootChestScene({
     && board.allSelectionsLocked
     && board.selectedChests.length === board.selectionLimit,
   );
+  const boardOnly = frame === 'board-only';
 
   return (
-    <section className={[styles.scene, frame === 'embedded' ? styles.sceneEmbedded : ''].filter(Boolean).join(' ')}>
-      <header className={styles.sceneHeader}>
-        <div className={styles.titleStack}>
-          <p className={styles.kicker}>Ghosted loot chest</p>
-          <h2 className={styles.headline}>{sceneHeadline(turn, scene.queueCount)}</h2>
-          <p className={styles.summary}>{sceneSummary(turn, scene.queueCount, scene.reward.title)}</p>
-        </div>
+    <section
+      className={[
+        styles.scene,
+        frame === 'embedded' ? styles.sceneEmbedded : '',
+        frame === 'broadcast' ? styles.sceneBroadcast : '',
+        boardOnly ? styles.sceneBoardOnly : '',
+      ].filter(Boolean).join(' ')}
+    >
+      {boardOnly ? null : (
+        <header className={styles.sceneHeader}>
+          <div className={styles.titleStack}>
+            <p className={styles.kicker}>Ghosted loot chest</p>
+            <h2 className={styles.headline}>{sceneHeadline(turn, scene.queueCount)}</h2>
+          </div>
 
-        <div className={styles.sceneMeta}>
-          <span className={styles.sceneMetaItem}>
-            <strong>{scene.reward.title}</strong>
-            <small>{scene.reward.cost.toLocaleString()} pts</small>
-          </span>
-          <span className={styles.sceneMetaItem}>
-            <strong>{scene.queueCount}</strong>
-            <small>{scene.queueCount === 1 ? 'viewer waiting' : 'viewers waiting'}</small>
-          </span>
-        </div>
-      </header>
+          <div className={styles.sceneMeta}>
+            <span className={styles.sceneMetaItem}>
+              <small>Reward</small>
+              <strong>{scene.reward.title}</strong>
+              <em>{scene.reward.cost.toLocaleString()} pts</em>
+            </span>
+            <span className={styles.sceneMetaItem}>
+              <small>Queue</small>
+              <strong>{scene.queueCount}</strong>
+              <em>{scene.queueCount === 1 ? 'viewer waiting' : 'viewers waiting'}</em>
+            </span>
+          </div>
+        </header>
+      )}
 
       <div className={styles.boardShell}>
-        <SceneSprite spec={getBoardBackdropSpriteSpec()} className={styles.boardBackdrop} />
+        {boardOnly ? null : <SceneSprite spec={getBoardBackdropSpriteSpec()} className={styles.boardBackdrop} />}
         <SceneSprite spec={getBoardFrameSpriteSpec()} className={styles.boardFrame} />
         <div className={styles.boardContent}>
         {board ? (
@@ -335,18 +346,21 @@ export function LootChestScene({
         </div>
       </div>
 
-      <footer className={styles.sceneFooter}>
-        <div className={styles.footerPrimary}>
-          <span className={styles.footerLabel}>Live step</span>
-          <strong className={styles.footerValue}>{phaseLabel(turn?.phase, scene.queueCount)}</strong>
-        </div>
-        <p className={styles.footerNote}>{footerNote(turn, selectedIndices.size, scene.queueCount)}</p>
-        <span className={styles.footerTimestamp}>
-          {turn?.lastActionAt
-            ? new Date(turn.lastActionAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-            : 'Waiting'}
-        </span>
-      </footer>
+      {boardOnly ? null : (
+        <footer className={styles.sceneFooter}>
+          <div className={styles.footerPrimary}>
+            <span className={styles.footerLabel}>Live step</span>
+            <strong className={styles.footerValue}>{phaseLabel(turn?.phase, scene.queueCount)}</strong>
+          </div>
+          <p className={styles.footerNote}>{sceneSummary(turn, scene.queueCount, scene.reward.title)}</p>
+          <p className={styles.footerDetail}>{footerNote(turn, selectedIndices.size, scene.queueCount)}</p>
+          <span className={styles.footerTimestamp}>
+            {turn?.lastActionAt
+              ? new Date(turn.lastActionAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+              : 'Waiting'}
+          </span>
+        </footer>
+      )}
     </section>
   );
 }

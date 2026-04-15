@@ -15,5 +15,20 @@ export default async function TwitchLootChestOverlayPage({
     notFound();
   }
 
-  return <TwitchLootChestOverlayClient initialState={initialState} overlayToken={token} />;
+  return (
+    <>
+      <style>{`
+        html,
+        body {
+          background: transparent !important;
+        }
+
+        body::before,
+        body::after {
+          display: none !important;
+        }
+      `}</style>
+      <TwitchLootChestOverlayClient initialState={initialState} overlayToken={token} />
+    </>
+  );
 }
