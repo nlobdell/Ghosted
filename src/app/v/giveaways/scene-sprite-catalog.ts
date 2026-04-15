@@ -29,6 +29,14 @@ export type SceneSpriteSpec = {
   frameAnchorBounds?: Array<SceneSpriteBounds | undefined>;
 };
 
+export type SceneSpriteVisibleRegion = {
+  leftPct: number;
+  topPct: number;
+  widthPct: number;
+  heightPct: number;
+  anchorShiftPct: number;
+};
+
 function versionedSpriteSrc(src: string, assetVersion?: string) {
   if (!assetVersion) {
     return src;
@@ -47,6 +55,14 @@ function withAssetVersion(spec: SceneSpriteSpec, assetVersion?: string): SceneSp
     ...spec,
     src: versionedSpriteSrc(spec.src, assetVersion),
   };
+}
+
+function clampFrameIndex(spec: SceneSpriteSpec, frameIndex: number) {
+  if (spec.frames <= 1) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(spec.frames - 1, frameIndex));
 }
 
 function staticSprite(
@@ -288,4 +304,31 @@ export function getResultSpriteSpec(
   }
 
   return withAssetVersion(RESULT_SPRITES[result], assetVersion);
+}
+
+export function getSceneSpriteVisibleRegion(
+  spec: SceneSpriteSpec,
+  frameIndex = spec.initialFrame ?? 0,
+): SceneSpriteVisibleRegion | null {
+  if (!spec.frameWidth || !spec.frameHeight) {
+    return null;
+  }
+
+  const resolvedFrameIndex = clampFrameIndex(spec, frameIndex);
+  const bounds = spec.frameBounds?.[resolvedFrameIndex] ?? spec.visibleBounds;
+  if (!bounds) {
+    return null;
+  }
+
+  const anchorBounds = spec.frameAnchorBounds?.[resolvedFrameIndex] ?? spec.anchorBounds ?? bounds;
+  const visibleCenter = (anchorBounds.left + anchorBounds.right + 1) / 2;
+  const frameCenter = spec.frameWidth / 2;
+
+  return {
+    leftPct: (bounds.left / spec.frameWidth) * 100,
+    topPct: (bounds.top / spec.frameHeight) * 100,
+    widthPct: (((bounds.right - bounds.left) + 1) / spec.frameWidth) * 100,
+    heightPct: (((bounds.bottom - bounds.top) + 1) / spec.frameHeight) * 100,
+    anchorShiftPct: ((frameCenter - visibleCenter) / spec.frameWidth) * 100,
+  };
 }

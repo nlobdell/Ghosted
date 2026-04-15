@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type {
   LootChestBoardChest,
   LootChestChestAnimationState,
@@ -15,10 +15,42 @@ import {
   getBoardFrameSpriteSpec,
   getChestSpriteSpec,
   getResultSpriteSpec,
+  getSceneSpriteVisibleRegion,
 } from './scene-sprite-catalog';
 import styles from './loot-chest-scene.module.css';
 
 const REVEAL_ANIMATION_MS = 1400;
+const CHEST_SPRITE_BOX_WIDTH_PCT = 82;
+const CHEST_SPRITE_BOX_HEIGHT_PCT = CHEST_SPRITE_BOX_WIDTH_PCT * (32 / 48);
+const CHEST_SPRITE_BOX_TOP_PCT = 50 - ((56 * CHEST_SPRITE_BOX_HEIGHT_PCT) / 100);
+
+function chestHitAreaStyle(spriteState: LootChestChestSpriteState, spriteSpec: ReturnType<typeof getChestSpriteSpec>) {
+  const visibleRegion = getSceneSpriteVisibleRegion(spriteSpec);
+  if (!visibleRegion) {
+    return undefined;
+  }
+
+  const hitLeftPct = 50
+    - (CHEST_SPRITE_BOX_WIDTH_PCT / 2)
+    + ((visibleRegion.anchorShiftPct * CHEST_SPRITE_BOX_WIDTH_PCT) / 100)
+    + ((visibleRegion.leftPct * CHEST_SPRITE_BOX_WIDTH_PCT) / 100);
+  const hitTopPct = CHEST_SPRITE_BOX_TOP_PCT
+    + ((visibleRegion.topPct * CHEST_SPRITE_BOX_HEIGHT_PCT) / 100);
+  const hitWidthPct = (visibleRegion.widthPct * CHEST_SPRITE_BOX_WIDTH_PCT) / 100;
+  const hitHeightPct = (visibleRegion.heightPct * CHEST_SPRITE_BOX_HEIGHT_PCT) / 100;
+  const liftPx = (
+    spriteState === 'selected'
+    || spriteState === 'locked'
+  ) ? -2 : 0;
+
+  return {
+    ['--chest-hit-left' as string]: `${hitLeftPct}%`,
+    ['--chest-hit-top' as string]: `${hitTopPct}%`,
+    ['--chest-hit-width' as string]: `${hitWidthPct}%`,
+    ['--chest-hit-height' as string]: `${hitHeightPct}%`,
+    ['--chest-hit-lift' as string]: `${liftPx}px`,
+  } as CSSProperties;
+}
 
 function phaseLabel(phase: LootChestTurn['phase'] | null | undefined, queueCount: number) {
   if (phase === 'selection') return 'Choose 3 chests';
@@ -319,6 +351,7 @@ export function LootChestScene({
                   || cuedRevealChestIndex === chest.index,
                 );
                 const hovered = hoveredChestIndex === chest.index;
+                const hitAreaStyle = chestHitAreaStyle(spriteState, spriteSpec);
                 const chestClassName = [
                   styles.chest,
                   clickable ? styles.chestInteractive : '',
@@ -334,48 +367,54 @@ export function LootChestScene({
                 ].filter(Boolean).join(' ');
 
                 return (
-                  <button
+                  <div
                     key={chest.index}
-                    type="button"
                     className={chestClassName}
+                    data-chest-shell-index={chest.index}
                     style={{
                       ['--selection-column-shift' as string]: selectionRow ? String(selectionRow.columnShift) : '0',
                       ['--selection-row-shift' as string]: selectionRow ? String(selectionRow.rowShift) : '0',
                     }}
-                    disabled={!clickable}
-                    onClick={() => {
-                      if (selectionInteractive) {
-                        onToggleSelection?.(chest.index);
-                        return;
-                      }
-
-                      if (revealable) {
-                        onRevealChest?.(chest.index);
-                      }
-                    }}
-                    onPointerEnter={() => onPreviewChest?.(chest.index)}
-                    onPointerLeave={() => onPreviewChest?.(null)}
-                    onFocus={() => onPreviewChest?.(chest.index)}
-                    onBlur={() => onPreviewChest?.(null)}
-                    data-chest-index={chest.index}
-                    data-sprite-state={spriteState}
-                    data-animation-state={animationState}
-                    data-hovered={hovered ? 'true' : 'false'}
-                    data-reveal-cue={chest.revealCue ? 'true' : 'false'}
-                    data-active-animation={animateReveal ? 'true' : 'false'}
-                    data-selection-stage={selectionRowActive ? 'true' : 'false'}
-                    data-selection-slot={selectionRow ? String(selectionRow.slot) : ''}
-                    data-dormant={dormant ? 'true' : 'false'}
-                    data-clickable={clickable ? 'true' : 'false'}
                   >
                     <span className={styles.chestVisual}>
                       <SceneSprite spec={spriteSpec} className={styles.chestSprite} />
+                      <button
+                        type="button"
+                        className={styles.chestHitArea}
+                        style={hitAreaStyle}
+                        disabled={!clickable}
+                        aria-label={`Chest ${chest.label}`}
+                        onClick={() => {
+                          if (selectionInteractive) {
+                            onToggleSelection?.(chest.index);
+                            return;
+                          }
+
+                          if (revealable) {
+                            onRevealChest?.(chest.index);
+                          }
+                        }}
+                        onPointerEnter={() => onPreviewChest?.(chest.index)}
+                        onPointerLeave={() => onPreviewChest?.(null)}
+                        onFocus={() => onPreviewChest?.(chest.index)}
+                        onBlur={() => onPreviewChest?.(null)}
+                        data-chest-index={chest.index}
+                        data-sprite-state={spriteState}
+                        data-animation-state={animationState}
+                        data-hovered={hovered ? 'true' : 'false'}
+                        data-reveal-cue={chest.revealCue ? 'true' : 'false'}
+                        data-active-animation={animateReveal ? 'true' : 'false'}
+                        data-selection-stage={selectionRowActive ? 'true' : 'false'}
+                        data-selection-slot={selectionRow ? String(selectionRow.slot) : ''}
+                        data-dormant={dormant ? 'true' : 'false'}
+                        data-clickable={clickable ? 'true' : 'false'}
+                      />
                     </span>
                     <span className={styles.chestLabelStack}>
                       <span className={styles.chestNumber}>{chest.label}</span>
                       <span className={styles.chestWord}>{chestLabel(chest, spriteState)}</span>
                     </span>
-                  </button>
+                  </div>
                 );
               })}
             </div>

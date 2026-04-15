@@ -261,7 +261,8 @@ describe('LootChestScene', () => {
     const secondSelected = container.querySelector('[data-chest-index="4"]');
     const thirdSelected = container.querySelector('[data-chest-index="8"]');
     const dormantChest = container.querySelector('[data-chest-index="0"]');
-    const selectedSprite = firstSelected?.querySelector('[data-sprite-id="chest-locked"]');
+    const firstSelectedShell = container.querySelector('[data-chest-shell-index="1"]');
+    const selectedSprite = firstSelectedShell?.querySelector('[data-sprite-id="chest-locked"]');
     const selectedSpriteStyle = selectedSprite instanceof HTMLElement ? selectedSprite.style.getPropertyValue('--scene-sprite-anchor-x') : '';
 
     expect(firstSelected?.getAttribute('data-selection-stage')).toBe('true');
@@ -269,7 +270,7 @@ describe('LootChestScene', () => {
     expect(secondSelected?.getAttribute('data-selection-slot')).toBe('1');
     expect(thirdSelected?.getAttribute('data-selection-slot')).toBe('2');
     expect(dormantChest?.getAttribute('data-dormant')).toBe('true');
-    expect(selectedSprite?.getAttribute('data-sprite-playback')).toBe('static');
+    expect(firstSelectedShell?.querySelector('[data-sprite-id="chest-locked"]')?.getAttribute('data-sprite-playback')).toBe('static');
     expect(selectedSpriteStyle).not.toBe('');
   });
 
@@ -444,7 +445,7 @@ describe('LootChestScene', () => {
     );
 
     await waitFor(() => {
-      const prizeChest = container.querySelector('[data-chest-index="4"]');
+      const prizeChest = container.querySelector('[data-chest-shell-index="4"]');
       const prizeSprite = prizeChest?.querySelector('[data-sprite-id="chest-opening-winner"]');
       expect(prizeSprite).not.toBeNull();
     });
@@ -486,7 +487,7 @@ describe('LootChestScene', () => {
       />,
     );
 
-    const openingSprite = container.querySelector('[data-chest-index="4"] [data-sprite-id="chest-opening"]') as HTMLElement | null;
+    const openingSprite = container.querySelector('[data-chest-shell-index="4"] [data-sprite-id="chest-opening"]') as HTMLElement | null;
     expect(openingSprite).not.toBeNull();
 
     const startAnchor = Number.parseFloat(openingSprite?.style.getPropertyValue('--scene-sprite-anchor-x') ?? '');
@@ -658,7 +659,7 @@ describe('LootChestScene', () => {
     );
 
     const frameSprite = container.querySelector('[data-sprite-id="board-frame-overlay"]') as HTMLElement | null;
-    const lockedSprite = container.querySelector('[data-chest-index="1"] [data-sprite-id="chest-locked"]') as HTMLElement | null;
+    const lockedSprite = container.querySelector('[data-chest-shell-index="1"] [data-sprite-id="chest-locked"]') as HTMLElement | null;
 
     expect(frameSprite?.style.getPropertyValue('--scene-sprite-image')).toContain('board-frame-overlay.svg?v=build-123');
     expect(lockedSprite?.style.getPropertyValue('--scene-sprite-image')).toContain('chest.png?v=build-123');

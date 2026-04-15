@@ -199,26 +199,17 @@
   min-height: 0;
 }
 
-.sceneBoardOnlyViewport .boardShell {
-  width: 100%;
-  min-height: 100%;
-  height: 100%;
-  padding: clamp(0.8rem, 1.8vh, 1.35rem) clamp(1.2rem, 3vw, 2.6rem);
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
 .sceneBoardOnlyWidth {
   height: 100%;
   min-height: 0;
 }
 
+.sceneBoardOnlyViewport .boardShell,
 .sceneBoardOnlyWidth .boardShell {
   width: 100%;
   min-height: 100%;
   height: 100%;
-  padding: clamp(0.8rem, 1.8vh, 1.35rem) clamp(1rem, 2vw, 2rem);
+  padding: clamp(0.78rem, 1.65cqi, 1.2rem) clamp(1rem, 2.6cqi, 2.25rem);
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -232,18 +223,12 @@
   opacity: 1;
 }
 
-.sceneBoardOnlyViewport .boardGrid {
-  width: min(90vw, 1720px);
-  margin: 0 auto;
-  gap: clamp(0.65rem, 1vw, 1.05rem);
-  --board-gap: clamp(0.65rem, 1vw, 1.05rem);
-}
-
+.sceneBoardOnlyViewport .boardGrid,
 .sceneBoardOnlyWidth .boardGrid {
-  width: min(100%, 1720px);
+  width: min(90cqi, 1720px);
   margin: 0 auto;
-  gap: clamp(0.65rem, 1vw, 1.05rem);
-  --board-gap: clamp(0.65rem, 1vw, 1.05rem);
+  gap: clamp(0.65rem, 1.05cqi, 1.05rem);
+  --board-gap: clamp(0.65rem, 1.05cqi, 1.05rem);
 }
 
 .sceneBoardOnly .chest::after {
@@ -469,6 +454,30 @@
     border-color var(--ease-standard),
     background-color var(--ease-standard),
     box-shadow var(--ease-standard);
+}
+
+.chestHitArea {
+  position: absolute;
+  left: var(--chest-hit-left, 9%);
+  top: calc(var(--chest-hit-top, 19.4%) + var(--chest-hit-lift, 0px));
+  width: var(--chest-hit-width, 47.83%);
+  height: var(--chest-hit-height, 34.17%);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  appearance: none;
+  cursor: inherit;
+  z-index: 2;
+}
+
+.chestHitArea:disabled {
+  pointer-events: none;
+}
+
+.chestHitArea:focus-visible {
+  outline: 1px solid rgba(191, 179, 255, 0.3);
+  outline-offset: 2px;
 }
 
 .chest::after {
