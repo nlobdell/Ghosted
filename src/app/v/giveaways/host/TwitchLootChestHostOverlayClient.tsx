@@ -129,6 +129,11 @@ export default function TwitchLootChestHostOverlayClient({
   const revealedChestKey = activeBoard?.revealedChests.join(',') ?? '';
   const overlayToken = state.connection.overlayToken ?? null;
   const revealBusy = Boolean(busyAction?.startsWith('reveal'));
+  const showInlineLockAction = Boolean(
+    activeBoard
+    && !activeBoard.allSelectionsLocked
+    && draftSelections.length === activeBoard.selectionLimit,
+  );
   useGiveawayBuildSync(buildId);
 
   useEffect(() => {
@@ -504,6 +509,13 @@ export default function TwitchLootChestHostOverlayClient({
               frame="board-only"
               boardSizing="width"
               assetVersion={buildId}
+              boardAction={showInlineLockAction ? {
+                label: busyAction === 'lock' ? 'Locking...' : 'Lock',
+                onClick: () => {
+                  void lockSelections();
+                },
+                disabled: Boolean(busyAction),
+              } : null}
             />
           </section>
 

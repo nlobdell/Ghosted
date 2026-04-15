@@ -162,6 +162,7 @@ export function LootChestScene({
   frame = 'standalone',
   boardSizing = 'viewport',
   assetVersion,
+  boardAction,
 }: {
   scene: LootChestSceneSnapshot;
   presentationCue?: LootChestPresentationCue | null;
@@ -172,6 +173,11 @@ export function LootChestScene({
   frame?: 'standalone' | 'embedded' | 'broadcast' | 'board-only';
   boardSizing?: 'viewport' | 'width';
   assetVersion?: string;
+  boardAction?: {
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+  } | null;
 }) {
   const turn = scene.focusTurn;
   const board = turn?.board ?? null;
@@ -375,6 +381,19 @@ export function LootChestScene({
                 className={`${styles.resultStamp} ${(animateResult || Boolean(cuedResult)) ? styles.resultStampAnimated : ''}`}
                 data-result-cue={(animateResult || Boolean(cuedResult)) ? 'true' : 'false'}
               />
+            ) : null}
+
+            {boardAction ? (
+              <div className={styles.boardActionDock}>
+                <button
+                  type="button"
+                  className={styles.boardActionButton}
+                  onClick={boardAction.onClick}
+                  disabled={boardAction.disabled}
+                >
+                  {boardAction.label}
+                </button>
+              </div>
             ) : null}
           </>
         ) : (

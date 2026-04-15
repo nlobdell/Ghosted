@@ -283,6 +283,16 @@
   justify-items: center;
 }
 
+.sceneBoardOnly .boardActionDock {
+  bottom: clamp(0.8rem, 2vh, 1.3rem);
+}
+
+.sceneBoardOnly .boardActionButton {
+  min-height: 1.95rem;
+  padding-inline: 0.66rem;
+  font-size: 0.66rem;
+}
+
 .sceneSprite {
   position: relative;
   display: block;
@@ -340,6 +350,42 @@
   display: grid;
   min-height: 100%;
   align-items: center;
+}
+
+.boardActionDock {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(0.9rem, 2.2vh, 1.45rem);
+  z-index: 4;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.boardActionButton {
+  min-height: 2rem;
+  padding: 0.42rem 0.72rem;
+  border: 1px solid rgba(191, 179, 255, 0.22);
+  border-radius: 0;
+  background: rgba(15, 17, 24, 0.88);
+  color: var(--color-text-strong);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  box-shadow: none;
+  pointer-events: auto;
+  transition: border-color var(--ease-standard), background-color var(--ease-standard), color var(--ease-standard);
+}
+
+.boardActionButton:hover {
+  border-color: rgba(191, 179, 255, 0.34);
+  background: rgba(22, 24, 34, 0.96);
+}
+
+.boardActionButton:disabled {
+  opacity: 0.62;
+  cursor: default;
 }
 
 .boardGrid {
@@ -676,6 +722,10 @@
   .sceneBoardOnly .boardShell {
     min-height: 100vh;
     padding: 0.5rem;
+  }
+
+  .boardActionDock {
+    bottom: 0.7rem;
   }
 
   .boardGrid {

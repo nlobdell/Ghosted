@@ -166,6 +166,36 @@ describe('LootChestScene', () => {
     expect(fifthChest?.getAttribute('data-sprite-state')).toBe('selected');
   });
 
+  it('can show an inline lock action inside the board when all picks are ready', () => {
+    const onLock = vi.fn();
+    const board = makeBoard({
+      phase: 'selection',
+      selectedChests: [],
+      revealedChests: [],
+      allSelectionsLocked: false,
+      remainingSelections: 3,
+      remainingReveals: 0,
+    });
+
+    const { getByRole } = render(
+      <LootChestScene
+        scene={makeScene({
+          queueCount: 1,
+          focusTurn: makeTurn({ board, phase: 'selection' }),
+        })}
+        draftSelections={[0, 2, 4]}
+        onToggleSelection={vi.fn()}
+        boardAction={{
+          label: 'Lock',
+          onClick: onLock,
+        }}
+      />,
+    );
+
+    fireEvent.click(getByRole('button', { name: 'Lock' }));
+    expect(onLock).toHaveBeenCalledTimes(1);
+  });
+
   it('stages the locked selections into a centered row before reveals begin', () => {
     const board = makeBoard({
       phase: 'locked',
