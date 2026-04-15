@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { startTransition, useEffect, useEffectEvent, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { startTransition, useEffect, useEffectEvent, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { formatDate, getJSON } from '@/lib/api';
 import type {
   LootChestGameState,
@@ -17,6 +17,8 @@ import styles from './page.module.css';
 const HOST_STATE_POLL_MS = 2500;
 const PRESENTATION_THROTTLE_MS = 90;
 const HOVER_HEARTBEAT_MS = 350;
+const HOST_SCENE_WIDTH = 1920;
+const HOST_SCENE_HEIGHT = 1080;
 
 type HostMessage = {
   text: string;
@@ -110,9 +112,11 @@ export default function TwitchLootChestHostOverlayClient({
   const [draftSelections, setDraftSelections] = useState<number[]>(initialState.activeTurn?.board?.selectedChests ?? []);
   const [presentationCue, setPresentationCue] = useState<LootChestPresentationCue | null>(null);
   const [hoveredPreviewIndex, setHoveredPreviewIndex] = useState<number | null>(null);
+  const [sceneScale, setSceneScale] = useState(1);
   const pollInFlightRef = useRef(false);
   const draftSelectionsRef = useRef<number[]>(initialState.activeTurn?.board?.selectedChests ?? []);
   const hoveredPreviewIndexRef = useRef<number | null>(null);
+  const sceneStageRef = useRef<HTMLElement | null>(null);
   const presentationThrottleRef = useRef<{
     lastSentAt: number;
     lastSentKey: string | null;
@@ -340,6 +344,33 @@ export default function TwitchLootChestHostOverlayClient({
       window.clearInterval(intervalId);
     };
   }, [activeTurnId, hoveredPreviewIndex]);
+
+  useEffect(() => {
+    const stage = sceneStageRef.current;
+    if (!stage || typeof ResizeObserver !== 'function') {
+      return undefined;
+    }
+
+    const updateScale = () => {
+      const { width, height } = stage.getBoundingClientRect();
+      if (!width || !height) {
+        return;
+      }
+
+      const nextScale = Math.min(width / HOST_SCENE_WIDTH, height / HOST_SCENE_HEIGHT);
+      setSceneScale(nextScale > 0 ? nextScale : 1);
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(() => {
+      updateScale();
+    });
+    observer.observe(stage);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   const { syncCue, dismissCue } = useLootChestSceneTransport({
     overlayToken,
@@ -575,29 +606,37 @@ export default function TwitchLootChestHostOverlayClient({
     }
   }
 
+  const sceneViewportStyle = {
+    ['--host-scene-scale' as string]: String(sceneScale),
+  } as CSSProperties;
+
   return (
     <main className={styles.hostPage}>
       <section className={styles.hostSurface}>
         <div className={styles.surfaceBody}>
-          <section className={styles.sceneStage} onKeyDown={handleBoardKeyDown} tabIndex={0}>
-            <LootChestScene
-              scene={state.scene}
-              presentationCue={presentationCue}
-              draftSelections={draftSelections}
-              onToggleSelection={busyAction ? undefined : toggleSelection}
-              onRevealChest={busyAction ? undefined : revealChest}
-              onPreviewChest={previewChest}
-              frame="board-only"
-              boardSizing="width"
-              assetVersion={buildId}
-              boardAction={showInlineLockAction ? {
-                label: busyAction === 'lock' ? 'Locking...' : 'Lock',
-                onClick: () => {
-                  void lockSelections();
-                },
-                disabled: Boolean(busyAction),
-              } : null}
-            />
+          <section ref={sceneStageRef} className={styles.sceneStage} onKeyDown={handleBoardKeyDown} tabIndex={0}>
+            <div className={styles.sceneViewport} style={sceneViewportStyle}>
+              <div className={styles.sceneViewportInner}>
+                <LootChestScene
+                  scene={state.scene}
+                  presentationCue={presentationCue}
+                  draftSelections={draftSelections}
+                  onToggleSelection={busyAction ? undefined : toggleSelection}
+                  onRevealChest={busyAction ? undefined : revealChest}
+                  onPreviewChest={previewChest}
+                  frame="board-only"
+                  boardSizing="width"
+                  assetVersion={buildId}
+                  boardAction={showInlineLockAction ? {
+                    label: busyAction === 'lock' ? 'Locking...' : 'Lock',
+                    onClick: () => {
+                      void lockSelections();
+                    },
+                    disabled: Boolean(busyAction),
+                  } : null}
+                />
+              </div>
+            </div>
           </section>
 
           <aside className={styles.sideRail}>

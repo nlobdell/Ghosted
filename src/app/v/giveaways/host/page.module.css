@@ -132,11 +132,27 @@
   align-self: start;
   min-height: 0;
   padding: 0;
+  overflow: hidden;
   outline: none;
 }
 
 .sceneStage:focus-visible {
   box-shadow: inset 0 0 0 2px rgba(191, 179, 255, 0.12);
+}
+
+.sceneViewport {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.sceneViewportInner {
+  width: 1920px;
+  height: 1080px;
+  transform: scale(var(--host-scene-scale, 1));
+  transform-origin: center center;
 }
 
 .sideRail {
@@ -253,6 +269,11 @@
   .sceneStage {
     aspect-ratio: auto;
     min-height: min(100vh, 44rem);
+  }
+
+  .sceneViewportInner {
+    width: 1920px;
+    height: 1080px;
   }
 
   .railBlock {
