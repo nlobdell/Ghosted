@@ -44,6 +44,7 @@ function staticSprite(
 }
 
 const CLOSED_CHEST_BOUNDS = { left: 2, top: 12, right: 29, bottom: 31 } as const;
+const SELECTED_CHEST_BOUNDS = { left: 2, top: 2, right: 29, bottom: 31 } as const;
 const EMPTY_CHEST_BOUNDS = { left: 2, top: 21, right: 40, bottom: 31 } as const;
 const PRIZE_CHEST_BOUNDS = { left: 2, top: 2, right: 40, bottom: 31 } as const;
 const OPENING_CHEST_FRAME_BOUNDS = [
@@ -81,10 +82,10 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     anchorBounds: CLOSED_CHEST_BOUNDS,
   },
   selected: {
-    ...staticSprite('chest-selected', '/giveaways/sprites/chest.png', { pixelated: true }),
+    ...staticSprite('chest-selected', '/giveaways/sprites/chest-selected.png', { pixelated: true }),
     frameWidth: 48,
     frameHeight: 32,
-    visibleBounds: CLOSED_CHEST_BOUNDS,
+    visibleBounds: SELECTED_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
   },
   locked: {
