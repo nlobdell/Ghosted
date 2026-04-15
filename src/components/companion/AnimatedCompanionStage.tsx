@@ -7,6 +7,7 @@ import {
   buildAccentSchedule,
   composeMotionMatrix,
   evaluateMotionChannel,
+  scaleMatrix,
   multiplyMatrix,
   matrixForElement,
   matrixToCss,
@@ -14,6 +15,7 @@ import {
   motionGroupChain,
   resolveStageShadowRect,
   stagePresentationMultiplier,
+  translateMatrix,
   unionRects,
   type CompanionMotionAccentEvent,
   type Matrix2D,
@@ -34,6 +36,7 @@ type AnimatedCompanionStageProps = {
   targetSize?: number;
   presentation?: StagePresentation;
   seedKey?: string;
+  sceneFacingScaleX?: 1 | -1;
   showDebugOverlay?: boolean;
 };
 
@@ -43,6 +46,7 @@ type StagePiece = {
   zIndex: number;
   role: string;
   motionGroup: string;
+  sceneFacingFlip: CompanionRenderLayer['sceneFacingFlip'];
   animation: CompanionRenderLayer['animation'];
   slice?: CompanionRenderSlice;
   baseRect: CompanionRenderRect;
@@ -118,6 +122,33 @@ function resolvePieceBaseRect(
   } satisfies CompanionRenderRect;
 }
 
+function horizontalFlipMatrix(scaleX: 1 | -1, pivot: { x: number; y: number }) {
+  return multiplyMatrix(
+    translateMatrix(pivot.x, pivot.y),
+    multiplyMatrix(
+      scaleMatrix(scaleX, 1),
+      translateMatrix(-pivot.x, -pivot.y),
+    ),
+  );
+}
+
+function resolveSceneFacingCompensationScale(
+  sceneFacingFlip: CompanionRenderLayer['sceneFacingFlip'],
+  sceneFacingScaleX: 1 | -1 | undefined,
+) {
+  if (sceneFacingScaleX !== 1 && sceneFacingScaleX !== -1) return 1;
+  if (sceneFacingFlip === 'ignore') return sceneFacingScaleX;
+  if (sceneFacingFlip === 'invert') return -1;
+  return 1;
+}
+
+function transformPoint(matrix: Matrix2D, point: { x: number; y: number }) {
+  return {
+    x: (matrix.a * point.x) + (matrix.c * point.y) + matrix.e,
+    y: (matrix.b * point.x) + (matrix.d * point.y) + matrix.f,
+  };
+}
+
 export function AnimatedCompanionStage({
   manifest,
   fallbackSrc,
@@ -126,6 +157,7 @@ export function AnimatedCompanionStage({
   targetSize = 224,
   presentation = 'ambient',
   seedKey,
+  sceneFacingScaleX,
   showDebugOverlay = false,
 }: AnimatedCompanionStageProps) {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -160,6 +192,7 @@ export function AnimatedCompanionStage({
             zIndex: layer.zIndex,
             role: layer.role,
             motionGroup: String(slice.motionGroup ?? layer.motionGroup ?? rootKey),
+            sceneFacingFlip: layer.sceneFacingFlip,
             animation: layer.animation,
             slice,
             baseRect: resolvePieceBaseRect(layer, slice, logicalWidth, logicalHeight),
@@ -172,6 +205,7 @@ export function AnimatedCompanionStage({
           zIndex: layer.zIndex,
           role: layer.role,
           motionGroup: String(layer.motionGroup ?? rootKey),
+          sceneFacingFlip: layer.sceneFacingFlip,
           animation: layer.animation,
           baseRect: resolvePieceBaseRect(layer, undefined, logicalWidth, logicalHeight),
         }];
@@ -437,7 +471,18 @@ export function AnimatedCompanionStage({
         if (customGroup && groupMatrices[customGroup]) {
           composedGlobalMatrix = groupMatrices[customGroup]!;
         }
-        const composedLocalMatrix = matrixForElement(composedGlobalMatrix, leftPx, topPx);
+        let composedLocalMatrix = matrixForElement(composedGlobalMatrix, leftPx, topPx);
+        const sceneFacingCompensationScale = resolveSceneFacingCompensationScale(piece.sceneFacingFlip, sceneFacingScaleX);
+        if (sceneFacingCompensationScale === -1) {
+          const transformedCenter = transformPoint(composedGlobalMatrix, {
+            x: leftPx + (widthPx / 2),
+            y: topPx + (heightPx / 2),
+          });
+          composedLocalMatrix = multiplyMatrix(
+            horizontalFlipMatrix(-1, transformedCenter),
+            composedLocalMatrix,
+          );
+        }
 
         node.style.left = `${leftPx}px`;
         node.style.top = `${topPx}px`;
@@ -463,6 +508,7 @@ export function AnimatedCompanionStage({
     prefersReducedMotion,
     presentationMultiplier,
     rootKey,
+    sceneFacingScaleX,
     stableSeedKey,
     stageScale,
   ]);

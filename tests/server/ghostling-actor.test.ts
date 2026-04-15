@@ -63,6 +63,7 @@ describe('ghostling actor metrics', () => {
         role: 'hat-front',
         src: '/hat.png',
         zIndex: 50,
+        sceneFacingFlip: 'allow',
         slot: 'hat',
         motionGroup: 'head',
         animation: {

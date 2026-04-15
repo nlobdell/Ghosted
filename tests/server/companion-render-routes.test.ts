@@ -32,11 +32,12 @@ function svgBuffer(fill = '#7c5cff') {
   );
 }
 
-function ghostlingMetadata() {
+function ghostlingMetadata(sceneFacingFlip?: 'allow' | 'ignore' | 'invert') {
   return JSON.stringify({
     kind: 'ghostling-cosmetic',
     schemaVersion: 1,
     slot: 'hat',
+    ...(sceneFacingFlip ? { sceneFacingFlip } : {}),
     canvas: { width: 210, height: 260 },
     baseRect: { x: 0, y: 21, width: 210, height: 210 },
     mount: { x: 105, y: 140 },
@@ -242,7 +243,7 @@ describe('companion render and dev-login routes', () => {
       rarity: 'common',
       cost: 0,
       description: '',
-      metadataJson: ghostlingMetadata(),
+      metadataJson: ghostlingMetadata('ignore'),
       frontAsset: {
         filename: 'sky-crown-front.svg',
         contentType: 'image/svg+xml',
@@ -269,6 +270,8 @@ describe('companion render and dev-login routes', () => {
 
     expect(manifest.height).toBeGreaterThan(32);
     expect(manifest.layers.find((layer) => layer.key === 'hat-front')?.slices?.[0]?.targetY ?? -1).toBeGreaterThanOrEqual(0);
+    expect(manifest.layers.find((layer) => layer.key === 'hat-front')?.sceneFacingFlip).toBe('ignore');
+    expect(manifest.layers.filter((layer) => layer.slot == null).every((layer) => layer.sceneFacingFlip === 'allow')).toBe(true);
 
     const staticResponse = await getCompanionRenderRoute(new Request(`http://localhost/api/companion/render?user=${userId}`));
     const staticPayload = await staticResponse.text();

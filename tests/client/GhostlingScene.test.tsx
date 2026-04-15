@@ -31,14 +31,21 @@ vi.mock('@/components/companion/AnimatedCompanionStage', () => ({
     alt,
     presentation,
     seedKey,
+    sceneFacingScaleX,
   }: {
     alt: string;
     presentation?: string;
     seedKey?: string;
+    sceneFacingScaleX?: 1 | -1;
   }) => {
-    animatedStageMock({ alt, presentation, seedKey });
+    animatedStageMock({ alt, presentation, seedKey, sceneFacingScaleX });
     return (
-      <div data-testid="animated-stage" data-presentation={presentation} data-seed-key={seedKey}>
+      <div
+        data-testid="animated-stage"
+        data-presentation={presentation}
+        data-seed-key={seedKey}
+        data-scene-facing-scale-x={sceneFacingScaleX}
+      >
         {alt}
       </div>
     );
@@ -305,6 +312,7 @@ function makePreview(
       role: 'base-body',
       src: '/ghost.png',
       zIndex: 10,
+      sceneFacingFlip: 'allow',
       motionGroup: 'root',
       animation: {
         mode: 'static',
@@ -363,6 +371,7 @@ function makeTallHatPreview() {
       role: 'base-body',
       src: '/ghost.png',
       zIndex: 10,
+      sceneFacingFlip: 'allow',
       motionGroup: 'root',
       animation: {
         mode: 'static',
@@ -377,6 +386,7 @@ function makeTallHatPreview() {
       role: 'hat-front',
       src: '/hat.png',
       zIndex: 40,
+      sceneFacingFlip: 'allow',
       slot: 'hat',
       motionGroup: 'head',
       animation: {
@@ -580,6 +590,49 @@ describe('GhostlingScene', () => {
     expect(screen.getByTestId('animated-stage')).not.toBeNull();
     expect(screen.queryByAltText("Member One's Ghostling")).toBeNull();
     expect(animatedStageMock).toHaveBeenCalled();
+  });
+
+  it('passes scene-facing scale into animated stages for manifest-driven companions', () => {
+    const payload: ScenePresencePayload = {
+      ...makePayload([makeMember('user:1', 'Member One')]),
+      sharedScene: {
+        hero: {
+          version: 1,
+          variant: 'hero',
+          width: SHARED_COMMONS_WORLD.sourceWidth,
+          height: SHARED_COMMONS_WORLD.sourceHeight,
+          savedAt: Date.now(),
+          payloadSource: 'voice',
+          liveCount: 1,
+          entities: [makeSharedEntity({
+            key: 'user:1',
+            x: 1245,
+            y: 242,
+            targetX: 1305,
+            targetY: 246,
+            safeZoneKey: 'shared-floor',
+            pointKey: 'floor-right-inner',
+            facingLeft: false,
+          })],
+        },
+      },
+    };
+
+    render(
+      <GhostlingScene
+        variant="hero"
+        initialPayload={payload}
+        fallbackCompanion={makePreview()}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    expect(animatedStageMock).toHaveBeenCalledWith(expect.objectContaining({
+      alt: "Member One's Ghostling",
+      sceneFacingScaleX: -1,
+    }));
   });
 
   it('uses the measured visible ghost bounds as the interactive wrapper', () => {

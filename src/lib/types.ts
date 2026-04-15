@@ -151,6 +151,7 @@ export interface HallRewardsSummary {
 }
 
 export type CompanionSlotKey = 'hat' | 'face' | 'neck' | 'body';
+export type CompanionSceneFacingFlipMode = 'allow' | 'ignore' | 'invert';
 
 export interface CompanionAnimationFrame {
   x: number;
@@ -230,6 +231,7 @@ export interface CompanionItemRenderMetadata {
   kind: 'ghostling-cosmetic';
   schemaVersion: 1;
   slot: CompanionSlotKey;
+  sceneFacingFlip?: CompanionSceneFacingFlipMode;
   canvas: {
     width: number;
     height: number;
@@ -248,6 +250,7 @@ export interface CompanionRenderLayer {
   src: string;
   zIndex: number;
   animation: CompanionLayerAnimation;
+  sceneFacingFlip: CompanionSceneFacingFlipMode;
   slot?: CompanionSlotKey | null;
   motionGroup?: string | null;
   slices?: CompanionRenderSlice[];
@@ -758,6 +761,167 @@ export interface GiveawayItem {
   endAt: string;
   requiredRole?: { id: string; label: string };
   canEnter: boolean;
+}
+
+export interface TwitchBroadcasterConnection {
+  id: string;
+  login: string;
+  displayName: string;
+  connected: boolean;
+  isActive: boolean;
+  requiresReconnect: boolean;
+  scopes: string[];
+  tokenExpiresAt?: string | null;
+  updatedAt: string;
+}
+
+export interface TwitchEventSubSubscription {
+  id: string;
+  moduleKey: string;
+  subscriptionType: string;
+  version: string;
+  status: string;
+  broadcasterUserId?: string | null;
+  callbackUrl?: string | null;
+  condition: Record<string, unknown>;
+  lastVerifiedAt?: string | null;
+  lastSyncAttemptAt?: string | null;
+  revokedReason?: string | null;
+  updatedAt: string;
+}
+
+export type TwitchEventDeliveryStatus = 'received' | 'processed' | 'failed' | 'ignored';
+
+export interface TwitchEventDelivery {
+  messageId: string;
+  subscriptionId?: string | null;
+  subscriptionType?: string | null;
+  messageType: string;
+  broadcasterUserId?: string | null;
+  verified: boolean;
+  processingStatus: TwitchEventDeliveryStatus;
+  processingAttempts: number;
+  receivedAt: string;
+  processedAt?: string | null;
+  lastError?: string | null;
+}
+
+export interface TwitchModuleHealth {
+  key: string;
+  label: string;
+  href: string;
+  status: 'ready' | 'warning' | 'critical';
+  summary: string;
+  chips: string[];
+}
+
+export interface TwitchPlatformState {
+  operator: {
+    displayName: string;
+    discordId: string;
+  };
+  config: {
+    operatorAllowlistConfigured: boolean;
+    oauthReady: boolean;
+    eventSubReady: boolean;
+    redirectUri?: string | null;
+    callbackUrl?: string | null;
+  };
+  connection: TwitchBroadcasterConnection | null;
+  subscriptions: TwitchEventSubSubscription[];
+  recentDeliveries: TwitchEventDelivery[];
+  modules: TwitchModuleHealth[];
+}
+
+export type LootChestTurnStatus = 'queued' | 'active' | 'completed';
+export type LootChestTurnResult = 'pending' | 'win' | 'miss';
+
+export interface TwitchRewardConnectionState {
+  configured: boolean;
+  oauthReady: boolean;
+  connected: boolean;
+  requiresReconnect: boolean;
+  broadcaster?: {
+    id: string;
+    login: string;
+    displayName: string;
+  } | null;
+  reward: {
+    id?: string | null;
+    title: string;
+    prompt: string;
+    cost: number;
+    isPaused: boolean;
+    isEnabled: boolean;
+  };
+  eventSub: {
+    callbackUrl?: string | null;
+    subscriptionId?: string | null;
+    status?: string | null;
+    lastVerifiedAt?: string | null;
+  };
+  scopes: string[];
+  overlayUrl?: string | null;
+}
+
+export interface LootChestBoardChest {
+  index: number;
+  label: string;
+  selected: boolean;
+  revealed: boolean;
+  containsPrize: boolean;
+  revealState: 'closed' | 'selected' | 'empty' | 'prize';
+}
+
+export interface LootChestBoard {
+  totalChests: number;
+  selectionLimit: number;
+  prizeChestIndex?: number | null;
+  selectedChests: number[];
+  revealedChests: number[];
+  remainingSelections: number;
+  remainingReveals: number;
+  prizeFound: boolean;
+  allSelectionsLocked: boolean;
+  chests: LootChestBoardChest[];
+}
+
+export interface LootChestTurn {
+  id: number;
+  redemptionId: string;
+  rewardId: string;
+  status: LootChestTurnStatus;
+  result: LootChestTurnResult;
+  redeemedAt: string;
+  createdAt: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  userInput?: string | null;
+  viewer: {
+    twitchId: string;
+    login: string;
+    displayName: string;
+  };
+  board?: LootChestBoard | null;
+}
+
+export interface LootChestGameState {
+  operator: {
+    displayName: string;
+    discordId: string;
+  };
+  connection: TwitchRewardConnectionState;
+  queue: LootChestTurn[];
+  activeTurn: LootChestTurn | null;
+  recentResults: LootChestTurn[];
+  canStartNextTurn: boolean;
+}
+
+export interface LootChestOverlayState {
+  connection: Pick<TwitchRewardConnectionState, 'connected' | 'reward'>;
+  queueCount: number;
+  activeTurn: LootChestTurn | null;
+  lastResolvedTurn: LootChestTurn | null;
 }
 
 export interface WomPlayer {

@@ -58,6 +58,7 @@ function svgFile(filename: string, fill = '#7c5cff') {
 function ghostlingMetadata(
   slot: 'hat' | 'face' | 'neck' | 'body',
   overrides: Partial<{
+    sceneFacingFlip: 'allow' | 'ignore' | 'invert';
     canvas: { width: number; height: number };
     baseRect: { x: number; y: number; width: number; height: number };
     mount: { x: number; y: number };
@@ -71,6 +72,7 @@ function ghostlingMetadata(
     kind: 'ghostling-cosmetic',
     schemaVersion: 1,
     slot,
+    ...(overrides.sceneFacingFlip ? { sceneFacingFlip: overrides.sceneFacingFlip } : {}),
     canvas: overrides.canvas ?? { width: 210, height: 260 },
     baseRect: overrides.baseRect ?? { x: 0, y: 21, width: 210, height: 210 },
     mount: overrides.mount ?? { x: 105, y: 90 },
@@ -402,6 +404,26 @@ describe('companion route handlers', () => {
     expect(outOfBoundsResponse.status).toBe(400);
     expect(outOfBoundsPayload.error).toContain('mount');
 
+    const invalidFlipMode = new FormData();
+    invalidFlipMode.set('name', 'Broken Flip');
+    invalidFlipMode.set('slot', 'hat');
+    invalidFlipMode.set('rarity', 'rare');
+    invalidFlipMode.set('cost', '120');
+    invalidFlipMode.set('frontAsset', svgFile('broken-flip-front.svg'));
+    invalidFlipMode.set('metadata', metadataFile('broken-flip.ghostling.json', {
+      ...ghostlingMetadata('hat'),
+      sceneFacingFlip: 'sideways',
+    }));
+
+    const invalidFlipResponse = await postCompanionAdminItemsRoute(new Request('http://localhost/api/companion/admin/items', {
+      method: 'POST',
+      body: invalidFlipMode,
+    }));
+    const invalidFlipPayload = await invalidFlipResponse.json();
+
+    expect(invalidFlipResponse.status).toBe(400);
+    expect(invalidFlipPayload.error).toContain('sceneFacingFlip');
+
     const validFormData = new FormData();
     validFormData.set('name', 'Anchor Hood');
     validFormData.set('slot', 'hat');
@@ -424,9 +446,11 @@ describe('companion route handlers', () => {
     expect(response.status).toBe(201);
     expect(payload.library.items[0].renderMetadata).toMatchObject({
       slot: 'hat',
+      sceneFacingFlip: 'allow',
       mount: { x: 105, y: 90 },
     });
     expect(storedRow.render_metadata_json).toContain('"kind":"ghostling-cosmetic"');
+    expect(storedRow.render_metadata_json).toContain('"sceneFacingFlip":"allow"');
   });
 
   it('updates companion metadata and slug through the admin route', async () => {
@@ -443,7 +467,9 @@ describe('companion route handlers', () => {
         rarity: 'legendary',
         cost: 220,
         description: 'Solar market hood.',
-        metadataJson: JSON.stringify(ghostlingMetadata('hat')),
+        metadataJson: JSON.stringify(ghostlingMetadata('hat', {
+          sceneFacingFlip: 'invert',
+        })),
       }),
       headers: { 'Content-Type': 'application/json' },
     }));
@@ -462,7 +488,7 @@ describe('companion route handlers', () => {
       name: 'Sun Hood',
       rarity: 'legendary',
       cost: 220,
-      renderMetadata: { slot: 'hat' },
+      renderMetadata: { slot: 'hat', sceneFacingFlip: 'invert' },
     });
     expect(payload.library.items.find((item: { slug: string }) => item.slug === 'moon-hood')).toBeUndefined();
     expect(auditRow).toEqual({ action: 'update_companion_item', target_id: 'sun-hood' });
@@ -523,7 +549,9 @@ describe('companion route handlers', () => {
     createData.set('rarity', 'rare');
     createData.set('cost', '120');
     createData.set('frontAsset', svgFile('anchor-crown-front.svg', '#88c0ff'));
-    createData.set('metadata', metadataFile('anchor-crown.ghostling.json', ghostlingMetadata('hat')));
+    createData.set('metadata', metadataFile('anchor-crown.ghostling.json', ghostlingMetadata('hat', {
+      sceneFacingFlip: 'invert',
+    })));
 
     const createResponse = await postCompanionAdminItemsRoute(new Request('http://localhost/api/companion/admin/items', {
       method: 'POST',
@@ -550,9 +578,11 @@ describe('companion route handlers', () => {
     expect(replaceResponse.status).toBe(200);
     expect(replacedItem.renderMetadata).toMatchObject({
       slot: 'hat',
+      sceneFacingFlip: 'invert',
       mount: { x: 105, y: 90 },
     });
     expect(storedRow.render_metadata_json).toContain('"kind":"ghostling-cosmetic"');
+    expect(storedRow.render_metadata_json).toContain('"sceneFacingFlip":"invert"');
   });
 
   it('archives and restores cosmetics through the admin routes with audit visibility', async () => {
@@ -700,7 +730,9 @@ describe('companion route handlers', () => {
     const metadataPath = path.join(repoItemsDir, metadataName);
     repoFixturePaths.push(assetPath, metadataPath);
     fs.writeFileSync(assetPath, svgBuffer('#88c0ff'));
-    fs.writeFileSync(metadataPath, JSON.stringify(ghostlingMetadata('hat')));
+    fs.writeFileSync(metadataPath, JSON.stringify(ghostlingMetadata('hat', {
+      sceneFacingFlip: 'ignore',
+    })));
 
     const libraryResponse = await getCompanionAdminLibraryRoute();
     const libraryPayload = await libraryResponse.json();
@@ -710,7 +742,7 @@ describe('companion route handlers', () => {
     expect(candidate).toMatchObject({
       slug: 'route-anchor',
       renderMetadataPath: `repo/defaults/items/${metadataName}`,
-      renderMetadata: { slot: 'hat' },
+      renderMetadata: { slot: 'hat', sceneFacingFlip: 'ignore' },
     });
     expect(candidate.renderMetadataErrors).toEqual([]);
 
@@ -740,9 +772,10 @@ describe('companion route handlers', () => {
     expect(importResponse.status).toBe(201);
     expect(importPayload.library.items.find((item: { slug: string }) => item.slug === 'route-anchor')).toMatchObject({
       slug: 'route-anchor',
-      renderMetadata: { slot: 'hat' },
+      renderMetadata: { slot: 'hat', sceneFacingFlip: 'ignore' },
     });
     expect(storedRow.render_metadata_json).toContain('"schemaVersion":1');
+    expect(storedRow.render_metadata_json).toContain('"sceneFacingFlip":"ignore"');
   });
 
   it('surfaces invalid repo sidecar metadata in the admin library payload', async () => {

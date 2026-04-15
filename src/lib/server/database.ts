@@ -335,6 +335,131 @@ function ensureSchema(db: Database.Database) {
 
     CREATE INDEX IF NOT EXISTS idx_runelite_account_links_user
     ON runelite_account_links(user_id);
+
+    CREATE TABLE IF NOT EXISTS twitch_loot_chest_settings (
+      singleton_key TEXT PRIMARY KEY,
+      broadcaster_user_id TEXT,
+      broadcaster_login TEXT,
+      broadcaster_display_name TEXT,
+      access_token TEXT,
+      refresh_token TEXT,
+      token_expires_at TEXT,
+      token_scope_json TEXT NOT NULL DEFAULT '[]',
+      reward_id TEXT,
+      reward_title TEXT NOT NULL DEFAULT 'Loot Chest Spin',
+      reward_prompt TEXT NOT NULL DEFAULT 'Redeem for a host-run Ghosted loot chest turn.',
+      reward_cost INTEGER NOT NULL DEFAULT 1000,
+      reward_is_paused INTEGER NOT NULL DEFAULT 0,
+      reward_is_enabled INTEGER NOT NULL DEFAULT 0,
+      overlay_token TEXT NOT NULL,
+      oauth_state TEXT,
+      oauth_state_actor_discord_id TEXT,
+      oauth_state_expires_at TEXT,
+      eventsub_subscription_id TEXT,
+      eventsub_status TEXT,
+      eventsub_callback_url TEXT,
+      eventsub_last_verified_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS twitch_loot_chest_turns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      redemption_id TEXT NOT NULL UNIQUE,
+      reward_id TEXT NOT NULL,
+      viewer_twitch_id TEXT NOT NULL,
+      viewer_login TEXT NOT NULL,
+      viewer_display_name TEXT NOT NULL,
+      user_input TEXT,
+      status TEXT NOT NULL,
+      result TEXT NOT NULL DEFAULT 'pending',
+      prize_chest_index INTEGER,
+      selected_chests_json TEXT NOT NULL DEFAULT '[]',
+      revealed_chests_json TEXT NOT NULL DEFAULT '[]',
+      fulfillment_status TEXT NOT NULL DEFAULT 'UNFULFILLED',
+      redeemed_at TEXT NOT NULL,
+      started_at TEXT,
+      completed_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_twitch_loot_chest_turns_status
+    ON twitch_loot_chest_turns(status, redeemed_at);
+
+    CREATE TABLE IF NOT EXISTS twitch_loot_chest_events (
+      id TEXT PRIMARY KEY,
+      source TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      payload_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS twitch_platform_settings (
+      singleton_key TEXT PRIMARY KEY,
+      oauth_state TEXT,
+      oauth_state_actor_discord_id TEXT,
+      oauth_state_expires_at TEXT,
+      oauth_state_next_path TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS twitch_platform_broadcasters (
+      broadcaster_user_id TEXT PRIMARY KEY,
+      broadcaster_login TEXT NOT NULL,
+      broadcaster_display_name TEXT NOT NULL,
+      access_token TEXT,
+      refresh_token TEXT,
+      token_expires_at TEXT,
+      token_scope_json TEXT NOT NULL DEFAULT '[]',
+      is_active INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_twitch_platform_broadcasters_active
+    ON twitch_platform_broadcasters(is_active, updated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS twitch_platform_subscriptions (
+      id TEXT PRIMARY KEY,
+      module_key TEXT NOT NULL,
+      subscription_type TEXT NOT NULL,
+      subscription_version TEXT NOT NULL,
+      broadcaster_user_id TEXT,
+      condition_json TEXT NOT NULL DEFAULT '{}',
+      transport_method TEXT,
+      callback_url TEXT,
+      status TEXT NOT NULL,
+      last_verified_at TEXT,
+      last_sync_attempt_at TEXT,
+      revoked_reason TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_twitch_platform_subscriptions_lookup
+    ON twitch_platform_subscriptions(subscription_type, module_key, broadcaster_user_id);
+
+    CREATE TABLE IF NOT EXISTS twitch_platform_deliveries (
+      message_id TEXT PRIMARY KEY,
+      subscription_id TEXT,
+      subscription_type TEXT,
+      message_type TEXT NOT NULL,
+      broadcaster_user_id TEXT,
+      verified INTEGER NOT NULL DEFAULT 0,
+      processing_status TEXT NOT NULL DEFAULT 'received',
+      processing_attempts INTEGER NOT NULL DEFAULT 0,
+      raw_headers_json TEXT NOT NULL DEFAULT '{}',
+      raw_body TEXT NOT NULL DEFAULT '',
+      payload_json TEXT NOT NULL DEFAULT '{}',
+      received_at TEXT NOT NULL,
+      processed_at TEXT,
+      last_error TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_twitch_platform_deliveries_status
+    ON twitch_platform_deliveries(processing_status, received_at DESC);
   `);
 
   ensureTableColumn(db, 'users', 'public_name_source', "TEXT NOT NULL DEFAULT 'discord'");
@@ -370,6 +495,164 @@ function ensureSchema(db: Database.Database) {
     SET updated_at = COALESCE(updated_at, created_at)
     WHERE updated_at IS NULL
   `);
+
+  const legacyLootChestSettings = db.prepare(`
+    SELECT *
+    FROM twitch_loot_chest_settings
+    WHERE singleton_key = 'default'
+    LIMIT 1
+  `).get() as {
+    broadcaster_user_id: string | null;
+    broadcaster_login: string | null;
+    broadcaster_display_name: string | null;
+    access_token: string | null;
+    refresh_token: string | null;
+    token_expires_at: string | null;
+    token_scope_json: string | null;
+    oauth_state: string | null;
+    oauth_state_actor_discord_id: string | null;
+    oauth_state_expires_at: string | null;
+    eventsub_subscription_id: string | null;
+    eventsub_status: string | null;
+    eventsub_callback_url: string | null;
+    eventsub_last_verified_at: string | null;
+    reward_id: string | null;
+    created_at: string;
+    updated_at: string;
+  } | undefined;
+
+  if (legacyLootChestSettings) {
+    db.prepare(`
+      INSERT OR IGNORE INTO twitch_platform_settings (
+        singleton_key,
+        oauth_state,
+        oauth_state_actor_discord_id,
+        oauth_state_expires_at,
+        oauth_state_next_path,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'default',
+      legacyLootChestSettings.oauth_state,
+      legacyLootChestSettings.oauth_state_actor_discord_id,
+      legacyLootChestSettings.oauth_state_expires_at,
+      '/v/giveaways/',
+      legacyLootChestSettings.created_at,
+      legacyLootChestSettings.updated_at,
+    );
+
+    if (legacyLootChestSettings.broadcaster_user_id) {
+      db.prepare(`
+        INSERT OR IGNORE INTO twitch_platform_broadcasters (
+          broadcaster_user_id,
+          broadcaster_login,
+          broadcaster_display_name,
+          access_token,
+          refresh_token,
+          token_expires_at,
+          token_scope_json,
+          is_active,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+      `).run(
+        legacyLootChestSettings.broadcaster_user_id,
+        legacyLootChestSettings.broadcaster_login ?? legacyLootChestSettings.broadcaster_user_id,
+        legacyLootChestSettings.broadcaster_display_name
+          ?? legacyLootChestSettings.broadcaster_login
+          ?? legacyLootChestSettings.broadcaster_user_id,
+        legacyLootChestSettings.access_token,
+        legacyLootChestSettings.refresh_token,
+        legacyLootChestSettings.token_expires_at,
+        legacyLootChestSettings.token_scope_json ?? '[]',
+        legacyLootChestSettings.created_at,
+        legacyLootChestSettings.updated_at,
+      );
+    }
+
+    if (legacyLootChestSettings.eventsub_subscription_id) {
+      db.prepare(`
+        INSERT OR IGNORE INTO twitch_platform_subscriptions (
+          id,
+          module_key,
+          subscription_type,
+          subscription_version,
+          broadcaster_user_id,
+          condition_json,
+          transport_method,
+          callback_url,
+          status,
+          last_verified_at,
+          last_sync_attempt_at,
+          revoked_reason,
+          created_at,
+          updated_at
+        )
+        VALUES (?, 'giveaways', 'channel.channel_points_custom_reward_redemption.add', '1', ?, ?, 'webhook', ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        legacyLootChestSettings.eventsub_subscription_id,
+        legacyLootChestSettings.broadcaster_user_id,
+        JSON.stringify({
+          broadcaster_user_id: legacyLootChestSettings.broadcaster_user_id,
+          reward_id: legacyLootChestSettings.reward_id,
+        }),
+        legacyLootChestSettings.eventsub_callback_url,
+        legacyLootChestSettings.eventsub_status ?? 'enabled',
+        legacyLootChestSettings.eventsub_last_verified_at,
+        legacyLootChestSettings.updated_at,
+        legacyLootChestSettings.eventsub_status?.includes('revoked')
+          ? legacyLootChestSettings.eventsub_status
+          : null,
+        legacyLootChestSettings.created_at,
+        legacyLootChestSettings.updated_at,
+      );
+    }
+  }
+
+  const legacyLootChestEvents = db.prepare(`
+    SELECT *
+    FROM twitch_loot_chest_events
+  `).all() as Array<{
+    id: string;
+    event_type: string;
+    payload_json: string;
+    created_at: string;
+  }>;
+
+  for (const event of legacyLootChestEvents) {
+    db.prepare(`
+      INSERT OR IGNORE INTO twitch_platform_deliveries (
+        message_id,
+        subscription_type,
+        message_type,
+        broadcaster_user_id,
+        verified,
+        processing_status,
+        processing_attempts,
+        raw_headers_json,
+        raw_body,
+        payload_json,
+        received_at,
+        processed_at
+      )
+      VALUES (?, 'channel.channel_points_custom_reward_redemption.add', ?, ?, 1, ?, 1, '{}', ?, ?, ?, ?)
+    `).run(
+      event.id,
+      event.event_type,
+      legacyLootChestSettings?.broadcaster_user_id ?? null,
+      event.event_type === 'notification' || event.event_type === 'revocation' || event.event_type === 'webhook_callback_verification'
+        ? 'processed'
+        : 'ignored',
+      event.payload_json,
+      event.payload_json,
+      event.created_at,
+      event.created_at,
+    );
+  }
+
   seedDefaultCasinoGames(db);
   ensureDefaultCompanionBase(db);
   removeLegacyDefaultCompanionAssets(db);
