@@ -107,12 +107,12 @@ export function createSceneRealtimeServer(options: SceneRealtimeServerOptions = 
   const buildPayload = options.buildPayload ?? buildScenePresencePayload;
   const buildGiveawaySnapshot = options.buildGiveawaySnapshot
     ?? (async (input?: { db?: Database.Database }) => {
-      const { buildLootChestSceneSnapshot } = localRequire('./twitch-loot-chest');
+      const { buildLootChestSceneSnapshot } = localRequire('./twitch-loot-chest-scene.ts');
       return buildLootChestSceneSnapshot(input?.db ?? db);
     });
   const validateGiveawayToken = options.isValidGiveawayToken
     ?? ((token: string, currentDb?: Database.Database) => {
-      const { isValidLootChestOverlayToken } = localRequire('./twitch-loot-chest');
+      const { isValidLootChestOverlayToken } = localRequire('./twitch-loot-chest-scene.ts');
       return isValidLootChestOverlayToken(token, currentDb ?? db);
     });
   const logger = options.logger ?? console;

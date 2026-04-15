@@ -26,6 +26,10 @@ import {
 } from '@/lib/server/giveaway-realtime';
 import { displayName } from '@/lib/server/ghosted-api';
 import {
+  buildLootChestSceneSnapshot as buildLootChestSceneSnapshotBase,
+  isValidLootChestOverlayToken as isValidLootChestOverlayTokenBase,
+} from '@/lib/server/twitch-loot-chest-scene';
+import {
   beginTwitchPlatformConnect,
   completeTwitchPlatformConnect,
   getTwitchPlatformConfig,
@@ -436,51 +440,8 @@ function mapTurnRow(row: LootChestTurnRow): LootChestTurn {
   };
 }
 
-function latestScenePublishedAt(input: {
-  settings: LootChestSettingsRow;
-  queued: LootChestTurnRow[];
-  active: LootChestTurnRow | null;
-  lastResolved: LootChestTurnRow | null;
-}) {
-  const timestamps = [
-    input.settings.updated_at,
-    input.active?.updated_at ?? null,
-    input.lastResolved?.updated_at ?? null,
-    input.queued[0]?.updated_at ?? null,
-  ].filter((value): value is string => Boolean(value));
-
-  const latestTimestamp = timestamps.reduce((latest, value) => {
-    if (!latest) return value;
-    return Date.parse(value) > Date.parse(latest) ? value : latest;
-  }, '');
-
-  return latestTimestamp || utcIso();
-}
-
-function sceneRevisionFromTimestamp(value: string) {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
 export function buildLootChestSceneSnapshot(db = getDb()): LootChestSceneSnapshot {
-  const settings = getSettingsRow(db);
-  const queued = queuedTurnRows(db);
-  const active = activeTurnRow(db) ?? null;
-  const lastResolved = recentCompletedTurns(db, 1)[0] ?? null;
-  const publishedAt = latestScenePublishedAt({
-    settings,
-    queued,
-    active,
-    lastResolved,
-  });
-
-  return {
-    revision: sceneRevisionFromTimestamp(publishedAt),
-    publishedAt,
-    queueCount: queued.length,
-    reward: connectionStateFromRows(db).reward,
-      focusTurn: active ? mapTurnRow(active) : lastResolved ? mapTurnRow(lastResolved) : null,
-  };
+  return buildLootChestSceneSnapshotBase(db);
 }
 
 function cueExpiresAt(durationMs: number) {
@@ -1260,8 +1221,7 @@ export function overlayTokenFromSettings() {
 }
 
 export function isValidLootChestOverlayToken(token: string, db = getDb()) {
-  const normalized = String(token ?? '').trim();
-  return Boolean(normalized) && normalized === getSettingsRow(db).overlay_token;
+  return isValidLootChestOverlayTokenBase(token, db);
 }
 
 export function turnRowsForTests() {

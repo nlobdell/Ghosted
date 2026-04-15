@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WebSocket } from 'ws';
 import type {
   LootChestPresentationCue,
@@ -6,6 +6,12 @@ import type {
   LootChestSceneSnapshot,
 } from '@/lib/types';
 import { createSceneRealtimeServer } from '@/lib/server/scene-realtime';
+import type { ServerTestContext } from './test-utils';
+import {
+  cleanupServerTestEnvironment,
+  setupServerTestEnvironment,
+} from './test-utils';
+import { buildLootChestSceneSnapshot } from '@/lib/server/twitch-loot-chest-scene';
 
 function waitForMessage(socket: WebSocket) {
   return new Promise<LootChestRealtimeSocketMessage>((resolve, reject) => {
@@ -57,7 +63,14 @@ function makeCue(overrides: Partial<LootChestPresentationCue> = {}): LootChestPr
 }
 
 describe('giveaway realtime server', () => {
+  let context: ServerTestContext;
+
+  beforeEach(() => {
+    context = setupServerTestEnvironment();
+  });
+
   afterEach(() => {
+    cleanupServerTestEnvironment(context);
     vi.restoreAllMocks();
   });
 
@@ -137,6 +150,37 @@ describe('giveaway realtime server', () => {
       payload: cue,
       sentAt: cue.sentAt,
     });
+
+    socket.close();
+    await server.stop();
+  });
+
+  it('uses the default giveaway snapshot loader without importing the auth stack', async () => {
+    const initialScene = buildLootChestSceneSnapshot(context.db);
+    const settingsRow = context.db.prepare(`
+      SELECT overlay_token
+      FROM twitch_loot_chest_settings
+      WHERE singleton_key = 'default'
+      LIMIT 1
+    `).get() as { overlay_token: string };
+
+    const server = createSceneRealtimeServer({
+      host: '127.0.0.1',
+      port: 0,
+      giveawayTickMs: 1000,
+      db: context.db,
+      logger: { info() {}, warn() {}, error() {} },
+    });
+
+    const start = await server.start();
+    const socket = new WebSocket(`ws://${start.host}:${start.port}${start.giveawayPath}?overlayToken=${settingsRow.overlay_token}`);
+    const message = await waitForMessage(socket);
+
+    expect(message.type).toBe('loot-chest:snapshot');
+    if (message.type === 'loot-chest:snapshot') {
+      expect(message.payload.revision).toBe(initialScene.revision);
+      expect(message.payload.reward.title).toBe(initialScene.reward.title);
+    }
 
     socket.close();
     await server.stop();
