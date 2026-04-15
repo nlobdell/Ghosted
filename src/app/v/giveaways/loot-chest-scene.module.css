@@ -97,11 +97,71 @@
 .boardShell {
   position: relative;
   display: grid;
+  overflow: hidden;
+  isolation: isolate;
   min-height: clamp(16rem, 46vh, 30rem);
   padding: 0.75rem;
   border: 1px solid rgba(191, 179, 255, 0.1);
   border-radius: 0;
   background: rgba(255, 255, 255, 0.02);
+}
+
+.sceneSprite {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+}
+
+.sceneSpriteStrip {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--scene-sprite-frames, 1) * 100%);
+  height: 100%;
+  background-image: var(--scene-sprite-image);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  transform: translateX(var(--scene-sprite-static-translate, 0%));
+  will-change: transform;
+}
+
+.sceneSpriteLoop .sceneSpriteStrip {
+  animation: sceneSpritePlayback var(--scene-sprite-duration, 0ms) steps(var(--scene-sprite-frames, 1), end) infinite;
+}
+
+.sceneSpriteOnce .sceneSpriteStrip {
+  animation: sceneSpritePlayback var(--scene-sprite-duration, 0ms) steps(var(--scene-sprite-frames, 1), end) 1 both;
+}
+
+.sceneSpritePixelated,
+.sceneSpritePixelated .sceneSpriteStrip {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.boardBackdrop,
+.boardFrame {
+  position: absolute;
+  inset: 0;
+}
+
+.boardBackdrop {
+  z-index: 0;
+  opacity: 0.18;
+}
+
+.boardFrame {
+  z-index: 0;
+  opacity: 0.4;
+}
+
+.boardContent {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: 100%;
 }
 
 .boardGrid {
@@ -209,7 +269,6 @@
 .chestSprite {
   position: absolute;
   inset: 0;
-  background: var(--chest-sprite) center/contain no-repeat;
   transition: transform var(--ease-standard), filter var(--ease-standard);
 }
 
@@ -276,9 +335,9 @@
   position: absolute;
   right: 1rem;
   bottom: 1rem;
+  z-index: 3;
   width: clamp(3.5rem, 7vw, 4.8rem);
   aspect-ratio: 1;
-  background: var(--result-asset) center/contain no-repeat;
   opacity: 0.86;
   pointer-events: none;
 }
@@ -307,6 +366,15 @@
   100% {
     transform: translateY(0) scale(1);
     filter: brightness(1);
+  }
+}
+
+@keyframes sceneSpritePlayback {
+  from {
+    transform: translateX(var(--scene-sprite-static-translate, 0%));
+  }
+  to {
+    transform: translateX(var(--scene-sprite-end-translate, 0%));
   }
 }
 
@@ -366,6 +434,8 @@
     transform: none;
   }
 
+  .sceneSpriteLoop .sceneSpriteStrip,
+  .sceneSpriteOnce .sceneSpriteStrip,
   .chestReveal .chestSprite,
   .resultStampAnimated {
     animation: none;

@@ -169,12 +169,14 @@ describe('LootChestScene', () => {
     const secondSelected = container.querySelector('[data-chest-index="4"]');
     const thirdSelected = container.querySelector('[data-chest-index="8"]');
     const dormantChest = container.querySelector('[data-chest-index="0"]');
+    const selectedSprite = firstSelected?.querySelector('[data-sprite-id="chest-locked"]');
 
     expect(firstSelected?.getAttribute('data-selection-stage')).toBe('true');
     expect(firstSelected?.getAttribute('data-selection-slot')).toBe('0');
     expect(secondSelected?.getAttribute('data-selection-slot')).toBe('1');
     expect(thirdSelected?.getAttribute('data-selection-slot')).toBe('2');
     expect(dormantChest?.getAttribute('data-dormant')).toBe('true');
+    expect(selectedSprite?.getAttribute('data-sprite-playback')).toBe('static');
   });
 
   it('animates the revealed chest when the board revision advances', async () => {
@@ -307,6 +309,10 @@ describe('LootChestScene', () => {
     await waitFor(() => {
       expect(container.querySelector('[data-result-cue="true"]')).not.toBeNull();
     });
+
+    expect(container.querySelector('[data-sprite-id="board-backdrop"]')).not.toBeNull();
+    expect(container.querySelector('[data-sprite-id="board-frame"]')).not.toBeNull();
+    expect(container.querySelector('[data-sprite-id="result-win"]')).not.toBeNull();
   });
 
   it('mirrors a host hover cue onto the shared scene without enabling public controls', () => {

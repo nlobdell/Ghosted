@@ -9,35 +9,16 @@ import type {
   LootChestSceneSnapshot,
   LootChestTurn,
 } from '@/lib/types';
+import { SceneSprite } from './SceneSprite';
+import {
+  getBoardBackdropSpriteSpec,
+  getBoardFrameSpriteSpec,
+  getChestSpriteSpec,
+  getResultSpriteSpec,
+} from './scene-sprite-catalog';
 import styles from './loot-chest-scene.module.css';
 
 const REVEAL_ANIMATION_MS = 1400;
-
-function spriteAssetForState(state: LootChestChestSpriteState) {
-  switch (state) {
-    case 'selected':
-      return '/giveaways/sprites/chest-selected.svg';
-    case 'locked':
-      return '/giveaways/sprites/chest-locked.svg';
-    case 'opening':
-      return '/giveaways/sprites/chest-opening.svg';
-    case 'empty':
-    case 'resolved-empty':
-      return '/giveaways/sprites/chest-empty.svg';
-    case 'prize':
-    case 'resolved-prize':
-      return '/giveaways/sprites/chest-prize.svg';
-    case 'closed':
-    default:
-      return '/giveaways/sprites/chest-closed.svg';
-  }
-}
-
-function resultAsset(result: LootChestTurn['result'] | null | undefined) {
-  if (result === 'win') return '/giveaways/sprites/result-win.svg';
-  if (result === 'miss') return '/giveaways/sprites/result-miss.svg';
-  return null;
-}
 
 function phaseLabel(phase: LootChestTurn['phase'] | null | undefined, queueCount: number) {
   if (phase === 'selection') return 'Choose 3 chests';
@@ -269,12 +250,16 @@ export function LootChestScene({
       </header>
 
       <div className={styles.boardShell}>
+        <SceneSprite spec={getBoardBackdropSpriteSpec()} className={styles.boardBackdrop} />
+        <SceneSprite spec={getBoardFrameSpriteSpec()} className={styles.boardFrame} />
+        <div className={styles.boardContent}>
         {board ? (
           <>
             <div className={[styles.boardGrid, selectionRowActive ? styles.boardGridSelectionStage : ''].filter(Boolean).join(' ')}>
               {board.chests.map((chest) => {
                 const spriteState = displaySpriteState(chest, board.selectionLimit, selectedIndices, interactive);
                 const animationState = displayAnimationState(chest, spriteState);
+                const spriteSpec = getChestSpriteSpec(spriteState, animationState);
                 const selectionRow = selectionRowActive ? selectionRowPosition(board, chest.index) : null;
                 const dormant = selectionRowActive && selectionRow === null;
                 const animateReveal = Boolean(
@@ -325,11 +310,7 @@ export function LootChestScene({
                     data-selection-slot={selectionRow ? String(selectionRow.slot) : ''}
                     data-dormant={dormant ? 'true' : 'false'}
                   >
-                    <span
-                      className={styles.chestSprite}
-                      style={{ ['--chest-sprite' as string]: `url("${spriteAssetForState(spriteState)}")` }}
-                      aria-hidden="true"
-                    />
+                    <SceneSprite spec={spriteSpec} className={styles.chestSprite} />
                     <span className={styles.chestNumber}>{chest.label}</span>
                     <span className={styles.chestWord}>{chestLabel(chest, spriteState)}</span>
                   </button>
@@ -337,12 +318,11 @@ export function LootChestScene({
               })}
             </div>
 
-            {(turn?.resolutionCue || cuedResult) && resultAsset(cuedResult ?? turn?.resolutionCue?.result) ? (
-              <div
+            {(turn?.resolutionCue || cuedResult) && getResultSpriteSpec(cuedResult ?? turn?.resolutionCue?.result) ? (
+              <SceneSprite
+                spec={getResultSpriteSpec(cuedResult ?? turn?.resolutionCue?.result)!}
                 className={`${styles.resultStamp} ${(animateResult || Boolean(cuedResult)) ? styles.resultStampAnimated : ''}`}
-                style={{ ['--result-asset' as string]: `url("${resultAsset(cuedResult ?? turn?.resolutionCue?.result)}")` }}
                 data-result-cue={(animateResult || Boolean(cuedResult)) ? 'true' : 'false'}
-                aria-hidden="true"
               />
             ) : null}
           </>
@@ -352,6 +332,7 @@ export function LootChestScene({
             <p>The next redemption will appear here when the host starts a turn.</p>
           </div>
         )}
+        </div>
       </div>
 
       <footer className={styles.sceneFooter}>
