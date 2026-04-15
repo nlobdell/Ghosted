@@ -1,12 +1,32 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/server/ghosted-api';
-import { isTwitchPlatformOperator, twitchPlatformLoginHref } from '@/lib/server/twitch-platform';
+import {
+  getTwitchPlatformFeatureBaseUrl,
+  isTwitchPlatformOperator,
+  twitchPlatformLoginHref,
+} from '@/lib/server/twitch-platform';
 import { completeGhostedTwitchPlatformConnect } from '@/lib/server/twitch-platform-runtime';
 
 export const runtime = 'nodejs';
 
+function redirectBaseUrl(request: Request) {
+  const configuredBaseUrl = getTwitchPlatformFeatureBaseUrl();
+  if (configuredBaseUrl) {
+    return configuredBaseUrl;
+  }
+
+  const requestUrl = new URL(request.url);
+  const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  const forwardedProto = request.headers.get('x-forwarded-proto');
+  if (forwardedHost) {
+    return `${forwardedProto ?? requestUrl.protocol.replace(/:$/, '')}://${forwardedHost}`;
+  }
+
+  return requestUrl.origin;
+}
+
 function redirectWithMessage(request: Request, nextPath: string, message: string) {
-  const url = new URL(nextPath, request.url);
+  const url = new URL(nextPath, redirectBaseUrl(request));
   url.searchParams.set('message', message);
   return NextResponse.redirect(url);
 }
@@ -19,7 +39,7 @@ function callbackNextPath(request: Request) {
 export async function GET(request: Request) {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
-    return NextResponse.redirect(new URL(twitchPlatformLoginHref(callbackNextPath(request)), request.url));
+    return NextResponse.redirect(new URL(twitchPlatformLoginHref(callbackNextPath(request)), redirectBaseUrl(request)));
   }
   if (!isTwitchPlatformOperator(currentUser)) {
     return redirectWithMessage(request, '/v/twitch/', 'This Twitch connection is not allowed for your Discord account.');
