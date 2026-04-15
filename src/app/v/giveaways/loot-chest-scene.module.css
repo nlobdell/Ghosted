@@ -436,7 +436,10 @@
   left: 50%;
   width: 84%;
   aspect-ratio: 48 / 32;
-  transform: translate(-50%, calc(-54% + var(--chest-sprite-lift, 0px)));
+  transform: translate(
+    calc(-50% + var(--scene-sprite-anchor-x, 0%)),
+    calc(-54% + var(--chest-sprite-lift, 0px))
+  );
   transition: transform var(--ease-standard), filter var(--ease-standard);
 }
 
@@ -537,15 +540,24 @@
 
 @keyframes chestReveal {
   0% {
-    transform: translate(-50%, calc(-54% + 4px)) scale(0.97);
+    transform: translate(
+      calc(-50% + var(--scene-sprite-anchor-x, 0%)),
+      calc(-54% + 4px)
+    ) scale(0.97);
     filter: brightness(0.88);
   }
   60% {
-    transform: translate(-50%, calc(-54% - 2px)) scale(1.01);
+    transform: translate(
+      calc(-50% + var(--scene-sprite-anchor-x, 0%)),
+      calc(-54% - 2px)
+    ) scale(1.01);
     filter: brightness(1.03);
   }
   100% {
-    transform: translate(-50%, calc(-54% + var(--chest-sprite-lift, 0px))) scale(1);
+    transform: translate(
+      calc(-50% + var(--scene-sprite-anchor-x, 0%)),
+      calc(-54% + var(--chest-sprite-lift, 0px))
+    ) scale(1);
     filter: brightness(1);
   }
 }

@@ -20,6 +20,16 @@ function spriteEndTranslate(frames: number) {
   return `${-(((frames - 1) * 100) / frames)}%`;
 }
 
+function spriteAnchorShift(spec: SceneSpriteSpec) {
+  if (!spec.visibleBounds || !spec.frameWidth) {
+    return '0%';
+  }
+
+  const visibleCenter = (spec.visibleBounds.left + spec.visibleBounds.right + 1) / 2;
+  const frameCenter = spec.frameWidth / 2;
+  return `${((frameCenter - visibleCenter) / spec.frameWidth) * 100}%`;
+}
+
 export function SceneSprite({
   spec,
   className,
@@ -36,6 +46,7 @@ export function SceneSprite({
     ['--scene-sprite-duration' as string]: `${spec.durationMs ?? 0}ms`,
     ['--scene-sprite-static-translate' as string]: spriteTranslate(spec.frames, spec.initialFrame ?? 0),
     ['--scene-sprite-end-translate' as string]: spriteEndTranslate(spec.frames),
+    ['--scene-sprite-anchor-x' as string]: spriteAnchorShift(spec),
   } as CSSProperties;
 
   return (

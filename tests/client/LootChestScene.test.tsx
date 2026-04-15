@@ -170,6 +170,7 @@ describe('LootChestScene', () => {
     const thirdSelected = container.querySelector('[data-chest-index="8"]');
     const dormantChest = container.querySelector('[data-chest-index="0"]');
     const selectedSprite = firstSelected?.querySelector('[data-sprite-id="chest-locked"]');
+    const selectedSpriteStyle = selectedSprite instanceof HTMLElement ? selectedSprite.style.getPropertyValue('--scene-sprite-anchor-x') : '';
 
     expect(firstSelected?.getAttribute('data-selection-stage')).toBe('true');
     expect(firstSelected?.getAttribute('data-selection-slot')).toBe('0');
@@ -177,6 +178,7 @@ describe('LootChestScene', () => {
     expect(thirdSelected?.getAttribute('data-selection-slot')).toBe('2');
     expect(dormantChest?.getAttribute('data-dormant')).toBe('true');
     expect(selectedSprite?.getAttribute('data-sprite-playback')).toBe('static');
+    expect(selectedSpriteStyle).not.toBe('');
   });
 
   it('animates the revealed chest when the board revision advances', async () => {

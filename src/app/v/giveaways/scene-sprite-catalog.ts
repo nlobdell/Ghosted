@@ -10,10 +10,18 @@ export type SceneSpriteSpec = {
   id: string;
   src: string;
   frames: number;
+  frameWidth?: number;
+  frameHeight?: number;
   durationMs?: number;
   playback: SceneSpritePlayback;
   initialFrame?: number;
   pixelated?: boolean;
+  visibleBounds?: {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+  };
 };
 
 function staticSprite(
@@ -31,16 +39,34 @@ function staticSprite(
 }
 
 const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
-  closed: staticSprite('chest-closed', '/giveaways/sprites/chest.png', { pixelated: true }),
-  selected: staticSprite('chest-selected', '/giveaways/sprites/chest.png', { pixelated: true }),
-  locked: staticSprite('chest-locked', '/giveaways/sprites/chest.png', { pixelated: true }),
+  closed: {
+    ...staticSprite('chest-closed', '/giveaways/sprites/chest.png', { pixelated: true }),
+    frameWidth: 48,
+    frameHeight: 32,
+    visibleBounds: { left: 2, top: 12, right: 29, bottom: 31 },
+  },
+  selected: {
+    ...staticSprite('chest-selected', '/giveaways/sprites/chest.png', { pixelated: true }),
+    frameWidth: 48,
+    frameHeight: 32,
+    visibleBounds: { left: 2, top: 12, right: 29, bottom: 31 },
+  },
+  locked: {
+    ...staticSprite('chest-locked', '/giveaways/sprites/chest.png', { pixelated: true }),
+    frameWidth: 48,
+    frameHeight: 32,
+    visibleBounds: { left: 2, top: 12, right: 29, bottom: 31 },
+  },
   opening: {
     id: 'chest-opening',
     src: '/giveaways/sprites/chest-opening-animation.png',
     frames: 10,
+    frameWidth: 48,
+    frameHeight: 32,
     playback: 'once',
     durationMs: 680,
     pixelated: true,
+    visibleBounds: { left: 2, top: 12, right: 29, bottom: 31 },
   },
   empty: staticSprite('chest-empty', '/giveaways/sprites/chest-empty.svg', { pixelated: true }),
   prize: staticSprite('chest-prize', '/giveaways/sprites/chest-prize.svg', { pixelated: true }),
