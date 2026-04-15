@@ -136,6 +136,47 @@ describe('LootChestScene', () => {
     expect(onToggleSelection).toHaveBeenCalledWith(4);
   });
 
+  it('stages the locked selections into a centered row before reveals begin', () => {
+    const board = makeBoard({
+      phase: 'locked',
+      boardRevision: 2,
+      selectedChests: [1, 4, 8],
+      revealedChests: [],
+      allSelectionsLocked: true,
+      remainingSelections: 0,
+      remainingReveals: 3,
+      lastAction: 'chests_selected',
+    }, {
+      1: { spriteState: 'locked', animationState: 'idle' },
+      4: { spriteState: 'locked', animationState: 'idle' },
+      8: { spriteState: 'locked', animationState: 'idle' },
+    });
+
+    const { container } = render(
+      <LootChestScene
+        scene={makeScene({
+          queueCount: 1,
+          focusTurn: makeTurn({
+            board,
+            phase: 'locked',
+            lastAction: 'chests_selected',
+          }),
+        })}
+      />,
+    );
+
+    const firstSelected = container.querySelector('[data-chest-index="1"]');
+    const secondSelected = container.querySelector('[data-chest-index="4"]');
+    const thirdSelected = container.querySelector('[data-chest-index="8"]');
+    const dormantChest = container.querySelector('[data-chest-index="0"]');
+
+    expect(firstSelected?.getAttribute('data-selection-stage')).toBe('true');
+    expect(firstSelected?.getAttribute('data-selection-slot')).toBe('0');
+    expect(secondSelected?.getAttribute('data-selection-slot')).toBe('1');
+    expect(thirdSelected?.getAttribute('data-selection-slot')).toBe('2');
+    expect(dormantChest?.getAttribute('data-dormant')).toBe('true');
+  });
+
   it('animates the revealed chest when the board revision advances', async () => {
     const lockedBoard = makeBoard({
       phase: 'locked',

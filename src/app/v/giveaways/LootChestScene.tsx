@@ -154,6 +154,24 @@ function displayAnimationState(
   return chest.animationState;
 }
 
+function selectionRowPosition(board: NonNullable<LootChestTurn['board']>, chestIndex: number) {
+  const slot = board.selectedChests.indexOf(chestIndex);
+  if (slot === -1) {
+    return null;
+  }
+
+  const currentColumn = chestIndex % 5;
+  const currentRow = Math.floor(chestIndex / 5);
+  const targetColumn = slot + 1;
+  const targetRow = 0.5;
+
+  return {
+    slot,
+    columnShift: targetColumn - currentColumn,
+    rowShift: targetRow - currentRow,
+  };
+}
+
 export function LootChestScene({
   scene,
   presentationCue,
@@ -223,6 +241,11 @@ export function LootChestScene({
   const cuedResult = presentationCue?.kind === 'result' && presentationCue.turnId === turn?.id
     ? presentationCue.result ?? null
     : null;
+  const selectionRowActive = Boolean(
+    board
+    && board.allSelectionsLocked
+    && board.selectedChests.length === board.selectionLimit,
+  );
 
   return (
     <section className={[styles.scene, frame === 'embedded' ? styles.sceneEmbedded : ''].filter(Boolean).join(' ')}>
@@ -248,10 +271,12 @@ export function LootChestScene({
       <div className={styles.boardShell}>
         {board ? (
           <>
-            <div className={styles.boardGrid}>
+            <div className={[styles.boardGrid, selectionRowActive ? styles.boardGridSelectionStage : ''].filter(Boolean).join(' ')}>
               {board.chests.map((chest) => {
                 const spriteState = displaySpriteState(chest, board.selectionLimit, selectedIndices, interactive);
                 const animationState = displayAnimationState(chest, spriteState);
+                const selectionRow = selectionRowActive ? selectionRowPosition(board, chest.index) : null;
+                const dormant = selectionRowActive && selectionRow === null;
                 const animateReveal = Boolean(
                   (
                     changedChestIndex === chest.index
@@ -264,6 +289,9 @@ export function LootChestScene({
                 const chestClassName = [
                   styles.chest,
                   interactive ? styles.chestInteractive : '',
+                  selectionRowActive ? styles.chestSelectionStage : '',
+                  selectionRow ? styles.chestSelectedRow : '',
+                  dormant ? styles.chestDormant : '',
                   hovered ? styles.chestHovered : '',
                   spriteState === 'selected' ? styles.chestSelected : '',
                   spriteState === 'locked' ? styles.chestLocked : '',
@@ -277,6 +305,10 @@ export function LootChestScene({
                     key={chest.index}
                     type="button"
                     className={chestClassName}
+                    style={{
+                      ['--selection-column-shift' as string]: selectionRow ? String(selectionRow.columnShift) : '0',
+                      ['--selection-row-shift' as string]: selectionRow ? String(selectionRow.rowShift) : '0',
+                    }}
                     disabled={!interactive}
                     onClick={() => onToggleSelection?.(chest.index)}
                     onPointerEnter={() => onPreviewChest?.(chest.index)}
@@ -289,6 +321,9 @@ export function LootChestScene({
                     data-hovered={hovered ? 'true' : 'false'}
                     data-reveal-cue={chest.revealCue ? 'true' : 'false'}
                     data-active-animation={animateReveal ? 'true' : 'false'}
+                    data-selection-stage={selectionRowActive ? 'true' : 'false'}
+                    data-selection-slot={selectionRow ? String(selectionRow.slot) : ''}
+                    data-dormant={dormant ? 'true' : 'false'}
                   >
                     <span
                       className={styles.chestSprite}

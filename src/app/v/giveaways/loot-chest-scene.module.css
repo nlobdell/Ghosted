@@ -109,6 +109,11 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.55rem;
+  --board-gap: 0.55rem;
+}
+
+.boardGridSelectionStage {
+  isolation: isolate;
 }
 
 .sceneFooter {
@@ -157,9 +162,28 @@
   color: inherit;
   cursor: default;
   transition:
+    transform 520ms cubic-bezier(0.22, 0.8, 0.22, 1),
+    opacity 320ms ease,
     border-color var(--ease-standard),
     background-color var(--ease-standard),
     box-shadow var(--ease-standard);
+}
+
+.chestSelectionStage {
+  will-change: transform, opacity;
+}
+
+.chestSelectedRow {
+  z-index: 2;
+  transform:
+    translateX(calc(var(--selection-column-shift, 0) * (100% + var(--board-gap))))
+    translateY(calc(var(--selection-row-shift, 0) * (100% + var(--board-gap))));
+  box-shadow: 0 0 0 1px rgba(191, 179, 255, 0.08);
+}
+
+.chestDormant {
+  opacity: 0.18;
+  transform: scale(0.96);
 }
 
 .chestInteractive {
@@ -219,6 +243,12 @@
 .chestLocked {
   border-color: rgba(191, 179, 255, 0.18);
   background: rgba(191, 179, 255, 0.05);
+}
+
+.chestSelectedRow.chestLocked,
+.chestSelectedRow.chestPrize,
+.chestSelectedRow.chestEmpty {
+  background: rgba(191, 179, 255, 0.08);
 }
 
 .chestPrize {
@@ -316,6 +346,12 @@
 
   .boardGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chestSelectedRow,
+  .chestDormant {
+    opacity: 1;
+    transform: none;
   }
 }
 
