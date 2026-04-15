@@ -497,7 +497,7 @@ export default function TwitchLootChestHostOverlayClient({
               onToggleSelection={busyAction ? undefined : toggleSelection}
               onRevealChest={busyAction ? undefined : revealChest}
               onPreviewChest={previewChest}
-              frame="embedded"
+              frame="board-only"
             />
           </section>
 
