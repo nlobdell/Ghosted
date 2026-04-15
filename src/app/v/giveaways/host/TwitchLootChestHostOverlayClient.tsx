@@ -310,11 +310,15 @@ export default function TwitchLootChestHostOverlayClient({
       return;
     }
 
+    const selectedChests = draftSelectionKey
+      ? draftSelectionKey.split(',').map((entry) => Number(entry)).filter((entry) => Number.isInteger(entry))
+      : [];
+
     void getJSON<{ cue: LootChestPresentationCue }>('/api/v/giveaways/presentation', {
       method: 'POST',
       body: JSON.stringify({
         turnId: activeTurnId,
-        selectedChests: draftSelections,
+        selectedChests,
       }),
     }).catch(() => {
       // Mirroring draft picks to the public overlay is best-effort.
