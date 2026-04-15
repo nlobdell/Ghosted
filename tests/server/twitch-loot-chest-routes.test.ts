@@ -567,7 +567,7 @@ describe('twitch platform and loot chest routes', () => {
     expect(firstRevealPayload.result.board.lastChangedChestIndex).toBe(4);
     expect(firstRevealPayload.result.board.chests[4]).toMatchObject({
       revealCue: true,
-      spriteState: 'opening',
+      spriteState: 'prize',
       animationState: 'opening',
     });
     expect(firstRevealPayload.scene.focusTurn.board.boardRevision).toBe(3);
@@ -648,7 +648,7 @@ describe('twitch platform and loot chest routes', () => {
     expect(revealPayload.result.result).toBe('pending');
     expect(revealPayload.result.board.chests[8]).toMatchObject({
       revealCue: true,
-      spriteState: 'opening',
+      spriteState: 'empty',
       animationState: 'opening',
     });
   });

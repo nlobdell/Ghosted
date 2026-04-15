@@ -330,10 +330,6 @@ export function LootChestScene({
               {board.chests.map((chest) => {
                 const spriteState = displaySpriteState(chest, selectedIndices, previewSelections);
                 const animationState = displayAnimationState(chest, spriteState);
-                const spriteSpec = getChestSpriteSpec(spriteState, animationState, {
-                  winner: chest.containsPrize || spriteState === 'prize' || spriteState === 'resolved-prize',
-                  assetVersion,
-                });
                 const selectionRow = selectionRowActive ? selectionRowPosition(board, chest.index) : null;
                 const dormant = selectionRowActive && selectionRow === null;
                 const revealable = Boolean(
@@ -350,8 +346,14 @@ export function LootChestScene({
                   )
                   || cuedRevealChestIndex === chest.index,
                 );
+                const renderSpriteState = animateReveal ? 'opening' : spriteState;
+                const renderAnimationState = animateReveal ? 'opening' : animationState;
+                const spriteSpec = getChestSpriteSpec(renderSpriteState, renderAnimationState, {
+                  winner: chest.containsPrize || spriteState === 'prize' || spriteState === 'resolved-prize',
+                  assetVersion,
+                });
                 const hovered = hoveredChestIndex === chest.index;
-                const hitAreaStyle = chestHitAreaStyle(spriteState, spriteSpec);
+                const hitAreaStyle = chestHitAreaStyle(renderSpriteState, spriteSpec);
                 const chestClassName = [
                   styles.chest,
                   clickable ? styles.chestInteractive : '',

@@ -227,15 +227,12 @@ function chestPresentationState(input: {
   let spriteState: LootChestChestSpriteState = 'closed';
   let animationState: LootChestChestAnimationState = 'idle';
 
-  if (revealCue) {
-    spriteState = 'opening';
-    animationState = 'opening';
-  } else if (isRevealed && isPrize) {
+  if (isRevealed && isPrize) {
     spriteState = phase === 'resolved' ? 'resolved-prize' : 'prize';
-    animationState = phase === 'resolved' ? 'burst' : 'settled';
+    animationState = revealCue ? 'opening' : (phase === 'resolved' ? 'burst' : 'settled');
   } else if (isRevealed) {
     spriteState = phase === 'resolved' ? 'resolved-empty' : 'empty';
-    animationState = 'settled';
+    animationState = revealCue ? 'opening' : 'settled';
   } else if (isSelected && selectedChests.length === CHEST_SELECTION_LIMIT) {
     spriteState = 'locked';
     animationState = 'idle';
