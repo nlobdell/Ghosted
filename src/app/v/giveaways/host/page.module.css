@@ -116,6 +116,7 @@
 .surfaceBody {
   display: grid;
   align-items: stretch;
+  gap: 0;
 }
 
 .sceneStage {
@@ -123,6 +124,7 @@
   align-items: stretch;
   width: 100%;
   min-width: 0;
+  aspect-ratio: 16 / 9;
   align-self: start;
   min-height: 0;
   padding: 0;
@@ -135,10 +137,14 @@
 
 .sideRail {
   min-width: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid rgba(191, 179, 255, 0.08);
 }
 
 .railBlock {
   padding: 0.85rem 0.95rem;
+  border-bottom: 0;
+  border-right: 1px solid rgba(191, 179, 255, 0.08);
 }
 
 .railIntro {
@@ -152,6 +158,10 @@
 
 .inlineBanner {
   padding: 0.55rem 0;
+}
+
+.railBlock:last-child {
+  border-right: 0;
 }
 
 .railBlock:last-child,
@@ -216,19 +226,14 @@
   font-size: 0.68rem;
 }
 
-@media (min-width: 1080px) {
-  .surfaceBody {
-    grid-template-columns: minmax(0, 1fr) 18rem;
-  }
-
-  .sideRail {
-    border-left: 1px solid rgba(191, 179, 255, 0.08);
-  }
-}
-
 @media (max-width: 1079px) {
   .sideRail {
-    border-top: 1px solid rgba(191, 179, 255, 0.08);
+    grid-template-columns: 1fr;
+  }
+
+  .railBlock {
+    border-right: 0;
+    border-bottom: 1px solid rgba(191, 179, 255, 0.08);
   }
 }
 
@@ -239,6 +244,11 @@
 
   .actionGrid {
     grid-template-columns: 1fr;
+  }
+
+  .sceneStage {
+    aspect-ratio: auto;
+    min-height: min(100vh, 44rem);
   }
 
   .railBlock {
