@@ -16,6 +16,7 @@ import styles from './page.module.css';
 
 const HOST_STATE_POLL_MS = 2500;
 const PRESENTATION_THROTTLE_MS = 90;
+const HOVER_HEARTBEAT_MS = 350;
 
 type HostMessage = {
   text: string;
@@ -108,11 +109,14 @@ export default function TwitchLootChestHostOverlayClient({
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [draftSelections, setDraftSelections] = useState<number[]>(initialState.activeTurn?.board?.selectedChests ?? []);
   const [presentationCue, setPresentationCue] = useState<LootChestPresentationCue | null>(null);
+  const [hoveredPreviewIndex, setHoveredPreviewIndex] = useState<number | null>(null);
   const pollInFlightRef = useRef(false);
+  const draftSelectionsRef = useRef<number[]>(initialState.activeTurn?.board?.selectedChests ?? []);
+  const hoveredPreviewIndexRef = useRef<number | null>(null);
   const presentationThrottleRef = useRef<{
     lastSentAt: number;
     lastSentKey: string | null;
-    queued: { turnId: number; chestIndex: number | null } | null;
+    queued: { turnId: number; chestIndex: number | null; selectedChests?: number[] | null } | null;
     timeoutId: number;
   }>({
     lastSentAt: 0,
@@ -127,7 +131,6 @@ export default function TwitchLootChestHostOverlayClient({
   const activeTurnId = activeTurn?.id ?? null;
   const selectedChestKey = activeBoard?.selectedChests.join(',') ?? '';
   const revealedChestKey = activeBoard?.revealedChests.join(',') ?? '';
-  const draftSelectionKey = draftSelections.join(',');
   const overlayToken = state.connection.overlayToken ?? null;
   const revealBusy = Boolean(busyAction?.startsWith('reveal'));
   const showInlineLockAction = Boolean(
@@ -144,6 +147,10 @@ export default function TwitchLootChestHostOverlayClient({
   useGiveawayBuildSync(buildId);
 
   useEffect(() => {
+    draftSelectionsRef.current = draftSelections;
+  }, [draftSelections]);
+
+  useEffect(() => {
     setDraftSelections(
       selectedChestKey
         ? selectedChestKey.split(',').map((entry) => Number(entry)).filter((entry) => Number.isInteger(entry))
@@ -155,12 +162,14 @@ export default function TwitchLootChestHostOverlayClient({
     presentationThrottleRef.current.lastSentAt = 0;
     presentationThrottleRef.current.lastSentKey = null;
     presentationThrottleRef.current.queued = null;
+    hoveredPreviewIndexRef.current = null;
+    setHoveredPreviewIndex(null);
     if (presentationThrottleRef.current.timeoutId > 0) {
       window.clearTimeout(presentationThrottleRef.current.timeoutId);
       presentationThrottleRef.current.timeoutId = 0;
     }
     setPresentationCue(null);
-  }, [activeTurnId, revealedChestKey]);
+  }, [activeTurnId, revealedChestKey, selectedChestKey]);
 
   useEffect(() => {
     const throttleState = presentationThrottleRef.current;
@@ -225,6 +234,19 @@ export default function TwitchLootChestHostOverlayClient({
 
   const refreshState = useEffectEvent((quiet = true) => {
     void loadState(quiet);
+  });
+
+  const heartbeatHoverCue = useEffectEvent(() => {
+    if (!activeTurnId || hoveredPreviewIndexRef.current === null) {
+      return;
+    }
+
+    const nextSelectedChests = selectionStageActive ? draftSelectionsRef.current : undefined;
+    void publishPresentationCue({
+      turnId: activeTurnId,
+      chestIndex: hoveredPreviewIndexRef.current,
+      selectedChests: nextSelectedChests,
+    });
   });
 
   async function publishPresentationCue(input: { turnId: number; chestIndex: number | null; selectedChests?: number[] | null }) {
@@ -306,24 +328,18 @@ export default function TwitchLootChestHostOverlayClient({
   }, []);
 
   useEffect(() => {
-    if (!selectionStageActive || !activeTurnId) {
+    if (!activeTurnId || hoveredPreviewIndex === null) {
       return;
     }
 
-    const selectedChests = draftSelectionKey
-      ? draftSelectionKey.split(',').map((entry) => Number(entry)).filter((entry) => Number.isInteger(entry))
-      : [];
+    const intervalId = window.setInterval(() => {
+      heartbeatHoverCue();
+    }, HOVER_HEARTBEAT_MS);
 
-    void getJSON<{ cue: LootChestPresentationCue }>('/api/v/giveaways/presentation', {
-      method: 'POST',
-      body: JSON.stringify({
-        turnId: activeTurnId,
-        selectedChests,
-      }),
-    }).catch(() => {
-      // Mirroring draft picks to the public overlay is best-effort.
-    });
-  }, [activeTurnId, draftSelectionKey, selectionStageActive]);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [activeTurnId, hoveredPreviewIndex]);
 
   const { syncCue, dismissCue } = useLootChestSceneTransport({
     overlayToken,
@@ -381,17 +397,43 @@ export default function TwitchLootChestHostOverlayClient({
       return;
     }
 
-    setDraftSelections((current) => (
-      current.includes(index)
-        ? current.filter((entry) => entry !== index)
-        : current.length >= activeBoard.selectionLimit
-          ? current
-          : [...current, index]
-    ));
+    const currentSelections = draftSelectionsRef.current;
+    const nextSelections = currentSelections.includes(index)
+      ? currentSelections.filter((entry) => entry !== index)
+      : currentSelections.length >= activeBoard.selectionLimit
+        ? currentSelections
+        : [...currentSelections, index];
+
+    draftSelectionsRef.current = nextSelections;
+    setDraftSelections(nextSelections);
+
+    if (!activeTurnId) {
+      return;
+    }
+
+    void getJSON<{ cue: LootChestPresentationCue }>('/api/v/giveaways/presentation', {
+      method: 'POST',
+      body: JSON.stringify({
+        turnId: activeTurnId,
+        selectedChests: nextSelections,
+      }),
+    }).catch(() => {
+      // Mirroring draft picks to the public overlay is best-effort.
+    });
+
+    if (hoveredPreviewIndexRef.current !== null) {
+      queuePresentationCue({
+        turnId: activeTurnId,
+        chestIndex: hoveredPreviewIndexRef.current,
+        selectedChests: nextSelections,
+      });
+    }
   }
 
   function previewChest(index: number | null) {
     if (!activeTurn || !activeBoard) {
+      hoveredPreviewIndexRef.current = null;
+      setHoveredPreviewIndex(null);
       dismissCue();
       return;
     }
@@ -404,14 +446,18 @@ export default function TwitchLootChestHostOverlayClient({
       && !activeBoard.revealedChests.includes(index);
 
     if (!canPreviewSelection && !canPreviewReveal) {
+      hoveredPreviewIndexRef.current = null;
+      setHoveredPreviewIndex(null);
       dismissCue();
       return;
     }
 
+    hoveredPreviewIndexRef.current = index;
+    setHoveredPreviewIndex(index);
     queuePresentationCue({
       turnId: activeTurn.id,
       chestIndex: index,
-      selectedChests: draftSelections,
+      selectedChests: canPreviewSelection ? draftSelectionsRef.current : undefined,
     });
   }
 
