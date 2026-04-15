@@ -1,9 +1,9 @@
 .hostPage {
   min-height: 100vh;
   display: grid;
-  width: min(100%, 1360px);
+  width: min(100%, 1500px);
   margin: 0 auto;
-  padding: 0.9rem;
+  padding: 0.7rem;
   background: var(--color-bg-0);
   color: var(--color-text-strong);
 }
@@ -119,7 +119,7 @@
 }
 
 .sceneStage {
-  padding: 0.95rem;
+  padding: 0.7rem;
   outline: none;
 }
 
@@ -212,7 +212,7 @@
 
 @media (min-width: 1080px) {
   .surfaceBody {
-    grid-template-columns: minmax(0, 1fr) 22rem;
+    grid-template-columns: minmax(0, 1fr) 19.5rem;
   }
 
   .sideRail {
