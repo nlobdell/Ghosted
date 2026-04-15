@@ -19,13 +19,13 @@ function firstNonEmpty(values: Array<string | null | undefined>) {
 
 function readBuildIdFromDisk() {
   const candidatePaths = [
-    path.join(process.cwd(), '.next', 'BUILD_ID'),
-    path.join(process.cwd(), '.next', 'standalone', '.next', 'BUILD_ID'),
+    path.join(/*turbopackIgnore: true*/ process.cwd(), '.next', 'BUILD_ID'),
+    path.join(/*turbopackIgnore: true*/ process.cwd(), '.next', 'standalone', '.next', 'BUILD_ID'),
   ];
 
   for (const candidatePath of candidatePaths) {
     try {
-      const value = fs.readFileSync(candidatePath, 'utf8').trim();
+      const value = fs.readFileSync(/*turbopackIgnore: true*/ candidatePath, 'utf8').trim();
       if (value) {
         return value;
       }
@@ -39,8 +39,8 @@ function readBuildIdFromDisk() {
 
 function readPackageVersion() {
   try {
-    const packageJsonPath = path.join(process.cwd(), 'package.json');
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as { version?: string };
+    const packageJsonPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ packageJsonPath, 'utf8')) as { version?: string };
     return packageJson.version?.trim() || 'dev';
   } catch {
     return 'dev';
@@ -59,20 +59,20 @@ function walkLatestModifiedAt(rootPath: string) {
 
     let entries: fs.Dirent[];
     try {
-      entries = fs.readdirSync(currentPath, { withFileTypes: true });
+      entries = fs.readdirSync(/*turbopackIgnore: true*/ currentPath, { withFileTypes: true });
     } catch {
       continue;
     }
 
     for (const entry of entries) {
-      const absolutePath = path.join(currentPath, entry.name);
+      const absolutePath = path.join(/*turbopackIgnore: true*/ currentPath, entry.name);
       if (entry.isDirectory()) {
         queue.push(absolutePath);
         continue;
       }
 
       try {
-        const stats = fs.statSync(absolutePath);
+        const stats = fs.statSync(/*turbopackIgnore: true*/ absolutePath);
         latestModifiedAt = Math.max(latestModifiedAt, Math.trunc(stats.mtimeMs));
       } catch {
         // Ignore files that disappear mid-scan during local iteration.
@@ -90,8 +90,8 @@ function readDevSurfaceVersion() {
   }
 
   const roots = [
-    path.join(process.cwd(), 'public', 'giveaways', 'sprites'),
-    path.join(process.cwd(), 'src', 'app', 'v', 'giveaways'),
+    path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'giveaways', 'sprites'),
+    path.join(/*turbopackIgnore: true*/ process.cwd(), 'src', 'app', 'v', 'giveaways'),
   ];
 
   const latestModifiedAt = roots.reduce((currentLatest, rootPath) => (
