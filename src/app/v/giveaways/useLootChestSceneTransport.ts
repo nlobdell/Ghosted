@@ -101,7 +101,7 @@ export function useLootChestSceneTransport<TState extends SceneCarrier>({
 
     if (nextCue.kind === 'clear') {
       cueRef.current = null;
-      applyCueRef.current(null);
+      applyCueRef.current(nextCue);
       return;
     }
 

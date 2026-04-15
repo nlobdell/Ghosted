@@ -947,12 +947,13 @@ export interface LootChestSceneSnapshot {
   focusTurn: LootChestTurn | null;
 }
 
-export type LootChestPresentationCueKind = 'hover' | 'clear' | 'reveal' | 'result';
+export type LootChestPresentationCueKind = 'hover' | 'clear' | 'reveal' | 'result' | 'selection';
 
 export interface LootChestPresentationCue {
   kind: LootChestPresentationCueKind;
   turnId: number | null;
   chestIndex?: number | null;
+  selectedChests?: number[] | null;
   result?: Exclude<LootChestTurnResult, 'pending'> | null;
   sceneRevision?: number | null;
   sentAt: string;

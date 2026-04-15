@@ -464,21 +464,39 @@ function cueExpiresAt(durationMs: number) {
   return utcIso(new Date(Date.now() + durationMs));
 }
 
-function buildLootChestClearCue(turnId: number | null = null): LootChestPresentationCue {
+function buildLootChestClearCue(
+  turnId: number | null = null,
+  selectedChests?: number[] | null,
+): LootChestPresentationCue {
   return {
     kind: 'clear',
     turnId,
+    selectedChests: selectedChests ?? null,
     sentAt: utcIso(),
   };
 }
 
-function buildLootChestHoverCue(turnId: number, chestIndex: number): LootChestPresentationCue {
+function buildLootChestHoverCue(
+  turnId: number,
+  chestIndex: number,
+  selectedChests?: number[] | null,
+): LootChestPresentationCue {
   return {
     kind: 'hover',
     turnId,
     chestIndex,
+    selectedChests: selectedChests ?? null,
     sentAt: utcIso(),
     expiresAt: cueExpiresAt(HOVER_CUE_TTL_MS),
+  };
+}
+
+function buildLootChestSelectionCue(turnId: number, selectedChests: number[]): LootChestPresentationCue {
+  return {
+    kind: 'selection',
+    turnId,
+    selectedChests,
+    sentAt: utcIso(),
   };
 }
 
@@ -549,6 +567,7 @@ export async function publishLootChestTurnActionRealtime(turn: LootChestTurn) {
 export async function publishLootChestOperatorPresentation(input: {
   turnId?: unknown;
   chestIndex?: unknown;
+  selectedChests?: unknown;
 }) {
   const db = getDb();
   await requireTwitchPlatformOperator();
@@ -568,6 +587,23 @@ export async function publishLootChestOperatorPresentation(input: {
     return clearCue;
   }
 
+  if (Array.isArray(input.selectedChests)) {
+    const mirroredSelectedChests = normalizeChestIndexes(input.selectedChests);
+    if (mirroredSelectedChests.length === 0) {
+      const clearCue = buildLootChestClearCue(activeTurn.id, []);
+      await publishLootChestPresentationCue(clearCue);
+      return clearCue;
+    }
+
+    if (mirroredSelectedChests.length > CHEST_SELECTION_LIMIT) {
+      throw new AppError(`Select at most ${CHEST_SELECTION_LIMIT} unique chests.`, 400);
+    }
+
+    const cue = buildLootChestSelectionCue(activeTurn.id, mirroredSelectedChests);
+    await publishLootChestPresentationCue(cue);
+    return cue;
+  }
+
   if (input.chestIndex === null || input.chestIndex === undefined || input.chestIndex === '') {
     const clearCue = buildLootChestClearCue(activeTurn.id);
     await publishLootChestPresentationCue(clearCue);
@@ -579,7 +615,10 @@ export async function publishLootChestOperatorPresentation(input: {
     throw new AppError('Chest index is invalid.', 400);
   }
 
-  const cue = buildLootChestHoverCue(activeTurn.id, chestIndex);
+  const mirroredSelectedChests = Array.isArray(input.selectedChests)
+    ? normalizeChestIndexes(input.selectedChests)
+    : undefined;
+  const cue = buildLootChestHoverCue(activeTurn.id, chestIndex, mirroredSelectedChests);
   await publishLootChestPresentationCue(cue);
   return cue;
 }

@@ -9,6 +9,7 @@ export const POST = withRouteErrorHandling(async (request: Request) => {
   const cue = await publishLootChestOperatorPresentation({
     turnId: payload.turnId,
     chestIndex: payload.chestIndex,
+    selectedChests: payload.selectedChests,
   });
 
   return NextResponse.json({

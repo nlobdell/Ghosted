@@ -683,6 +683,36 @@ describe('twitch platform and loot chest routes', () => {
     expect(turnRow.revealed_chests_json).toBe('[]');
   });
 
+  it('publishes mirrored draft selection cues for the public overlay without mutating board state', async () => {
+    authMock.mockResolvedValue({ user: { id: String(operatorUserId) } });
+    seedConnectedTwitchState(context);
+    const queuedTurn = insertQueuedLootChestTurnForTests({ viewerLogin: 'selector', viewerDisplayName: 'Selection Viewer' });
+
+    await postStartTurnRoute(new Request('http://localhost/api/v/giveaways/turns/1/start', {
+      method: 'POST',
+    }), {
+      params: Promise.resolve({ id: String(queuedTurn.id) }),
+    });
+
+    const response = await postGiveawayPresentationRoute(new Request('http://localhost/api/v/giveaways/presentation', {
+      method: 'POST',
+      body: JSON.stringify({ turnId: queuedTurn.id, selectedChests: [1, 4, 8] }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.cue).toMatchObject({
+      kind: 'selection',
+      turnId: queuedTurn.id,
+      selectedChests: [1, 4, 8],
+    });
+
+    const turnRow = turnRowsForTests()[0];
+    expect(turnRow.selected_chests_json).toBe('[]');
+    expect(turnRow.revealed_chests_json).toBe('[]');
+  });
+
   it('stores broadcaster tokens and syncs the managed reward and subscription during connect completion', async () => {
     authMock.mockResolvedValue({ user: { id: String(operatorUserId) } });
     const actor = getUserById(context.db, operatorUserId);

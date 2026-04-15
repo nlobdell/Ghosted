@@ -112,12 +112,12 @@ function chestLabel(chest: LootChestBoardChest, spriteState: LootChestChestSprit
 function displaySpriteState(
   chest: LootChestBoardChest,
   selectedIndices: Set<number>,
-  interactive: boolean,
+  previewSelections: boolean,
 ): LootChestChestSpriteState {
-  if (!interactive) {
+  if (!previewSelections) {
     return chest.spriteState;
   }
-  if (selectedIndices.has(chest.index)) {
+  if (previewSelections && selectedIndices.has(chest.index) && !chest.revealed) {
     return 'selected';
   }
   return chest.revealed ? chest.spriteState : 'closed';
@@ -163,6 +163,7 @@ export function LootChestScene({
   boardSizing = 'viewport',
   assetVersion,
   boardAction,
+  mirroredSelections,
 }: {
   scene: LootChestSceneSnapshot;
   presentationCue?: LootChestPresentationCue | null;
@@ -178,6 +179,7 @@ export function LootChestScene({
     onClick: () => void;
     disabled?: boolean;
   } | null;
+  mirroredSelections?: number[];
 }) {
   const turn = scene.focusTurn;
   const board = turn?.board ?? null;
@@ -195,7 +197,15 @@ export function LootChestScene({
     && board.allSelectionsLocked
     && board.remainingReveals > 0,
   );
-  const selectedIndices = new Set(selectionInteractive ? (draftSelections ?? []) : board?.selectedChests ?? []);
+  const selectedIndices = new Set(
+    selectionInteractive
+      ? (draftSelections ?? [])
+      : (
+        board?.allSelectionsLocked
+          ? (board?.selectedChests ?? [])
+          : (mirroredSelections ?? [])
+      ),
+  );
   const [animatedRevision, setAnimatedRevision] = useState(0);
   const lastAnimatedRef = useRef(board?.boardRevision ?? 0);
   const lastTurnIdRef = useRef(turn?.id ?? 0);
@@ -246,6 +256,7 @@ export function LootChestScene({
     && board.selectedChests.length === board.selectionLimit,
   );
   const boardOnly = frame === 'board-only';
+  const previewSelections = selectionInteractive || Boolean(board && !board.allSelectionsLocked && (mirroredSelections?.length ?? 0) > 0);
 
   return (
     <section
@@ -291,7 +302,7 @@ export function LootChestScene({
           <>
             <div className={[styles.boardGrid, selectionRowActive ? styles.boardGridSelectionStage : ''].filter(Boolean).join(' ')}>
               {board.chests.map((chest) => {
-                const spriteState = displaySpriteState(chest, selectedIndices, selectionInteractive);
+                const spriteState = displaySpriteState(chest, selectedIndices, previewSelections);
                 const animationState = displayAnimationState(chest, spriteState);
                 const spriteSpec = getChestSpriteSpec(spriteState, animationState, {
                   winner: chest.containsPrize || spriteState === 'prize' || spriteState === 'resolved-prize',

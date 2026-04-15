@@ -196,6 +196,38 @@ describe('LootChestScene', () => {
     expect(onLock).toHaveBeenCalledTimes(1);
   });
 
+  it('can mirror draft picks and a non-interactive lock affordance on the public board', () => {
+    const board = makeBoard({
+      phase: 'selection',
+      selectedChests: [],
+      revealedChests: [],
+      allSelectionsLocked: false,
+      remainingSelections: 3,
+      remainingReveals: 0,
+    });
+
+    const { container, getByRole } = render(
+      <LootChestScene
+        scene={makeScene({
+          queueCount: 1,
+          focusTurn: makeTurn({ board, phase: 'selection' }),
+        })}
+        frame="board-only"
+        mirroredSelections={[0, 2, 4]}
+        boardAction={{
+          label: 'Lock',
+          onClick: vi.fn(),
+          disabled: true,
+        }}
+      />,
+    );
+
+    expect(container.querySelector('[data-chest-index="0"]')?.getAttribute('data-sprite-state')).toBe('selected');
+    expect(container.querySelector('[data-chest-index="2"]')?.getAttribute('data-sprite-state')).toBe('selected');
+    expect(container.querySelector('[data-chest-index="4"]')?.getAttribute('data-sprite-state')).toBe('selected');
+    expect((getByRole('button', { name: 'Lock' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('stages the locked selections into a centered row before reveals begin', () => {
     const board = makeBoard({
       phase: 'locked',

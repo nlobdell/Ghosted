@@ -127,12 +127,19 @@ export default function TwitchLootChestHostOverlayClient({
   const activeTurnId = activeTurn?.id ?? null;
   const selectedChestKey = activeBoard?.selectedChests.join(',') ?? '';
   const revealedChestKey = activeBoard?.revealedChests.join(',') ?? '';
+  const draftSelectionKey = draftSelections.join(',');
   const overlayToken = state.connection.overlayToken ?? null;
   const revealBusy = Boolean(busyAction?.startsWith('reveal'));
   const showInlineLockAction = Boolean(
     activeBoard
     && !activeBoard.allSelectionsLocked
     && draftSelections.length === activeBoard.selectionLimit,
+  );
+  const selectionStageActive = Boolean(
+    activeTurnId
+    && activeBoard
+    && !activeBoard.allSelectionsLocked
+    && activeBoard.revealedChests.length === 0,
   );
   useGiveawayBuildSync(buildId);
 
@@ -164,16 +171,17 @@ export default function TwitchLootChestHostOverlayClient({
     };
   }, []);
 
-  function cueKey(input: { turnId: number; chestIndex: number | null }) {
-    return `${input.turnId}:${input.chestIndex ?? 'clear'}`;
+  function cueKey(input: { turnId: number; chestIndex: number | null; selectedChests?: number[] | null }) {
+    return `${input.turnId}:${input.chestIndex ?? 'clear'}:${(input.selectedChests ?? []).join(',')}`;
   }
 
-  function makeOptimisticCue(input: { turnId: number; chestIndex: number | null }): LootChestPresentationCue {
+  function makeOptimisticCue(input: { turnId: number; chestIndex: number | null; selectedChests?: number[] | null }): LootChestPresentationCue {
     const sentAt = new Date().toISOString();
     if (input.chestIndex === null) {
       return {
         kind: 'clear',
         turnId: input.turnId,
+        selectedChests: input.selectedChests ?? null,
         sentAt,
       };
     }
@@ -182,6 +190,7 @@ export default function TwitchLootChestHostOverlayClient({
       kind: 'hover',
       turnId: input.turnId,
       chestIndex: input.chestIndex,
+      selectedChests: input.selectedChests ?? null,
       sentAt,
       expiresAt: new Date(Date.now() + 1000).toISOString(),
     };
@@ -218,7 +227,7 @@ export default function TwitchLootChestHostOverlayClient({
     void loadState(quiet);
   });
 
-  async function publishPresentationCue(input: { turnId: number; chestIndex: number | null }) {
+  async function publishPresentationCue(input: { turnId: number; chestIndex: number | null; selectedChests?: number[] | null }) {
     const optimisticCue = makeOptimisticCue(input);
     syncCue(optimisticCue);
 
@@ -246,7 +255,7 @@ export default function TwitchLootChestHostOverlayClient({
     void publishPresentationCue(queued);
   }
 
-  function queuePresentationCue(input: { turnId: number; chestIndex: number | null }) {
+  function queuePresentationCue(input: { turnId: number; chestIndex: number | null; selectedChests?: number[] | null }) {
     const nextKey = cueKey(input);
     if (presentationThrottleRef.current.lastSentKey === nextKey) {
       syncCue(makeOptimisticCue(input));
@@ -296,6 +305,22 @@ export default function TwitchLootChestHostOverlayClient({
     };
   }, []);
 
+  useEffect(() => {
+    if (!selectionStageActive || !activeTurnId) {
+      return;
+    }
+
+    void getJSON<{ cue: LootChestPresentationCue }>('/api/v/giveaways/presentation', {
+      method: 'POST',
+      body: JSON.stringify({
+        turnId: activeTurnId,
+        selectedChests: draftSelections,
+      }),
+    }).catch(() => {
+      // Mirroring draft picks to the public overlay is best-effort.
+    });
+  }, [activeTurnId, draftSelectionKey, selectionStageActive]);
+
   const { syncCue, dismissCue } = useLootChestSceneTransport({
     overlayToken,
     currentScene: state.scene,
@@ -311,6 +336,11 @@ export default function TwitchLootChestHostOverlayClient({
     },
     applyCue: (nextCue) => {
       startTransition(() => {
+        if (!nextCue || nextCue.kind === 'clear' || nextCue.kind === 'selection') {
+          setPresentationCue(null);
+          return;
+        }
+
         setPresentationCue(nextCue);
       });
     },
@@ -377,6 +407,7 @@ export default function TwitchLootChestHostOverlayClient({
     queuePresentationCue({
       turnId: activeTurn.id,
       chestIndex: index,
+      selectedChests: draftSelections,
     });
   }
 

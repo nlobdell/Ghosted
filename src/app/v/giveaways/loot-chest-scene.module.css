@@ -384,7 +384,7 @@
 }
 
 .boardActionButton:disabled {
-  opacity: 0.62;
+  opacity: 1;
   cursor: default;
 }
 
