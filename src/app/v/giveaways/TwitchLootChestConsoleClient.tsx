@@ -152,6 +152,46 @@ export default function TwitchLootChestConsoleClient({
     }, 'Twitch reward synced.');
   }
 
+  async function handleClearCache() {
+    setBusyAction('clear-cache');
+    try {
+      const result = await getJSON<{
+        removedCount: number;
+        importedCount: number;
+        pendingCount: number;
+        state: LootChestGameState;
+      }>('/api/v/giveaways/twitch/cache/clear', {
+        method: 'POST',
+      });
+
+      startTransition(() => {
+        setState(result.state);
+      });
+
+      const parts: string[] = [];
+      if (result.removedCount > 0) {
+        parts.push(`removed ${result.removedCount} stale turn${result.removedCount === 1 ? '' : 's'}`);
+      }
+      if (result.importedCount > 0) {
+        parts.push(`restored ${result.importedCount} Twitch redemption${result.importedCount === 1 ? '' : 's'}`);
+      }
+
+      setMessage({
+        text: parts.length > 0
+          ? `Cache cleared: ${parts.join(', ')}. ${result.pendingCount} pending turn${result.pendingCount === 1 ? '' : 's'} remain.`
+          : 'Cache cleared. Local giveaway state already matched Twitch.',
+        variant: 'info',
+      });
+    } catch (error) {
+      setMessage({
+        text: error instanceof Error ? error.message : 'Unable to clear the giveaway cache.',
+        variant: 'error',
+      });
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   const recentResultItems = useMemo(() => {
     return state.recentResults.map((turn) => ({
       title: turn.viewer.displayName,
@@ -317,6 +357,16 @@ export default function TwitchLootChestConsoleClient({
                       : state.connection.reward.isPaused
                         ? 'Resume reward'
                         : 'Pause reward'}
+                  </button>
+                  <button
+                    className="button button--secondary"
+                    type="button"
+                    disabled={!rewardReady || !state.connection.connected || busyAction === 'clear-cache'}
+                    onClick={() => {
+                      void handleClearCache();
+                    }}
+                  >
+                    {busyAction === 'clear-cache' ? 'Clearing...' : 'Clear cache'}
                   </button>
                 </div>
               </form>

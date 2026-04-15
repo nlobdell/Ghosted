@@ -26,6 +26,7 @@ import { POST as postPlatformEventSubRoute } from '@/app/api/v/twitch/eventsub/r
 import { GET as getGiveawayStateRoute } from '@/app/api/v/giveaways/state/route';
 import { GET as getGiveawayCallbackRoute } from '@/app/api/v/giveaways/twitch/callback/route';
 import { POST as postGiveawayPresentationRoute } from '@/app/api/v/giveaways/presentation/route';
+import { POST as postGiveawayClearCacheRoute } from '@/app/api/v/giveaways/twitch/cache/clear/route';
 import { POST as postStartTurnRoute } from '@/app/api/v/giveaways/turns/[id]/start/route';
 import { POST as postSelectTurnRoute } from '@/app/api/v/giveaways/turns/[id]/select/route';
 import { POST as postRevealTurnRoute } from '@/app/api/v/giveaways/turns/[id]/reveal/route';
@@ -220,6 +221,54 @@ describe('twitch platform and loot chest routes', () => {
     expect(overlayPayload.queueCount).toBe(1);
     expect(overlayPayload.connection.connected).toBe(true);
     expect(overlayPayload.scene.queueCount).toBe(1);
+  });
+
+  it('clears stale pending turns and restores unfulfilled Twitch redemptions from the source of truth', async () => {
+    authMock.mockResolvedValue({ user: { id: String(operatorUserId) } });
+    seedConnectedTwitchState(context);
+    insertQueuedLootChestTurnForTests({
+      redemptionId: 'stale-redemption',
+      viewerLogin: 'stale_viewer',
+      viewerDisplayName: 'Stale Viewer',
+    });
+
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (input: string | URL) => {
+      const url = String(input);
+      if (url.includes('/helix/channel_points/custom_rewards/redemptions')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'remote-redemption',
+            user_id: 'viewer-remote',
+            user_login: 'remote_login',
+            user_name: 'Remote Viewer',
+            redeemed_at: '2026-04-14T19:34:00.000Z',
+            reward: {
+              id: 'reward-1',
+            },
+          }],
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }));
+
+    const response = await postGiveawayClearCacheRoute();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.removedCount).toBe(1);
+    expect(payload.importedCount).toBe(1);
+    expect(payload.pendingCount).toBe(1);
+    expect(payload.state.queue).toHaveLength(1);
+    expect(payload.state.queue[0].redemptionId).toBe('remote-redemption');
+    expect(turnRowsForTests()).toHaveLength(1);
+    expect(turnRowsForTests()[0].redemption_id).toBe('remote-redemption');
   });
 
   it('persists accepted webhook deliveries, creates queued turns, and ignores duplicate message ids', async () => {

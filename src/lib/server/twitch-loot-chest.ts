@@ -115,6 +115,13 @@ type TwitchRewardRedemptionEvent = {
   };
 };
 
+type TwitchRewardRedemptionsResponse = {
+  data?: TwitchRewardRedemptionEvent[];
+  pagination?: {
+    cursor?: string;
+  };
+};
+
 function getDb() {
   return getDatabase();
 }
@@ -218,6 +225,15 @@ function recentCompletedTurns(db = getDb(), limit = 8) {
     ORDER BY completed_at DESC, id DESC
     LIMIT ?
   `).all(limit) as LootChestTurnRow[];
+}
+
+function pendingTurnRows(db = getDb()) {
+  return db.prepare(`
+    SELECT *
+    FROM twitch_loot_chest_turns
+    WHERE status IN ('queued', 'active')
+    ORDER BY redeemed_at ASC, id ASC
+  `).all() as LootChestTurnRow[];
 }
 
 function parseChestIndexes(value: string | null | undefined) {
@@ -865,6 +881,35 @@ function upsertTurnFromRedemption(db: Database, event: TwitchRewardRedemptionEve
   `).get(redemptionId) as LootChestTurnRow;
 }
 
+async function listUnfulfilledRewardRedemptions(db: Database, rewardId: string) {
+  const connection = await twitchPlatformGateway.ensureFreshBroadcaster(db);
+  const redemptions: TwitchRewardRedemptionEvent[] = [];
+  let after: string | undefined;
+
+  for (let page = 0; page < 5; page += 1) {
+    const response = await twitchPlatformGateway.userApiRequest<TwitchRewardRedemptionsResponse>(db, {
+      path: '/channel_points/custom_rewards/redemptions',
+      query: {
+        broadcaster_id: connection.broadcaster_user_id,
+        reward_id: rewardId,
+        status: 'UNFULFILLED',
+        first: 50,
+        after,
+      },
+    });
+
+    redemptions.push(...(response.data ?? []));
+
+    const nextCursor = String(response.pagination?.cursor ?? '').trim();
+    if (!nextCursor) {
+      break;
+    }
+    after = nextCursor;
+  }
+
+  return redemptions;
+}
+
 export const twitchGiveawaysModuleHandler: TwitchModuleHandler = {
   moduleKey: 'giveaways',
   label: 'Giveaways',
@@ -1149,6 +1194,62 @@ export async function pauseLootChestReward(paused: boolean) {
   await requireTwitchPlatformOperator();
   await setRewardPaused(db, paused);
   return connectionStateFromRows(db);
+}
+
+export async function clearLootChestCache() {
+  const db = getDb();
+  const operator = await requireTwitchPlatformOperator();
+  const settings = getSettingsRow(db);
+  if (!settings.reward_id) {
+    throw new AppError('Create the Twitch reward first.', 400);
+  }
+
+  const remoteRedemptions = await listUnfulfilledRewardRedemptions(db, settings.reward_id);
+  const remoteRedemptionIds = new Set(
+    remoteRedemptions
+      .map((redemption) => String(redemption.id ?? '').trim())
+      .filter(Boolean),
+  );
+  const localPendingRows = pendingTurnRows(db);
+  const knownRedemptionIds = new Set(listTurnRows(db).map((row) => row.redemption_id));
+
+  let removedCount = 0;
+  let importedCount = 0;
+
+  const reconcilePendingTurns = db.transaction(() => {
+    for (const row of localPendingRows) {
+      if (remoteRedemptionIds.has(row.redemption_id)) {
+        continue;
+      }
+
+      db.prepare(`
+        DELETE FROM twitch_loot_chest_turns
+        WHERE id = ?
+      `).run(row.id);
+      removedCount += 1;
+    }
+
+    for (const redemption of remoteRedemptions) {
+      const redemptionId = String(redemption.id ?? '').trim();
+      if (!redemptionId || knownRedemptionIds.has(redemptionId)) {
+        continue;
+      }
+
+      upsertTurnFromRedemption(db, redemption);
+      knownRedemptionIds.add(redemptionId);
+      importedCount += 1;
+    }
+  });
+
+  reconcilePendingTurns();
+  await publishLootChestRealtimeUpdate(db, buildLootChestClearCue(null));
+
+  return {
+    removedCount,
+    importedCount,
+    pendingCount: pendingTurnRows(db).length,
+    state: await buildLootChestGameState(operator),
+  };
 }
 
 export async function buildLootChestGameState(actor?: Awaited<ReturnType<typeof requireTwitchPlatformOperator>>): Promise<LootChestGameState> {
