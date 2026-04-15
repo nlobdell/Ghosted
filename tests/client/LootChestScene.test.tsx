@@ -536,6 +536,8 @@ describe('LootChestScene', () => {
     expect(container.querySelector('header')).toBeNull();
     expect(container.querySelector('footer')).toBeNull();
     expect(container.querySelector('[data-sprite-id="board-backdrop"]')).toBeNull();
+    expect(container.querySelector('[data-sprite-id="board-frame-overlay"]')).not.toBeNull();
+    expect(container.querySelector('[data-sprite-id="board-frame"]')).toBeNull();
     expect(container.querySelector('[data-chest-index="4"]')).not.toBeNull();
   });
 });

@@ -271,7 +271,7 @@ export function LootChestScene({
 
       <div className={styles.boardShell}>
         {boardOnly ? null : <SceneSprite spec={getBoardBackdropSpriteSpec()} className={styles.boardBackdrop} />}
-        <SceneSprite spec={getBoardFrameSpriteSpec()} className={styles.boardFrame} />
+        <SceneSprite spec={getBoardFrameSpriteSpec(boardOnly ? 'overlay' : 'default')} className={styles.boardFrame} />
         <div className={styles.boardContent}>
         {board ? (
           <>

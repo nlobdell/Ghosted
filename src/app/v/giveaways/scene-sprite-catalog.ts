@@ -200,13 +200,14 @@ const RESULT_SPRITES: Record<Exclude<LootChestTurnResult, 'pending'>, SceneSprit
 
 const BOARD_BACKDROP = staticSprite('board-backdrop', '/giveaways/sprites/backdrop.svg');
 const BOARD_FRAME = staticSprite('board-frame', '/giveaways/sprites/board-frame.svg');
+const BOARD_FRAME_OVERLAY = staticSprite('board-frame-overlay', '/giveaways/sprites/board-frame-overlay.svg');
 
 export function getBoardBackdropSpriteSpec() {
   return BOARD_BACKDROP;
 }
 
-export function getBoardFrameSpriteSpec() {
-  return BOARD_FRAME;
+export function getBoardFrameSpriteSpec(variant: 'default' | 'overlay' = 'default') {
+  return variant === 'overlay' ? BOARD_FRAME_OVERLAY : BOARD_FRAME;
 }
 
 export function getChestSpriteSpec(
