@@ -213,7 +213,7 @@ describe('LootChestScene', () => {
           focusTurn: makeTurn({ board, phase: 'selection' }),
         })}
         frame="board-only"
-        mirroredSelections={[0, 2, 4]}
+        draftSelections={[0, 2, 4]}
         boardAction={{
           label: 'Lock',
           onClick: vi.fn(),

@@ -163,7 +163,6 @@ export function LootChestScene({
   boardSizing = 'viewport',
   assetVersion,
   boardAction,
-  mirroredSelections,
 }: {
   scene: LootChestSceneSnapshot;
   presentationCue?: LootChestPresentationCue | null;
@@ -179,7 +178,6 @@ export function LootChestScene({
     onClick: () => void;
     disabled?: boolean;
   } | null;
-  mirroredSelections?: number[];
 }) {
   const turn = scene.focusTurn;
   const board = turn?.board ?? null;
@@ -197,14 +195,11 @@ export function LootChestScene({
     && board.allSelectionsLocked
     && board.remainingReveals > 0,
   );
+  const previewSelections = Boolean(board && !board.allSelectionsLocked && (draftSelections?.length ?? 0) > 0);
   const selectedIndices = new Set(
-    selectionInteractive
-      ? (draftSelections ?? [])
-      : (
-        board?.allSelectionsLocked
-          ? (board?.selectedChests ?? [])
-          : (mirroredSelections ?? [])
-      ),
+    board?.allSelectionsLocked
+      ? (board?.selectedChests ?? [])
+      : (draftSelections ?? []),
   );
   const [animatedRevision, setAnimatedRevision] = useState(0);
   const lastAnimatedRef = useRef(board?.boardRevision ?? 0);
@@ -256,7 +251,6 @@ export function LootChestScene({
     && board.selectedChests.length === board.selectionLimit,
   );
   const boardOnly = frame === 'board-only';
-  const previewSelections = selectionInteractive || Boolean(board && !board.allSelectionsLocked && (mirroredSelections?.length ?? 0) > 0);
 
   return (
     <section

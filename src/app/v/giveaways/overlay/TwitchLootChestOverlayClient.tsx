@@ -92,7 +92,7 @@ export default function TwitchLootChestOverlayClient({
         frame="board-only"
         boardSizing="viewport"
         assetVersion={buildId}
-        mirroredSelections={effectiveMirroredSelections}
+        draftSelections={effectiveMirroredSelections}
         boardAction={showInlineLockAction ? {
           label: 'Lock',
           onClick: () => {},
