@@ -598,6 +598,50 @@ describe('twitch platform and loot chest routes', () => {
     expect(completePayload.scene.focusTurn.status).toBe('completed');
   });
 
+  it('reveals a specifically clicked locked chest when the host sends a chest index', async () => {
+    authMock.mockResolvedValue({ user: { id: String(operatorUserId) } });
+    seedConnectedTwitchState(context);
+    const queuedTurn = insertQueuedLootChestTurnForTests({ viewerLogin: 'picker', viewerDisplayName: 'Picker Viewer' });
+
+    await postStartTurnRoute(new Request('http://localhost/api/v/giveaways/turns/1/start', {
+      method: 'POST',
+    }), {
+      params: Promise.resolve({ id: String(queuedTurn.id) }),
+    });
+
+    context.db.prepare(`
+      UPDATE twitch_loot_chest_turns
+      SET prize_chest_index = ?
+      WHERE id = ?
+    `).run(4, queuedTurn.id);
+
+    await postSelectTurnRoute(new Request('http://localhost/api/v/giveaways/turns/1/select', {
+      method: 'POST',
+      body: JSON.stringify({ chests: [4, 1, 8] }),
+      headers: { 'Content-Type': 'application/json' },
+    }), {
+      params: Promise.resolve({ id: String(queuedTurn.id) }),
+    });
+
+    const revealResponse = await postRevealTurnRoute(new Request('http://localhost/api/v/giveaways/turns/1/reveal', {
+      method: 'POST',
+      body: JSON.stringify({ chestIndex: 8 }),
+      headers: { 'Content-Type': 'application/json' },
+    }), {
+      params: Promise.resolve({ id: String(queuedTurn.id) }),
+    });
+    const revealPayload = await revealResponse.json();
+
+    expect(revealResponse.status).toBe(200);
+    expect(revealPayload.result.board.lastChangedChestIndex).toBe(8);
+    expect(revealPayload.result.result).toBe('pending');
+    expect(revealPayload.result.board.chests[8]).toMatchObject({
+      revealCue: true,
+      spriteState: 'opening',
+      animationState: 'opening',
+    });
+  });
+
   it('publishes authenticated host hover presentation cues without mutating board state', async () => {
     authMock.mockResolvedValue({ user: { id: String(operatorUserId) } });
     seedConnectedTwitchState(context);

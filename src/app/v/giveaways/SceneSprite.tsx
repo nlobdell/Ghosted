@@ -29,7 +29,7 @@ function clampFrameIndex(spec: SceneSpriteSpec, frameIndex: number) {
 }
 
 function spriteAnchorShift(spec: SceneSpriteSpec, frameIndex: number) {
-  const bounds = spec.frameBounds?.[frameIndex] ?? spec.anchorBounds ?? spec.visibleBounds;
+  const bounds = spec.frameAnchorBounds?.[frameIndex] ?? spec.anchorBounds ?? spec.visibleBounds;
   if (!bounds || !spec.frameWidth) {
     return '0%';
   }

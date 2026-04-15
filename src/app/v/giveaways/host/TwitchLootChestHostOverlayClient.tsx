@@ -67,7 +67,7 @@ function controlHint(state: LootChestGameState) {
   }
 
   if (activeTurn.board.remainingReveals > 0) {
-    return 'Space reveals the next chest.';
+    return 'Click a locked chest or press Space to reveal.';
   }
 
   return 'Press C or use Complete to fulfill Twitch.';
@@ -125,6 +125,7 @@ export default function TwitchLootChestHostOverlayClient({
   const selectedChestKey = activeBoard?.selectedChests.join(',') ?? '';
   const revealedChestKey = activeBoard?.revealedChests.join(',') ?? '';
   const overlayToken = state.connection.overlayToken ?? null;
+  const revealBusy = Boolean(busyAction?.startsWith('reveal'));
 
   useEffect(() => {
     setDraftSelections(
@@ -347,7 +348,19 @@ export default function TwitchLootChestHostOverlayClient({
   }
 
   function previewChest(index: number | null) {
-    if (!activeTurn || !activeBoard || activeBoard.allSelectionsLocked || activeBoard.revealedChests.length > 0) {
+    if (!activeTurn || !activeBoard) {
+      dismissCue();
+      return;
+    }
+
+    const canPreviewSelection = !activeBoard.allSelectionsLocked && activeBoard.revealedChests.length === 0;
+    const canPreviewReveal = activeBoard.allSelectionsLocked
+      && activeBoard.remainingReveals > 0
+      && index !== null
+      && activeBoard.selectedChests.includes(index)
+      && !activeBoard.revealedChests.includes(index);
+
+    if (!canPreviewSelection && !canPreviewReveal) {
       dismissCue();
       return;
     }
@@ -376,6 +389,18 @@ export default function TwitchLootChestHostOverlayClient({
     await runAction('reveal', async () => getJSON<TurnActionResponse>(`/api/v/giveaways/turns/${activeTurn.id}/reveal`, {
       method: 'POST',
     }), 'Next chest revealed.');
+  }
+
+  async function revealChest(index: number) {
+    if (!activeTurn || !activeBoard || busyAction) return;
+    if (!activeBoard.allSelectionsLocked || !activeBoard.selectedChests.includes(index) || activeBoard.revealedChests.includes(index)) {
+      return;
+    }
+
+    await runAction(`reveal-${index}`, async () => getJSON<TurnActionResponse>(`/api/v/giveaways/turns/${activeTurn.id}/reveal`, {
+      method: 'POST',
+      body: JSON.stringify({ chestIndex: index }),
+    }), `Chest ${index + 1} revealed.`);
   }
 
   async function completeTurn() {
@@ -469,7 +494,8 @@ export default function TwitchLootChestHostOverlayClient({
               scene={state.scene}
               presentationCue={presentationCue}
               draftSelections={draftSelections}
-              onToggleSelection={toggleSelection}
+              onToggleSelection={busyAction ? undefined : toggleSelection}
+              onRevealChest={busyAction ? undefined : revealChest}
               onPreviewChest={previewChest}
               frame="embedded"
             />
@@ -550,12 +576,12 @@ export default function TwitchLootChestHostOverlayClient({
                 <button
                   className="button button--secondary"
                   type="button"
-                  disabled={!activeBoard?.allSelectionsLocked || activeBoard.remainingReveals === 0 || busyAction === 'reveal'}
+                  disabled={!activeBoard?.allSelectionsLocked || activeBoard.remainingReveals === 0 || revealBusy}
                   onClick={() => {
                     void revealNext();
                   }}
                 >
-                  {busyAction === 'reveal' ? 'Revealing...' : 'Reveal next'}
+                  {revealBusy ? 'Revealing...' : 'Reveal next'}
                 </button>
                 <button
                   className="button button--secondary"

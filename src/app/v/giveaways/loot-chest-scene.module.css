@@ -426,8 +426,8 @@
 }
 
 .chestHovered::after {
-  border-color: rgba(191, 179, 255, 0.18);
-  box-shadow: inset 0 0 0 1px rgba(191, 179, 255, 0.04);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .chestSprite {
@@ -484,7 +484,8 @@
 }
 
 .chestLocked::after {
-  border-color: rgba(191, 179, 255, 0.12);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .chestPrize {
@@ -496,7 +497,8 @@
 }
 
 .chestPrize::after {
-  border-color: rgba(255, 217, 142, 0.16);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .chestEmpty {
@@ -508,7 +510,8 @@
 }
 
 .chestEmpty::after {
-  border-color: rgba(191, 179, 255, 0.1);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .chestReveal .chestSprite {

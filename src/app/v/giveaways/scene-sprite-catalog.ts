@@ -26,6 +26,7 @@ export type SceneSpriteSpec = {
   visibleBounds?: SceneSpriteBounds;
   anchorBounds?: SceneSpriteBounds;
   frameBounds?: Array<SceneSpriteBounds | undefined>;
+  frameAnchorBounds?: Array<SceneSpriteBounds | undefined>;
 };
 
 function staticSprite(
@@ -69,6 +70,7 @@ const WINNER_CHEST_FRAME_BOUNDS = [
   { left: 2, top: 8, right: 40, bottom: 31 },
   { left: 2, top: 2, right: 40, bottom: 31 },
 ] as const satisfies SceneSpriteBounds[];
+const STABLE_CHEST_ANCHOR_BOUNDS = Array.from({ length: 10 }, () => CLOSED_CHEST_BOUNDS);
 
 const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
   closed: {
@@ -104,6 +106,7 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     visibleBounds: CLOSED_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
     frameBounds: OPENING_CHEST_FRAME_BOUNDS,
+    frameAnchorBounds: STABLE_CHEST_ANCHOR_BOUNDS,
   },
   empty: {
     id: 'chest-empty',
@@ -115,7 +118,9 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     initialFrame: 9,
     pixelated: true,
     visibleBounds: EMPTY_CHEST_BOUNDS,
+    anchorBounds: CLOSED_CHEST_BOUNDS,
     frameBounds: OPENING_CHEST_FRAME_BOUNDS,
+    frameAnchorBounds: STABLE_CHEST_ANCHOR_BOUNDS,
   },
   prize: {
     id: 'chest-prize',
@@ -127,7 +132,9 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     initialFrame: 9,
     pixelated: true,
     visibleBounds: PRIZE_CHEST_BOUNDS,
+    anchorBounds: CLOSED_CHEST_BOUNDS,
     frameBounds: WINNER_CHEST_FRAME_BOUNDS,
+    frameAnchorBounds: STABLE_CHEST_ANCHOR_BOUNDS,
   },
   'resolved-empty': {
     id: 'chest-resolved-empty',
@@ -139,7 +146,9 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     initialFrame: 9,
     pixelated: true,
     visibleBounds: EMPTY_CHEST_BOUNDS,
+    anchorBounds: CLOSED_CHEST_BOUNDS,
     frameBounds: OPENING_CHEST_FRAME_BOUNDS,
+    frameAnchorBounds: STABLE_CHEST_ANCHOR_BOUNDS,
   },
   'resolved-prize': {
     id: 'chest-resolved-prize',
@@ -151,7 +160,9 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     initialFrame: 9,
     pixelated: true,
     visibleBounds: PRIZE_CHEST_BOUNDS,
+    anchorBounds: CLOSED_CHEST_BOUNDS,
     frameBounds: WINNER_CHEST_FRAME_BOUNDS,
+    frameAnchorBounds: STABLE_CHEST_ANCHOR_BOUNDS,
   },
 };
 
@@ -165,7 +176,9 @@ const WINNER_OPENING_SPRITE: SceneSpriteSpec = {
   durationMs: 680,
   pixelated: true,
   visibleBounds: PRIZE_CHEST_BOUNDS,
+  anchorBounds: CLOSED_CHEST_BOUNDS,
   frameBounds: WINNER_CHEST_FRAME_BOUNDS,
+  frameAnchorBounds: STABLE_CHEST_ANCHOR_BOUNDS,
 };
 
 const RESULT_SPRITES: Record<Exclude<LootChestTurnResult, 'pending'>, SceneSpriteSpec> = {

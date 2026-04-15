@@ -181,6 +181,48 @@ describe('LootChestScene', () => {
     expect(selectedSpriteStyle).not.toBe('');
   });
 
+  it('lets the host click a locked staged chest to reveal that exact pick', () => {
+    const onRevealChest = vi.fn();
+    const board = makeBoard({
+      phase: 'locked',
+      boardRevision: 2,
+      selectedChests: [1, 4, 8],
+      revealedChests: [],
+      allSelectionsLocked: true,
+      remainingSelections: 0,
+      remainingReveals: 3,
+      lastAction: 'chests_selected',
+    }, {
+      1: { spriteState: 'locked', animationState: 'idle' },
+      4: { spriteState: 'locked', animationState: 'idle' },
+      8: { spriteState: 'locked', animationState: 'idle' },
+    });
+
+    const { container } = render(
+      <LootChestScene
+        scene={makeScene({
+          queueCount: 1,
+          focusTurn: makeTurn({
+            board,
+            phase: 'locked',
+            lastAction: 'chests_selected',
+          }),
+        })}
+        onRevealChest={onRevealChest}
+      />,
+    );
+
+    const revealableChest = container.querySelector('[data-chest-index="4"]') as HTMLButtonElement | null;
+    const dormantChest = container.querySelector('[data-chest-index="0"]') as HTMLButtonElement | null;
+
+    expect(revealableChest?.disabled).toBe(false);
+    expect(revealableChest?.getAttribute('data-clickable')).toBe('true');
+    expect(dormantChest?.disabled).toBe(true);
+
+    fireEvent.click(revealableChest!);
+    expect(onRevealChest).toHaveBeenCalledWith(4);
+  });
+
   it('animates the revealed chest when the board revision advances', async () => {
     const lockedBoard = makeBoard({
       phase: 'locked',
@@ -316,7 +358,7 @@ describe('LootChestScene', () => {
     });
   });
 
-  it('re-anchors the opening strip as wider reveal frames play', () => {
+  it('keeps the opening strip anchored to a stable chest base as frames advance', () => {
     vi.useFakeTimers();
 
     const { container } = render(
@@ -364,7 +406,7 @@ describe('LootChestScene', () => {
 
     const laterFrame = Number.parseFloat(openingSprite?.style.getPropertyValue('--scene-sprite-anchor-x') ?? '');
     expect(Number.parseInt(openingSprite?.getAttribute('data-sprite-frame') ?? '0', 10)).toBeGreaterThan(0);
-    expect(laterFrame).toBeLessThan(startAnchor);
+    expect(laterFrame).toBe(startAnchor);
   });
 
   it('shows the result burst when a resolved board arrives on a new revision', async () => {

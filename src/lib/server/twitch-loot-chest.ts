@@ -1077,7 +1077,7 @@ export async function selectLootChestTurnChests(turnId: number, chestIndexes: un
   return mapTurnRow(assertTurnById(db, turnId));
 }
 
-export async function revealNextLootChest(turnId: number) {
+export async function revealNextLootChest(turnId: number, requestedChestIndex?: unknown) {
   const db = getDb();
   await requireTwitchPlatformOperator();
   const row = assertTurnById(db, turnId);
@@ -1091,7 +1091,23 @@ export async function revealNextLootChest(turnId: number) {
     throw new AppError('Select three chests before revealing.', 400);
   }
 
-  const nextChest = selected.find((index) => !revealed.includes(index));
+  let nextChest: number | undefined;
+  if (requestedChestIndex !== undefined && requestedChestIndex !== null && requestedChestIndex !== '') {
+    const parsedChestIndex = Number(requestedChestIndex);
+    if (!Number.isInteger(parsedChestIndex) || parsedChestIndex < 0 || parsedChestIndex >= CHEST_COUNT) {
+      throw new AppError('Chest selection is invalid.', 400);
+    }
+    if (!selected.includes(parsedChestIndex)) {
+      throw new AppError('Choose one of the locked chests to reveal.', 400);
+    }
+    if (revealed.includes(parsedChestIndex)) {
+      throw new AppError('That chest is already revealed.', 400);
+    }
+    nextChest = parsedChestIndex;
+  } else {
+    nextChest = selected.find((index) => !revealed.includes(index));
+  }
+
   if (nextChest === undefined) {
     throw new AppError('All selected chests are already revealed.', 400);
   }
