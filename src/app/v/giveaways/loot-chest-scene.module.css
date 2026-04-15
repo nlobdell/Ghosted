@@ -1,0 +1,377 @@
+.scene {
+  --scene-border: rgba(219, 188, 118, 0.2);
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
+  overflow: hidden;
+  border-radius: 1.65rem;
+  border: 1px solid var(--scene-border);
+  background:
+    linear-gradient(180deg, rgba(11, 10, 8, 0.82), rgba(7, 7, 6, 0.9)),
+    url('/giveaways/sprites/backdrop.svg') center/cover no-repeat;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 239, 199, 0.08),
+    0 28px 54px rgba(0, 0, 0, 0.28);
+  isolation: isolate;
+}
+
+.sceneHost {
+  min-height: 42rem;
+}
+
+.sceneOverlay {
+  min-height: min(88vh, 54rem);
+}
+
+.ambientHalo {
+  position: absolute;
+  inset: auto 8% 68% 8%;
+  height: 12rem;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(255, 214, 126, 0.18) 0%, rgba(255, 214, 126, 0.04) 42%, transparent 72%);
+  filter: blur(18px);
+  animation: ambientFloat 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sceneHeader,
+.badgeRow,
+.boardMeta,
+.boardGrid,
+.statusRail {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.sceneHeader,
+.boardShell,
+.statusRail {
+  position: relative;
+  z-index: 1;
+}
+
+.sceneHeader {
+  grid-template-columns: minmax(0, 1.1fr) minmax(16rem, 0.9fr);
+  align-items: start;
+}
+
+.titleStack {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.kicker,
+.chestWord {
+  color: rgba(255, 240, 207, 0.76);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.headline {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 0.9;
+  color: #fff5dc;
+  text-wrap: balance;
+}
+
+.summary {
+  max-width: 46rem;
+  color: rgba(255, 245, 222, 0.84);
+}
+
+.badgeRow {
+  align-content: start;
+}
+
+.badge {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 235, 186, 0.11);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(6px);
+}
+
+.badge strong,
+.metaChip,
+.statusChip,
+.emptyState strong,
+.chestNumber {
+  color: #fff2cf;
+}
+
+.badge small,
+.emptyState p {
+  color: rgba(255, 244, 223, 0.72);
+}
+
+.badgeIcon {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 236, 191, 0.14);
+  background:
+    linear-gradient(180deg, rgba(58, 42, 17, 0.92), rgba(22, 17, 10, 0.98)),
+    var(--badge-icon) center/72% no-repeat;
+  box-shadow: inset 0 1px 0 rgba(255, 247, 230, 0.1);
+}
+
+.boardShell {
+  display: grid;
+  gap: 0.95rem;
+  padding: 1.25rem;
+  border-radius: 1.45rem;
+  border: 1px solid rgba(255, 238, 205, 0.08);
+  background:
+    linear-gradient(180deg, rgba(18, 15, 9, 0.84), rgba(10, 9, 7, 0.9));
+}
+
+.boardFrame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: url('/giveaways/sprites/board-frame.svg') center/cover no-repeat;
+  opacity: 0.88;
+}
+
+.boardMeta,
+.statusRail {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, max-content);
+  align-items: center;
+  justify-content: start;
+  overflow-x: auto;
+}
+
+.metaChip,
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.42rem 0.74rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 232, 180, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
+}
+
+.boardGrid {
+  position: relative;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.chest {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 0.2rem;
+  aspect-ratio: 0.9;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  cursor: default;
+}
+
+.chestInteractive {
+  cursor: pointer;
+}
+
+.chestInteractive:hover {
+  transform: translateY(-2px);
+}
+
+.chestGlow,
+.chestSprite {
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
+.chestGlow {
+  inset: 12% 12% 18%;
+  background:
+    radial-gradient(circle, rgba(255, 222, 149, 0.3), rgba(255, 222, 149, 0.04) 54%, transparent 74%);
+  filter: blur(14px);
+  opacity: 0;
+  transition: opacity var(--ease-standard);
+}
+
+.chestSelected .chestGlow,
+.chestLocked .chestGlow,
+.chestPrize .chestGlow {
+  opacity: 1;
+}
+
+.chestSprite {
+  background: var(--chest-sprite) center/contain no-repeat;
+  transition:
+    transform var(--ease-standard),
+    filter var(--ease-standard);
+}
+
+.chestNumber,
+.chestWord {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.chestNumber {
+  align-self: end;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 2.4vw, 1.85rem);
+}
+
+.chestWord {
+  align-self: start;
+}
+
+.chestSelected .chestSprite {
+  transform: translateY(-4px) scale(1.02);
+  animation: chestPulse 1.8s ease-in-out infinite;
+}
+
+.chestLocked .chestSprite {
+  transform: translateY(-3px);
+}
+
+.chestEmpty .chestSprite {
+  filter: saturate(0.86) brightness(0.95);
+}
+
+.chestPrize .chestSprite {
+  filter: drop-shadow(0 0 18px rgba(255, 216, 124, 0.34));
+}
+
+.chestReveal .chestSprite {
+  animation: chestReveal 0.95s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.outcomeBurst {
+  position: absolute;
+  right: clamp(0.8rem, 2vw, 1.6rem);
+  bottom: clamp(0.8rem, 2vw, 1.3rem);
+  width: clamp(7rem, 14vw, 10rem);
+  aspect-ratio: 1;
+  background: var(--result-asset) center/contain no-repeat;
+  opacity: 0.9;
+  transform: scale(0.9);
+  pointer-events: none;
+}
+
+.outcomeBurstAnimated {
+  animation: outcomeBurst 1s cubic-bezier(0.18, 0.88, 0.2, 1);
+}
+
+.emptyState {
+  display: grid;
+  place-items: center;
+  gap: 0.7rem;
+  min-height: 22rem;
+  text-align: center;
+}
+
+.emptyCrest {
+  width: 5.5rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 214, 126, 0.2), rgba(255, 214, 126, 0.04) 62%, transparent 74%),
+    url('/giveaways/sprites/result-win.svg') center/60% no-repeat;
+}
+
+@keyframes ambientFloat {
+  0%,
+  100% {
+    transform: translateY(0px) scaleX(1);
+    opacity: 0.62;
+  }
+  50% {
+    transform: translateY(8px) scaleX(1.06);
+    opacity: 0.86;
+  }
+}
+
+@keyframes chestPulse {
+  0%,
+  100% {
+    transform: translateY(-3px) scale(1.01);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.04);
+  }
+}
+
+@keyframes chestReveal {
+  0% {
+    transform: translateY(10px) scale(0.92);
+    filter: brightness(0.7);
+  }
+  45% {
+    transform: translateY(-10px) scale(1.06);
+    filter: brightness(1.18);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes outcomeBurst {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.6);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.06);
+  }
+  100% {
+    opacity: 0.92;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 1080px) {
+  .sceneHeader {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .boardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scene {
+    padding: 0.95rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambientHalo,
+  .chestSelected .chestSprite,
+  .chestReveal .chestSprite,
+  .outcomeBurstAnimated {
+    animation: none;
+  }
+
+  .chestInteractive:hover,
+  .chestSprite,
+  .chestGlow {
+    transition-duration: 0.01ms;
+  }
+}

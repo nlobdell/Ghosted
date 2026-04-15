@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { startTransition, useEffect, useEffectEvent, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { formatDate, getJSON } from '@/lib/api';
 import type { LootChestGameState } from '@/lib/types';
-import { LootChestBoardView } from '../LootChestBoard';
+import { LootChestScene } from '../LootChestScene';
 import styles from './page.module.css';
 
 const HOST_POLL_INTERVAL_MS = 700;
@@ -368,42 +368,15 @@ export default function TwitchLootChestHostOverlayClient({
             <span>{controlHint(state)}</span>
           </div>
 
-          <div className={styles.metaStrip}>
-            <article className={styles.metaCard}>
-              <span className={styles.label}>Viewer</span>
-              <strong>{activeTurn?.viewer.displayName ?? nextQueuedTurn?.viewer.displayName ?? 'Stand by'}</strong>
-              <span>{activeTurn ? `@${activeTurn.viewer.login}` : nextQueuedTurn ? `Next: @${nextQueuedTurn.viewer.login}` : 'Queue is clear'}</span>
-            </article>
-            <article className={styles.metaCard}>
-              <span className={styles.label}>Reward</span>
-              <strong>{state.connection.reward.title}</strong>
-              <span>{state.connection.reward.cost.toLocaleString()} points</span>
-            </article>
-            <article className={styles.metaCard}>
-              <span className={styles.label}>Action</span>
-              <strong>{actionLabel(state)}</strong>
-              <span>{busyAction ? 'Updating now' : 'Ready for the next host input'}</span>
-            </article>
-          </div>
-
           <section className={styles.boardShell} onKeyDown={handleBoardKeyDown} tabIndex={0}>
-            {activeBoard ? (
-              <LootChestBoardView
-                board={activeBoard}
-                draftSelections={draftSelections}
-                onToggleSelection={toggleSelection}
-              />
-            ) : (
-              <div className={styles.emptyBoard}>
-                <p className={styles.label}>No active turn</p>
-                <strong>{nextQueuedTurn ? `${nextQueuedTurn.viewer.displayName} is ready to start.` : 'Waiting for the next redemption.'}</strong>
-                <span>
-                  {nextQueuedTurn
-                    ? 'Start the queued turn from this host surface when you are ready to go live.'
-                    : 'Keep this surface open and the queue will appear here as Twitch redemptions arrive.'}
-                </span>
-              </div>
-            )}
+            <LootChestScene
+              turn={activeTurn ?? nextQueuedTurn}
+              queueCount={state.queue.length}
+              reward={state.connection.reward}
+              variant="host"
+              draftSelections={draftSelections}
+              onToggleSelection={toggleSelection}
+            />
           </section>
 
           <div className={styles.controlRail}>

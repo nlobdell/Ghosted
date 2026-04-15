@@ -835,6 +835,23 @@ export interface TwitchPlatformState {
 
 export type LootChestTurnStatus = 'queued' | 'active' | 'completed';
 export type LootChestTurnResult = 'pending' | 'win' | 'miss';
+export type LootChestPresentationPhase = 'queued' | 'selection' | 'locked' | 'revealing' | 'resolved';
+export type LootChestPresentationAction =
+  | 'queued'
+  | 'turn_started'
+  | 'chests_selected'
+  | 'chest_revealed'
+  | 'turn_completed';
+export type LootChestChestSpriteState =
+  | 'closed'
+  | 'selected'
+  | 'locked'
+  | 'opening'
+  | 'empty'
+  | 'prize'
+  | 'resolved-empty'
+  | 'resolved-prize';
+export type LootChestChestAnimationState = 'idle' | 'pulse' | 'opening' | 'settled' | 'burst';
 
 export interface TwitchRewardConnectionState {
   configured: boolean;
@@ -871,11 +888,16 @@ export interface LootChestBoardChest {
   revealed: boolean;
   containsPrize: boolean;
   revealState: 'closed' | 'selected' | 'empty' | 'prize';
+  spriteState: LootChestChestSpriteState;
+  animationState: LootChestChestAnimationState;
+  revealCue: boolean;
 }
 
 export interface LootChestBoard {
   totalChests: number;
   selectionLimit: number;
+  phase: Exclude<LootChestPresentationPhase, 'queued'>;
+  boardRevision: number;
   prizeChestIndex?: number | null;
   selectedChests: number[];
   revealedChests: number[];
@@ -883,6 +905,10 @@ export interface LootChestBoard {
   remainingReveals: number;
   prizeFound: boolean;
   allSelectionsLocked: boolean;
+  lastAction?: LootChestPresentationAction | null;
+  lastActionAt?: string | null;
+  lastChangedChestIndex?: number | null;
+  activeAnimationChestIndex?: number | null;
   chests: LootChestBoardChest[];
 }
 
@@ -896,6 +922,13 @@ export interface LootChestTurn {
   createdAt: string;
   startedAt?: string | null;
   completedAt?: string | null;
+  phase: LootChestPresentationPhase;
+  lastAction?: LootChestPresentationAction | null;
+  lastActionAt?: string | null;
+  resolutionCue?: {
+    result: Exclude<LootChestTurnResult, 'pending'>;
+    highlightChestIndex?: number | null;
+  } | null;
   userInput?: string | null;
   viewer: {
     twitchId: string;

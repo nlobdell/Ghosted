@@ -364,23 +364,27 @@ function ensureSchema(db: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS twitch_loot_chest_turns (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      redemption_id TEXT NOT NULL UNIQUE,
-      reward_id TEXT NOT NULL,
-      viewer_twitch_id TEXT NOT NULL,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        redemption_id TEXT NOT NULL UNIQUE,
+        reward_id TEXT NOT NULL,
+        viewer_twitch_id TEXT NOT NULL,
       viewer_login TEXT NOT NULL,
       viewer_display_name TEXT NOT NULL,
       user_input TEXT,
       status TEXT NOT NULL,
       result TEXT NOT NULL DEFAULT 'pending',
-      prize_chest_index INTEGER,
-      selected_chests_json TEXT NOT NULL DEFAULT '[]',
-      revealed_chests_json TEXT NOT NULL DEFAULT '[]',
-      fulfillment_status TEXT NOT NULL DEFAULT 'UNFULFILLED',
-      redeemed_at TEXT NOT NULL,
-      started_at TEXT,
-      completed_at TEXT,
-      created_at TEXT NOT NULL,
+        prize_chest_index INTEGER,
+        selected_chests_json TEXT NOT NULL DEFAULT '[]',
+        revealed_chests_json TEXT NOT NULL DEFAULT '[]',
+        board_revision INTEGER NOT NULL DEFAULT 0,
+        last_action TEXT NOT NULL DEFAULT 'queued',
+        last_action_at TEXT,
+        last_changed_chest_index INTEGER,
+        fulfillment_status TEXT NOT NULL DEFAULT 'UNFULFILLED',
+        redeemed_at TEXT NOT NULL,
+        started_at TEXT,
+        completed_at TEXT,
+        created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
 
@@ -460,10 +464,14 @@ function ensureSchema(db: Database.Database) {
 
     CREATE INDEX IF NOT EXISTS idx_twitch_platform_deliveries_status
     ON twitch_platform_deliveries(processing_status, received_at DESC);
-  `);
+    `);
 
-  ensureTableColumn(db, 'users', 'public_name_source', "TEXT NOT NULL DEFAULT 'discord'");
-  ensureTableColumn(db, 'user_game_accounts', 'claim_source', "TEXT NOT NULL DEFAULT 'manual_wom'");
+    ensureTableColumn(db, 'users', 'public_name_source', "TEXT NOT NULL DEFAULT 'discord'");
+    ensureTableColumn(db, 'user_game_accounts', 'claim_source', "TEXT NOT NULL DEFAULT 'manual_wom'");
+    ensureTableColumn(db, 'twitch_loot_chest_turns', 'board_revision', 'INTEGER NOT NULL DEFAULT 0');
+    ensureTableColumn(db, 'twitch_loot_chest_turns', 'last_action', "TEXT NOT NULL DEFAULT 'queued'");
+    ensureTableColumn(db, 'twitch_loot_chest_turns', 'last_action_at', 'TEXT');
+    ensureTableColumn(db, 'twitch_loot_chest_turns', 'last_changed_chest_index', 'INTEGER');
   ensureTableColumn(db, 'user_game_accounts', 'claimed_at', 'TEXT');
   ensureTableColumn(db, 'user_game_accounts', 'verified_at', 'TEXT');
   ensureTableColumn(db, 'companion_catalog', 'front_asset_path', 'TEXT');
