@@ -352,9 +352,13 @@ export function LootChestScene({
                     data-dormant={dormant ? 'true' : 'false'}
                     data-clickable={clickable ? 'true' : 'false'}
                   >
-                    <SceneSprite spec={spriteSpec} className={styles.chestSprite} />
-                    <span className={styles.chestNumber}>{chest.label}</span>
-                    <span className={styles.chestWord}>{chestLabel(chest, spriteState)}</span>
+                    <span className={styles.chestVisual}>
+                      <SceneSprite spec={spriteSpec} className={styles.chestSprite} />
+                    </span>
+                    <span className={styles.chestLabelStack}>
+                      <span className={styles.chestNumber}>{chest.label}</span>
+                      <span className={styles.chestWord}>{chestLabel(chest, spriteState)}</span>
+                    </span>
                   </button>
                 );
               })}
