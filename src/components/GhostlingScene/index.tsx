@@ -2881,6 +2881,7 @@ export function GhostlingScene({
                       targetSize={stageMetrics.targetSize}
                       presentation={presentationForState(state)}
                       seedKey={`scene:${world}:${variant}:${entity.key}`}
+                      sceneFacingScaleX={entity.facingLeft ? 1 : -1}
                     />
                   ) : (
                     <img

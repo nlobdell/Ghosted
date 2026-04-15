@@ -85,6 +85,7 @@ describe('companion server module', () => {
     expect(payload.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-left-hand.png'))).toBe(true);
     expect(payload.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-body.png'))).toBe(true);
     expect(payload.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
+    expect(payload.renderManifest.layers.every((layer) => layer.sceneFacingFlip === 'allow')).toBe(true);
     expect(payload.share.discordCardUrl).toContain('card=1&discord=1');
     expect(payload.share.animatedDiscordCardUrl).toContain('card=1&discord=1');
     expect(payload.share.animatedDiscordEmbedUrl).toContain('/api/companion/render-discord-animated.gif?user=');
@@ -93,6 +94,7 @@ describe('companion server module', () => {
     expect(hallSummary.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-right-hand.png'))).toBe(true);
     expect(hallSummary.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-left-hand.png'))).toBe(true);
     expect(hallSummary.renderManifest.layers.some((layer) => layer.src.includes('ghostling-base-head.png'))).toBe(true);
+    expect(hallSummary.renderManifest.layers.every((layer) => layer.sceneFacingFlip === 'allow')).toBe(true);
   });
 
   it('purchases a cosmetic, deducts points, and auto-equips the first unlocked slot item', () => {

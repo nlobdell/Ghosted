@@ -14,6 +14,7 @@ import type {
   CompanionRenderPoint,
   CompanionRenderRect,
   CompanionRenderSlice,
+  CompanionSceneFacingFlipMode,
   CompanionSlotKey,
 } from '@/lib/types';
 import { resolveStageShadowRect } from '@/lib/companion-motion';
@@ -112,6 +113,7 @@ export type CompanionManifestLayer = {
   role: string;
   relativePath: string;
   zIndex: number;
+  sceneFacingFlip: CompanionSceneFacingFlipMode;
   slot: CompanionSlotKey | null;
   motionGroup: string | null;
   slices: CompanionRenderSlice[];
@@ -513,6 +515,17 @@ type CompanionItemRenderMetadataValidationResult = {
   errors: string[];
 };
 
+const COMPANION_SCENE_FACING_FLIP_MODES = ['allow', 'ignore', 'invert'] as const satisfies readonly CompanionSceneFacingFlipMode[];
+
+function normalizeSceneFacingFlip(value: unknown) {
+  if (value == null) return null;
+  const normalized = String(value).trim().toLowerCase();
+  if (!normalized) return null;
+  return COMPANION_SCENE_FACING_FLIP_MODES.includes(normalized as CompanionSceneFacingFlipMode)
+    ? normalized as CompanionSceneFacingFlipMode
+    : null;
+}
+
 function validateCompanionItemRenderMetadataObject(
   value: unknown,
   options: CompanionItemRenderMetadataValidationOptions = {},
@@ -537,6 +550,11 @@ function validateCompanionItemRenderMetadataObject(
   }
   if (options.expectedSlot && rawSlot && rawSlot !== options.expectedSlot) {
     errors.push(`Ghostling metadata slot "${rawSlot}" does not match the selected "${options.expectedSlot}" slot.`);
+  }
+
+  const sceneFacingFlip = normalizeSceneFacingFlip(shape.sceneFacingFlip);
+  if (shape.sceneFacingFlip !== undefined && !sceneFacingFlip) {
+    errors.push('Ghostling metadata sceneFacingFlip must be "allow", "ignore", or "invert".');
   }
 
   const canvasShape = shape.canvas && typeof shape.canvas === 'object' ? shape.canvas as Record<string, unknown> : {};
@@ -595,6 +613,7 @@ function validateCompanionItemRenderMetadataObject(
     kind: 'ghostling-cosmetic',
     schemaVersion: 1,
     slot: rawSlot as CompanionSlotKey,
+    sceneFacingFlip: sceneFacingFlip ?? 'allow',
     canvas: {
       width: canvasRect.width,
       height: canvasRect.height,
@@ -719,6 +738,7 @@ function companionRigLayerToManifestLayer(
     slot: null,
     relativePath,
     zIndex: layer.zIndex,
+    sceneFacingFlip: 'allow',
     motionGroup: layer.motionGroup,
     slices: [],
   } satisfies CompanionManifestLayer;
@@ -740,6 +760,7 @@ function fallbackBaseRigLayer(
     slot: null,
     relativePath,
     zIndex: kind === 'body' ? 20 : 35,
+    sceneFacingFlip: 'allow',
     motionGroup: kind,
     slices: [],
   } satisfies CompanionManifestLayer;
@@ -1415,6 +1436,7 @@ function companionItemLayer(
   const relativePath = side === 'front' ? row.front_asset_path : row.back_asset_path;
   if (!relativePath) return null;
 
+  const metadata = companionItemRenderMetadataFromRow(row);
   const metadataSlices = metadataLayerSlices(row, side, row.slot_key, baseConfig.rig, canvas);
   return {
     key: `${row.slot_key}-${side}`,
@@ -1422,6 +1444,7 @@ function companionItemLayer(
     slot: row.slot_key,
     relativePath,
     zIndex,
+    sceneFacingFlip: metadata?.sceneFacingFlip ?? 'allow',
     motionGroup: null,
     slices: metadataSlices.length
       ? metadataSlices
@@ -1459,6 +1482,7 @@ export function resolveCompanionLayerScene(
 
   layers.push(...baseConfig.layers.map((layer) => ({
     ...layer,
+    sceneFacingFlip: layer.sceneFacingFlip ?? 'allow',
     slices: layer.slices.length
       ? layer.slices.map((slice) => ({ ...slice }))
       : [fullLayerSlice(layer.relativePath, layer.key, undefined, layer.motionGroup, canvas)],
@@ -1516,6 +1540,7 @@ export function companionRenderManifest(
         src,
         zIndex: layer.zIndex,
         animation,
+        sceneFacingFlip: layer.sceneFacingFlip,
         slot: layer.slot,
         motionGroup,
         slices: layer.slices,

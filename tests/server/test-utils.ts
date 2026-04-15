@@ -6,6 +6,7 @@ import { utcIso } from '@/lib/server/core';
 import { getDatabase, resetDatabaseForTests } from '@/lib/server/database';
 
 type EnvKey =
+  | 'AUTH_URL'
   | 'ADMIN_DISCORD_IDS'
   | 'COMPANION_ASSET_DIR'
   | 'DAILY_WAGER_CAP'
@@ -15,12 +16,19 @@ type EnvKey =
   | 'DEV_AUTH_ADMIN'
   | 'ENABLE_DEV_AUTH'
   | 'SESSION_COOKIE_SECURE'
+  | 'TWITCH_CLIENT_ID'
+  | 'TWITCH_CLIENT_SECRET'
+  | 'TWITCH_EVENTSUB_SECRET'
+  | 'TWITCH_OPERATOR_DISCORD_IDS'
+  | 'TWITCH_GAME_OPERATOR_DISCORD_IDS'
+  | 'TWITCH_REDIRECT_URI'
   | 'WOM_API_BASE'
   | 'WOM_CACHE_TTL_SECONDS'
   | 'WOM_GROUP_ID'
   | 'WORLD_ASSET_DIR';
 
 const ENV_KEYS: EnvKey[] = [
+  'AUTH_URL',
   'ADMIN_DISCORD_IDS',
   'COMPANION_ASSET_DIR',
   'DAILY_WAGER_CAP',
@@ -30,6 +38,12 @@ const ENV_KEYS: EnvKey[] = [
   'DEV_AUTH_ADMIN',
   'ENABLE_DEV_AUTH',
   'SESSION_COOKIE_SECURE',
+  'TWITCH_CLIENT_ID',
+  'TWITCH_CLIENT_SECRET',
+  'TWITCH_EVENTSUB_SECRET',
+  'TWITCH_OPERATOR_DISCORD_IDS',
+  'TWITCH_GAME_OPERATOR_DISCORD_IDS',
+  'TWITCH_REDIRECT_URI',
   'WOM_API_BASE',
   'WOM_CACHE_TTL_SECONDS',
   'WOM_GROUP_ID',
@@ -54,11 +68,18 @@ export function setupServerTestEnvironment(overrides: Partial<Record<EnvKey, str
   process.env.DEV_AUTH_ADMIN = overrides.DEV_AUTH_ADMIN ?? '';
   process.env.DISCORD_BOT_TOKEN = overrides.DISCORD_BOT_TOKEN ?? '';
   process.env.DISCORD_GUILD_ID = overrides.DISCORD_GUILD_ID ?? '';
+  process.env.AUTH_URL = overrides.AUTH_URL ?? 'https://ghostedclan.com';
   process.env.WOM_GROUP_ID = overrides.WOM_GROUP_ID ?? '123';
   process.env.WOM_CACHE_TTL_SECONDS = overrides.WOM_CACHE_TTL_SECONDS ?? '900';
   process.env.WOM_API_BASE = overrides.WOM_API_BASE ?? 'https://api.wiseoldman.net/v2';
   process.env.ENABLE_DEV_AUTH = overrides.ENABLE_DEV_AUTH ?? 'false';
   process.env.SESSION_COOKIE_SECURE = overrides.SESSION_COOKIE_SECURE ?? '';
+  process.env.TWITCH_CLIENT_ID = overrides.TWITCH_CLIENT_ID ?? 'twitch-client-id';
+  process.env.TWITCH_CLIENT_SECRET = overrides.TWITCH_CLIENT_SECRET ?? 'twitch-client-secret';
+  process.env.TWITCH_EVENTSUB_SECRET = overrides.TWITCH_EVENTSUB_SECRET ?? 'eventsub-secret';
+  process.env.TWITCH_OPERATOR_DISCORD_IDS = overrides.TWITCH_OPERATOR_DISCORD_IDS ?? overrides.TWITCH_GAME_OPERATOR_DISCORD_IDS ?? 'operator-discord';
+  process.env.TWITCH_GAME_OPERATOR_DISCORD_IDS = overrides.TWITCH_GAME_OPERATOR_DISCORD_IDS ?? 'operator-discord';
+  process.env.TWITCH_REDIRECT_URI = overrides.TWITCH_REDIRECT_URI ?? 'https://ghostedclan.com/api/v/twitch/callback';
   process.env.ADMIN_DISCORD_IDS = overrides.ADMIN_DISCORD_IDS ?? '';
   process.env.WORLD_ASSET_DIR = overrides.WORLD_ASSET_DIR ?? path.join(tempDir, 'world-assets');
 

@@ -67,6 +67,10 @@ Local env files:
   - `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` for real Discord sign-in
   - `DISCORD_REDIRECT_URI` if you want Discord OAuth to use one fixed registered callback URI
   - `DISCORD_GUILD_ID` and `DISCORD_BOT_TOKEN` for live Discord role sync
+  - `TWITCH_OPERATOR_DISCORD_IDS` to allow specific Discord users into the Twitch operator surfaces at `/v/twitch` and `/v/giveaways`
+  - `TWITCH_GAME_OPERATOR_DISCORD_IDS` remains as a temporary compatibility fallback for older giveaway-only setups
+  - `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_REDIRECT_URI`, and `TWITCH_EVENTSUB_SECRET` for the Ghosted Twitch platform, loot chest console, and webhook
+  - `AUTH_URL` or `PUBLIC_BASE_URL` so the Twitch EventSub callback can advertise the correct public URL
   - `WOM_GROUP_ID` for clan/WOM endpoints
   - `DATABASE_PATH` and `COMPANION_ASSET_DIR` if you want to override the local defaults
 
@@ -80,6 +84,18 @@ Companion studio:
 
 ```text
 http://localhost:3000/hall/ghostling
+```
+
+Twitch loot chest console:
+
+```text
+http://localhost:3000/v/giveaways
+```
+
+Twitch operator home:
+
+```text
+http://localhost:3000/v/twitch
 ```
 
 Companion asset storage:
@@ -167,9 +183,11 @@ Current VPS pattern:
 - Caddy -> scene realtime websocket sidecar (`ghosted-scene-realtime.service`) on `127.0.0.1:3001` for `/ws/scene/presence`
 - optional Discord worker (`ghosted-discord-worker.service`) for bot-backed Discord features
 - Next owns all public and internal `/api/*` routes, including companion asset serving and render endpoints
+- The Twitch platform control plane lives at `/v/twitch`, while the loot chest giveaway console stays at `/v/giveaways` and its OBS/browser-source overlay stays at `/v/giveaways/overlay/[token]`
 - `/auth/login`, `/auth/logout`, `/auth/dev-login`, and `/api/auth/*` live in Next/Auth.js plus the legacy-session bridge
 - `/admin/discord-presence/` is the operator surface for worker health, current public mode, and the public voice/stage allowlist
 - Env file lives at `/etc/ghosted/ghosted.env`
+- Twitch EventSub notifications terminate on the Next route `/api/v/twitch/eventsub`, using `AUTH_URL` or `PUBLIC_BASE_URL` to form the public callback URL
 - With `DATABASE_PATH=/var/lib/ghosted/ghosted.db`, uploaded companion assets default to `/var/lib/ghosted/companion-assets/` unless `COMPANION_ASSET_DIR` is set explicitly
 - Production builds use Next standalone output and run from `/opt/ghosted/.next/standalone/server.js`
 

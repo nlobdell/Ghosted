@@ -101,6 +101,7 @@ function makeManifest(overrides: Partial<CompanionRenderManifest> = {}): Compani
       role: 'base-body',
       src: '/ghost.png',
       zIndex: 10,
+      sceneFacingFlip: 'allow',
       motionGroup: 'root',
       animation: {
         mode: 'static',
@@ -255,5 +256,123 @@ describe('AnimatedCompanionStage', () => {
 
     expect(firstTransform).toBe(secondTransform);
     expect(thirdTransform).not.toBe(firstTransform);
+  });
+
+  it('cancels the parent scene flip for ignore layers when the ghostling faces right', () => {
+    const manifest = makeManifest({
+      motion: {
+        shadowOpacity: 0.2,
+        rootGroup: 'root',
+        channels: {
+          root: {},
+        },
+        slotGroups: {},
+        accents: [],
+      },
+      layers: [{
+        key: 'hat-front',
+        role: 'hat-front',
+        src: '/hat.png',
+        zIndex: 20,
+        sceneFacingFlip: 'ignore',
+        motionGroup: 'head',
+        animation: {
+          mode: 'static',
+          fps: 0,
+          frameCount: 1,
+          frameWidth: 32,
+          frameHeight: 32,
+          loop: false,
+        },
+        slices: [{
+          key: 'hat-front',
+          sourceX: 0,
+          sourceY: 0,
+          sourceWidth: 32,
+          sourceHeight: 32,
+          targetX: 0,
+          targetY: 0,
+          targetWidth: 32,
+          targetHeight: 32,
+          motionGroup: 'head',
+        }],
+      }],
+    });
+
+    const { container } = render(
+      <AnimatedCompanionStage
+        manifest={manifest}
+        fallbackSrc="/ghost.png"
+        alt="Ignore flip"
+        targetSize={64}
+        sceneFacingScaleX={-1}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    expect(parseMatrix(pieceNode(container).style.transform)[0]).toBeCloseTo(-1, 4);
+  });
+
+  it('only applies invert layers when a scene-facing scale is provided', () => {
+    const manifest = makeManifest({
+      motion: {
+        shadowOpacity: 0.2,
+        rootGroup: 'root',
+        channels: {
+          root: {},
+        },
+        slotGroups: {},
+        accents: [],
+      },
+      layers: [{
+        key: 'hat-front',
+        role: 'hat-front',
+        src: '/hat.png',
+        zIndex: 20,
+        sceneFacingFlip: 'invert',
+        motionGroup: 'head',
+        animation: {
+          mode: 'static',
+          fps: 0,
+          frameCount: 1,
+          frameWidth: 32,
+          frameHeight: 32,
+          loop: false,
+        },
+        slices: [{
+          key: 'hat-front',
+          sourceX: 0,
+          sourceY: 0,
+          sourceWidth: 32,
+          sourceHeight: 32,
+          targetX: 0,
+          targetY: 0,
+          targetWidth: 32,
+          targetHeight: 32,
+          motionGroup: 'head',
+        }],
+      }],
+    });
+
+    const ambient = render(
+      <AnimatedCompanionStage manifest={manifest} fallbackSrc="/ghost.png" alt="Ambient invert" targetSize={64} />,
+    );
+    const scene = render(
+      <AnimatedCompanionStage
+        manifest={manifest}
+        fallbackSrc="/ghost.png"
+        alt="Scene invert"
+        targetSize={64}
+        sceneFacingScaleX={1}
+      />,
+    );
+
+    flushFrame(0);
+    flushFrame(16);
+
+    expect(parseMatrix(pieceNode(ambient.container).style.transform)[0]).toBeCloseTo(1, 4);
+    expect(parseMatrix(pieceNode(scene.container).style.transform)[0]).toBeCloseTo(-1, 4);
   });
 });
