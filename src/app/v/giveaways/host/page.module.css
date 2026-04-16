@@ -121,7 +121,7 @@
 
 .surfaceBody {
   display: grid;
-  align-items: stretch;
+  align-items: start;
   gap: 0;
   grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
   min-height: 0;
@@ -168,13 +168,19 @@
 .sideRail {
   grid-column: 1;
   grid-row: 1;
+  align-self: start;
   min-width: 0;
   grid-template-columns: 1fr;
   border-right: 1px solid rgba(191, 179, 255, 0.08);
-  max-height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.sideRail::-webkit-scrollbar {
+  display: none;
 }
 
 .railBlock {

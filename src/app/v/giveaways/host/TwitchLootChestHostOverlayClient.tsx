@@ -117,6 +117,7 @@ export default function TwitchLootChestHostOverlayClient({
   const [presentationCue, setPresentationCue] = useState<LootChestPresentationCue | null>(null);
   const [hoveredPreviewIndex, setHoveredPreviewIndex] = useState<number | null>(null);
   const [sceneScale, setSceneScale] = useState(1);
+  const [sceneStageHeight, setSceneStageHeight] = useState<number | null>(null);
   const pollInFlightRef = useRef(false);
   const draftSelectionsRef = useRef<number[]>(initialState.activeTurn?.board?.selectedChests ?? []);
   const hoveredPreviewIndexRef = useRef<number | null>(null);
@@ -363,6 +364,7 @@ export default function TwitchLootChestHostOverlayClient({
 
       const nextScale = Math.min(width / HOST_SCENE_WIDTH, height / HOST_SCENE_HEIGHT);
       setSceneScale(nextScale > 0 ? nextScale : 1);
+      setSceneStageHeight(height);
     };
 
     updateScale();
@@ -635,6 +637,9 @@ export default function TwitchLootChestHostOverlayClient({
   const sceneViewportStyle = {
     ['--host-scene-scale' as string]: String(sceneScale),
   } as CSSProperties;
+  const sideRailStyle = sceneStageHeight
+    ? ({ maxHeight: `${sceneStageHeight}px` } as CSSProperties)
+    : undefined;
 
   return (
     <main className={styles.hostPage}>
@@ -665,7 +670,7 @@ export default function TwitchLootChestHostOverlayClient({
             </div>
           </section>
 
-          <aside className={styles.sideRail}>
+          <aside className={styles.sideRail} style={sideRailStyle}>
             <section className={styles.railBlock}>
               <div className={styles.railIntro}>
                 <p className={styles.routeLabel}>Ghosted giveaways</p>
