@@ -67,6 +67,12 @@ export function SceneSprite({
     frameIndex: initialFrame,
   }));
   const animated = spec.frames > 1 && spec.playback !== 'static' && Boolean(spec.durationMs);
+  const textured = Boolean(spec.textureLayer);
+  const texturedAnimated = Boolean(
+    spec.textureLayer?.durationMs
+    && ((spec.textureLayer.scrollX && spec.textureLayer.scrollX !== '0px')
+      || (spec.textureLayer.scrollY && spec.textureLayer.scrollY !== '0px')),
+  );
   const displayFrameIndex = spriteState.signature === signature ? spriteState.frameIndex : initialFrame;
 
   useEffect(() => {
@@ -110,6 +116,17 @@ export function SceneSprite({
     ['--scene-sprite-static-translate' as string]: spriteTranslate(spec.frames, displayFrameIndex),
     ['--scene-sprite-end-translate' as string]: spriteEndTranslate(spec.frames),
     ['--scene-sprite-anchor-x' as string]: spriteAnchorShift(spec, displayFrameIndex),
+    ['--scene-texture-image' as string]: spec.textureLayer ? `url("${spec.textureLayer.src}")` : 'none',
+    ['--scene-texture-repeat' as string]: spec.textureLayer?.repeat ?? 'repeat',
+    ['--scene-texture-size' as string]: spec.textureLayer?.size ?? 'auto',
+    ['--scene-texture-duration' as string]: `${spec.textureLayer?.durationMs ?? 0}ms`,
+    ['--scene-texture-scroll-x' as string]: spec.textureLayer?.scrollX ?? '0px',
+    ['--scene-texture-scroll-y' as string]: spec.textureLayer?.scrollY ?? '0px',
+    ['--scene-texture-opacity' as string]: String(spec.textureLayer?.opacity ?? 1),
+    ['--scene-detail-image' as string]: `url("${spec.detailLayer?.src ?? spec.src}")`,
+    ['--scene-detail-opacity' as string]: String(spec.detailLayer?.opacity ?? 1),
+    ['--scene-detail-blend-mode' as string]: spec.detailLayer?.mixBlendMode ?? 'normal',
+    ['--scene-detail-filter' as string]: spec.detailLayer?.filter ?? 'none',
   } as CSSProperties;
 
   return (
@@ -124,10 +141,33 @@ export function SceneSprite({
       data-sprite-frame={String(displayFrameIndex)}
       data-sprite-frames={String(spec.frames)}
       data-sprite-playback={animated ? spec.playback : 'static'}
+      data-sprite-textured={textured ? 'true' : 'false'}
       aria-hidden="true"
       {...rest}
     >
-      <span className={styles.sceneSpriteStrip} />
+      {textured ? (
+        <>
+          <span
+            className={[
+              styles.sceneSpriteTextureMask,
+              spec.textureLayer?.pixelated ? styles.sceneSpritePixelated : '',
+              texturedAnimated ? styles.sceneSpriteTextureAnimated : '',
+            ].filter(Boolean).join(' ')}
+            data-sprite-layer="texture"
+          />
+          {spec.detailLayer ? (
+            <span
+              className={[
+                styles.sceneSpriteDetailStrip,
+                (spec.detailLayer.pixelated ?? spec.pixelated) ? styles.sceneSpritePixelated : '',
+              ].filter(Boolean).join(' ')}
+              data-sprite-layer="detail"
+            />
+          ) : null}
+        </>
+      ) : (
+        <span className={styles.sceneSpriteStrip} />
+      )}
     </span>
   );
 }

@@ -28,6 +28,27 @@ export type SceneSpriteSpec = {
   anchorBounds?: SceneSpriteBounds;
   frameBounds?: ReadonlyArray<SceneSpriteBounds | undefined>;
   frameAnchorBounds?: ReadonlyArray<SceneSpriteBounds | undefined>;
+  textureLayer?: SceneSpriteTextureLayer;
+  detailLayer?: SceneSpriteDetailLayer;
+};
+
+export type SceneSpriteTextureLayer = {
+  src: string;
+  repeat?: 'repeat' | 'repeat-x' | 'repeat-y' | 'no-repeat';
+  size?: string;
+  durationMs?: number;
+  scrollX?: string;
+  scrollY?: string;
+  opacity?: number;
+  pixelated?: boolean;
+};
+
+export type SceneSpriteDetailLayer = {
+  src?: string;
+  opacity?: number;
+  mixBlendMode?: string;
+  filter?: string;
+  pixelated?: boolean;
 };
 
 export type SceneSpriteVisibleRegion = {
@@ -55,6 +76,14 @@ function withAssetVersion(spec: SceneSpriteSpec, assetVersion?: string): SceneSp
   return {
     ...spec,
     src: versionedSpriteSrc(spec.src, assetVersion),
+    textureLayer: spec.textureLayer ? {
+      ...spec.textureLayer,
+      src: versionedSpriteSrc(spec.textureLayer.src, assetVersion),
+    } : undefined,
+    detailLayer: spec.detailLayer ? {
+      ...spec.detailLayer,
+      src: spec.detailLayer.src ? versionedSpriteSrc(spec.detailLayer.src, assetVersion) : undefined,
+    } : undefined,
   };
 }
 
@@ -91,29 +120,53 @@ const STABLE_CHEST_ANCHOR_BOUNDS = Array.from(
   () => CLOSED_CHEST_BOUNDS,
 );
 
+const INFERNAL_CHEST_TEXTURE: SceneSpriteTextureLayer = {
+  src: '/giveaways/sprites/infernal-cape-texture.png',
+  repeat: 'repeat',
+  size: '128px 128px',
+  durationMs: 2200,
+  scrollY: '-128px',
+  opacity: 0.96,
+  pixelated: true,
+};
+
+const INFERNAL_CHEST_DETAIL: SceneSpriteDetailLayer = {
+  opacity: 0.42,
+  filter: 'brightness(0.72) contrast(1.28) saturate(0.52)',
+  pixelated: true,
+};
+
+function withInfernalChestTexture(spec: SceneSpriteSpec): SceneSpriteSpec {
+  return {
+    ...spec,
+    textureLayer: INFERNAL_CHEST_TEXTURE,
+    detailLayer: INFERNAL_CHEST_DETAIL,
+  };
+}
+
 const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
-  closed: {
+  closed: withInfernalChestTexture({
     ...staticSprite('chest-closed', '/giveaways/sprites/chest.png', { pixelated: true }),
     frameWidth: CHEST_SPRITE_GEOMETRY.closed.frameWidth,
     frameHeight: CHEST_SPRITE_GEOMETRY.closed.frameHeight,
     visibleBounds: CLOSED_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
-  },
-  selected: {
+  }),
+  selected: withInfernalChestTexture({
     ...staticSprite('chest-selected', '/giveaways/sprites/chest-selected.png', { pixelated: true }),
     frameWidth: CHEST_SPRITE_GEOMETRY.selected.frameWidth,
     frameHeight: CHEST_SPRITE_GEOMETRY.selected.frameHeight,
     visibleBounds: SELECTED_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
-  },
-  locked: {
+  }),
+  locked: withInfernalChestTexture({
     ...staticSprite('chest-locked', '/giveaways/sprites/chest.png', { pixelated: true }),
     frameWidth: CHEST_SPRITE_GEOMETRY.closed.frameWidth,
     frameHeight: CHEST_SPRITE_GEOMETRY.closed.frameHeight,
     visibleBounds: CLOSED_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
-  },
-  opening: {
+  }),
+  opening: withInfernalChestTexture({
     id: 'chest-opening',
     src: '/giveaways/sprites/chest-opening-animation.png',
     frames: OPENING_CHEST_FRAME_BOUNDS.length,
@@ -126,8 +179,8 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     anchorBounds: CLOSED_CHEST_BOUNDS,
     frameBounds: OPENING_CHEST_FRAME_BOUNDS,
     frameAnchorBounds: STABLE_CHEST_ANCHOR_BOUNDS,
-  },
-  empty: {
+  }),
+  empty: withInfernalChestTexture({
     id: 'chest-empty',
     src: '/giveaways/sprites/chest-opening-animation.png',
     frames: OPENING_CHEST_FRAME_BOUNDS.length,
@@ -140,8 +193,8 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     anchorBounds: CLOSED_CHEST_BOUNDS,
     frameBounds: OPENING_CHEST_FRAME_BOUNDS,
     frameAnchorBounds: STABLE_CHEST_ANCHOR_BOUNDS,
-  },
-  prize: {
+  }),
+  prize: withInfernalChestTexture({
     id: 'chest-prize',
     src: '/giveaways/sprites/chest-opening-animation-winner.png',
     frames: WINNER_CHEST_FRAME_BOUNDS.length,
@@ -154,8 +207,8 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     anchorBounds: CLOSED_CHEST_BOUNDS,
     frameBounds: WINNER_CHEST_FRAME_BOUNDS,
     frameAnchorBounds: STABLE_CHEST_ANCHOR_BOUNDS,
-  },
-  'resolved-empty': {
+  }),
+  'resolved-empty': withInfernalChestTexture({
     id: 'chest-resolved-empty',
     src: '/giveaways/sprites/chest-opening-animation.png',
     frames: OPENING_CHEST_FRAME_BOUNDS.length,
@@ -168,8 +221,8 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     anchorBounds: CLOSED_CHEST_BOUNDS,
     frameBounds: OPENING_CHEST_FRAME_BOUNDS,
     frameAnchorBounds: STABLE_CHEST_ANCHOR_BOUNDS,
-  },
-  'resolved-prize': {
+  }),
+  'resolved-prize': withInfernalChestTexture({
     id: 'chest-resolved-prize',
     src: '/giveaways/sprites/chest-opening-animation-winner.png',
     frames: WINNER_CHEST_FRAME_BOUNDS.length,
@@ -182,10 +235,10 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
     anchorBounds: CLOSED_CHEST_BOUNDS,
     frameBounds: WINNER_CHEST_FRAME_BOUNDS,
     frameAnchorBounds: STABLE_CHEST_ANCHOR_BOUNDS,
-  },
+  }),
 };
 
-const WINNER_OPENING_SPRITE: SceneSpriteSpec = {
+const WINNER_OPENING_SPRITE: SceneSpriteSpec = withInfernalChestTexture({
   id: 'chest-opening-winner',
   src: '/giveaways/sprites/chest-opening-animation-winner.png',
   frames: WINNER_CHEST_FRAME_BOUNDS.length,
@@ -198,7 +251,7 @@ const WINNER_OPENING_SPRITE: SceneSpriteSpec = {
   anchorBounds: CLOSED_CHEST_BOUNDS,
   frameBounds: WINNER_CHEST_FRAME_BOUNDS,
   frameAnchorBounds: STABLE_CHEST_ANCHOR_BOUNDS,
-};
+});
 
 const RESULT_SPRITES: Record<Exclude<LootChestTurnResult, 'pending'>, SceneSpriteSpec> = {
   win: {

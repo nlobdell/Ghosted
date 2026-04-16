@@ -303,6 +303,44 @@
   will-change: transform;
 }
 
+.sceneSpriteTextureMask {
+  position: absolute;
+  inset: 0;
+  background-image: var(--scene-texture-image);
+  background-position: 0 0;
+  background-repeat: var(--scene-texture-repeat, repeat);
+  background-size: var(--scene-texture-size, auto);
+  opacity: var(--scene-texture-opacity, 1);
+  -webkit-mask-image: var(--scene-sprite-image);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: calc(var(--scene-sprite-frames, 1) * 100%) 100%;
+  -webkit-mask-position: var(--scene-sprite-static-translate, 0%) 0;
+  mask-image: var(--scene-sprite-image);
+  mask-repeat: no-repeat;
+  mask-size: calc(var(--scene-sprite-frames, 1) * 100%) 100%;
+  mask-position: var(--scene-sprite-static-translate, 0%) 0;
+  will-change: background-position;
+}
+
+.sceneSpriteTextureAnimated {
+  animation: sceneSpriteTextureScroll var(--scene-texture-duration, 0ms) linear infinite;
+}
+
+.sceneSpriteDetailStrip {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--scene-sprite-frames, 1) * 100%);
+  height: 100%;
+  background-image: var(--scene-detail-image);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  transform: translateX(var(--scene-sprite-static-translate, 0%));
+  opacity: var(--scene-detail-opacity, 1);
+  mix-blend-mode: var(--scene-detail-blend-mode, normal);
+  filter: var(--scene-detail-filter, none);
+  will-change: transform;
+}
+
 .sceneSpriteLoop .sceneSpriteStrip {
   animation: sceneSpritePlayback var(--scene-sprite-duration, 0ms) steps(var(--scene-sprite-frames, 1), end) infinite;
 }
@@ -812,6 +850,15 @@
   }
 }
 
+@keyframes sceneSpriteTextureScroll {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: var(--scene-texture-scroll-x, 0px) var(--scene-texture-scroll-y, 0px);
+  }
+}
+
 @keyframes resultStamp {
   0% {
     opacity: 0;
@@ -897,6 +944,7 @@
 
   .sceneSpriteLoop .sceneSpriteStrip,
   .sceneSpriteOnce .sceneSpriteStrip,
+  .sceneSpriteTextureAnimated,
   .chestReveal .chestSprite,
   .resultStampAnimated {
     animation: none;

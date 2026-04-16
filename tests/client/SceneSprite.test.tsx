@@ -27,6 +27,30 @@ const OPENING_SPEC: SceneSpriteSpec = {
   pixelated: true,
 };
 
+const TEXTURED_SPEC: SceneSpriteSpec = {
+  id: 'chest-textured',
+  src: '/giveaways/sprites/chest.png',
+  frames: 1,
+  frameWidth: 48,
+  frameHeight: 32,
+  playback: 'static',
+  pixelated: true,
+  textureLayer: {
+    src: '/giveaways/sprites/infernal-cape-texture.png',
+    repeat: 'repeat',
+    size: '128px 128px',
+    durationMs: 2200,
+    scrollY: '-128px',
+    opacity: 0.96,
+    pixelated: true,
+  },
+  detailLayer: {
+    opacity: 0.42,
+    filter: 'brightness(0.72) contrast(1.28) saturate(0.52)',
+    pixelated: true,
+  },
+};
+
 describe('SceneSprite', () => {
   afterEach(() => {
     cleanup();
@@ -57,5 +81,19 @@ describe('SceneSprite', () => {
       vi.advanceTimersByTime(220);
     });
     expect(Number(openingSprite?.getAttribute('data-sprite-frame'))).toBeGreaterThan(0);
+  });
+
+  it('renders a masked texture layer and detail overlay when texture support is enabled', () => {
+    const { container } = render(<SceneSprite spec={TEXTURED_SPEC} />);
+
+    const texturedSprite = container.querySelector('[data-sprite-id="chest-textured"]') as HTMLElement | null;
+    const textureMask = container.querySelector('[data-sprite-layer="texture"]') as HTMLElement | null;
+    const detailStrip = container.querySelector('[data-sprite-layer="detail"]') as HTMLElement | null;
+
+    expect(texturedSprite?.getAttribute('data-sprite-textured')).toBe('true');
+    expect(textureMask).not.toBeNull();
+    expect(detailStrip).not.toBeNull();
+    expect(texturedSprite?.style.getPropertyValue('--scene-texture-image')).toContain('infernal-cape-texture.png');
+    expect(texturedSprite?.style.getPropertyValue('--scene-detail-opacity')).toBe('0.42');
   });
 });
