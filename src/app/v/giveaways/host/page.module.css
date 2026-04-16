@@ -291,7 +291,8 @@
   }
 
   .sideRail {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
     border-right: 0;
     border-top: 1px solid rgba(191, 179, 255, 0.08);
     max-height: none;
@@ -306,6 +307,10 @@
     border-right: 0;
     border-bottom: 1px solid rgba(191, 179, 255, 0.08);
   }
+
+  .railBlock:nth-child(3) {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 760px) {
@@ -318,13 +323,18 @@
   }
 
   .sceneStage {
-    aspect-ratio: auto;
-    min-height: min(100vh, 44rem);
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 0;
   }
 
   .sceneViewportInner {
     width: 1920px;
     height: 1080px;
+  }
+
+  .sideRail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .railBlock {
