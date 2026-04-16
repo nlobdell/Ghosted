@@ -35,18 +35,6 @@ type DisconnectResponse = {
   giveawayState: LootChestGameState;
 };
 
-function hostCaption(state: LootChestGameState) {
-  if (state.activeTurn) {
-    return `${state.activeTurn.viewer.displayName} is live. ${boardStatus(state)}.`;
-  }
-
-  if (state.queue.length > 0) {
-    return `${state.queue.length} queued redemption${state.queue.length === 1 ? '' : 's'} waiting for the next start.`;
-  }
-
-  return 'Keep this open on a second screen for the fastest control path.';
-}
-
 function boardStatus(state: LootChestGameState) {
   const activeTurn = state.activeTurn;
   if (!activeTurn?.board) {
@@ -661,6 +649,77 @@ export default function TwitchLootChestHostOverlayClient({
   const sideRailStyle = !compactLayout && sceneStageSize?.height
     ? ({ maxHeight: `${sceneStageSize.height}px` } as CSSProperties)
     : undefined;
+  const liveControlPanel = (
+    <>
+      <div className={styles.sceneActionHeader}>
+        <div className={styles.sceneActionIntro}>
+          <p className={styles.sectionLabel}>Live control</p>
+          <h2 className={styles.sectionTitle}>{actionLabel(state)}</h2>
+        </div>
+        <span className={styles.inlineMeta}>{state.queue.length} waiting</span>
+      </div>
+
+      <p className={styles.sceneActionCopy}>{controlHint(state)}</p>
+
+      <button
+        className={`button ${styles.primaryActionButton}`}
+        type="button"
+        onClick={() => {
+          void performPrimaryAction();
+        }}
+        disabled={Boolean(busyAction) || (!activeBoard && !nextQueuedTurn) || (!activeBoard ? false : (!activeBoard.allSelectionsLocked && draftSelections.length !== activeBoard.selectionLimit))}
+      >
+        {busyAction ? 'Working...' : actionLabel(state)}
+      </button>
+
+      <div className={styles.actionGrid}>
+        <button
+          className="button button--secondary"
+          type="button"
+          disabled={!nextQueuedTurn || Boolean(activeTurn) || busyAction === `start-${nextQueuedTurn?.id ?? 0}`}
+          onClick={() => {
+            if (nextQueuedTurn) {
+              void startTurn(nextQueuedTurn.id, nextQueuedTurn.viewer.displayName);
+            }
+          }}
+        >
+          {busyAction?.startsWith('start-') ? 'Starting...' : nextQueuedTurn ? 'Start next' : 'Queue empty'}
+        </button>
+        <button
+          className="button button--secondary"
+          type="button"
+          disabled={!activeBoard || activeBoard.allSelectionsLocked || draftSelections.length !== activeBoard.selectionLimit || busyAction === 'lock'}
+          onClick={() => {
+            void lockSelections();
+          }}
+        >
+          {busyAction === 'lock' ? 'Locking...' : 'Lock picks'}
+        </button>
+        <button
+          className="button button--secondary"
+          type="button"
+          disabled={!activeBoard?.allSelectionsLocked || activeBoard.remainingReveals === 0 || revealBusy}
+          onClick={() => {
+            void revealNext();
+          }}
+        >
+          {revealBusy ? 'Revealing...' : 'Reveal next'}
+        </button>
+        <button
+          className="button button--secondary"
+          type="button"
+          disabled={!activeBoard || activeBoard.revealedChests.length !== activeBoard.selectionLimit || busyAction === 'complete'}
+          onClick={() => {
+            void completeTurn();
+          }}
+        >
+          {busyAction === 'complete' ? 'Completing...' : 'Complete'}
+        </button>
+      </div>
+
+      <p className={styles.keyHint}>Shortcuts: 1-0 picks, Enter primary action, Space reveal, C complete.</p>
+    </>
+  );
 
   return (
     <main className={styles.hostPage}>
@@ -697,35 +756,36 @@ export default function TwitchLootChestHostOverlayClient({
             </div>
           </section>
 
+          <section className={styles.sceneActionDock}>
+            {liveControlPanel}
+          </section>
+
           <aside className={styles.sideRail} style={sideRailStyle}>
             <section className={styles.railBlock}>
-              <div className={styles.railIntro}>
-                <p className={styles.routeLabel}>Ghosted giveaways</p>
-                <p className={styles.pageSummary}>{hostCaption(state)}</p>
-              </div>
-
               <div className={styles.railUtility}>
-                <span className={styles.inlineMeta}>{boardStatus(state)}</span>
-                <Link className="button button--secondary" href="/v?tab=live">
-                  Console
-                </Link>
-                <button
-                  className="button button--secondary"
-                  type="button"
-                  disabled={!state.connection.connected || busyAction === 'disconnect'}
-                  onClick={() => {
-                    void disconnectTwitch();
-                  }}
-                >
-                  {busyAction === 'disconnect' ? 'Disconnecting...' : 'Disconnect Twitch'}
-                </button>
-                {state.connection.overlayUrl ? (
-                  <Link className="button button--secondary" href={state.connection.overlayUrl}>
-                    Public overlay
+                <span className={`${styles.inlineMeta} ${styles.railUtilityStatus}`}>{boardStatus(state)}</span>
+                <div className={styles.railUtilityActions}>
+                  <Link className="button button--secondary" href="/v?tab=live">
+                    Console
                   </Link>
-                ) : (
-                  <span className={styles.inlineMeta}>Overlay pending</span>
-                )}
+                  <button
+                    className="button button--secondary"
+                    type="button"
+                    disabled={!state.connection.connected || busyAction === 'disconnect'}
+                    onClick={() => {
+                      void disconnectTwitch();
+                    }}
+                  >
+                    {busyAction === 'disconnect' ? 'Disconnecting...' : 'Disconnect Twitch'}
+                  </button>
+                  {state.connection.overlayUrl ? (
+                    <Link className="button button--secondary" href={state.connection.overlayUrl}>
+                      Public overlay
+                    </Link>
+                  ) : (
+                    <span className={`${styles.inlineMeta} ${styles.railUtilityPending}`}>Overlay pending</span>
+                  )}
+                </div>
               </div>
 
               {message ? (
@@ -735,73 +795,9 @@ export default function TwitchLootChestHostOverlayClient({
                 </div>
               ) : null}
 
-              <div className={styles.railHeader}>
-                <div>
-                  <p className={styles.sectionLabel}>Live control</p>
-                  <h2 className={styles.sectionTitle}>{actionLabel(state)}</h2>
-                </div>
-                <span className={styles.inlineMeta}>{state.queue.length} waiting</span>
+              <div className={styles.railActionPanel}>
+                {liveControlPanel}
               </div>
-
-              <p className={styles.sectionCopy}>{controlHint(state)}</p>
-
-              <button
-                className={`button ${styles.primaryActionButton}`}
-                type="button"
-                onClick={() => {
-                  void performPrimaryAction();
-                }}
-                disabled={Boolean(busyAction) || (!activeBoard && !nextQueuedTurn) || (!activeBoard ? false : (!activeBoard.allSelectionsLocked && draftSelections.length !== activeBoard.selectionLimit))}
-              >
-                {busyAction ? 'Working...' : actionLabel(state)}
-              </button>
-
-              <div className={styles.actionGrid}>
-                <button
-                  className="button button--secondary"
-                  type="button"
-                  disabled={!nextQueuedTurn || Boolean(activeTurn) || busyAction === `start-${nextQueuedTurn?.id ?? 0}`}
-                  onClick={() => {
-                    if (nextQueuedTurn) {
-                      void startTurn(nextQueuedTurn.id, nextQueuedTurn.viewer.displayName);
-                    }
-                  }}
-                >
-                  {busyAction?.startsWith('start-') ? 'Starting...' : nextQueuedTurn ? 'Start next' : 'Queue empty'}
-                </button>
-                <button
-                  className="button button--secondary"
-                  type="button"
-                  disabled={!activeBoard || activeBoard.allSelectionsLocked || draftSelections.length !== activeBoard.selectionLimit || busyAction === 'lock'}
-                  onClick={() => {
-                    void lockSelections();
-                  }}
-                >
-                  {busyAction === 'lock' ? 'Locking...' : 'Lock picks'}
-                </button>
-                <button
-                  className="button button--secondary"
-                  type="button"
-                  disabled={!activeBoard?.allSelectionsLocked || activeBoard.remainingReveals === 0 || revealBusy}
-                  onClick={() => {
-                    void revealNext();
-                  }}
-                >
-                  {revealBusy ? 'Revealing...' : 'Reveal next'}
-                </button>
-                <button
-                  className="button button--secondary"
-                  type="button"
-                  disabled={!activeBoard || activeBoard.revealedChests.length !== activeBoard.selectionLimit || busyAction === 'complete'}
-                  onClick={() => {
-                    void completeTurn();
-                  }}
-                >
-                  {busyAction === 'complete' ? 'Completing...' : 'Complete'}
-                </button>
-              </div>
-
-              <p className={styles.keyHint}>Shortcuts: 1-0 picks, Enter primary action, Space reveal, C complete.</p>
             </section>
 
             <section className={styles.railBlock}>

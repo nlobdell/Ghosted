@@ -84,7 +84,6 @@
   flex-wrap: wrap;
 }
 
-.routeLabel,
 .sectionLabel,
 .inlineMeta,
 .keyHint {
@@ -95,12 +94,6 @@
   text-transform: uppercase;
 }
 
-.pageTitle {
-  font-size: clamp(1.14rem, 2.3vw, 1.5rem);
-  line-height: 1.08;
-}
-
-.pageSummary,
 .sectionCopy,
 .rowMeta {
   margin: 0;
@@ -124,26 +117,64 @@
   display: grid;
   align-items: start;
   gap: 0;
-  grid-template-columns: var(--host-rail-width) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) var(--host-rail-width) auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
   min-height: 0;
 }
 
 .sceneStage {
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(100%, calc(100vh * 16 / 9));
+  width: min(calc(100vw - var(--host-rail-width) - 2rem), calc(100vh * 16 / 9), 1920px);
   max-width: 1920px;
   min-width: 0;
   aspect-ratio: 16 / 9;
-  justify-self: center;
+  justify-self: start;
   align-self: start;
   min-height: 0;
   padding: 0;
   overflow: hidden;
   outline: none;
+}
+
+.sceneActionDock {
+  grid-column: 3;
+  grid-row: 2;
+  display: none;
+  gap: 0.7rem;
+  width: min(calc(100vw - var(--host-rail-width) - 2rem), calc(100vh * 16 / 9), 1920px);
+  max-width: 1920px;
+  justify-self: start;
+  align-self: start;
+  min-width: 0;
+  padding: 0.8rem 0.95rem 0;
+  border-top: 1px solid rgba(191, 179, 255, 0.08);
+}
+
+.railActionPanel {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.sceneActionHeader,
+.sceneActionIntro {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.sceneActionHeader {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.7rem;
+}
+
+.sceneActionCopy {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.45;
 }
 
 .sceneStage:focus-visible {
@@ -168,8 +199,8 @@
 }
 
 .sideRail {
-  grid-column: 1;
-  grid-row: 1;
+  grid-column: 2;
+  grid-row: 1 / span 2;
   align-self: start;
   min-width: 0;
   grid-template-columns: 1fr;
@@ -191,13 +222,40 @@
   border-right: 0;
 }
 
-.railIntro {
+.railUtility {
   display: grid;
-  gap: 0.28rem;
+  justify-content: stretch;
+  align-items: stretch;
+  gap: 0.55rem;
 }
 
-.railUtility {
-  justify-content: flex-start;
+.railUtilityStatus {
+  min-width: 0;
+}
+
+.railUtilityActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.railUtilityActions > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.railUtilityActions :global(.button) {
+  width: 100%;
+  justify-content: center;
+}
+
+.railUtilityPending {
+  display: grid;
+  place-items: center;
+  min-height: 2.35rem;
+  padding: 0.46rem 0.76rem;
+  border: 1px solid rgba(191, 179, 255, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+  text-align: center;
 }
 
 .inlineBanner {
@@ -285,6 +343,7 @@
   }
 
   .sceneStage,
+  .sceneActionDock,
   .sideRail {
     grid-column: auto;
     grid-row: auto;
@@ -303,6 +362,16 @@
     width: min(100%, 1920px);
   }
 
+  .sceneActionDock {
+    display: grid;
+    width: min(100%, 1920px);
+    padding-top: 0.75rem;
+  }
+
+  .railActionPanel {
+    display: none;
+  }
+
   .railBlock {
     border-right: 0;
     border-bottom: 1px solid rgba(191, 179, 255, 0.08);
@@ -316,6 +385,16 @@
 @media (max-width: 760px) {
   .hostPage {
     padding: 0;
+  }
+
+  .sceneActionDock {
+    width: 100%;
+    padding-inline: 0.8rem;
+  }
+
+  .sceneActionHeader {
+    grid-template-columns: 1fr;
+    align-items: start;
   }
 
   .actionGrid {
