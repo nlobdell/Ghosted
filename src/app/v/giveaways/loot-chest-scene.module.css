@@ -754,21 +754,16 @@
     padding: 0.65rem;
   }
 
-  .boardShell {
+  .scene:not(.sceneBoardOnly) .boardShell {
     min-height: auto;
     padding: 0.68rem;
   }
 
-  .sceneBoardOnly .boardShell {
-    min-height: 100vh;
-    padding: 0.5rem;
-  }
-
-  .boardActionDock {
+  .scene:not(.sceneBoardOnly) .boardActionDock {
     top: 50%;
   }
 
-  .boardGrid {
+  .scene:not(.sceneBoardOnly) .boardGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.6rem;
     --board-gap: 0.6rem;
@@ -776,13 +771,11 @@
 
   .sceneBoardOnlyViewport .boardGrid,
   .sceneBoardOnlyWidth .boardGrid {
-    width: min(94vw, 1720px);
-    gap: 0.72rem;
-    --board-gap: 0.72rem;
+    width: min(90cqi, 1720px);
   }
 
-  .chestSelectedRow,
-  .chestDormant {
+  .scene:not(.sceneBoardOnly) .chestSelectedRow,
+  .scene:not(.sceneBoardOnly) .chestDormant {
     opacity: 1;
     transform: none;
   }
