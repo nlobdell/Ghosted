@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState, type ComponentPropsWithoutRef, type CSSProperties } from 'react';
+import { useEffect, useState, type ComponentPropsWithoutRef, type CSSProperties } from 'react';
 import type { SceneSpriteSpec } from './scene-sprite-catalog';
 import styles from './loot-chest-scene.module.css';
 
@@ -62,15 +62,12 @@ export function SceneSprite({
 } & Omit<ComponentPropsWithoutRef<'span'>, 'children'>) {
   const initialFrame = clampFrameIndex(spec, spec.initialFrame ?? 0);
   const signature = spriteSignature(spec, initialFrame);
-  const [frameIndex, setFrameIndex] = useState(initialFrame);
-  const previousSignatureRef = useRef(signature);
+  const [spriteState, setSpriteState] = useState(() => ({
+    signature,
+    frameIndex: initialFrame,
+  }));
   const animated = spec.frames > 1 && spec.playback !== 'static' && Boolean(spec.durationMs);
-  const displayFrameIndex = previousSignatureRef.current === signature ? frameIndex : initialFrame;
-
-  useLayoutEffect(() => {
-    previousSignatureRef.current = signature;
-    setFrameIndex(initialFrame);
-  }, [initialFrame, signature]);
+  const displayFrameIndex = spriteState.signature === signature ? spriteState.frameIndex : initialFrame;
 
   useEffect(() => {
     if (!animated || !spec.durationMs) {
@@ -90,7 +87,10 @@ export function SceneSprite({
         nextFrame = Math.min(spec.frames - 1, nextFrame + 1);
       }
 
-      setFrameIndex(nextFrame);
+      setSpriteState({
+        signature,
+        frameIndex: nextFrame,
+      });
 
       if (spec.playback === 'once' && nextFrame >= spec.frames - 1) {
         window.clearInterval(intervalId);

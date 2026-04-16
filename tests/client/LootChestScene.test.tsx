@@ -381,6 +381,99 @@ describe('LootChestScene', () => {
     });
   });
 
+  it('keeps an earlier chest opening animation alive when a later chest starts revealing', async () => {
+    const { container, rerender } = render(
+      <LootChestScene
+        scene={makeScene({
+          revision: 2,
+          focusTurn: makeTurn({
+            board: makeBoard({
+              phase: 'locked',
+              boardRevision: 2,
+              selectedChests: [1, 4, 8],
+              revealedChests: [],
+              allSelectionsLocked: true,
+              remainingSelections: 0,
+              remainingReveals: 3,
+              lastAction: 'chests_selected',
+            }, {
+              1: { spriteState: 'locked', animationState: 'idle' },
+              4: { spriteState: 'locked', animationState: 'idle' },
+              8: { spriteState: 'locked', animationState: 'idle' },
+            }),
+            phase: 'locked',
+            lastAction: 'chests_selected',
+          }),
+        })}
+      />,
+    );
+
+    rerender(
+      <LootChestScene
+        scene={makeScene({
+          revision: 3,
+          focusTurn: makeTurn({
+            board: makeBoard({
+              phase: 'revealing',
+              boardRevision: 3,
+              selectedChests: [1, 4, 8],
+              revealedChests: [1],
+              allSelectionsLocked: true,
+              remainingSelections: 0,
+              remainingReveals: 2,
+              lastAction: 'chest_revealed',
+              lastChangedChestIndex: 1,
+              activeAnimationChestIndex: 1,
+            }, {
+              1: { revealed: true, spriteState: 'empty', animationState: 'settled', revealCue: true },
+              4: { spriteState: 'locked', animationState: 'idle' },
+              8: { spriteState: 'locked', animationState: 'idle' },
+            }),
+            phase: 'revealing',
+            lastAction: 'chest_revealed',
+          }),
+        })}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-chest-shell-index="1"] [data-sprite-id="chest-opening"]')).not.toBeNull();
+    });
+
+    rerender(
+      <LootChestScene
+        scene={makeScene({
+          revision: 4,
+          focusTurn: makeTurn({
+            board: makeBoard({
+              phase: 'revealing',
+              boardRevision: 4,
+              selectedChests: [1, 4, 8],
+              revealedChests: [1, 4],
+              allSelectionsLocked: true,
+              remainingSelections: 0,
+              remainingReveals: 1,
+              lastAction: 'chest_revealed',
+              lastChangedChestIndex: 4,
+              activeAnimationChestIndex: 4,
+            }, {
+              1: { revealed: true, spriteState: 'empty', animationState: 'settled' },
+              4: { revealed: true, spriteState: 'empty', animationState: 'settled', revealCue: true },
+              8: { spriteState: 'locked', animationState: 'idle' },
+            }),
+            phase: 'revealing',
+            lastAction: 'chest_revealed',
+          }),
+        })}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-chest-shell-index="1"] [data-sprite-id="chest-opening"]')).not.toBeNull();
+      expect(container.querySelector('[data-chest-shell-index="4"] [data-sprite-id="chest-opening"]')).not.toBeNull();
+    });
+  });
+
   it('uses the winner strip when a prize chest begins opening', async () => {
     const { container, rerender } = render(
       <LootChestScene
@@ -676,7 +769,7 @@ describe('LootChestScene', () => {
     expect(container.querySelector('[data-debug-overlay="true"]')).not.toBeNull();
     expect(getByText('Scene debug')).toBeTruthy();
     expect(container.querySelector('[data-chest-shell-index="4"]')?.textContent?.trim()).toBe('5');
-    expect(container.querySelector('[data-debug-chest-index="1"]')?.textContent).toContain('Empty');
+    expect(container.querySelector('[data-debug-chest-index="1"]')?.textContent).toContain('Opening');
     expect(container.querySelector('[data-debug-chest-index="4"]')?.textContent).toContain('Locked');
   });
 

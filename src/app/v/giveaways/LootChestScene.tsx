@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState, type CSSProperties } from 'react';
 import type {
   LootChestBoardChest,
   LootChestChestAnimationState,
@@ -20,9 +20,79 @@ import {
 import styles from './loot-chest-scene.module.css';
 
 const REVEAL_ANIMATION_MS = 1400;
+const CHEST_OPENING_LATCH_MS = 820;
 const CHEST_SPRITE_BOX_WIDTH_PCT = 82;
 const CHEST_SPRITE_BOX_HEIGHT_PCT = CHEST_SPRITE_BOX_WIDTH_PCT * (32 / 48);
 const CHEST_SPRITE_BOX_TOP_PCT = 50 - ((56 * CHEST_SPRITE_BOX_HEIGHT_PCT) / 100);
+
+type ActiveChestRevealAnimation = {
+  cycle: number;
+  winner: boolean;
+};
+
+type RevealAnimationState = {
+  turnId: number;
+  animations: Record<number, ActiveChestRevealAnimation>;
+};
+
+type RevealAnimationAction =
+  | {
+    type: 'queue';
+    turnId: number;
+    chestIndex: number;
+    winner: boolean;
+  }
+  | {
+    type: 'clear';
+    chestIndex: number;
+  }
+  | {
+    type: 'reset';
+  };
+
+function revealAnimationReducer(
+  state: RevealAnimationState,
+  action: RevealAnimationAction,
+): RevealAnimationState {
+  if (action.type === 'reset') {
+    if (state.turnId === 0 && Object.keys(state.animations).length === 0) {
+      return state;
+    }
+
+    return {
+      turnId: 0,
+      animations: {},
+    };
+  }
+
+  if (action.type === 'clear') {
+    if (!state.animations[action.chestIndex]) {
+      return state;
+    }
+
+    const nextAnimations = { ...state.animations };
+    delete nextAnimations[action.chestIndex];
+    return {
+      ...state,
+      animations: nextAnimations,
+    };
+  }
+
+  const currentAnimations = state.turnId === action.turnId ? state.animations : {};
+  const existing = currentAnimations[action.chestIndex];
+  const nextCycle = existing?.cycle ?? (Math.max(0, ...Object.values(currentAnimations).map((entry) => entry.cycle)) + 1);
+
+  return {
+    turnId: action.turnId,
+    animations: {
+      ...currentAnimations,
+      [action.chestIndex]: {
+        cycle: nextCycle,
+        winner: Boolean(existing?.winner || action.winner),
+      },
+    },
+  };
+}
 
 function chestHitAreaStyle(spriteState: LootChestChestSpriteState, spriteSpec: ReturnType<typeof getChestSpriteSpec>) {
   const visibleRegion = getSceneSpriteVisibleRegion(spriteSpec);
@@ -305,9 +375,56 @@ export function LootChestScene({
       ? (board?.selectedChests ?? [])
       : (draftSelections ?? []),
   );
+  const [revealAnimationState, dispatchRevealAnimation] = useReducer(revealAnimationReducer, {
+    turnId: turn?.id ?? 0,
+    animations: {},
+  });
   const [animatedRevision, setAnimatedRevision] = useState(0);
   const lastAnimatedRef = useRef(board?.boardRevision ?? 0);
   const lastTurnIdRef = useRef(turn?.id ?? 0);
+  const revealTimeoutsRef = useRef(new Map<number, number>());
+  const processedRevealTokensRef = useRef(new Set<string>());
+
+  useEffect(() => () => {
+    revealTimeoutsRef.current.forEach((timeoutId) => {
+      window.clearTimeout(timeoutId);
+    });
+    revealTimeoutsRef.current.clear();
+  }, []);
+
+  useEffect(() => {
+    processedRevealTokensRef.current.clear();
+    revealTimeoutsRef.current.forEach((timeoutId) => {
+      window.clearTimeout(timeoutId);
+    });
+    revealTimeoutsRef.current.clear();
+    dispatchRevealAnimation({ type: 'reset' });
+  }, [turn?.id]);
+
+  const queueRevealAnimation = useCallback((chestIndex: number, winner: boolean) => {
+    const currentTurnId = turn?.id ?? 0;
+    const existingTimeout = revealTimeoutsRef.current.get(chestIndex);
+    if (existingTimeout) {
+      window.clearTimeout(existingTimeout);
+    }
+
+    dispatchRevealAnimation({
+      type: 'queue',
+      turnId: currentTurnId,
+      chestIndex,
+      winner,
+    });
+
+    const timeoutId = window.setTimeout(() => {
+      revealTimeoutsRef.current.delete(chestIndex);
+      dispatchRevealAnimation({
+        type: 'clear',
+        chestIndex,
+      });
+    }, CHEST_OPENING_LATCH_MS);
+
+    revealTimeoutsRef.current.set(chestIndex, timeoutId);
+  }, [turn?.id]);
 
   useEffect(() => {
     const nextTurnId = turn?.id ?? 0;
@@ -338,12 +455,66 @@ export function LootChestScene({
     };
   }, [board?.boardRevision, turn?.id]);
 
-  const changedChestIndex = board?.activeAnimationChestIndex ?? board?.lastChangedChestIndex ?? null;
+  useEffect(() => {
+    if (!board || !turn?.id || board.lastAction !== 'chest_revealed') {
+      return;
+    }
+
+    const chestIndex = board.activeAnimationChestIndex ?? board.lastChangedChestIndex ?? null;
+    if (chestIndex === null || chestIndex === undefined) {
+      return;
+    }
+
+    const token = `board:${turn.id}:${board.boardRevision}:${chestIndex}`;
+    if (processedRevealTokensRef.current.has(token)) {
+      return;
+    }
+
+    const revealChest = board.chests.find((entry) => entry.index === chestIndex);
+    if (!revealChest) {
+      return;
+    }
+
+    processedRevealTokensRef.current.add(token);
+    queueRevealAnimation(
+      chestIndex,
+      revealChest.containsPrize || revealChest.spriteState === 'prize' || revealChest.spriteState === 'resolved-prize',
+    );
+  }, [
+    board,
+    queueRevealAnimation,
+    turn?.id,
+  ]);
+
+  useEffect(() => {
+    if (!presentationCue || presentationCue.kind !== 'reveal' || presentationCue.turnId !== turn?.id) {
+      return;
+    }
+
+    const chestIndex = presentationCue.chestIndex;
+    if (chestIndex === null || chestIndex === undefined) {
+      return;
+    }
+
+    const token = `cue:${presentationCue.turnId}:${presentationCue.sentAt ?? ''}:${chestIndex}`;
+    if (processedRevealTokensRef.current.has(token)) {
+      return;
+    }
+
+    const revealChest = board?.chests.find((entry) => entry.index === chestIndex);
+    processedRevealTokensRef.current.add(token);
+    queueRevealAnimation(
+      chestIndex,
+      Boolean(
+        revealChest?.containsPrize
+        || revealChest?.spriteState === 'prize'
+        || revealChest?.spriteState === 'resolved-prize',
+      ),
+    );
+  }, [board?.chests, presentationCue, queueRevealAnimation, turn?.id]);
+
   const animateResult = Boolean(turn?.resolutionCue && board && animatedRevision === board.boardRevision);
   const hoveredChestIndex = presentationCue?.kind === 'hover' && presentationCue.turnId === turn?.id
-    ? presentationCue.chestIndex ?? null
-    : null;
-  const cuedRevealChestIndex = presentationCue?.kind === 'reveal' && presentationCue.turnId === turn?.id
     ? presentationCue.chestIndex ?? null
     : null;
   const cuedResult = presentationCue?.kind === 'result' && presentationCue.turnId === turn?.id
@@ -358,6 +529,9 @@ export function LootChestScene({
   const debugChestEntries = board ? board.chests.map((chest) => {
     const spriteState = displaySpriteState(chest, selectedIndices, previewSelections);
     const animationState = displayAnimationState(chest, spriteState);
+    const activeRevealAnimation = revealAnimationState.turnId === (turn?.id ?? 0)
+      ? (revealAnimationState.animations[chest.index] ?? null)
+      : null;
     const selectionRow = selectionRowActive ? selectionRowPosition(board, chest.index) : null;
     const dormant = selectionRowActive && selectionRow === null;
     const revealable = Boolean(
@@ -366,20 +540,14 @@ export function LootChestScene({
       && !chest.revealed,
     );
     const clickable = selectionInteractive || revealable;
-    const animateReveal = Boolean(
-      (
-        changedChestIndex === chest.index
-        && board.boardRevision === animatedRevision
-        && chest.revealCue
-      )
-      || cuedRevealChestIndex === chest.index,
-    );
+    const animateReveal = Boolean(activeRevealAnimation);
     const renderSpriteState = animateReveal ? 'opening' : spriteState;
     const renderAnimationState = animateReveal ? 'opening' : animationState;
     const hovered = hoveredChestIndex === chest.index;
 
     return {
       chest,
+      activeRevealAnimation,
       spriteState,
       animationState,
       selectionRow,
@@ -449,6 +617,7 @@ export function LootChestScene({
               {debugChestEntries.map((entry) => {
                 const {
                   chest,
+                  activeRevealAnimation,
                   spriteState,
                   animationState,
                   selectionRow,
@@ -461,9 +630,15 @@ export function LootChestScene({
                   hovered,
                 } = entry;
                 const spriteSpec = getChestSpriteSpec(renderSpriteState, renderAnimationState, {
-                  winner: chest.containsPrize || spriteState === 'prize' || spriteState === 'resolved-prize',
+                  winner: (
+                    activeRevealAnimation?.winner
+                    ?? chest.containsPrize
+                  ) || spriteState === 'prize' || spriteState === 'resolved-prize',
                   assetVersion,
                 });
+                const spriteRenderKey = activeRevealAnimation
+                  ? `${chest.index}:opening:${activeRevealAnimation.cycle}`
+                  : `${chest.index}:${renderSpriteState}:${renderAnimationState}`;
                 const hitAreaStyle = chestHitAreaStyle(renderSpriteState, spriteSpec);
                 const chestClassName = [
                   styles.chest,
@@ -490,7 +665,7 @@ export function LootChestScene({
                     }}
                   >
                     <span className={styles.chestVisual}>
-                      <SceneSprite spec={spriteSpec} className={styles.chestSprite} />
+                      <SceneSprite key={spriteRenderKey} spec={spriteSpec} className={styles.chestSprite} />
                       <button
                         type="button"
                         className={styles.chestHitArea}
