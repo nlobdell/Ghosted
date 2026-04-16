@@ -262,7 +262,7 @@
 }
 
 .sceneBoardOnly .chest {
-  --chest-label-offset: clamp(0.34rem, 0.85cqi, 0.58rem);
+  --chest-label-offset: clamp(0.08rem, 0.2cqi, 0.18rem);
 }
 
 .sceneBoardOnly .boardContent {
@@ -566,7 +566,7 @@
   background: transparent;
   color: inherit;
   cursor: default;
-  --chest-label-offset: clamp(0.42rem, 0.95vw, 0.72rem);
+  --chest-label-offset: clamp(0.1rem, 0.24vw, 0.22rem);
   transition:
     transform 520ms cubic-bezier(0.22, 0.8, 0.22, 1),
     opacity 320ms ease,
@@ -681,7 +681,7 @@
 
 .chestLabelStack {
   position: absolute;
-  top: calc(50% + var(--chest-label-offset));
+  top: calc(74% + var(--chest-label-offset));
   left: 50%;
   display: grid;
   justify-items: center;
