@@ -33,6 +33,7 @@ type ActiveChestRevealAnimation = {
 type RevealAnimationState = {
   turnId: number;
   animations: Record<number, ActiveChestRevealAnimation>;
+  seenTokens: Record<string, true>;
 };
 
 type RevealAnimationAction =
@@ -41,6 +42,7 @@ type RevealAnimationAction =
     turnId: number;
     chestIndex: number;
     winner: boolean;
+    token: string;
   }
   | {
     type: 'clear';
@@ -62,6 +64,7 @@ function revealAnimationReducer(
     return {
       turnId: 0,
       animations: {},
+      seenTokens: {},
     };
   }
 
@@ -90,6 +93,10 @@ function revealAnimationReducer(
         cycle: nextCycle,
         winner: Boolean(existing?.winner || action.winner),
       },
+    },
+    seenTokens: {
+      ...state.seenTokens,
+      [action.token]: true,
     },
   };
 }
@@ -378,12 +385,12 @@ export function LootChestScene({
   const [revealAnimationState, dispatchRevealAnimation] = useReducer(revealAnimationReducer, {
     turnId: turn?.id ?? 0,
     animations: {},
+    seenTokens: {},
   });
   const [animatedRevision, setAnimatedRevision] = useState(0);
   const lastAnimatedRef = useRef(board?.boardRevision ?? 0);
   const lastTurnIdRef = useRef(turn?.id ?? 0);
   const revealTimeoutsRef = useRef(new Map<number, number>());
-  const processedRevealTokensRef = useRef(new Set<string>());
 
   useEffect(() => () => {
     revealTimeoutsRef.current.forEach((timeoutId) => {
@@ -393,7 +400,6 @@ export function LootChestScene({
   }, []);
 
   useEffect(() => {
-    processedRevealTokensRef.current.clear();
     revealTimeoutsRef.current.forEach((timeoutId) => {
       window.clearTimeout(timeoutId);
     });
@@ -401,7 +407,7 @@ export function LootChestScene({
     dispatchRevealAnimation({ type: 'reset' });
   }, [turn?.id]);
 
-  const queueRevealAnimation = useCallback((chestIndex: number, winner: boolean) => {
+  const queueRevealAnimation = useCallback((chestIndex: number, winner: boolean, token: string) => {
     const currentTurnId = turn?.id ?? 0;
     const existingTimeout = revealTimeoutsRef.current.get(chestIndex);
     if (existingTimeout) {
@@ -413,6 +419,7 @@ export function LootChestScene({
       turnId: currentTurnId,
       chestIndex,
       winner,
+      token,
     });
 
     const timeoutId = window.setTimeout(() => {
@@ -466,7 +473,7 @@ export function LootChestScene({
     }
 
     const token = `board:${turn.id}:${board.boardRevision}:${chestIndex}`;
-    if (processedRevealTokensRef.current.has(token)) {
+    if (revealAnimationState.seenTokens[token]) {
       return;
     }
 
@@ -475,14 +482,15 @@ export function LootChestScene({
       return;
     }
 
-    processedRevealTokensRef.current.add(token);
     queueRevealAnimation(
       chestIndex,
       revealChest.containsPrize || revealChest.spriteState === 'prize' || revealChest.spriteState === 'resolved-prize',
+      token,
     );
   }, [
     board,
     queueRevealAnimation,
+    revealAnimationState.seenTokens,
     turn?.id,
   ]);
 
@@ -497,12 +505,11 @@ export function LootChestScene({
     }
 
     const token = `cue:${presentationCue.turnId}:${presentationCue.sentAt ?? ''}:${chestIndex}`;
-    if (processedRevealTokensRef.current.has(token)) {
+    if (revealAnimationState.seenTokens[token]) {
       return;
     }
 
     const revealChest = board?.chests.find((entry) => entry.index === chestIndex);
-    processedRevealTokensRef.current.add(token);
     queueRevealAnimation(
       chestIndex,
       Boolean(
@@ -510,13 +517,28 @@ export function LootChestScene({
         || revealChest?.spriteState === 'prize'
         || revealChest?.spriteState === 'resolved-prize',
       ),
+      token,
     );
-  }, [board?.chests, presentationCue, queueRevealAnimation, turn?.id]);
+  }, [board?.chests, presentationCue, queueRevealAnimation, revealAnimationState.seenTokens, turn?.id]);
 
   const animateResult = Boolean(turn?.resolutionCue && board && animatedRevision === board.boardRevision);
   const hoveredChestIndex = presentationCue?.kind === 'hover' && presentationCue.turnId === turn?.id
     ? presentationCue.chestIndex ?? null
     : null;
+  const boardRevealChestIndex = board?.lastAction === 'chest_revealed'
+    ? (board.activeAnimationChestIndex ?? board.lastChangedChestIndex ?? null)
+    : null;
+  const boardRevealToken = boardRevealChestIndex !== null && boardRevealChestIndex !== undefined && turn?.id
+    ? `board:${turn.id}:${board?.boardRevision ?? 0}:${boardRevealChestIndex}`
+    : null;
+  const boardRevealPending = Boolean(boardRevealToken && !revealAnimationState.seenTokens[boardRevealToken]);
+  const cuedRevealChestIndex = presentationCue?.kind === 'reveal' && presentationCue.turnId === turn?.id
+    ? presentationCue.chestIndex ?? null
+    : null;
+  const cuedRevealToken = cuedRevealChestIndex !== null && cuedRevealChestIndex !== undefined && presentationCue?.kind === 'reveal'
+    ? `cue:${presentationCue.turnId}:${presentationCue.sentAt ?? ''}:${cuedRevealChestIndex}`
+    : null;
+  const cuedRevealPending = Boolean(cuedRevealToken && !revealAnimationState.seenTokens[cuedRevealToken]);
   const cuedResult = presentationCue?.kind === 'result' && presentationCue.turnId === turn?.id
     ? presentationCue.result ?? null
     : null;
@@ -541,8 +563,12 @@ export function LootChestScene({
     );
     const clickable = selectionInteractive || revealable;
     const animateReveal = Boolean(activeRevealAnimation);
-    const renderSpriteState = animateReveal ? 'opening' : spriteState;
-    const renderAnimationState = animateReveal ? 'opening' : animationState;
+    const instantReveal = (
+      (boardRevealPending && boardRevealChestIndex === chest.index)
+      || (cuedRevealPending && cuedRevealChestIndex === chest.index)
+    );
+    const renderSpriteState = (animateReveal || instantReveal) ? 'opening' : spriteState;
+    const renderAnimationState = (animateReveal || instantReveal) ? 'opening' : animationState;
     const hovered = hoveredChestIndex === chest.index;
 
     return {
