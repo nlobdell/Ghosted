@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useState, type ComponentPropsWithoutRef, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentPropsWithoutRef, type CSSProperties } from 'react';
 import type { SceneSpriteSpec } from './scene-sprite-catalog';
 import styles from './loot-chest-scene.module.css';
 
@@ -39,6 +39,19 @@ function spriteAnchorShift(spec: SceneSpriteSpec, frameIndex: number) {
   return `${((frameCenter - visibleCenter) / spec.frameWidth) * 100}%`;
 }
 
+function spriteSignature(spec: SceneSpriteSpec, initialFrame: number) {
+  return [
+    spec.id,
+    spec.src,
+    spec.frames,
+    spec.playback,
+    spec.durationMs ?? 0,
+    spec.frameWidth ?? 0,
+    spec.frameHeight ?? 0,
+    initialFrame,
+  ].join('|');
+}
+
 export function SceneSprite({
   spec,
   className,
@@ -48,12 +61,16 @@ export function SceneSprite({
   spec: SceneSpriteSpec;
 } & Omit<ComponentPropsWithoutRef<'span'>, 'children'>) {
   const initialFrame = clampFrameIndex(spec, spec.initialFrame ?? 0);
+  const signature = spriteSignature(spec, initialFrame);
   const [frameIndex, setFrameIndex] = useState(initialFrame);
+  const previousSignatureRef = useRef(signature);
   const animated = spec.frames > 1 && spec.playback !== 'static' && Boolean(spec.durationMs);
+  const displayFrameIndex = previousSignatureRef.current === signature ? frameIndex : initialFrame;
 
   useLayoutEffect(() => {
+    previousSignatureRef.current = signature;
     setFrameIndex(initialFrame);
-  }, [initialFrame, spec.id]);
+  }, [initialFrame, signature]);
 
   useEffect(() => {
     if (!animated || !spec.durationMs) {
@@ -83,16 +100,16 @@ export function SceneSprite({
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [animated, initialFrame, spec.durationMs, spec.frames, spec.id, spec.playback]);
+  }, [animated, initialFrame, signature, spec.durationMs, spec.frames, spec.playback]);
 
   const style = {
     ...styleProp,
     ['--scene-sprite-image' as string]: `url("${spec.src}")`,
     ['--scene-sprite-frames' as string]: String(spec.frames),
     ['--scene-sprite-duration' as string]: `${spec.durationMs ?? 0}ms`,
-    ['--scene-sprite-static-translate' as string]: spriteTranslate(spec.frames, frameIndex),
+    ['--scene-sprite-static-translate' as string]: spriteTranslate(spec.frames, displayFrameIndex),
     ['--scene-sprite-end-translate' as string]: spriteEndTranslate(spec.frames),
-    ['--scene-sprite-anchor-x' as string]: spriteAnchorShift(spec, frameIndex),
+    ['--scene-sprite-anchor-x' as string]: spriteAnchorShift(spec, displayFrameIndex),
   } as CSSProperties;
 
   return (
@@ -104,7 +121,7 @@ export function SceneSprite({
       ].filter(Boolean).join(' ')}
       style={style}
       data-sprite-id={spec.id}
-      data-sprite-frame={String(frameIndex)}
+      data-sprite-frame={String(displayFrameIndex)}
       data-sprite-frames={String(spec.frames)}
       data-sprite-playback={animated ? spec.playback : 'static'}
       aria-hidden="true"

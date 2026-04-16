@@ -3,6 +3,7 @@ import type {
   LootChestChestSpriteState,
   LootChestTurnResult,
 } from '@/lib/types';
+import { CHEST_SPRITE_GEOMETRY } from './generated-sprite-geometry';
 
 export type SceneSpritePlayback = 'static' | 'once' | 'loop';
 
@@ -25,8 +26,8 @@ export type SceneSpriteSpec = {
   pixelated?: boolean;
   visibleBounds?: SceneSpriteBounds;
   anchorBounds?: SceneSpriteBounds;
-  frameBounds?: Array<SceneSpriteBounds | undefined>;
-  frameAnchorBounds?: Array<SceneSpriteBounds | undefined>;
+  frameBounds?: ReadonlyArray<SceneSpriteBounds | undefined>;
+  frameAnchorBounds?: ReadonlyArray<SceneSpriteBounds | undefined>;
 };
 
 export type SceneSpriteVisibleRegion = {
@@ -79,64 +80,45 @@ function staticSprite(
   };
 }
 
-const CLOSED_CHEST_BOUNDS = { left: 2, top: 12, right: 29, bottom: 31 } as const;
-const SELECTED_CHEST_BOUNDS = { left: 2, top: 2, right: 29, bottom: 31 } as const;
-const EMPTY_CHEST_BOUNDS = { left: 2, top: 21, right: 40, bottom: 31 } as const;
-const PRIZE_CHEST_BOUNDS = { left: 2, top: 2, right: 40, bottom: 31 } as const;
-const OPENING_CHEST_FRAME_BOUNDS = [
-  { left: 2, top: 12, right: 29, bottom: 31 },
-  { left: 2, top: 12, right: 29, bottom: 31 },
-  { left: 1, top: 13, right: 29, bottom: 31 },
-  { left: 1, top: 13, right: 29, bottom: 31 },
-  { left: 2, top: 11, right: 29, bottom: 31 },
-  { left: 2, top: 11, right: 30, bottom: 31 },
-  { left: 2, top: 9, right: 31, bottom: 31 },
-  { left: 2, top: 23, right: 41, bottom: 31 },
-  { left: 2, top: 21, right: 40, bottom: 31 },
-  { left: 2, top: 21, right: 40, bottom: 31 },
-] as const satisfies SceneSpriteBounds[];
-const WINNER_CHEST_FRAME_BOUNDS = [
-  { left: 2, top: 12, right: 29, bottom: 31 },
-  { left: 2, top: 12, right: 29, bottom: 31 },
-  { left: 1, top: 13, right: 29, bottom: 31 },
-  { left: 1, top: 13, right: 29, bottom: 31 },
-  { left: 2, top: 11, right: 29, bottom: 31 },
-  { left: 2, top: 11, right: 30, bottom: 31 },
-  { left: 2, top: 9, right: 31, bottom: 31 },
-  { left: 2, top: 13, right: 41, bottom: 31 },
-  { left: 2, top: 5, right: 40, bottom: 31 },
-  { left: 2, top: 1, right: 40, bottom: 31 },
-] as const satisfies SceneSpriteBounds[];
-const STABLE_CHEST_ANCHOR_BOUNDS = Array.from({ length: 10 }, () => CLOSED_CHEST_BOUNDS);
+const CLOSED_CHEST_BOUNDS = CHEST_SPRITE_GEOMETRY.closed.bounds;
+const SELECTED_CHEST_BOUNDS = CHEST_SPRITE_GEOMETRY.selected.bounds;
+const EMPTY_CHEST_BOUNDS = CHEST_SPRITE_GEOMETRY.opening.finalBounds;
+const PRIZE_CHEST_BOUNDS = CHEST_SPRITE_GEOMETRY.winnerOpening.finalBounds;
+const OPENING_CHEST_FRAME_BOUNDS = CHEST_SPRITE_GEOMETRY.opening.frameBounds;
+const WINNER_CHEST_FRAME_BOUNDS = CHEST_SPRITE_GEOMETRY.winnerOpening.frameBounds;
+const STABLE_CHEST_ANCHOR_BOUNDS = Array.from(
+  { length: CHEST_SPRITE_GEOMETRY.opening.frameBounds.length },
+  () => CLOSED_CHEST_BOUNDS,
+);
 
 const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
   closed: {
     ...staticSprite('chest-closed', '/giveaways/sprites/chest.png', { pixelated: true }),
-    frameWidth: 48,
-    frameHeight: 32,
+    frameWidth: CHEST_SPRITE_GEOMETRY.closed.frameWidth,
+    frameHeight: CHEST_SPRITE_GEOMETRY.closed.frameHeight,
     visibleBounds: CLOSED_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
   },
   selected: {
     ...staticSprite('chest-selected', '/giveaways/sprites/chest-selected.png', { pixelated: true }),
-    frameWidth: 48,
-    frameHeight: 32,
+    frameWidth: CHEST_SPRITE_GEOMETRY.selected.frameWidth,
+    frameHeight: CHEST_SPRITE_GEOMETRY.selected.frameHeight,
     visibleBounds: SELECTED_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
   },
   locked: {
     ...staticSprite('chest-locked', '/giveaways/sprites/chest.png', { pixelated: true }),
-    frameWidth: 48,
-    frameHeight: 32,
+    frameWidth: CHEST_SPRITE_GEOMETRY.closed.frameWidth,
+    frameHeight: CHEST_SPRITE_GEOMETRY.closed.frameHeight,
     visibleBounds: CLOSED_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
   },
   opening: {
     id: 'chest-opening',
     src: '/giveaways/sprites/chest-opening-animation.png',
-    frames: 10,
-    frameWidth: 48,
-    frameHeight: 32,
+    frames: OPENING_CHEST_FRAME_BOUNDS.length,
+    frameWidth: CHEST_SPRITE_GEOMETRY.opening.frameWidth,
+    frameHeight: CHEST_SPRITE_GEOMETRY.opening.frameHeight,
     playback: 'once',
     durationMs: 680,
     pixelated: true,
@@ -148,11 +130,11 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
   empty: {
     id: 'chest-empty',
     src: '/giveaways/sprites/chest-opening-animation.png',
-    frames: 10,
-    frameWidth: 48,
-    frameHeight: 32,
+    frames: OPENING_CHEST_FRAME_BOUNDS.length,
+    frameWidth: CHEST_SPRITE_GEOMETRY.opening.frameWidth,
+    frameHeight: CHEST_SPRITE_GEOMETRY.opening.frameHeight,
     playback: 'static',
-    initialFrame: 9,
+    initialFrame: OPENING_CHEST_FRAME_BOUNDS.length - 1,
     pixelated: true,
     visibleBounds: EMPTY_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
@@ -162,11 +144,11 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
   prize: {
     id: 'chest-prize',
     src: '/giveaways/sprites/chest-opening-animation-winner.png',
-    frames: 10,
-    frameWidth: 48,
-    frameHeight: 32,
+    frames: WINNER_CHEST_FRAME_BOUNDS.length,
+    frameWidth: CHEST_SPRITE_GEOMETRY.winnerOpening.frameWidth,
+    frameHeight: CHEST_SPRITE_GEOMETRY.winnerOpening.frameHeight,
     playback: 'static',
-    initialFrame: 9,
+    initialFrame: WINNER_CHEST_FRAME_BOUNDS.length - 1,
     pixelated: true,
     visibleBounds: PRIZE_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
@@ -176,11 +158,11 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
   'resolved-empty': {
     id: 'chest-resolved-empty',
     src: '/giveaways/sprites/chest-opening-animation.png',
-    frames: 10,
-    frameWidth: 48,
-    frameHeight: 32,
+    frames: OPENING_CHEST_FRAME_BOUNDS.length,
+    frameWidth: CHEST_SPRITE_GEOMETRY.opening.frameWidth,
+    frameHeight: CHEST_SPRITE_GEOMETRY.opening.frameHeight,
     playback: 'static',
-    initialFrame: 9,
+    initialFrame: OPENING_CHEST_FRAME_BOUNDS.length - 1,
     pixelated: true,
     visibleBounds: EMPTY_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
@@ -190,11 +172,11 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
   'resolved-prize': {
     id: 'chest-resolved-prize',
     src: '/giveaways/sprites/chest-opening-animation-winner.png',
-    frames: 10,
-    frameWidth: 48,
-    frameHeight: 32,
+    frames: WINNER_CHEST_FRAME_BOUNDS.length,
+    frameWidth: CHEST_SPRITE_GEOMETRY.winnerOpening.frameWidth,
+    frameHeight: CHEST_SPRITE_GEOMETRY.winnerOpening.frameHeight,
     playback: 'static',
-    initialFrame: 9,
+    initialFrame: WINNER_CHEST_FRAME_BOUNDS.length - 1,
     pixelated: true,
     visibleBounds: PRIZE_CHEST_BOUNDS,
     anchorBounds: CLOSED_CHEST_BOUNDS,
@@ -206,9 +188,9 @@ const CHEST_SPRITES: Record<LootChestChestSpriteState, SceneSpriteSpec> = {
 const WINNER_OPENING_SPRITE: SceneSpriteSpec = {
   id: 'chest-opening-winner',
   src: '/giveaways/sprites/chest-opening-animation-winner.png',
-  frames: 10,
-  frameWidth: 48,
-  frameHeight: 32,
+  frames: WINNER_CHEST_FRAME_BOUNDS.length,
+  frameWidth: CHEST_SPRITE_GEOMETRY.winnerOpening.frameWidth,
+  frameHeight: CHEST_SPRITE_GEOMETRY.winnerOpening.frameHeight,
   playback: 'once',
   durationMs: 680,
   pixelated: true,
