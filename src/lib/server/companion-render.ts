@@ -111,16 +111,35 @@ function discordCardFontFaceMarkup() {
   }
 
   try {
-    const fontPath = path.join(
-      /*turbopackIgnore: true*/ process.cwd(),
-      'node_modules',
-      'next',
-      'dist',
-      'compiled',
-      '@vercel',
-      'og',
-      'Geist-Regular.ttf',
-    );
+    const fontPathCandidates = [
+      path.join(
+        /*turbopackIgnore: true*/ process.cwd(),
+        'node_modules',
+        'next',
+        'dist',
+        'compiled',
+        '@vercel',
+        'og',
+        'Geist-Regular.ttf',
+      ),
+      path.join(
+        /*turbopackIgnore: true*/ process.cwd(),
+        '.next',
+        'standalone',
+        'node_modules',
+        'next',
+        'dist',
+        'compiled',
+        '@vercel',
+        'og',
+        'Geist-Regular.ttf',
+      ),
+    ];
+    const fontPath = fontPathCandidates.find((candidate) => fs.existsSync(candidate));
+    if (!fontPath) {
+      throw new Error('Embedded Discord card font file is unavailable.');
+    }
+
     const fontBase64 = fs.readFileSync(fontPath).toString('base64');
     cachedDiscordCardFontFaceMarkup = (
       '<style>'

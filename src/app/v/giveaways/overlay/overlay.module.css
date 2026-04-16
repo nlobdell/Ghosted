@@ -1,82 +1,13 @@
 .overlayPage {
-  min-height: 100vh;
-  display: grid;
-  align-content: start;
-  gap: 1rem;
-  padding: 1.4rem;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 217, 142, 0.12), transparent 22%),
-    linear-gradient(180deg, rgba(9, 8, 13, 0.96), rgba(4, 4, 7, 0.98));
-  color: var(--color-text-strong);
-}
-
-.hero,
-.stage,
-.statusBar,
-.metaStrip {
-  display: grid;
-  gap: 0.85rem;
-}
-
-.hero {
-  padding: 1.2rem 1.25rem;
-  border-radius: 1.4rem;
-  border: 1px solid rgba(191, 179, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.headline {
-  font-size: clamp(2.2rem, 6vw, 4rem);
-  line-height: 0.9;
-}
-
-.statusBar {
-  padding: 1rem 1.1rem;
-  border-radius: 1.2rem;
-  border: 1px solid rgba(191, 179, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.statusWin {
-  border-color: rgba(143, 255, 196, 0.18);
-  background: rgba(143, 255, 196, 0.08);
-}
-
-.statusMiss {
-  border-color: rgba(255, 181, 166, 0.16);
-  background: rgba(255, 181, 166, 0.08);
-}
-
-.metaStrip {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.metaCard {
-  display: grid;
-  gap: 0.35rem;
-  padding: 0.95rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(191, 179, 255, 0.1);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.label {
-  color: var(--color-text-soft);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.stage {
-  padding: 1.1rem;
-  border-radius: 1.3rem;
-  border: 1px solid rgba(191, 179, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-@media (max-width: 760px) {
-  .metaStrip {
-    grid-template-columns: 1fr;
-  }
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  box-sizing: border-box;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
 }

@@ -4,12 +4,14 @@ import {
   beginTwitchPlatformConnect,
   buildTwitchPlatformState,
   completeTwitchPlatformConnect,
+  disconnectTwitchPlatform,
   replayTwitchPlatformDelivery,
   syncTwitchPlatformSubscriptions,
   twitchEventProcessor,
   type TwitchModuleHandler,
 } from '@/lib/server/twitch-platform';
 import { buildLootChestGameState, twitchGiveawaysModuleHandler } from '@/lib/server/twitch-loot-chest';
+import type { VOperatorAppState } from '@/lib/types';
 
 const GHOSTED_TWITCH_HANDLERS: TwitchModuleHandler[] = [twitchGiveawaysModuleHandler];
 type GhostedTwitchOperator = Parameters<typeof beginTwitchPlatformConnect>[0];
@@ -20,6 +22,18 @@ export function ghostedTwitchHandlers() {
 
 export async function buildGhostedTwitchPlatformState(actor: GhostedTwitchOperator) {
   return buildTwitchPlatformState(actor, GHOSTED_TWITCH_HANDLERS);
+}
+
+export async function buildGhostedVOperatorAppState(actor: GhostedTwitchOperator): Promise<VOperatorAppState> {
+  const [platform, giveaway] = await Promise.all([
+    buildTwitchPlatformState(actor, GHOSTED_TWITCH_HANDLERS),
+    buildLootChestGameState(actor),
+  ]);
+
+  return {
+    platform,
+    giveaway,
+  };
 }
 
 export async function beginGhostedTwitchPlatformConnect(
@@ -45,6 +59,14 @@ export async function completeGhostedTwitchPlatformConnect(params: {
 
 export async function syncGhostedTwitchPlatformSubscriptions() {
   return syncTwitchPlatformSubscriptions(GHOSTED_TWITCH_HANDLERS);
+}
+
+export async function disconnectGhostedTwitchPlatform(actor: GhostedTwitchOperator) {
+  const platformState = await disconnectTwitchPlatform(GHOSTED_TWITCH_HANDLERS);
+  return {
+    platformState,
+    giveawayState: await buildLootChestGameState(actor),
+  };
 }
 
 export async function handleGhostedTwitchPlatformWebhook(request: Request) {

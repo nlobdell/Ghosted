@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { AppError, readJsonBody, withRouteErrorHandling } from '@/lib/server/core';
-import { selectLootChestTurnChests } from '@/lib/server/twitch-loot-chest';
+import { publishLootChestTurnActionRealtime, selectLootChestTurnChests } from '@/lib/server/twitch-loot-chest';
 
 export const runtime = 'nodejs';
 
@@ -15,8 +15,10 @@ export const POST = withRouteErrorHandling(async (
   }
 
   const payload = await readJsonBody<Record<string, unknown>>(request);
+  const result = await selectLootChestTurnChests(turnId, payload.chests);
   return NextResponse.json({
     ok: true,
-    result: await selectLootChestTurnChests(turnId, payload.chests),
+    result,
+    scene: await publishLootChestTurnActionRealtime(result),
   });
 });

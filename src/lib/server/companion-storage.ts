@@ -172,9 +172,9 @@ function fileExists(targetPath: string) {
 }
 
 function resolveCompanionStorageTarget(root: string, relativeParts: string[]) {
-  const resolvedRoot = path.resolve(root);
-  const target = path.resolve(resolvedRoot, ...relativeParts);
-  const relative = path.relative(resolvedRoot, target);
+  const resolvedRoot = path.resolve(/*turbopackIgnore: true*/ root);
+  const target = path.resolve(/*turbopackIgnore: true*/ resolvedRoot, ...relativeParts);
+  const relative = path.relative(/*turbopackIgnore: true*/ resolvedRoot, target);
   if (relative.startsWith('..') || path.isAbsolute(relative)) {
     throw new AppError('Companion asset not found.', 404);
   }
@@ -372,11 +372,14 @@ function normalizeMotionAccent(value: unknown, fallbackKey: string) {
 
 export function companionAssetDir() {
   const configured = envText('COMPANION_ASSET_DIR');
-  if (configured) return path.resolve(configured);
+  if (configured) return path.resolve(/*turbopackIgnore: true*/ configured);
 
   const configuredDatabasePath = envText('DATABASE_PATH');
   if (configuredDatabasePath) {
-    return path.join(path.dirname(path.resolve(configuredDatabasePath)), 'companion-assets');
+    return path.join(
+      path.dirname(path.resolve(/*turbopackIgnore: true*/ configuredDatabasePath)),
+      'companion-assets',
+    );
   }
 
   return path.join(path.dirname(defaultDatabasePath()), 'companion-assets');
@@ -431,7 +434,10 @@ export function companionAssetPath(relativePath: string) {
   if (fileExists(primaryTarget)) return primaryTarget;
 
   const legacyRoot = legacyCompanionAssetDir();
-  if (path.resolve(legacyRoot) !== path.resolve(companionAssetDir())) {
+  if (
+    path.resolve(/*turbopackIgnore: true*/ legacyRoot)
+    !== path.resolve(/*turbopackIgnore: true*/ companionAssetDir())
+  ) {
     const legacyTarget = resolveCompanionStorageTarget(legacyRoot, parts);
     if (fileExists(legacyTarget)) return legacyTarget;
   }

@@ -1,101 +1,104 @@
 'use client';
 
-import { startTransition, useEffect, useState } from 'react';
-import { formatDate, getJSON } from '@/lib/api';
-import type { LootChestOverlayState } from '@/lib/types';
-import { LootChestBoardView } from '../LootChestBoard';
+import { startTransition, useState } from 'react';
+import { getJSON } from '@/lib/api';
+import type { LootChestOverlayState, LootChestPresentationCue } from '@/lib/types';
+import { LootChestScene } from '../LootChestScene';
+import { useGiveawayBuildSync } from '../useGiveawayBuildSync';
+import { useLootChestSceneTransport } from '../useLootChestSceneTransport';
 import styles from './overlay.module.css';
+
+function normalizeSelectedChests(value: number[] | null | undefined) {
+  return Array.isArray(value)
+    ? value.filter((entry, index, current) => Number.isInteger(entry) && current.indexOf(entry) === index)
+    : [];
+}
 
 export default function TwitchLootChestOverlayClient({
   initialState,
   overlayToken,
+  buildId,
 }: {
   initialState: LootChestOverlayState;
   overlayToken: string;
+  buildId: string;
 }) {
   const [state, setState] = useState(initialState);
-  const activeTurn = state.activeTurn;
-  const focusTurn = activeTurn ?? state.lastResolvedTurn;
+  const [presentationCue, setPresentationCue] = useState<LootChestPresentationCue | null>(null);
+  const [mirroredSelections, setMirroredSelections] = useState<number[]>([]);
+  useGiveawayBuildSync(buildId);
 
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      void (async () => {
-        const nextState = await getJSON<LootChestOverlayState>(`/api/v/giveaways/state?overlayToken=${encodeURIComponent(overlayToken)}`);
-        startTransition(() => {
-          setState(nextState);
-        });
-      })();
-    }, 2500);
+  const activeTurn = state.scene.focusTurn;
+  const activeBoard = activeTurn?.board ?? null;
+  const effectiveMirroredSelections = activeTurn && activeBoard && !activeBoard.allSelectionsLocked && activeBoard.revealedChests.length === 0
+    ? mirroredSelections
+    : [];
+  const showInlineLockAction = Boolean(
+    activeTurn
+    && activeBoard
+    && !activeBoard.allSelectionsLocked
+    && activeBoard.revealedChests.length === 0
+    && effectiveMirroredSelections.length === activeBoard.selectionLimit,
+  );
 
-    return () => window.clearInterval(intervalId);
-  }, [overlayToken]);
+  useLootChestSceneTransport({
+    overlayToken,
+    currentScene: state.scene,
+    currentCue: presentationCue,
+    fetchState: () => getJSON<LootChestOverlayState>(`/api/v/giveaways/state?overlayToken=${encodeURIComponent(overlayToken)}`),
+    applyState: (nextState) => {
+      startTransition(() => {
+        setState(nextState);
+      });
+    },
+    applyScene: (nextScene) => {
+      startTransition(() => {
+        setState((current) => ({ ...current, scene: nextScene }));
+      });
+    },
+    applyCue: (nextCue) => {
+      startTransition(() => {
+        if (!nextCue) {
+          setPresentationCue(null);
+          return;
+        }
+
+        if (nextCue.selectedChests !== undefined) {
+          setMirroredSelections(normalizeSelectedChests(nextCue.selectedChests));
+        } else if (nextCue.kind === 'clear') {
+          setMirroredSelections([]);
+        }
+
+        if (nextCue.kind === 'selection') {
+          setPresentationCue(null);
+          return;
+        }
+
+        if (nextCue.kind === 'clear') {
+          setPresentationCue(null);
+          return;
+        }
+
+        setPresentationCue(nextCue);
+      });
+    },
+  });
 
   return (
     <main className={styles.overlayPage}>
-      <section className={styles.hero}>
-        <p className="kicker">Ghosted loot chest</p>
-        <h1 className={styles.headline}>
-          {activeTurn
-            ? `${activeTurn.viewer.displayName} is on the board`
-            : state.lastResolvedTurn
-              ? `${state.lastResolvedTurn.viewer.displayName} just finished a turn`
-              : 'Waiting for the next turn'}
-        </h1>
-        <p>
-          {activeTurn
-            ? `${state.queueCount} more queued after this turn. Reward: ${state.connection.reward.title}.`
-            : state.queueCount > 0
-              ? `${state.queueCount} queued turn${state.queueCount === 1 ? '' : 's'} waiting for the host.`
-              : 'Queue is empty right now.'}
-        </p>
-      </section>
-
-      {focusTurn ? (
-        <>
-          <section className={`${styles.statusBar} ${focusTurn.result === 'win' ? styles.statusWin : focusTurn.result === 'miss' ? styles.statusMiss : ''}`}>
-            <span className={styles.label}>Turn status</span>
-            <strong>
-              {focusTurn.result === 'win'
-                ? `${focusTurn.viewer.displayName} found the prize chest`
-                : focusTurn.result === 'miss'
-                  ? `${focusTurn.viewer.displayName} missed the prize chest`
-                  : `${focusTurn.viewer.displayName} is revealing chests`}
-            </strong>
-          </section>
-
-          <section className={styles.metaStrip}>
-            <article className={styles.metaCard}>
-              <span className={styles.label}>Viewer</span>
-              <strong>{focusTurn.viewer.displayName}</strong>
-              <span>@{focusTurn.viewer.login}</span>
-            </article>
-            <article className={styles.metaCard}>
-              <span className={styles.label}>Queue</span>
-              <strong>{state.queueCount}</strong>
-              <span>turns waiting</span>
-            </article>
-            <article className={styles.metaCard}>
-              <span className={styles.label}>Reward</span>
-              <strong>{state.connection.reward.title}</strong>
-              <span>{state.connection.reward.cost.toLocaleString()} points</span>
-            </article>
-          </section>
-
-          <section className={styles.stage}>
-            <LootChestBoardView board={focusTurn.board} compact />
-          </section>
-
-          <section className={styles.statusBar}>
-            <span className={styles.label}>Updated</span>
-            <strong>{formatDate(focusTurn.completedAt ?? focusTurn.startedAt ?? focusTurn.createdAt)}</strong>
-          </section>
-        </>
-      ) : (
-        <section className={styles.statusBar}>
-          <span className={styles.label}>Stand by</span>
-          <strong>The host has not started a loot chest turn yet.</strong>
-        </section>
-      )}
+      <LootChestScene
+        scene={state.scene}
+        presentationCue={presentationCue}
+        frame="board-only"
+        boardSizing="viewport"
+        assetVersion={buildId}
+        draftSelections={effectiveMirroredSelections}
+        boardAction={showInlineLockAction ? {
+          label: 'Lock',
+          onClick: () => {},
+          disabled: true,
+        } : null}
+      />
     </main>
   );
 }

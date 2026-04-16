@@ -1,19 +1,12 @@
-import { notFound } from 'next/navigation';
-import { lootChestStateForOverlayToken } from '@/lib/server/twitch-loot-chest';
-import TwitchLootChestOverlayClient from '../TwitchLootChestOverlayClient';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default async function TwitchLootChestOverlayPage({
+export default async function LegacyGiveawayOverlayPage({
   params,
 }: {
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const initialState = lootChestStateForOverlayToken(token);
-  if (!initialState) {
-    notFound();
-  }
-
-  return <TwitchLootChestOverlayClient initialState={initialState} overlayToken={token} />;
+  redirect(`/v/overlay?token=${encodeURIComponent(token)}`);
 }

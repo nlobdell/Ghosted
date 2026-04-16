@@ -5,14 +5,8 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  outputFileTracingIncludes: {
-    '/api/companion/assets/[...path]': ['./assets/companion/**/*'],
-    '/api/companion/render': ['./assets/companion/**/*'],
-    '/api/companion/render-animated': ['./assets/companion/**/*'],
-    '/api/companion/render-discord-animated.gif': [
-      './assets/companion/**/*',
-      './node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf',
-    ],
+  typescript: {
+    tsconfigPath: './tsconfig.build.json',
   },
   // Turbopack (default in Next.js 16) handles most static assets natively.
   // Empty config acknowledges the intentional turbopack-only setup.

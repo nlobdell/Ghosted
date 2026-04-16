@@ -171,6 +171,7 @@ export interface TwitchPlatformStore {
     scopes?: string[];
     isActive?: boolean;
   }): TwitchPlatformBroadcasterRow;
+  clearBroadcasterConnection(db: Database, broadcasterUserId: string): void;
   listSubscriptions(db?: Database): TwitchPlatformSubscriptionRow[];
   getSubscription(db: Database, id: string): TwitchPlatformSubscriptionRow | undefined;
   upsertSubscription(db: Database, input: {
@@ -187,6 +188,7 @@ export interface TwitchPlatformStore {
     lastSyncAttemptAt?: string | null;
     revokedReason?: string | null;
   }): TwitchPlatformSubscriptionRow;
+  deleteSubscription(db: Database, id: string): void;
   recordDelivery(db: Database, input: {
     messageId: string;
     subscriptionId?: string | null;
@@ -228,6 +230,7 @@ export interface TwitchModuleHandler {
   subscriptionTypes: string[];
   buildHealth(db: Database): Promise<TwitchModuleHealth> | TwitchModuleHealth;
   syncSubscriptions(context: TwitchModuleContext): Promise<void>;
+  disconnect?(context: TwitchModuleContext): Promise<void>;
   processDelivery(context: TwitchModuleDeliveryContext): Promise<'processed' | 'ignored'>;
 }
 
@@ -245,8 +248,8 @@ function randomToken(bytes = 24) {
 }
 
 function normalizedNextPath(nextPath?: string | null) {
-  const value = String(nextPath ?? '/v/twitch/').trim();
-  if (!value.startsWith('/')) return '/v/twitch/';
+  const value = String(nextPath ?? '/v').trim();
+  if (!value.startsWith('/')) return '/v';
   return value;
 }
 
@@ -267,7 +270,7 @@ export function isTwitchPlatformOperator(user: Pick<TwitchOperatorUser, 'discord
   return operatorIds.size > 0 && operatorIds.has(String(user.discord_id ?? '').trim());
 }
 
-export function twitchPlatformLoginHref(nextPath = '/v/twitch/') {
+export function twitchPlatformLoginHref(nextPath = '/v') {
   const encodedNext = encodeURIComponent(normalizedNextPath(nextPath));
   return process.env.ENABLE_DEV_AUTH === 'true'
     ? `/auth/dev-login?next=${encodedNext}`
@@ -378,7 +381,7 @@ function migrateLegacyTwitchPlatformState(db: Database) {
       SET oauth_state = ?,
           oauth_state_actor_discord_id = ?,
           oauth_state_expires_at = ?,
-          oauth_state_next_path = COALESCE(oauth_state_next_path, '/v/giveaways/'),
+          oauth_state_next_path = COALESCE(oauth_state_next_path, '/v?tab=live'),
           updated_at = ?
       WHERE singleton_key = ?
     `).run(
@@ -670,6 +673,19 @@ export const twitchPlatformStore: TwitchPlatformStore = {
     `).get(input.broadcasterUserId) as TwitchPlatformBroadcasterRow;
   },
 
+  clearBroadcasterConnection(db, broadcasterUserId) {
+    ensurePlatformReady(db);
+    db.prepare(`
+      UPDATE twitch_platform_broadcasters
+      SET access_token = NULL,
+          refresh_token = NULL,
+          token_expires_at = NULL,
+          is_active = 0,
+          updated_at = ?
+      WHERE broadcaster_user_id = ?
+    `).run(utcIso(), broadcasterUserId);
+  },
+
   listSubscriptions(db = getDb()) {
     ensurePlatformReady(db);
     return db.prepare(`
@@ -742,6 +758,14 @@ export const twitchPlatformStore: TwitchPlatformStore = {
     );
 
     return this.getSubscription(db, input.id)!;
+  },
+
+  deleteSubscription(db, id) {
+    ensurePlatformReady(db);
+    db.prepare(`
+      DELETE FROM twitch_platform_subscriptions
+      WHERE id = ?
+    `).run(id);
   },
 
   recordDelivery(db, input) {
@@ -1199,6 +1223,51 @@ export async function syncTwitchPlatformSubscriptions(handlers: TwitchModuleHand
     });
   }
 
+  return buildTwitchPlatformState(operator, handlers);
+}
+
+export async function disconnectTwitchPlatform(handlers: TwitchModuleHandler[]) {
+  const db = getDb();
+  const operator = await requireTwitchPlatformOperator();
+  const connection = twitchPlatformStore.getActiveBroadcaster(db);
+  if (!connection) {
+    return buildTwitchPlatformState(operator, handlers);
+  }
+
+  const config = getTwitchPlatformConfig();
+  const context: TwitchModuleContext = {
+    db,
+    config,
+    connection,
+    gateway: twitchPlatformGateway,
+    store: twitchPlatformStore,
+  };
+
+  for (const handler of handlers) {
+    if (handler.disconnect) {
+      await handler.disconnect(context);
+    }
+  }
+
+  const subscriptions = twitchPlatformStore.listSubscriptions(db)
+    .filter((subscription) => subscription.broadcaster_user_id === connection.broadcaster_user_id);
+
+  if (config.eventSubReady) {
+    for (const subscription of subscriptions) {
+      await twitchPlatformGateway.eventSubApiRequest({
+        path: '/eventsub/subscriptions',
+        method: 'DELETE',
+        query: { id: subscription.id },
+      });
+    }
+  }
+
+  for (const subscription of subscriptions) {
+    twitchPlatformStore.deleteSubscription(db, subscription.id);
+  }
+
+  twitchPlatformStore.clearBroadcasterConnection(db, connection.broadcaster_user_id);
+  twitchPlatformStore.clearOauthState(db);
   return buildTwitchPlatformState(operator, handlers);
 }
 

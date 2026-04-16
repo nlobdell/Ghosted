@@ -834,8 +834,32 @@ export interface TwitchPlatformState {
   modules: TwitchModuleHealth[];
 }
 
+export type VOperatorAppTab = 'live' | 'queue' | 'setup' | 'diagnostics';
+
+export interface VOperatorAppState {
+  platform: TwitchPlatformState;
+  giveaway: LootChestGameState;
+}
+
 export type LootChestTurnStatus = 'queued' | 'active' | 'completed';
 export type LootChestTurnResult = 'pending' | 'win' | 'miss';
+export type LootChestPresentationPhase = 'queued' | 'selection' | 'locked' | 'revealing' | 'resolved';
+export type LootChestPresentationAction =
+  | 'queued'
+  | 'turn_started'
+  | 'chests_selected'
+  | 'chest_revealed'
+  | 'turn_completed';
+export type LootChestChestSpriteState =
+  | 'closed'
+  | 'selected'
+  | 'locked'
+  | 'opening'
+  | 'empty'
+  | 'prize'
+  | 'resolved-empty'
+  | 'resolved-prize';
+export type LootChestChestAnimationState = 'idle' | 'pulse' | 'opening' | 'settled' | 'burst';
 
 export interface TwitchRewardConnectionState {
   configured: boolean;
@@ -863,6 +887,7 @@ export interface TwitchRewardConnectionState {
   };
   scopes: string[];
   overlayUrl?: string | null;
+  overlayToken?: string | null;
 }
 
 export interface LootChestBoardChest {
@@ -872,11 +897,16 @@ export interface LootChestBoardChest {
   revealed: boolean;
   containsPrize: boolean;
   revealState: 'closed' | 'selected' | 'empty' | 'prize';
+  spriteState: LootChestChestSpriteState;
+  animationState: LootChestChestAnimationState;
+  revealCue: boolean;
 }
 
 export interface LootChestBoard {
   totalChests: number;
   selectionLimit: number;
+  phase: Exclude<LootChestPresentationPhase, 'queued'>;
+  boardRevision: number;
   prizeChestIndex?: number | null;
   selectedChests: number[];
   revealedChests: number[];
@@ -884,6 +914,10 @@ export interface LootChestBoard {
   remainingReveals: number;
   prizeFound: boolean;
   allSelectionsLocked: boolean;
+  lastAction?: LootChestPresentationAction | null;
+  lastActionAt?: string | null;
+  lastChangedChestIndex?: number | null;
+  activeAnimationChestIndex?: number | null;
   chests: LootChestBoardChest[];
 }
 
@@ -897,6 +931,13 @@ export interface LootChestTurn {
   createdAt: string;
   startedAt?: string | null;
   completedAt?: string | null;
+  phase: LootChestPresentationPhase;
+  lastAction?: LootChestPresentationAction | null;
+  lastActionAt?: string | null;
+  resolutionCue?: {
+    result: Exclude<LootChestTurnResult, 'pending'>;
+    highlightChestIndex?: number | null;
+  } | null;
   userInput?: string | null;
   viewer: {
     twitchId: string;
@@ -906,12 +947,51 @@ export interface LootChestTurn {
   board?: LootChestBoard | null;
 }
 
+export interface LootChestSceneSnapshot {
+  revision: number;
+  publishedAt: string;
+  queueCount: number;
+  reward: TwitchRewardConnectionState['reward'];
+  focusTurn: LootChestTurn | null;
+}
+
+export type LootChestPresentationCueKind = 'hover' | 'clear' | 'reveal' | 'result' | 'selection';
+
+export interface LootChestPresentationCue {
+  kind: LootChestPresentationCueKind;
+  turnId: number | null;
+  chestIndex?: number | null;
+  selectedChests?: number[] | null;
+  result?: Exclude<LootChestTurnResult, 'pending'> | null;
+  sceneRevision?: number | null;
+  sentAt: string;
+  expiresAt?: string | null;
+}
+
+export type LootChestRealtimeSocketMessage =
+  | {
+    type: 'loot-chest:snapshot';
+    payload: LootChestSceneSnapshot;
+    sentAt: string;
+  }
+  | {
+    type: 'loot-chest:cue';
+    payload: LootChestPresentationCue;
+    sentAt: string;
+  }
+  | {
+    type: 'loot-chest:error';
+    code: 'unavailable';
+    retryable: boolean;
+  };
+
 export interface LootChestGameState {
   operator: {
     displayName: string;
     discordId: string;
   };
   connection: TwitchRewardConnectionState;
+  scene: LootChestSceneSnapshot;
   queue: LootChestTurn[];
   activeTurn: LootChestTurn | null;
   recentResults: LootChestTurn[];
@@ -920,6 +1000,7 @@ export interface LootChestGameState {
 
 export interface LootChestOverlayState {
   connection: Pick<TwitchRewardConnectionState, 'connected' | 'reward'>;
+  scene: LootChestSceneSnapshot;
   queueCount: number;
   activeTurn: LootChestTurn | null;
   lastResolvedTurn: LootChestTurn | null;

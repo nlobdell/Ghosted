@@ -22,7 +22,7 @@ function redirectBaseUrl(request: Request) {
 }
 
 function redirectWithMessage(request: Request, message: string) {
-  const url = new URL('/v/giveaways/', redirectBaseUrl(request));
+  const url = new URL('/v?tab=live', redirectBaseUrl(request));
   url.searchParams.set('message', message);
   return NextResponse.redirect(url);
 }

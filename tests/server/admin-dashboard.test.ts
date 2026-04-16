@@ -321,6 +321,7 @@ describe('admin dashboard payloads and routes', () => {
       'rewards',
       'content',
       'systems',
+      'worlds',
       'ghostling',
     ]);
     expect(payload.recentAudit[0]?.actionLabel).toBe('Save dispatch');
@@ -347,7 +348,7 @@ describe('admin dashboard payloads and routes', () => {
     const content = await contentResponse.json();
     const systems = await systemsResponse.json();
 
-    expect(overview.sectionSummaries).toHaveLength(4);
+    expect(overview.sectionSummaries).toHaveLength(5);
     expect(rewards.stats.activeGiveaways).toBe(1);
     expect(content.stats.publishedCount).toBe(1);
     expect(systems.discord.publicMode).toBe('bot');

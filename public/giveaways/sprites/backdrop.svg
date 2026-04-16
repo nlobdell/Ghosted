@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="800" x2="800" y1="0" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#23180f"/>
+      <stop offset="1" stop-color="#090805"/>
+    </linearGradient>
+    <radialGradient id="torch" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(800 220) rotate(90) scale(300 520)">
+      <stop stop-color="#F6D18C" stop-opacity=".35"/>
+      <stop offset=".55" stop-color="#D08B3D" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#090805" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect width="1600" height="900" fill="url(#torch)"/>
+  <path fill="#120D08" d="M0 900V220c90 70 186 102 289 98 111-4 216-49 312-137 112-101 228-152 346-152 118 0 235 51 350 153 97 86 201 131 312 136 102 4 199-28 291-98v680H0Z"/>
+  <path fill="#2E2114" fill-opacity=".55" d="M0 900V313c76 53 153 77 229 73 95-5 188-51 279-136 91-84 189-127 293-127 102 0 200 42 294 127 91 84 184 130 278 136 77 4 153-20 227-73V900H0Z"/>
+  <g fill="#F7D28A" fill-opacity=".2">
+    <circle cx="266" cy="156" r="3"/>
+    <circle cx="1348" cy="132" r="4"/>
+    <circle cx="1224" cy="208" r="3"/>
+    <circle cx="404" cy="228" r="2.5"/>
+    <circle cx="1002" cy="112" r="2.5"/>
+    <circle cx="858" cy="82" r="4"/>
+  </g>
+</svg>

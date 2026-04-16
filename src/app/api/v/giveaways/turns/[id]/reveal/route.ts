@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { AppError, withRouteErrorHandling } from '@/lib/server/core';
-import { revealNextLootChest } from '@/lib/server/twitch-loot-chest';
+import { publishLootChestTurnActionRealtime, revealNextLootChest } from '@/lib/server/twitch-loot-chest';
 
 export const runtime = 'nodejs';
 
 export const POST = withRouteErrorHandling(async (
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) => {
   const { id } = await context.params;
@@ -13,5 +13,17 @@ export const POST = withRouteErrorHandling(async (
   if (!Number.isFinite(turnId) || turnId <= 0) {
     throw new AppError('Turn ID is invalid.', 400);
   }
-  return NextResponse.json({ ok: true, result: await revealNextLootChest(turnId) });
+  let chestIndex: unknown;
+  const rawBody = await request.text();
+  if (rawBody.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(rawBody) as { chestIndex?: unknown };
+      chestIndex = parsed.chestIndex;
+    } catch {
+      throw new AppError('Reveal request body is invalid JSON.', 400);
+    }
+  }
+
+  const result = await revealNextLootChest(turnId, chestIndex);
+  return NextResponse.json({ ok: true, result, scene: await publishLootChestTurnActionRealtime(result) });
 });

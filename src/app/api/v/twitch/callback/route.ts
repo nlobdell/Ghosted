@@ -42,14 +42,14 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(twitchPlatformLoginHref(callbackNextPath(request)), redirectBaseUrl(request)));
   }
   if (!isTwitchPlatformOperator(currentUser)) {
-    return redirectWithMessage(request, '/v/twitch/', 'This Twitch connection is not allowed for your Discord account.');
+    return redirectWithMessage(request, '/v?tab=setup', 'This Twitch connection is not allowed for your Discord account.');
   }
 
   const url = new URL(request.url);
   const error = String(url.searchParams.get('error') ?? '').trim();
   const errorDescription = String(url.searchParams.get('error_description') ?? '').trim();
   if (error) {
-    return redirectWithMessage(request, '/v/twitch/', errorDescription || `Twitch connection failed: ${error}`);
+    return redirectWithMessage(request, '/v?tab=setup', errorDescription || `Twitch connection failed: ${error}`);
   }
 
   try {
@@ -61,6 +61,6 @@ export async function GET(request: Request) {
     return redirectWithMessage(request, result.nextPath, 'Twitch broadcaster connected.');
   } catch (caught) {
     const message = caught instanceof Error ? caught.message : 'Twitch connection failed.';
-    return redirectWithMessage(request, '/v/twitch/', message);
+    return redirectWithMessage(request, '/v?tab=setup', message);
   }
 }
