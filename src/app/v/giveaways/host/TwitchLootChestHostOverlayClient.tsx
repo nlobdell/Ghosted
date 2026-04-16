@@ -118,6 +118,7 @@ export default function TwitchLootChestHostOverlayClient({
   const [hoveredPreviewIndex, setHoveredPreviewIndex] = useState<number | null>(null);
   const [sceneScale, setSceneScale] = useState(1);
   const [sceneStageHeight, setSceneStageHeight] = useState<number | null>(null);
+  const [compactLayout, setCompactLayout] = useState(false);
   const pollInFlightRef = useRef(false);
   const draftSelectionsRef = useRef<number[]>(initialState.activeTurn?.board?.selectedChests ?? []);
   const hoveredPreviewIndexRef = useRef<number | null>(null);
@@ -349,6 +350,24 @@ export default function TwitchLootChestHostOverlayClient({
       window.clearInterval(intervalId);
     };
   }, [activeTurnId, hoveredPreviewIndex]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia('(max-width: 1079px), (max-aspect-ratio: 2 / 1)');
+    const updateLayoutMode = () => {
+      setCompactLayout(mediaQuery.matches);
+    };
+
+    updateLayoutMode();
+    mediaQuery.addEventListener('change', updateLayoutMode);
+
+    return () => {
+      mediaQuery.removeEventListener('change', updateLayoutMode);
+    };
+  }, []);
 
   useEffect(() => {
     const stage = sceneStageRef.current;
@@ -637,7 +656,7 @@ export default function TwitchLootChestHostOverlayClient({
   const sceneViewportStyle = {
     ['--host-scene-scale' as string]: String(sceneScale),
   } as CSSProperties;
-  const sideRailStyle = sceneStageHeight
+  const sideRailStyle = !compactLayout && sceneStageHeight
     ? ({ maxHeight: `${sceneStageHeight}px` } as CSSProperties)
     : undefined;
 

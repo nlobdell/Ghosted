@@ -51,6 +51,7 @@
 }
 
 .hostSurface {
+  --host-rail-width: 21rem;
   display: grid;
   width: 100%;
   min-height: 100vh;
@@ -123,7 +124,7 @@
   display: grid;
   align-items: start;
   gap: 0;
-  grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
+  grid-template-columns: var(--host-rail-width) minmax(0, 1fr);
   min-height: 0;
 }
 
@@ -133,7 +134,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: min(100%, calc(100vh * 16 / 9));
+  max-width: 1920px;
   min-width: 0;
   aspect-ratio: 16 / 9;
   justify-self: center;
@@ -268,7 +270,16 @@
   font-size: 0.68rem;
 }
 
-@media (max-width: 1079px) {
+@media (max-width: 1079px), (max-aspect-ratio: 2 / 1) {
+  .hostPage {
+    height: auto;
+    overflow: visible;
+  }
+
+  .hostSurface {
+    height: auto;
+  }
+
   .surfaceBody {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -287,6 +298,10 @@
     overflow: visible;
   }
 
+  .sceneStage {
+    width: min(100%, 1920px);
+  }
+
   .railBlock {
     border-right: 0;
     border-bottom: 1px solid rgba(191, 179, 255, 0.08);
@@ -296,12 +311,6 @@
 @media (max-width: 760px) {
   .hostPage {
     padding: 0;
-    height: auto;
-    overflow: visible;
-  }
-
-  .hostSurface {
-    height: auto;
   }
 
   .actionGrid {
