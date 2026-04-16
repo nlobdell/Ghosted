@@ -30,6 +30,7 @@ import { GET as getGiveawayBuildRoute } from '@/app/api/v/giveaways/build/route'
 import { GET as getGiveawayStateRoute } from '@/app/api/v/giveaways/state/route';
 import { GET as getGiveawayCallbackRoute } from '@/app/api/v/giveaways/twitch/callback/route';
 import { POST as postGiveawayPresentationRoute } from '@/app/api/v/giveaways/presentation/route';
+import { POST as postGiveawayPauseRewardRoute } from '@/app/api/v/giveaways/twitch/reward/pause/route';
 import { POST as postGiveawayClearCacheRoute } from '@/app/api/v/giveaways/twitch/cache/clear/route';
 import { POST as postStartTurnRoute } from '@/app/api/v/giveaways/turns/[id]/start/route';
 import { POST as postSelectTurnRoute } from '@/app/api/v/giveaways/turns/[id]/select/route';
@@ -299,6 +300,83 @@ describe('twitch platform and loot chest routes', () => {
     expect(payload.state.queue[0].redemptionId).toBe('remote-redemption');
     expect(turnRowsForTests()).toHaveLength(1);
     expect(turnRowsForTests()[0].redemption_id).toBe('remote-redemption');
+  });
+
+  it('pauses and resumes the managed reward through Twitch while preserving local reward metadata', async () => {
+    authMock.mockResolvedValue({ user: { id: String(operatorUserId) } });
+    seedConnectedTwitchState(context);
+
+    const fetchMock = vi.fn().mockImplementation(async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.includes('/helix/channel_points/custom_rewards') && init?.method === 'PATCH') {
+        const body = JSON.parse(String(init.body ?? '{}')) as { is_enabled?: boolean; is_paused?: boolean };
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'reward-1',
+            title: 'Loot Chest Spin',
+            prompt: 'Redeem for a host-run Ghosted loot chest turn.',
+            cost: 1000,
+            is_enabled: body.is_enabled ?? true,
+            is_paused: body.is_paused ?? false,
+          }],
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pauseResponse = await postGiveawayPauseRewardRoute(new Request('http://localhost/api/v/giveaways/twitch/reward/pause', {
+      method: 'POST',
+      body: JSON.stringify({ paused: true }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const pausePayload = await pauseResponse.json();
+
+    expect(pauseResponse.status).toBe(200);
+    expect(pausePayload.reward.isPaused).toBe(true);
+    expect(pausePayload.reward.isEnabled).toBe(true);
+    const [pauseUrl, pauseInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(String(pauseUrl)).toContain('/helix/channel_points/custom_rewards');
+    expect(pauseInit.method).toBe('PATCH');
+    expect(String(pauseInit.body)).toBe(JSON.stringify({ is_enabled: true, is_paused: true }));
+
+    const resumeResponse = await postGiveawayPauseRewardRoute(new Request('http://localhost/api/v/giveaways/twitch/reward/pause', {
+      method: 'POST',
+      body: JSON.stringify({ paused: false }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const resumePayload = await resumeResponse.json();
+
+    expect(resumeResponse.status).toBe(200);
+    expect(resumePayload.reward.isPaused).toBe(false);
+    expect(resumePayload.reward.isEnabled).toBe(true);
+
+    const settings = context.db.prepare(`
+      SELECT reward_title, reward_prompt, reward_cost, reward_is_paused, reward_is_enabled
+      FROM twitch_loot_chest_settings
+      WHERE singleton_key = 'default'
+      LIMIT 1
+    `).get() as {
+      reward_title: string;
+      reward_prompt: string;
+      reward_cost: number;
+      reward_is_paused: number;
+      reward_is_enabled: number;
+    };
+
+    expect(settings.reward_title).toBe('Loot Chest Spin');
+    expect(settings.reward_prompt).toBe('Redeem for a host-run Ghosted loot chest turn.');
+    expect(settings.reward_cost).toBe(1000);
+    expect(settings.reward_is_paused).toBe(0);
+    expect(settings.reward_is_enabled).toBe(1);
   });
 
   it('disconnects Twitch and clears the managed giveaway session state', async () => {
@@ -938,6 +1016,123 @@ describe('twitch platform and loot chest routes', () => {
     expect(result.platformState.connection?.id).toBe('broadcaster-1');
     expect(result.platformState.subscriptions[0]?.id).toBe('sub-1');
     expect(result.giveawayState.connection.reward.id).toBe('reward-1');
+    expect(result.giveawayState.connection.eventSub.subscriptionId).toBe('sub-1');
+  });
+
+  it('re-enables a previously disconnected managed reward during reconnect if Twitch still has it disabled', async () => {
+    authMock.mockResolvedValue({ user: { id: String(operatorUserId) } });
+    const actor = getUserById(context.db, operatorUserId);
+    expect(actor).toBeTruthy();
+
+    await beginGhostedTwitchPlatformConnect(actor!, '/v?tab=setup');
+    const { oauth_state: state } = context.db.prepare(`
+      SELECT oauth_state
+      FROM twitch_platform_settings
+      WHERE singleton_key = 'default'
+    `).get() as { oauth_state: string | null };
+
+    let rewardPatchBody: string | null = null;
+
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      const rawBody = typeof init?.body === 'string' ? init.body : '';
+
+      if (url.includes('id.twitch.tv/oauth2/token') && rawBody.includes('grant_type=authorization_code')) {
+        return new Response(JSON.stringify({
+          access_token: 'user-token',
+          refresh_token: 'refresh-token',
+          expires_in: 3600,
+          scope: ['channel:manage:redemptions', 'channel:read:redemptions'],
+          token_type: 'bearer',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      if (url.includes('id.twitch.tv/oauth2/token') && rawBody.includes('grant_type=client_credentials')) {
+        return new Response(JSON.stringify({
+          access_token: 'app-token',
+          expires_in: 3600,
+          token_type: 'bearer',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      if (url.includes('/helix/users')) {
+        return new Response(JSON.stringify({
+          data: [{ id: 'broadcaster-1', login: 'ghosted', display_name: 'Ghosted' }],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      if (url.includes('/helix/channel_points/custom_rewards?') && url.includes('only_manageable_rewards=true')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'reward-1',
+            title: 'Loot Chest Spin',
+            prompt: 'Redeem for a host-run Ghosted loot chest turn.',
+            cost: 1000,
+            is_enabled: false,
+            is_paused: true,
+          }],
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (url.includes('/helix/channel_points/custom_rewards') && init?.method === 'PATCH') {
+        rewardPatchBody = typeof init?.body === 'string' ? init.body : null;
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'reward-1',
+            title: 'Loot Chest Spin',
+            prompt: 'Redeem for a host-run Ghosted loot chest turn.',
+            cost: 1000,
+            is_enabled: true,
+            is_paused: false,
+          }],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      if (url.includes('/helix/eventsub/subscriptions') && url.includes(`type=${encodeURIComponent(GIVEAWAY_REDEMPTION_SUBSCRIPTION)}`)) {
+        return new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (url.includes('/helix/eventsub/subscriptions')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'sub-1',
+            status: 'webhook_callback_verification_pending',
+            type: GIVEAWAY_REDEMPTION_SUBSCRIPTION,
+            version: '1',
+            condition: { broadcaster_user_id: 'broadcaster-1', reward_id: 'reward-1' },
+            transport: { callback: 'https://ghostedclan.com/api/v/twitch/eventsub' },
+          }],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }));
+
+    const result = await completeGhostedTwitchPlatformConnect({
+      code: 'oauth-code',
+      state,
+      actor: actor!,
+    });
+
+    expect(rewardPatchBody).toBe(JSON.stringify({
+      title: 'Loot Chest Spin',
+      prompt: 'Redeem for a host-run Ghosted loot chest turn.',
+      cost: 1000,
+      is_enabled: true,
+      is_paused: false,
+    }));
+    expect(result.giveawayState.connection.reward.id).toBe('reward-1');
+    expect(result.giveawayState.connection.reward.isEnabled).toBe(true);
+    expect(result.giveawayState.connection.reward.isPaused).toBe(false);
     expect(result.giveawayState.connection.eventSub.subscriptionId).toBe('sub-1');
   });
 });

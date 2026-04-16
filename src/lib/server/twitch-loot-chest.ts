@@ -673,6 +673,7 @@ async function syncManagedReward(db: Database, input?: Partial<{ title: string; 
   const desiredTitle = String(input?.title ?? settings.reward_title ?? DEFAULT_REWARD_TITLE).trim() || DEFAULT_REWARD_TITLE;
   const desiredPrompt = String(input?.prompt ?? settings.reward_prompt ?? DEFAULT_REWARD_PROMPT).trim() || DEFAULT_REWARD_PROMPT;
   const desiredCost = Math.max(1, Number(input?.cost ?? settings.reward_cost ?? DEFAULT_REWARD_COST));
+  const desiredPaused = Boolean(settings.reward_is_paused);
 
   const rewards = await twitchPlatformGateway.userApiRequest<{ data?: TwitchRewardRecord[] }>(db, {
     path: '/channel_points/custom_rewards',
@@ -703,6 +704,8 @@ async function syncManagedReward(db: Database, input?: Partial<{ title: string; 
     reward.title !== desiredTitle
     || reward.prompt !== desiredPrompt
     || Number(reward.cost) !== desiredCost
+    || !reward.is_enabled
+    || Boolean(reward.is_paused) !== desiredPaused
   ) {
     const updated = await twitchPlatformGateway.userApiRequest<{ data?: TwitchRewardRecord[] }>(db, {
       path: '/channel_points/custom_rewards',
@@ -716,6 +719,7 @@ async function syncManagedReward(db: Database, input?: Partial<{ title: string; 
         prompt: desiredPrompt,
         cost: desiredCost,
         is_enabled: true,
+        is_paused: desiredPaused,
       },
     });
     reward = updated.data?.[0] ?? reward;
@@ -751,6 +755,7 @@ async function setRewardPaused(db: Database, paused: boolean) {
       id: settings.reward_id,
     },
     body: {
+      is_enabled: true,
       is_paused: paused,
     },
   });
@@ -758,8 +763,12 @@ async function setRewardPaused(db: Database, paused: boolean) {
   const reward = updated.data?.[0];
   return updateSettings(db, {
     broadcaster_user_id: activeConnection.broadcaster_user_id,
-    reward_is_paused: reward?.is_paused ? 1 : paused ? 1 : 0,
-    reward_is_enabled: reward?.is_enabled ? 1 : 0,
+    reward_id: reward?.id ?? settings.reward_id,
+    reward_title: reward?.title ?? settings.reward_title,
+    reward_prompt: reward?.prompt ?? settings.reward_prompt,
+    reward_cost: Number(reward?.cost ?? settings.reward_cost),
+    reward_is_paused: reward ? (reward.is_paused ? 1 : 0) : (paused ? 1 : 0),
+    reward_is_enabled: reward ? (reward.is_enabled ? 1 : 0) : settings.reward_is_enabled,
   });
 }
 
