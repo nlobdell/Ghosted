@@ -195,11 +195,17 @@
 }
 
 .sceneBoardOnlyViewport {
+  display: grid;
+  align-content: center;
+  justify-items: center;
   height: 100%;
   min-height: 0;
 }
 
 .sceneBoardOnlyWidth {
+  display: grid;
+  align-content: center;
+  justify-items: center;
   height: 100%;
   min-height: 0;
 }
