@@ -120,13 +120,16 @@
   display: grid;
   align-items: stretch;
   gap: 0;
+  grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
 }
 
 .sceneStage {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(100vw, 1920px);
+  width: 100%;
   min-width: 0;
   aspect-ratio: 16 / 9;
   justify-self: center;
@@ -159,15 +162,17 @@
 }
 
 .sideRail {
+  grid-column: 1;
+  grid-row: 1;
   min-width: 0;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid rgba(191, 179, 255, 0.08);
+  grid-template-columns: 1fr;
+  border-right: 1px solid rgba(191, 179, 255, 0.08);
 }
 
 .railBlock {
   padding: 0.85rem 0.95rem;
-  border-bottom: 0;
-  border-right: 1px solid rgba(191, 179, 255, 0.08);
+  border-bottom: 1px solid rgba(191, 179, 255, 0.08);
+  border-right: 0;
 }
 
 .railIntro {
@@ -184,7 +189,7 @@
 }
 
 .railBlock:last-child {
-  border-right: 0;
+  border-bottom: 0;
 }
 
 .railBlock:last-child,
@@ -250,8 +255,20 @@
 }
 
 @media (max-width: 1079px) {
+  .surfaceBody {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sceneStage,
+  .sideRail {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
   .sideRail {
     grid-template-columns: 1fr;
+    border-right: 0;
+    border-top: 1px solid rgba(191, 179, 255, 0.08);
   }
 
   .railBlock {
