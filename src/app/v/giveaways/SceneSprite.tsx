@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ComponentPropsWithoutRef, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useState, type ComponentPropsWithoutRef, type CSSProperties } from 'react';
 import type { SceneSpriteSpec } from './scene-sprite-catalog';
 import styles from './loot-chest-scene.module.css';
 
@@ -51,9 +51,11 @@ export function SceneSprite({
   const [frameIndex, setFrameIndex] = useState(initialFrame);
   const animated = spec.frames > 1 && spec.playback !== 'static' && Boolean(spec.durationMs);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setFrameIndex(initialFrame);
+  }, [initialFrame, spec.id]);
 
+  useEffect(() => {
     if (!animated || !spec.durationMs) {
       return undefined;
     }
