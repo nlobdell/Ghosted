@@ -8,11 +8,18 @@ import styles from '../giveaways/host/page.module.css';
 
 export const dynamic = 'force-dynamic';
 
-export default async function TwitchLootChestHostOverlayPage() {
+export default async function TwitchLootChestHostOverlayPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sceneDebug?: string }>;
+}) {
+  const params = await searchParams;
+  const sceneDebug = params.sceneDebug !== undefined && params.sceneDebug !== 'false' && params.sceneDebug !== '0';
+  const hostPath = sceneDebug ? '/v/host?sceneDebug=1' : '/v/host';
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
-    redirect(twitchPlatformLoginHref('/v/host'));
+    redirect(twitchPlatformLoginHref(hostPath));
   }
 
   if (!isTwitchPlatformOperator(currentUser)) {
@@ -32,5 +39,5 @@ export default async function TwitchLootChestHostOverlayPage() {
   const initialState = await buildLootChestGameState(currentUser);
   const buildId = getGhostedBuildId();
 
-  return <TwitchLootChestHostOverlayClient initialState={initialState} buildId={buildId} />;
+  return <TwitchLootChestHostOverlayClient initialState={initialState} buildId={buildId} sceneDebug={sceneDebug} />;
 }

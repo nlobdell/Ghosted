@@ -106,9 +106,11 @@ function recentResultLabel(turn: LootChestTurn) {
 export default function TwitchLootChestHostOverlayClient({
   initialState,
   buildId,
+  sceneDebug = false,
 }: {
   initialState: LootChestGameState;
   buildId: string;
+  sceneDebug?: boolean;
 }) {
   const [state, setState] = useState(initialState);
   const [message, setMessage] = useState<HostMessage>(null);
@@ -117,7 +119,7 @@ export default function TwitchLootChestHostOverlayClient({
   const [presentationCue, setPresentationCue] = useState<LootChestPresentationCue | null>(null);
   const [hoveredPreviewIndex, setHoveredPreviewIndex] = useState<number | null>(null);
   const [sceneScale, setSceneScale] = useState(1);
-  const [sceneStageHeight, setSceneStageHeight] = useState<number | null>(null);
+  const [sceneStageSize, setSceneStageSize] = useState<{ width: number; height: number } | null>(null);
   const [compactLayout, setCompactLayout] = useState(false);
   const pollInFlightRef = useRef(false);
   const draftSelectionsRef = useRef<number[]>(initialState.activeTurn?.board?.selectedChests ?? []);
@@ -383,7 +385,7 @@ export default function TwitchLootChestHostOverlayClient({
 
       const nextScale = Math.min(width / HOST_SCENE_WIDTH, height / HOST_SCENE_HEIGHT);
       setSceneScale(nextScale > 0 ? nextScale : 1);
-      setSceneStageHeight(height);
+      setSceneStageSize({ width, height });
     };
 
     updateScale();
@@ -656,8 +658,8 @@ export default function TwitchLootChestHostOverlayClient({
   const sceneViewportStyle = {
     ['--host-scene-scale' as string]: String(sceneScale),
   } as CSSProperties;
-  const sideRailStyle = !compactLayout && sceneStageHeight
-    ? ({ maxHeight: `${sceneStageHeight}px` } as CSSProperties)
+  const sideRailStyle = !compactLayout && sceneStageSize?.height
+    ? ({ maxHeight: `${sceneStageSize.height}px` } as CSSProperties)
     : undefined;
 
   return (
@@ -677,6 +679,12 @@ export default function TwitchLootChestHostOverlayClient({
                   frame="board-only"
                   boardSizing="width"
                   assetVersion={buildId}
+                  debugOverlay={sceneDebug ? {
+                    layoutMode: compactLayout ? 'compact' : 'wide',
+                    sceneScale,
+                    stageWidth: sceneStageSize?.width ?? null,
+                    stageHeight: sceneStageSize?.height ?? null,
+                  } : null}
                   boardAction={showInlineLockAction ? {
                     label: busyAction === 'lock' ? 'Locking...' : 'Lock',
                     onClick: () => {

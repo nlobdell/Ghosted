@@ -132,13 +132,83 @@ function footerNote(
   return 'Board resolved. Complete the turn when ready.';
 }
 
-function chestLabel(chest: LootChestBoardChest, spriteState: LootChestChestSpriteState) {
+export interface LootChestSceneDebugOverlay {
+  layoutMode: 'wide' | 'compact';
+  sceneScale: number;
+  stageWidth: number | null;
+  stageHeight: number | null;
+}
+
+function chestDebugLabel(spriteState: LootChestChestSpriteState) {
   if (spriteState === 'prize' || spriteState === 'resolved-prize') return 'Prize';
   if (spriteState === 'empty' || spriteState === 'resolved-empty') return 'Empty';
   if (spriteState === 'locked') return 'Locked';
   if (spriteState === 'selected') return 'Marked';
   if (spriteState === 'opening') return 'Opening';
-  return chest.label;
+  return 'Closed';
+}
+
+function cueLabel(cue: LootChestPresentationCue | null | undefined, turnId: number | null) {
+  if (!cue || cue.turnId !== turnId) {
+    return 'None';
+  }
+
+  if (cue.kind === 'hover') {
+    return cue.chestIndex !== undefined && cue.chestIndex !== null ? `Hover #${cue.chestIndex + 1}` : 'Hover';
+  }
+
+  if (cue.kind === 'clear') {
+    return 'Clear';
+  }
+
+  if (cue.kind === 'reveal') {
+    return cue.chestIndex !== undefined && cue.chestIndex !== null ? `Reveal #${cue.chestIndex + 1}` : 'Reveal';
+  }
+
+  if (cue.kind === 'result') {
+    return cue.result ? `Result ${cue.result}` : 'Result';
+  }
+
+  if (cue.kind === 'selection') {
+    return cue.selectedChests?.length ? `Selection ${cue.selectedChests.map((entry) => entry + 1).join(', ')}` : 'Selection';
+  }
+
+  return cue.kind;
+}
+
+function formatDebugStageSize(width: number | null, height: number | null) {
+  if (!width || !height) {
+    return 'Pending';
+  }
+
+  return `${Math.round(width)}x${Math.round(height)}`;
+}
+
+function chestDebugFlags({
+  chest,
+  hovered,
+  clickable,
+  dormant,
+  animateReveal,
+  selectionRow,
+}: {
+  chest: LootChestBoardChest;
+  hovered: boolean;
+  clickable: boolean;
+  dormant: boolean;
+  animateReveal: boolean;
+  selectionRow: ReturnType<typeof selectionRowPosition>;
+}) {
+  const flags: string[] = [];
+  if (chest.selected) flags.push('sel');
+  if (chest.revealed) flags.push('open');
+  if (chest.containsPrize) flags.push('prize');
+  if (hovered) flags.push('hover');
+  if (animateReveal) flags.push('cue');
+  if (selectionRow) flags.push(`slot${selectionRow.slot + 1}`);
+  if (dormant) flags.push('dim');
+  if (clickable) flags.push('live');
+  return flags.length > 0 ? flags.join(' · ') : 'idle';
 }
 
 function displaySpriteState(
@@ -194,6 +264,7 @@ export function LootChestScene({
   frame = 'standalone',
   boardSizing = 'viewport',
   assetVersion,
+  debugOverlay,
   boardAction,
 }: {
   scene: LootChestSceneSnapshot;
@@ -205,6 +276,7 @@ export function LootChestScene({
   frame?: 'standalone' | 'embedded' | 'broadcast' | 'board-only';
   boardSizing?: 'viewport' | 'width';
   assetVersion?: string;
+  debugOverlay?: LootChestSceneDebugOverlay | null;
   boardAction?: {
     label: string;
     onClick: () => void;
@@ -283,6 +355,53 @@ export function LootChestScene({
     && board.selectedChests.length === board.selectionLimit,
   );
   const boardOnly = frame === 'board-only';
+  const debugChestEntries = board ? board.chests.map((chest) => {
+    const spriteState = displaySpriteState(chest, selectedIndices, previewSelections);
+    const animationState = displayAnimationState(chest, spriteState);
+    const selectionRow = selectionRowActive ? selectionRowPosition(board, chest.index) : null;
+    const dormant = selectionRowActive && selectionRow === null;
+    const revealable = Boolean(
+      revealInteractive
+      && chest.selected
+      && !chest.revealed,
+    );
+    const clickable = selectionInteractive || revealable;
+    const animateReveal = Boolean(
+      (
+        changedChestIndex === chest.index
+        && board.boardRevision === animatedRevision
+        && chest.revealCue
+      )
+      || cuedRevealChestIndex === chest.index,
+    );
+    const renderSpriteState = animateReveal ? 'opening' : spriteState;
+    const renderAnimationState = animateReveal ? 'opening' : animationState;
+    const hovered = hoveredChestIndex === chest.index;
+
+    return {
+      chest,
+      spriteState,
+      animationState,
+      selectionRow,
+      dormant,
+      revealable,
+      clickable,
+      animateReveal,
+      renderSpriteState,
+      renderAnimationState,
+      hovered,
+      debugState: chestDebugLabel(renderSpriteState),
+      debugFlags: chestDebugFlags({
+        chest,
+        hovered,
+        clickable,
+        dormant,
+        animateReveal,
+        selectionRow,
+      }),
+    };
+  }) : [];
+  const debugCue = cueLabel(presentationCue, turn?.id ?? null);
 
   return (
     <section
@@ -327,32 +446,24 @@ export function LootChestScene({
         {board ? (
           <>
             <div className={[styles.boardGrid, selectionRowActive ? styles.boardGridSelectionStage : ''].filter(Boolean).join(' ')}>
-              {board.chests.map((chest) => {
-                const spriteState = displaySpriteState(chest, selectedIndices, previewSelections);
-                const animationState = displayAnimationState(chest, spriteState);
-                const selectionRow = selectionRowActive ? selectionRowPosition(board, chest.index) : null;
-                const dormant = selectionRowActive && selectionRow === null;
-                const revealable = Boolean(
-                  revealInteractive
-                  && chest.selected
-                  && !chest.revealed,
-                );
-                const clickable = selectionInteractive || revealable;
-                const animateReveal = Boolean(
-                  (
-                    changedChestIndex === chest.index
-                    && board.boardRevision === animatedRevision
-                    && chest.revealCue
-                  )
-                  || cuedRevealChestIndex === chest.index,
-                );
-                const renderSpriteState = animateReveal ? 'opening' : spriteState;
-                const renderAnimationState = animateReveal ? 'opening' : animationState;
+              {debugChestEntries.map((entry) => {
+                const {
+                  chest,
+                  spriteState,
+                  animationState,
+                  selectionRow,
+                  dormant,
+                  revealable,
+                  clickable,
+                  animateReveal,
+                  renderSpriteState,
+                  renderAnimationState,
+                  hovered,
+                } = entry;
                 const spriteSpec = getChestSpriteSpec(renderSpriteState, renderAnimationState, {
                   winner: chest.containsPrize || spriteState === 'prize' || spriteState === 'resolved-prize',
                   assetVersion,
                 });
-                const hovered = hoveredChestIndex === chest.index;
                 const hitAreaStyle = chestHitAreaStyle(renderSpriteState, spriteSpec);
                 const chestClassName = [
                   styles.chest,
@@ -414,7 +525,6 @@ export function LootChestScene({
                     </span>
                     <span className={styles.chestLabelStack}>
                       <span className={styles.chestNumber}>{chest.label}</span>
-                      <span className={styles.chestWord}>{chestLabel(chest, spriteState)}</span>
                     </span>
                   </div>
                 );
@@ -439,6 +549,88 @@ export function LootChestScene({
                 >
                   {boardAction.label}
                 </button>
+              </div>
+            ) : null}
+
+            {debugOverlay ? (
+              <div className={styles.debugOverlay} data-debug-overlay="true">
+                <div className={styles.debugHeader}>
+                  <strong>Scene debug</strong>
+                  <span>{debugOverlay.layoutMode} | {debugOverlay.sceneScale.toFixed(2)}x</span>
+                </div>
+
+                <div className={styles.debugGrid}>
+                  <section className={styles.debugBlock}>
+                    <p className={styles.debugSectionTitle}>Board</p>
+                    <div className={styles.debugStats}>
+                      <span className={styles.debugStat}>
+                        <span className={styles.debugLabel}>Turn</span>
+                        <span className={styles.debugValue}>{turn?.id ?? '--'}</span>
+                      </span>
+                      <span className={styles.debugStat}>
+                        <span className={styles.debugLabel}>Phase</span>
+                        <span className={styles.debugValue}>{turn?.phase ?? 'idle'}</span>
+                      </span>
+                      <span className={styles.debugStat}>
+                        <span className={styles.debugLabel}>Scene rev</span>
+                        <span className={styles.debugValue}>{scene.revision}</span>
+                      </span>
+                      <span className={styles.debugStat}>
+                        <span className={styles.debugLabel}>Board rev</span>
+                        <span className={styles.debugValue}>{board.boardRevision}</span>
+                      </span>
+                      <span className={styles.debugStat}>
+                        <span className={styles.debugLabel}>Stage</span>
+                        <span className={styles.debugValue}>{formatDebugStageSize(debugOverlay.stageWidth, debugOverlay.stageHeight)}</span>
+                      </span>
+                      <span className={styles.debugStat}>
+                        <span className={styles.debugLabel}>Cue</span>
+                        <span className={styles.debugValue}>{debugCue}</span>
+                      </span>
+                      <span className={styles.debugStat}>
+                        <span className={styles.debugLabel}>Selected</span>
+                        <span className={styles.debugValue}>{selectedIndices.size}/{board.selectionLimit}</span>
+                      </span>
+                      <span className={styles.debugStat}>
+                        <span className={styles.debugLabel}>Revealed</span>
+                        <span className={styles.debugValue}>{board.revealedChests.length}/{board.selectionLimit}</span>
+                      </span>
+                      <span className={styles.debugStat}>
+                        <span className={styles.debugLabel}>Changed</span>
+                        <span className={styles.debugValue}>{board.lastChangedChestIndex !== null && board.lastChangedChestIndex !== undefined ? `#${board.lastChangedChestIndex + 1}` : 'None'}</span>
+                      </span>
+                      <span className={styles.debugStat}>
+                        <span className={styles.debugLabel}>Anim chest</span>
+                        <span className={styles.debugValue}>{board.activeAnimationChestIndex !== null && board.activeAnimationChestIndex !== undefined ? `#${board.activeAnimationChestIndex + 1}` : 'None'}</span>
+                      </span>
+                      <span className={styles.debugStat}>
+                        <span className={styles.debugLabel}>Queue</span>
+                        <span className={styles.debugValue}>{scene.queueCount}</span>
+                      </span>
+                      <span className={styles.debugStat}>
+                        <span className={styles.debugLabel}>Action</span>
+                        <span className={styles.debugValue}>{board.lastAction ?? turn?.lastAction ?? 'idle'}</span>
+                      </span>
+                    </div>
+                  </section>
+
+                  <section className={styles.debugBlock}>
+                    <p className={styles.debugSectionTitle}>Chests</p>
+                    <div className={styles.debugChestList}>
+                      {debugChestEntries.map((entry) => (
+                        <div
+                          key={entry.chest.index}
+                          className={styles.debugChestRow}
+                          data-debug-chest-index={entry.chest.index}
+                        >
+                          <span className={styles.debugChestIndex}>#{entry.chest.label}</span>
+                          <span className={styles.debugChestState}>{entry.debugState}</span>
+                          <span className={styles.debugChestMeta}>{entry.renderAnimationState} | {entry.debugFlags}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
               </div>
             ) : null}
           </>

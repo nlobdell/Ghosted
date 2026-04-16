@@ -634,6 +634,52 @@ describe('LootChestScene', () => {
     expect(container.querySelector('[data-chest-index="4"]')).not.toBeNull();
   });
 
+  it('renders chest state text inside the host debug overlay instead of the main board labels', () => {
+    const board = makeBoard({
+      phase: 'locked',
+      selectedChests: [1, 4, 8],
+      revealedChests: [1],
+      allSelectionsLocked: true,
+      remainingSelections: 0,
+      remainingReveals: 2,
+      lastAction: 'chest_revealed',
+      lastChangedChestIndex: 1,
+      activeAnimationChestIndex: 1,
+      prizeChestIndex: 4,
+    }, {
+      1: { revealed: true, spriteState: 'empty', animationState: 'settled', revealCue: true },
+      4: { spriteState: 'locked', animationState: 'idle' },
+      8: { spriteState: 'locked', animationState: 'idle' },
+    });
+
+    const { container, getByText } = render(
+      <LootChestScene
+        scene={makeScene({
+          revision: 3,
+          queueCount: 2,
+          focusTurn: makeTurn({
+            board,
+            phase: 'revealing',
+            lastAction: 'chest_revealed',
+          }),
+        })}
+        frame="board-only"
+        debugOverlay={{
+          layoutMode: 'wide',
+          sceneScale: 0.74,
+          stageWidth: 1420,
+          stageHeight: 798,
+        }}
+      />,
+    );
+
+    expect(container.querySelector('[data-debug-overlay="true"]')).not.toBeNull();
+    expect(getByText('Scene debug')).toBeTruthy();
+    expect(container.querySelector('[data-chest-shell-index="4"]')?.textContent?.trim()).toBe('5');
+    expect(container.querySelector('[data-debug-chest-index="1"]')?.textContent).toContain('Empty');
+    expect(container.querySelector('[data-debug-chest-index="4"]')?.textContent).toContain('Locked');
+  });
+
   it('versions sprite asset urls so long-lived overlays pick up new scene art after reload', () => {
     const board = makeBoard({
       phase: 'locked',
