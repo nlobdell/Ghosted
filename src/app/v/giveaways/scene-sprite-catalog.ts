@@ -103,9 +103,9 @@ const WINNER_CHEST_FRAME_BOUNDS = [
   { left: 2, top: 11, right: 29, bottom: 31 },
   { left: 2, top: 11, right: 30, bottom: 31 },
   { left: 2, top: 9, right: 31, bottom: 31 },
-  { left: 2, top: 12, right: 41, bottom: 31 },
-  { left: 2, top: 8, right: 40, bottom: 31 },
-  { left: 2, top: 2, right: 40, bottom: 31 },
+  { left: 2, top: 13, right: 41, bottom: 31 },
+  { left: 2, top: 5, right: 40, bottom: 31 },
+  { left: 2, top: 1, right: 40, bottom: 31 },
 ] as const satisfies SceneSpriteBounds[];
 const STABLE_CHEST_ANCHOR_BOUNDS = Array.from({ length: 10 }, () => CLOSED_CHEST_BOUNDS);
 
