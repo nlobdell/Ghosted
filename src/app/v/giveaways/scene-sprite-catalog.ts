@@ -305,9 +305,9 @@ const RESULT_SPRITES: Record<Exclude<LootChestTurnResult, 'pending'>, SceneSprit
   },
 };
 
-const BOARD_BACKDROP = staticSprite('board-backdrop', '/giveaways/sprites/jad-scene-backdrop.webp');
-const BOARD_FRAME = staticSprite('board-frame', '/giveaways/sprites/board-frame.svg');
-const BOARD_FRAME_OVERLAY = staticSprite('board-frame-overlay', '/giveaways/sprites/board-frame-overlay.svg');
+const BOARD_BACKDROP = staticSprite('board-backdrop', '/giveaways/sprites/backdrop.svg');
+const BOARD_FRAME = staticSprite('board-frame', '/giveaways/sprites/jad-scene-backdrop.webp');
+const BOARD_FRAME_OVERLAY = staticSprite('board-frame-overlay', '/giveaways/sprites/jad-scene-backdrop.webp');
 
 export function getBoardBackdropSpriteSpec(assetVersion?: string) {
   return withAssetVersion(BOARD_BACKDROP, assetVersion);
