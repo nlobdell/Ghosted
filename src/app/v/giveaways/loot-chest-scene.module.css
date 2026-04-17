@@ -311,13 +311,13 @@
   background-repeat: var(--scene-texture-repeat, repeat);
   background-size: var(--scene-texture-size, auto);
   opacity: var(--scene-texture-opacity, 1);
-  -webkit-mask-image: var(--scene-sprite-image);
+  -webkit-mask-image: var(--scene-texture-mask-image, var(--scene-sprite-image));
   -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: calc(var(--scene-sprite-frames, 1) * 100%) 100%;
+  -webkit-mask-size: calc(var(--scene-texture-mask-frames, var(--scene-sprite-frames, 1)) * 100%) 100%;
   -webkit-mask-position: var(--scene-sprite-static-translate, 0%) 0;
-  mask-image: var(--scene-sprite-image);
+  mask-image: var(--scene-texture-mask-image, var(--scene-sprite-image));
   mask-repeat: no-repeat;
-  mask-size: calc(var(--scene-sprite-frames, 1) * 100%) 100%;
+  mask-size: calc(var(--scene-texture-mask-frames, var(--scene-sprite-frames, 1)) * 100%) 100%;
   mask-position: var(--scene-sprite-static-translate, 0%) 0;
   will-change: background-position;
 }

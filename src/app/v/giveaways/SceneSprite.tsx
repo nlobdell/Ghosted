@@ -117,6 +117,8 @@ export function SceneSprite({
     ['--scene-sprite-end-translate' as string]: spriteEndTranslate(spec.frames),
     ['--scene-sprite-anchor-x' as string]: spriteAnchorShift(spec, displayFrameIndex),
     ['--scene-texture-image' as string]: spec.textureLayer ? `url("${spec.textureLayer.src}")` : 'none',
+    ['--scene-texture-mask-image' as string]: `url("${spec.textureLayer?.maskSrc ?? spec.src}")`,
+    ['--scene-texture-mask-frames' as string]: String(spec.textureLayer?.maskFrames ?? spec.frames),
     ['--scene-texture-repeat' as string]: spec.textureLayer?.repeat ?? 'repeat',
     ['--scene-texture-size' as string]: spec.textureLayer?.size ?? 'auto',
     ['--scene-texture-duration' as string]: `${spec.textureLayer?.durationMs ?? 0}ms`,

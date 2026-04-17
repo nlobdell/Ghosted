@@ -34,6 +34,8 @@ export type SceneSpriteSpec = {
 
 export type SceneSpriteTextureLayer = {
   src: string;
+  maskSrc?: string;
+  maskFrames?: number;
   repeat?: 'repeat' | 'repeat-x' | 'repeat-y' | 'no-repeat';
   size?: string;
   durationMs?: number;
@@ -79,6 +81,7 @@ function withAssetVersion(spec: SceneSpriteSpec, assetVersion?: string): SceneSp
     textureLayer: spec.textureLayer ? {
       ...spec.textureLayer,
       src: versionedSpriteSrc(spec.textureLayer.src, assetVersion),
+      maskSrc: spec.textureLayer.maskSrc ? versionedSpriteSrc(spec.textureLayer.maskSrc, assetVersion) : undefined,
     } : undefined,
     detailLayer: spec.detailLayer ? {
       ...spec.detailLayer,
@@ -122,6 +125,8 @@ const STABLE_CHEST_ANCHOR_BOUNDS = Array.from(
 
 const INFERNAL_CHEST_TEXTURE: SceneSpriteTextureLayer = {
   src: '/giveaways/sprites/infernal-cape-texture.png',
+  maskSrc: '/giveaways/sprites/chest-opening-animation-mask.png',
+  maskFrames: OPENING_CHEST_FRAME_BOUNDS.length,
   repeat: 'repeat',
   size: '128px 128px',
   durationMs: 2200,

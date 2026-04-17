@@ -804,5 +804,6 @@ describe('LootChestScene', () => {
     expect(lockedSprite?.style.getPropertyValue('--scene-sprite-image')).toContain('chest.png?v=build-123');
     expect(lockedSprite?.getAttribute('data-sprite-textured')).toBe('true');
     expect(lockedSprite?.style.getPropertyValue('--scene-texture-image')).toContain('infernal-cape-texture.png?v=build-123');
+    expect(lockedSprite?.style.getPropertyValue('--scene-texture-mask-image')).toContain('chest-opening-animation-mask.png?v=build-123');
   });
 });

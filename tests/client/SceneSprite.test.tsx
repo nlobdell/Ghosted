@@ -37,6 +37,8 @@ const TEXTURED_SPEC: SceneSpriteSpec = {
   pixelated: true,
   textureLayer: {
     src: '/giveaways/sprites/infernal-cape-texture.png',
+    maskSrc: '/giveaways/sprites/chest-opening-animation-mask.png',
+    maskFrames: 10,
     repeat: 'repeat',
     size: '128px 128px',
     durationMs: 2200,
@@ -94,6 +96,8 @@ describe('SceneSprite', () => {
     expect(textureMask).not.toBeNull();
     expect(detailStrip).not.toBeNull();
     expect(texturedSprite?.style.getPropertyValue('--scene-texture-image')).toContain('infernal-cape-texture.png');
+    expect(texturedSprite?.style.getPropertyValue('--scene-texture-mask-image')).toContain('chest-opening-animation-mask.png');
+    expect(texturedSprite?.style.getPropertyValue('--scene-texture-mask-frames')).toBe('10');
     expect(texturedSprite?.style.getPropertyValue('--scene-detail-opacity')).toBe('0.42');
   });
 });
