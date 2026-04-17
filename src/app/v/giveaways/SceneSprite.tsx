@@ -182,6 +182,7 @@ export function SceneSprite({
     >
       {textured ? (
         <>
+          <span className={styles.sceneSpriteStrip} data-sprite-layer="base" />
           <span
             className={styles.sceneSpriteTextureViewport}
             data-sprite-layer="texture"

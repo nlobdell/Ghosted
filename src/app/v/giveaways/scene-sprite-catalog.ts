@@ -138,13 +138,7 @@ const INFERNAL_CHEST_TEXTURE: SceneSpriteTextureLayer = {
   size: '128px 128px',
   durationMs: 2200,
   scrollY: '-128px',
-  opacity: 0.96,
-  pixelated: true,
-};
-
-const INFERNAL_CHEST_DETAIL: SceneSpriteDetailLayer = {
-  opacity: 0.42,
-  filter: 'brightness(0.72) contrast(1.28) saturate(0.52)',
+  opacity: 0.84,
   pixelated: true,
 };
 
@@ -152,7 +146,6 @@ function withInfernalChestTexture(spec: SceneSpriteSpec): SceneSpriteSpec {
   return {
     ...spec,
     textureLayer: INFERNAL_CHEST_TEXTURE,
-    detailLayer: INFERNAL_CHEST_DETAIL,
   };
 }
 

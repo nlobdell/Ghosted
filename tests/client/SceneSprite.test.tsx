@@ -89,10 +89,12 @@ describe('SceneSprite', () => {
     const { container } = render(<SceneSprite spec={TEXTURED_SPEC} />);
 
     const texturedSprite = container.querySelector('[data-sprite-id="chest-textured"]') as HTMLElement | null;
+    const baseStrip = container.querySelector('[data-sprite-layer="base"]') as HTMLElement | null;
     const textureMask = container.querySelector('[data-sprite-layer="texture"]') as HTMLElement | null;
     const detailStrip = container.querySelector('[data-sprite-layer="detail"]') as HTMLElement | null;
 
     expect(texturedSprite?.getAttribute('data-sprite-textured')).toBe('true');
+    expect(baseStrip).not.toBeNull();
     expect(textureMask).not.toBeNull();
     expect(detailStrip).not.toBeNull();
     expect(texturedSprite?.style.getPropertyValue('--scene-texture-image')).toContain('infernal-cape-texture.png');
