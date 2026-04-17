@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ComponentPropsWithoutRef, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type ComponentPropsWithoutRef, type CSSProperties } from 'react';
 import type { SceneSpriteSpec } from './scene-sprite-catalog';
 import styles from './loot-chest-scene.module.css';
 
@@ -97,6 +97,10 @@ export function SceneSprite({
     && ((spec.textureLayer.scrollX && spec.textureLayer.scrollX !== '0px')
       || (spec.textureLayer.scrollY && spec.textureLayer.scrollY !== '0px')),
   );
+  const textureSyncDelay = useMemo(
+    () => (texturedAnimated ? textureAnimationDelay(spec.textureLayer?.durationMs) : '0ms'),
+    [spec.textureLayer?.durationMs, texturedAnimated],
+  );
   const displayFrameIndex = spriteState.signature === signature ? spriteState.frameIndex : initialFrame;
 
   useEffect(() => {
@@ -150,7 +154,7 @@ export function SceneSprite({
     ['--scene-texture-repeat' as string]: spec.textureLayer?.repeat ?? 'repeat',
     ['--scene-texture-size' as string]: spec.textureLayer?.size ?? 'auto',
     ['--scene-texture-duration' as string]: `${spec.textureLayer?.durationMs ?? 0}ms`,
-    ['--scene-texture-sync-delay' as string]: textureAnimationDelay(spec.textureLayer?.durationMs),
+    ['--scene-texture-sync-delay' as string]: textureSyncDelay,
     ['--scene-texture-scroll-x' as string]: spec.textureLayer?.scrollX ?? '0px',
     ['--scene-texture-scroll-y' as string]: spec.textureLayer?.scrollY ?? '0px',
     ['--scene-texture-opacity' as string]: String(spec.textureLayer?.opacity ?? 1),

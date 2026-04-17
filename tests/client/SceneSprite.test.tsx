@@ -102,4 +102,21 @@ describe('SceneSprite', () => {
     expect(texturedSprite?.style.getPropertyValue('--scene-texture-sync-delay')).toContain('ms');
     expect(texturedSprite?.style.getPropertyValue('--scene-detail-opacity')).toBe('0.42');
   });
+
+  it('keeps the textured overlay scroll phase stable across ordinary rerenders', () => {
+    const { container, rerender } = render(<SceneSprite spec={TEXTURED_SPEC} />);
+
+    const texturedSprite = container.querySelector('[data-sprite-id="chest-textured"]') as HTMLElement | null;
+    const initialDelay = texturedSprite?.style.getPropertyValue('--scene-texture-sync-delay');
+
+    rerender(<SceneSprite spec={{
+      ...TEXTURED_SPEC,
+      detailLayer: {
+        ...TEXTURED_SPEC.detailLayer,
+      },
+    }}
+    />);
+
+    expect(texturedSprite?.style.getPropertyValue('--scene-texture-sync-delay')).toBe(initialDelay);
+  });
 });

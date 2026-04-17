@@ -166,6 +166,33 @@ describe('LootChestScene', () => {
     expect(fifthChest?.getAttribute('data-sprite-state')).toBe('selected');
   });
 
+  it('constrains selected chest hitboxes to the chest body mask instead of the full sprite box', () => {
+    const board = makeBoard({
+      phase: 'selection',
+      selectedChests: [],
+      revealedChests: [],
+      allSelectionsLocked: false,
+      remainingSelections: 3,
+      remainingReveals: 0,
+    });
+
+    const { container } = render(
+      <LootChestScene
+        scene={makeScene({
+          queueCount: 1,
+          focusTurn: makeTurn({ board, phase: 'selection' }),
+        })}
+        draftSelections={[0]}
+        onToggleSelection={vi.fn()}
+      />,
+    );
+
+    const selectedChest = container.querySelector('[data-chest-index="0"]') as HTMLButtonElement | null;
+    expect(selectedChest).not.toBeNull();
+    expect(Number.parseFloat(selectedChest?.style.getPropertyValue('--chest-hit-width') ?? '0')).toBeCloseTo(41, 3);
+    expect(Number.parseFloat(selectedChest?.style.getPropertyValue('--chest-hit-height') ?? '0')).toBeCloseTo(32.458, 3);
+  });
+
   it('can show an inline lock action inside the board when all picks are ready', () => {
     const onLock = vi.fn();
     const board = makeBoard({

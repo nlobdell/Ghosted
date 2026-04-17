@@ -15,7 +15,7 @@ import {
   getBoardFrameSpriteSpec,
   getChestSpriteSpec,
   getResultSpriteSpec,
-  getSceneSpriteVisibleRegion,
+  getSceneSpriteInteractionRegion,
 } from './scene-sprite-catalog';
 import styles from './loot-chest-scene.module.css';
 
@@ -102,7 +102,7 @@ function revealAnimationReducer(
 }
 
 function chestHitAreaStyle(spriteState: LootChestChestSpriteState, spriteSpec: ReturnType<typeof getChestSpriteSpec>) {
-  const visibleRegion = getSceneSpriteVisibleRegion(spriteSpec);
+  const visibleRegion = getSceneSpriteInteractionRegion(spriteSpec);
   if (!visibleRegion) {
     return undefined;
   }

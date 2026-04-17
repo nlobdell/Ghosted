@@ -33,6 +33,10 @@ const spriteAssets = {
     filename: 'chest-opening-animation-winner.png',
     frames: 10,
   },
+  openingMask: {
+    filename: 'chest-opening-animation-mask.png',
+    frames: 10,
+  },
 };
 
 function formatObject(value, indentLevel = 0) {
@@ -169,6 +173,7 @@ async function main() {
   const selected = await readSpriteGeometry(spriteAssets.selected);
   const opening = await readSpriteGeometry(spriteAssets.opening);
   const winnerOpening = await readSpriteGeometry(spriteAssets.winnerOpening);
+  const openingMask = await readSpriteGeometry(spriteAssets.openingMask);
 
   const geometry = {
     closed: {
@@ -192,6 +197,13 @@ async function main() {
       frameHeight: winnerOpening.frameHeight,
       frameBounds: winnerOpening.frameBounds,
       finalBounds: winnerOpening.finalBounds,
+    },
+    openingMask: {
+      frameWidth: openingMask.frameWidth,
+      frameHeight: openingMask.frameHeight,
+      bounds: openingMask.bounds,
+      frameBounds: openingMask.frameBounds,
+      finalBounds: openingMask.finalBounds,
     },
   };
 

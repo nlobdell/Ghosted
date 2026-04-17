@@ -172,5 +172,83 @@ export const CHEST_SPRITE_GEOMETRY = {
       right: 40,
       bottom: 31
     }
+  },
+  openingMask: {
+    frameWidth: 48,
+    frameHeight: 32,
+    bounds: {
+      left: 5,
+      top: 12,
+      right: 28,
+      bottom: 30
+    },
+    frameBounds: [
+      {
+        left: 5,
+        top: 12,
+        right: 28,
+        bottom: 30
+      },
+      {
+        left: 5,
+        top: 12,
+        right: 28,
+        bottom: 30
+      },
+      {
+        left: 4,
+        top: 13,
+        right: 28,
+        bottom: 30
+      },
+      {
+        left: 4,
+        top: 13,
+        right: 28,
+        bottom: 30
+      },
+      {
+        left: 5,
+        top: 12,
+        right: 28,
+        bottom: 30
+      },
+      {
+        left: 6,
+        top: 11,
+        right: 29,
+        bottom: 30
+      },
+      {
+        left: 6,
+        top: 9,
+        right: 30,
+        bottom: 30
+      },
+      {
+        left: 6,
+        top: 23,
+        right: 40,
+        bottom: 30
+      },
+      {
+        left: 6,
+        top: 21,
+        right: 39,
+        bottom: 30
+      },
+      {
+        left: 6,
+        top: 21,
+        right: 39,
+        bottom: 30
+      }
+    ],
+    finalBounds: {
+      left: 6,
+      top: 21,
+      right: 39,
+      bottom: 30
+    }
   }
 } as const;
