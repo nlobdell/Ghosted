@@ -311,9 +311,7 @@
 
 .sceneSpriteTextureMask {
   position: absolute;
-  inset: 0 auto 0 0;
-  width: calc(var(--scene-texture-mask-frames, var(--scene-sprite-frames, 1)) * 100%);
-  height: 100%;
+  inset: 0;
   background-image: var(--scene-texture-image);
   background-position: 0 0;
   background-repeat: var(--scene-texture-repeat, repeat);
@@ -321,18 +319,18 @@
   opacity: var(--scene-texture-opacity, 1);
   -webkit-mask-image: var(--scene-texture-mask-image, var(--scene-sprite-image));
   -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: 100% 100%;
-  -webkit-mask-position: 0 0;
+  -webkit-mask-size: auto 100%;
+  -webkit-mask-position: var(--scene-texture-mask-position-x, 0%) 0;
   mask-image: var(--scene-texture-mask-image, var(--scene-sprite-image));
   mask-repeat: no-repeat;
-  mask-size: 100% 100%;
-  mask-position: 0 0;
-  transform: translateX(var(--scene-sprite-static-translate, 0%));
-  will-change: background-position, transform;
+  mask-size: auto 100%;
+  mask-position: var(--scene-texture-mask-position-x, 0%) 0;
+  will-change: background-position, mask-position, -webkit-mask-position;
 }
 
 .sceneSpriteTextureAnimated {
   animation: sceneSpriteTextureScroll var(--scene-texture-duration, 0ms) linear infinite;
+  animation-delay: var(--scene-texture-sync-delay, 0ms);
 }
 
 .sceneSpriteDetailStrip {

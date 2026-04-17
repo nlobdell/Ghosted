@@ -98,6 +98,8 @@ describe('SceneSprite', () => {
     expect(texturedSprite?.style.getPropertyValue('--scene-texture-image')).toContain('infernal-cape-texture.png');
     expect(texturedSprite?.style.getPropertyValue('--scene-texture-mask-image')).toContain('chest-opening-animation-mask.png');
     expect(texturedSprite?.style.getPropertyValue('--scene-texture-mask-frames')).toBe('10');
+    expect(texturedSprite?.style.getPropertyValue('--scene-texture-mask-position-x')).toBe('0%');
+    expect(texturedSprite?.style.getPropertyValue('--scene-texture-sync-delay')).toContain('ms');
     expect(texturedSprite?.style.getPropertyValue('--scene-detail-opacity')).toBe('0.42');
   });
 });

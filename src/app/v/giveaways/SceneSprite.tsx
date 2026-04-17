@@ -20,6 +20,14 @@ function spriteEndTranslate(frames: number) {
   return `${-(((frames - 1) * 100) / frames)}%`;
 }
 
+function spriteMaskPosition(frames: number, frameIndex = 0) {
+  if (frames <= 1 || frameIndex <= 0) {
+    return '0%';
+  }
+
+  return `${(frameIndex * 100) / (frames - 1)}%`;
+}
+
 function clampFrameIndex(spec: SceneSpriteSpec, frameIndex: number) {
   if (spec.frames <= 1) {
     return 0;
@@ -50,6 +58,22 @@ function spriteSignature(spec: SceneSpriteSpec, initialFrame: number) {
     spec.frameHeight ?? 0,
     initialFrame,
   ].join('|');
+}
+
+let textureAnimationEpochMs: number | null = null;
+
+function textureAnimationDelay(durationMs?: number) {
+  if (!durationMs) {
+    return '0ms';
+  }
+
+  if (textureAnimationEpochMs === null) {
+    textureAnimationEpochMs = typeof performance !== 'undefined' ? performance.now() : 0;
+  }
+
+  const now = typeof performance !== 'undefined' ? performance.now() : textureAnimationEpochMs;
+  const elapsed = ((now - textureAnimationEpochMs) % durationMs + durationMs) % durationMs;
+  return `${-elapsed}ms`;
 }
 
 export function SceneSprite({
@@ -119,9 +143,14 @@ export function SceneSprite({
     ['--scene-texture-image' as string]: spec.textureLayer ? `url("${spec.textureLayer.src}")` : 'none',
     ['--scene-texture-mask-image' as string]: `url("${spec.textureLayer?.maskSrc ?? spec.src}")`,
     ['--scene-texture-mask-frames' as string]: String(spec.textureLayer?.maskFrames ?? spec.frames),
+    ['--scene-texture-mask-position-x' as string]: spriteMaskPosition(
+      spec.textureLayer?.maskFrames ?? spec.frames,
+      displayFrameIndex,
+    ),
     ['--scene-texture-repeat' as string]: spec.textureLayer?.repeat ?? 'repeat',
     ['--scene-texture-size' as string]: spec.textureLayer?.size ?? 'auto',
     ['--scene-texture-duration' as string]: `${spec.textureLayer?.durationMs ?? 0}ms`,
+    ['--scene-texture-sync-delay' as string]: textureAnimationDelay(spec.textureLayer?.durationMs),
     ['--scene-texture-scroll-x' as string]: spec.textureLayer?.scrollX ?? '0px',
     ['--scene-texture-scroll-y' as string]: spec.textureLayer?.scrollY ?? '0px',
     ['--scene-texture-opacity' as string]: String(spec.textureLayer?.opacity ?? 1),
