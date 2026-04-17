@@ -370,7 +370,8 @@
 
 .boardBackdrop {
   z-index: 0;
-  opacity: 0.18;
+  opacity: 0.42;
+  filter: saturate(0.82) brightness(0.78);
 }
 
 .boardFrame {
