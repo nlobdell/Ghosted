@@ -150,13 +150,17 @@ export function SceneSprite({
       {textured ? (
         <>
           <span
-            className={[
-              styles.sceneSpriteTextureMask,
-              spec.textureLayer?.pixelated ? styles.sceneSpritePixelated : '',
-              texturedAnimated ? styles.sceneSpriteTextureAnimated : '',
-            ].filter(Boolean).join(' ')}
+            className={styles.sceneSpriteTextureViewport}
             data-sprite-layer="texture"
-          />
+          >
+            <span
+              className={[
+                styles.sceneSpriteTextureMask,
+                spec.textureLayer?.pixelated ? styles.sceneSpritePixelated : '',
+                texturedAnimated ? styles.sceneSpriteTextureAnimated : '',
+              ].filter(Boolean).join(' ')}
+            />
+          </span>
           {spec.detailLayer ? (
             <span
               className={[
